@@ -2,15 +2,16 @@ import React from 'react';
 import { avatarToImage, getCurrentAccount } from '../../../api/extension';
 import { Box, Text } from '@chakra-ui/layout';
 
-import Logo from '../../../assets/img/logoWhite.svg';
+import BannerDark from '../../../assets/img/cardanoYellow.png';
+import BannerLight from '../../../assets/img/cardanoWhite.png';
 import { Image, useColorModeValue } from '@chakra-ui/react';
 import AvatarLoader from './avatarLoader';
 
 const Account = React.forwardRef((props, ref) => {
-  const avatarBg = useColorModeValue('white', 'gray.700');
-  const panelBg = useColorModeValue('#349EA3', 'gray.800');
+  const avatarBg = useColorModeValue('white', 'yellow.500');
+  const panelBg = useColorModeValue('yellow.500', 'gray');
   const [account, setAccount] = React.useState(null);
-
+  const Banner = useColorModeValue(BannerLight, BannerDark);
   const initAccount = () =>
     getCurrentAccount().then((account) => setAccount(account));
 
@@ -44,7 +45,7 @@ const Account = React.forwardRef((props, ref) => {
         alignItems="center"
         justifyContent="center"
       >
-        <Image draggable={false} src={Logo} width="24px" />
+        <Image draggable={false} src={Banner} width="35px" />
       </Box>
       <Box
         zIndex="2"
@@ -74,7 +75,7 @@ const Account = React.forwardRef((props, ref) => {
         alignItems="center"
         justifyContent="center"
       >
-        <Text color="white" fontSize="lg" isTruncated={true} maxWidth="210px">
+        <Text color="black" fontSize="lg" isTruncated={true} maxWidth="210px">
           {account && account.name}
         </Text>
       </Box>

@@ -121,7 +121,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
           <InputGroup size="md">
             <Input
               ref={inputRef}
-              focusBorderColor="teal.400"
+              focusBorderColor="yellow.400"
               variant="filled"
               isInvalid={state.wrongPassword === true}
               pr="4.5rem"

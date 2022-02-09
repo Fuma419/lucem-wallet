@@ -178,7 +178,7 @@ const Asset = ({ asset, isDifference }) => {
                 isDifference
                   ? token.quantity <= 0
                     ? 'red.300'
-                    : 'teal.500'
+                    : 'yellow.500'
                   : 'inherit'
               }
             >

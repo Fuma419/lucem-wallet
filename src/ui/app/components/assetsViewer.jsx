@@ -63,7 +63,7 @@ const AssetsViewer = ({ assets }) => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
         ) : assetsArray.length <= 0 ? (
           <Box
@@ -74,7 +74,7 @@ const AssetsViewer = ({ assets }) => {
             flexDirection="column"
             opacity="0.5"
           >
-            <Planet size={80} mood="ko" color="#61DDBC" />
+            <Planet size={60} mood="ko" color="gray" />
             <Box height="2" />
             <Text fontWeight="bold" color="GrayText">
               No Assets
@@ -160,7 +160,7 @@ const Search = ({ setSearch, assets }) => {
         >
           <InputGroup size="sm">
             <Input
-              focusBorderColor="teal.400"
+              focusBorderColor="yellow.400"
               ref={ref}
               value={input}
               width={290}
@@ -187,7 +187,7 @@ const Search = ({ setSearch, assets }) => {
             aria-label="Search assets"
             size="sm"
             rounded="md"
-            color="teal.400"
+            color="yellow.400"
             onClick={() => input && setSearch(input)}
             icon={<SearchIcon />}
           />

@@ -22,8 +22,8 @@ import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import TrezorConnect from '../../../../temporary_modules/trezor-connect';
 
 // assets
-import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import LogoOriginal from '../../../assets/img/Hodler_Green_Icon_round.svg';
+import LogoWhite from '../../../assets/img/Hodler_Green_Icon_round.svg';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import TrezorLogo from '../../../assets/img/trezorLogo.svg';
 import { CheckCircleIcon, ChevronRightIcon } from '@chakra-ui/icons';
@@ -121,7 +121,7 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.trezor && 'teal.400'}
+          borderColor={selected === HW.trezor && 'yellow.400'}
           borderWidth={selected === HW.trezor && '3px'}
           p={4}
           _hover={{ opacity: 0.8 }}
@@ -143,7 +143,7 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.ledger && 'teal.400'}
+          borderColor={selected === HW.ledger && 'yellow.400'}
           borderWidth={selected === HW.ledger && '3px'}
           p={1}
           _hover={{ opacity: 0.8 }}

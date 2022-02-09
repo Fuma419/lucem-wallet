@@ -215,12 +215,13 @@ const GeneralSettings = ({ accountRef }) => {
       <Button
         size="sm"
         rounded="md"
+        colorScheme="yellow"
         onClick={() => {
           toggleColorMode();
         }}
         rightIcon={<SunIcon ml="2" />}
       >
-        {colorMode == 'dark' ? 'Light' : 'Dark'}
+        {colorMode == 'dark' ? 'Dark' : 'Light'}
       </Button>
 
       <Box height="6" />
@@ -336,7 +337,7 @@ const Whitelisted = () => {
           alignItems="center"
           justifyContent="center"
         >
-          <Spinner color="teal" speed="0.5s" />
+          <Spinner color="yellow.500" speed="0.5s" />
         </Box>
       )}
 
@@ -457,7 +458,7 @@ const Network = () => {
             size="sm"
             onClick={endpointHandler}
           >
-            {applied ? <CheckIcon color={'teal.400'} /> : 'Apply'}
+            {applied ? <CheckIcon color={'yellow.400'} /> : 'Apply'}
           </Button>
         </InputRightElement>
       </InputGroup>

@@ -39,8 +39,8 @@ import { TAB } from '../../../config/config';
 import { Planet } from 'react-kawaii';
 import { useDropzone } from 'react-dropzone';
 
-import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import LogoOriginal from '../../../assets/img/cardanoYellow.png';
+import LogoWhite from '../../../assets/img/cardanoYellow.png';
 import { useStoreActions } from 'easy-peasy';
 import { BsFileEarmark } from 'react-icons/bs';
 
@@ -73,8 +73,8 @@ const App = () => {
       background={backgroundColor}
     >
       {/* Logo */}
-      <Box position="absolute" left="40px" top="40px">
-        <Image draggable={false} src={Logo} width="36px" />
+      <Box position="absolute" left="70px" top="60px">
+        <Image draggable={false} src={Logo} width="80px" />
       </Box>
       <Box
         rounded="2xl"
@@ -156,11 +156,11 @@ const GenerateSeed = (props) => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'teal'}
+                      background={'yellow.400'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -184,11 +184,11 @@ const GenerateSeed = (props) => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'teal'}
+                      background={'yellow.400'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -293,11 +293,11 @@ const VerifySeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'teal'}
+                      background={'yellow.400'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -333,11 +333,11 @@ const VerifySeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'teal'}
+                      background={'yellow.400'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -352,7 +352,7 @@ const VerifySeed = () => {
       <Stack alignItems="center" justifyContent="center" direction="row">
         <Button
           fontWeight="medium"
-          color="gray.400"
+          color="yellow.400"
           variant="ghost"
           onClick={() => history.push({ pathname: '/account', mnemonic })}
         >
@@ -424,11 +424,11 @@ const ImportSeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'teal'}
+                      background={'yellow.400'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -458,11 +458,11 @@ const ImportSeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'teal'}
+                      background={'yellow.400'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -544,12 +544,12 @@ const SeedDrop = ({ onLoad, ...props }) => {
           !isValid
             ? 'red.300'
             : isDragAccept
-            ? 'teal'
+            ? 'yellow.400'
             : isDragReject
             ? 'red.300'
             : 'transparent'
         }
-        borderColor={isDragAccept ? 'teal' : isDragReject ? 'red.300' : 'gray'}
+        borderColor={isDragAccept ? 'yellow' : isDragReject ? 'red.300' : 'gray'}
         rounded="xl"
       >
         <div {...getRootProps({ className: 'dropzone' })}>
@@ -695,7 +695,7 @@ const MakeAccount = (props) => {
             !state.name
           }
           isLoading={loading}
-          colorScheme="teal"
+          colorScheme="yellow"
           loadingText="Creating"
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
@@ -730,7 +730,7 @@ const SuccessAndClose = () => {
         Successfully created wallet!
       </Text>
       <Box h={6} />
-      <Planet mood="blissful" size={150} color="#61DDBC" />
+      <Planet mood="blissful" size={150} color="yellow" />
       <Box h={10} />
       <Text width="300px">
         You can now close this tab and continue with the extension.

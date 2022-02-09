@@ -14,9 +14,10 @@ import {
   Link,
 } from '@chakra-ui/react';
 
-import LogoWhite from '../../../assets/img/logoWhite.svg';
-import LogoBlack from '../../../assets/img/logo.svg';
 import Berry from '../../../assets/img/berry.svg';
+import LogoWhite from '../../../assets/img/cardanoWhite.png';
+import LogoBlack from '../../../assets/img/cardanoYellow.png';
+import HodlerLogo from '../../../assets/img/Hodler_Green_Icon_round.png';
 import TermsOfUse from './termsOfUse';
 
 const { version } = require('../../../../package.json');
@@ -50,7 +51,7 @@ const About = React.forwardRef((props, ref) => {
           >
             <Image
               cursor="pointer"
-              onClick={() => window.open('https://namiwallet.io')}
+              onClick={() => window.open('https://www.hodlerstaking.com/')}
               width="90px"
               src={Logo}
             />
@@ -66,17 +67,24 @@ const About = React.forwardRef((props, ref) => {
               <Text fontSize="xs">
                 Created by{' '}
                 <span
-                  onClick={() => window.open('https://pipool.online')}
+                  onClick={() => window.open('https://www.hodlerstaking.com/')}
                   style={{ textDecoration: 'underline', cursor: 'pointer' }}
                 >
-                  Berry Pool
+                  Hodler Services
+                </span>
+                {' '}and{' '}
+                <span
+                  onClick={() => window.open('https://pipool.online/')}
+                  style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Berry.
                 </span>
               </Text>
               <Box height="4" />
               <Image
                 cursor="pointer"
-                onClick={() => window.open('https://pipool.online')}
-                src={Berry}
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
+                src={HodlerLogo}
                 width="30px"
               />
             </Box>

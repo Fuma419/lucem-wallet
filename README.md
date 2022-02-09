@@ -228,3 +228,18 @@ npm test
 
 Visit [namiwallet.io](https://namiwallet.io)<br/>
 Visit [Berry Pool](https://pipool.online)
+
+
+/Users/benjaminzawodni/_git/nami-wallet/secrets.testing.js
+/Users/benjaminzawodni/_git/nami-wallet/jest.config.js
+
+### reset dependencies.   If are not updating your packages you can delete the package-lock.json and node_modules
+npm cache clean --force
+rm -rf node_modules
+npm install
+
+### Delete and Reset the prefix
+$ npm config delete prefix 
+$ npm config set prefix $NVM_DIR/versions/node/v???.???
+
+"to-br": "to bottom right",

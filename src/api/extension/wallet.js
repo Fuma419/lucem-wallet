@@ -217,7 +217,7 @@ export const delegationTx = async (account, delegation, protocolParameters) => {
       )
     );
   const poolKeyHash =
-    '2a748e3885f6f73320ad16a8331247b81fe01b8d39f57eec9caa5091'; //BERRY
+    'cf7249855783f4ca98e0d5249da8c0c362dc1de36294f46ccc720fba'; //HODLR
   certificates.add(
     Loader.Cardano.Certificate.new_stake_delegation(
       Loader.Cardano.StakeDelegation.new(

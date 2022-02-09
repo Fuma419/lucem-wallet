@@ -28,7 +28,7 @@ import {
 } from '@chakra-ui/react';
 import { GoStop } from 'react-icons/go';
 // Assets
-import Berry from '../../../assets/img/berry.svg';
+import Logo from '../../../assets/img/Hodler_Green_Icon_round.png';
 import { ERROR } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';
@@ -68,7 +68,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     async initDelegation(account, delegation) {
       if (
         delegation.poolId ===
-        'pool19f6guwy97mmnxg9dz65rxyj8hq07qxud886hamyu4fgfz7dj9gl' // BERRY
+        'pool1eaeynp2hs06v4x8q65jfm2xqcd3dc80rv220gmxvwg8m5sd6e7a' // HODLR
       ) {
         return;
       }
@@ -85,7 +85,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
         if (count >= 5) {
           setData((d) => ({
             ...d,
-            error: 'Transaction not possible (maybe insufficient balance)',
+            error: 'Transaction not possible (2 Ada deposit required)',
           }));
           throw ERROR.txNotPossible;
         }
@@ -205,7 +205,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     <>
       <ConfirmModal
         ready={data.ready}
-        title="Delegate to Berry"
+        title="Delegate to the Hodler Coalition"
         sign={async (password, hw) => {
           if (hw)
             return await signAndSubmitHW(data.tx, {
@@ -258,17 +258,17 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             justifyContent="center"
             flexDirection="column"
           >
-            <Image src={Berry} width="40px" />
+            <Image src={Logo} width="40px" />
             <Box h="4" />
             <Text fontSize="sm">
-              Support the development of Nami Wallet by delegating to{' '}
+              Support a carbon neutral Cardano by delegating to{' '}
               <Link
                 fontWeight="semibold"
-                onClick={() => window.open('https://pipool.online')}
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
               >
-                Berry Pool
+                Hodler Coalition
               </Link>{' '}
-              and earn approximately <b>5%</b> staking rewards per year.
+              while earning around <b>4%</b> staking rewards.
             </Text>
             <Box h="6" />
             {data.error ? (
@@ -578,7 +578,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
               <br />
               <Link
                 fontWeight="semibold"
-                onClick={() => window.open('https://namiwallet.io')}
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
               >
                 Read more
               </Link>

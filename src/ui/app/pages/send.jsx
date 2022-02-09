@@ -424,7 +424,7 @@ const Send = () => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
         ) : (
           <>
@@ -636,7 +636,7 @@ const Send = () => {
                 width={'366px'}
                 height={'50px'}
                 isDisabled={!tx || fee.error}
-                colorScheme="orange"
+                colorScheme="yellow"
                 onClick={() => ref.current.openModal(account.current.index)}
               >
                 {fee.error ? fee.error : 'Send'}
@@ -802,7 +802,7 @@ const AddressPopup = ({
   removeAllAssets,
 }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const checkColor = useColorModeValue('teal.500', 'teal.200');
+  const checkColor = useColorModeValue('yellow.500', 'yellow.200');
   const ref = React.useRef(false);
   const [state, setState] = React.useState({
     currentAccount: null,
@@ -1273,7 +1273,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
                   flexDirection="column"
                   opacity="0.5"
                 >
-                  <Planet size={80} mood="ko" color="#61DDBC" />
+                  <Planet size={60} mood="ko" color="#gray" />
                   <Box height="2" />
                   <Text fontWeight="bold" color="GrayText">
                     No Assets
@@ -1288,7 +1288,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
                 alignItems="center"
                 justifyContent="center"
               >
-                <Spinner color="teal" speed="0.5s" />
+                <Spinner color="yellow" speed="0.5s" />
               </Box>
             )}
           </Box>
@@ -1381,7 +1381,7 @@ const Asset = ({ asset, choice, select, setChoice, onClose, addAssets }) => {
 };
 
 const Selection = ({ select, asset, choice, setChoice }) => {
-  const selectColor = useColorModeValue('orange.500', 'orange.200');
+  const selectColor = useColorModeValue('yellow.500', 'yellow.200');
   return (
     <Box
       rounded="full"

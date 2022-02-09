@@ -42,11 +42,11 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               </Text>
               <p>
                 THIS TERMS OF SERVICE AGREEMENT ("Agreement") is made between
-                Berry ("Cardano stake pool") and any person or entity ("User")
+                Hodler Services ("Cardano stake pool") and any person or entity ("User")
                 who completes the process to download, utilize, or operate the
                 software known as the Nami Wallet application, and data
                 processing service, application, communication service or other
-                content or offered or provided with the software by Berry. Berry
+                content or offered or provided with the software by Hodler Services. Hodler Services
                 and User are collectively referred to as the "Parties." BY
                 CLICKING THE ACCEPTANCE BUTTON OR ACCESSING, USING OR INSTALLING
                 ANY PART OF THE SOFTWARE, USER EXPRESSLY AGREES TO AND CONSENTS
@@ -67,12 +67,12 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 <span style={{ fontSize: 15 }}>a. Description.</span>&nbsp;The
                 Software functions as a free, open source, digital
                 cryptocurrency wallet. The Software does not constitute an
-                account by which Berry or any other third parties serve as
+                account by which Hodler Services or any other third parties serve as
                 financial intermediaries or custodians of User's ADA or any
                 other cryptocurrency. While the Software has undergone beta
                 testing and continues to be improved by feedback from the
                 developers community, open-source contributors and beta-testers,
-                Berry cannot guarantee that there will be no bugs in the
+                Hodler Services cannot guarantee that there will be no bugs in the
                 Software. User acknowledges that User's use of the Software is
                 at User's risk, discretion and in compliance with all applicable
                 laws. User is responsible for safekeeping User's passwords,
@@ -86,7 +86,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 PASSWORD(S), USER ACKNOWLEDGES AND AGREES THAT ANY ADA OR ANY
                 OTHER CRYPTOCURRENCIES USER HAS ASSOCIATED WITH THAT
                 CRYPTOCURRENCY WALLET WILL BECOME INACCESSIBLE. All transaction
-                requests are irreversible. Berry and its shareholders,
+                requests are irreversible. Hodler Services and its shareholders,
                 directors, officers, employees, affiliates and agents cannot
                 guarantee transaction confirmation or retrieve User's private
                 keys or passwords if User loses or forgets them.
@@ -96,9 +96,9 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 &nbsp;User agrees that from time to time the Software may be
                 inaccessible or inoperable for any reason, including, without
                 limitation: (i) equipment malfunctions; (ii) periodic
-                maintenance procedures or repairs which Berry may undertake from
-                time to time; or (iii) causes beyond the control of the Berry or
-                which are not reasonably foreseeable by Berry.
+                maintenance procedures or repairs which Hodler Services may undertake from
+                time to time; or (iii) causes beyond the control of the Hodler Services or
+                which are not reasonably foreseeable by Hodler Services.
               </p>
               <p>
                 <span style={{ fontSize: 15 }}>c. Equipment.</span>&nbsp;User
@@ -122,17 +122,17 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               </p>
               <p>
                 <span style={{ fontSize: 15 }}>e. Privacy.</span>&nbsp;When
-                reasonably practicable, Berry will attempt to respect User's
-                privacy. Berry will not monitor, edit, or disclose any personal
+                reasonably practicable, Hodler Services will attempt to respect User's
+                privacy. Hodler Services will not monitor, edit, or disclose any personal
                 information about User or User's account, including its contents
                 or User's use of the Software, without User's prior consent
-                unless Berry believes in good faith that such action is
+                unless Hodler Services believes in good faith that such action is
                 necessary to: (i) comply with legal process or other legal
                 requirements of any governmental authority; (ii) protect and
-                defend the rights or property Berry; (iii) enforce this
+                defend the rights or property Hodler Services; (iii) enforce this
                 Agreement; (iv) protect the interests of users of the Software
                 other than User or any other person; or (v) operate or conduct
-                maintenance and repair of Berry's services or equipment,
+                maintenance and repair of Hodler Services's services or equipment,
                 including the Software as authorized by law. User has no
                 expectation of privacy with respect to the Internet generally.
                 User's IP address is transmitted and recorded with each message
@@ -153,11 +153,11 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 3. User Representations
               </Text>
               <p>
-                User represents and warrants to Berry that: (a) if User is a
+                User represents and warrants to Hodler Services that: (a) if User is a
                 natural person, User is over the age of eighteen (18); (b) User
                 has the power and authority to enter into and perform User's
                 obligations under this Agreement; (c) all information provided
-                by User to Berry is truthful, accurate and complete; (d) User
+                by User to Hodler Services is truthful, accurate and complete; (d) User
                 will comply with all laws and regulations of any applicable
                 jurisdiction with regard to User's access, use or installation
                 of the Software; (e) User shall comply with all terms and
@@ -217,10 +217,10 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               <p>
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
                 EXPRESS OR IMPLIED. USE OF THE SOFTWARE IS AT USER'S SOLE RISK.
-                BERRY DOES NOT WARRANT THAT THE SOFTWARE WILL BE UNINTERRUPTED
-                OR ERROR FREE, NOR DOES BERRY MAKE ANY WARRANTY AS TO ANY
-                RESULTS THAT MAY BE OBTAINED BY USE OF THE SOFTWARE. BERRY MAKES
-                NO OTHER WARRANTIES, EXPRESS OR IMPLIED. BERRY EXPRESSLY
+                Hodler Services DOES NOT WARRANT THAT THE SOFTWARE WILL BE UNINTERRUPTED
+                OR ERROR FREE, NOR DOES Hodler Services MAKE ANY WARRANTY AS TO ANY
+                RESULTS THAT MAY BE OBTAINED BY USE OF THE SOFTWARE. Hodler Services MAKES
+                NO OTHER WARRANTIES, EXPRESS OR IMPLIED. Hodler Services EXPRESSLY
                 DISCLAIMS ANY WARRANTY OF MERCHANTABILITY, WARRANTY OF
                 SUITABILITY FOR A PARTICULAR PURPOSE, WARRANTY OF TITLE OR
                 INTEREST, OR WARRANTY OF NONINFRINGEMENT.
@@ -234,7 +234,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 7. Limitation of Liability
               </Text>
               <p>
-                IN NO EVENT SHALL BERRY OR ITS SHAREHOLDERS, DIRECTORS,
+                IN NO EVENT SHALL Hodler Services OR ITS SHAREHOLDERS, DIRECTORS,
                 OFFICERS, EMPLOYEES, AFFILIATES OR AGENTS, OR ANY OF ITS OR
                 THEIR RESPECTIVE SERVICE PROVIDERS, BE LIABLE TO USER OR ANY
                 THIRD PARTY FOR ANY USE, INTERRUPTION, DELAY OR INABILITY TO USE
@@ -250,7 +250,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 THIS AGREEMENT, BREACH OF CONTRACT, TORT (INCLUDING NEGLIGENCE)
                 OR OTHERWISE, REGARDLESS OF WHETHER SUCH DAMAGES WERE
                 FORESEEABLE AND WHETHER OR NOT WE WERE ADVISED OF THE
-                POSSIBILITY OF SUCH DAMAGES. IN NO EVENT SHALL BERRY OR ITS
+                POSSIBILITY OF SUCH DAMAGES. IN NO EVENT SHALL Hodler Services OR ITS
                 SHAREHOLDERS, DIRECTORS, OFFICERS, EMPLOYEES, AFFILIATES OR
                 AGENTS, OR ANY OF ITS OR THEIR RESPECTIVE SERVICE PROVIDERS, BE
                 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
@@ -266,7 +266,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 8. Indemnification
               </Text>
               <p>
-                User agrees to indemnify, hold harmless and defend Berry, its
+                User agrees to indemnify, hold harmless and defend Hodler Services, its
                 shareholders, directors, officers, employees, affiliates and
                 agents ("Indemnified Parties") from and against any action,
                 cause, claim, damage, debt, demand or liability, including
@@ -278,9 +278,9 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 without limitation, any statement, data or content made,
                 transmitted or republished by User or any person which is
                 prohibited as unacceptable under Section 4. THIS INDEMNIFICATION
-                INCLUDES THE EXPRESS INDEMNIFICATION OF BERRY AND ALL
+                INCLUDES THE EXPRESS INDEMNIFICATION OF Hodler Services AND ALL
                 INDEMNIFIED PARTIES FOR ANY ALLEGED NEGLIGENCE (INCLUDING ANY
-                ALLEGED GROSS NEGLIGENCE). OR OTHER ALLEGED MISCONDUCT OF BERRY
+                ALLEGED GROSS NEGLIGENCE). OR OTHER ALLEGED MISCONDUCT OF Hodler Services
                 OR ANY INDEMNIFIED PARTIES.
               </p>
               <Text
@@ -292,9 +292,9 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 9. Intellectual Property
               </Text>
               <p>
-                Berry retains all right, title, and interest in and to all of
-                Berry's brands, logos, and trademarks, including, but not
-                limited to Berry, Berry Pool, Nami, Nami Wallet, Nami App, and
+                Hodler Services retains all right, title, and interest in and to all of
+                Hodler Services's brands, logos, and trademarks, including, but not
+                limited to Hodler Services, Hodler Services Pool, Nami, Nami Wallet, Nami App, and
                 variations of the wording of the aforementioned brands, logos,
                 and trademarks.
               </p>
@@ -302,41 +302,41 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 10. Warnings
               </Text>
               <p>
-                User acknowledges that Berry shall not be responsible for
+                User acknowledges that Hodler Services shall not be responsible for
                 transferring, safeguarding, or maintaining private keys and/or
                 User's ADA or any other cryptocurrency. If User and/or any
                 co-signing authorities lose, mishandle, or have stolen
                 associated private keys, or if User's cosigners refuse to
                 provide requisite authority, User acknowledges that User may not
                 be able to recover User's ADA or any other cryptocurrency, and
-                that Berry shall not be responsible for such loss.
+                that Hodler Services shall not be responsible for such loss.
               </p>
               <p>
                 User acknowledges and agrees that ADA or any other
                 cryptocurrency transactions facilitated by the Software and/or
-                Berry may be delayed, and that Berry shall not be responsible
-                for any associated loss. User acknowledges and agrees that Berry
+                Hodler Services may be delayed, and that Hodler Services shall not be responsible
+                for any associated loss. User acknowledges and agrees that Hodler Services
                 shall not be responsible for any aspect of the information,
                 content, or services contained in any third-party materials or
                 on any third party sites accessible or linked to the Software
-                and/or Berry.
+                and/or Hodler Services.
               </p>
               <p>
                 By using the Software, User acknowledges and agrees: (i) that
-                Berry is not responsible for the operation of the underlying
-                protocols and that Berry makes no guarantee of their
+                Hodler Services is not responsible for the operation of the underlying
+                protocols and that Hodler Services makes no guarantee of their
                 functionality, security, or availability; and (ii) that the
                 underlying protocols are subject to sudden main-chain changes in
                 operating rules ("forks"), and that such forks may materially
                 affect the value, and/or function of the ADA or any other
                 cryptocurrency that User stores on the Software. In the event of
-                a fork, User agrees that Berry may temporarily suspend the
+                a fork, User agrees that Hodler Services may temporarily suspend the
                 Software operations (with or without notice to User) and that
-                Berry may, in its sole discretion, (a) configure or reconfigure
+                Hodler Services may, in its sole discretion, (a) configure or reconfigure
                 its systems or (b) decide not to support (or cease supporting)
                 the forked protocol entirely, provided, however, that User will
                 have an opportunity to withdraw funds from the Software. User
-                acknowledges and agrees that Berry assumes absolutely no
+                acknowledges and agrees that Hodler Services assumes absolutely no
                 responsibility whatsoever in respect of an unsupported branch of
                 a forked protocol.
               </p>
@@ -344,11 +344,11 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 11. Miscellaneous
               </Text>
               <p>
-                <span style={{ fontSize: 15 }}>a. Amendment.</span>&nbsp;Berry
+                <span style={{ fontSize: 15 }}>a. Amendment.</span>&nbsp;Hodler Services
                 shall have the right, at any time and without notice, to add to
                 or modify the terms of this Agreement, simply by delivering such
                 amended terms to User by electronic message through any medium
-                to any address provided to Berry by User. User's access to or
+                to any address provided to Hodler Services by User. User's access to or
                 use of the Software after the date such amended terms are
                 delivered to User shall be deemed to constitute acceptance of
                 such amended terms.
@@ -417,10 +417,10 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               <p>
                 12.2&nbsp;<span style={{ fontSize: 15 }}>Delegation.</span>
                 &nbsp;Users may delegate their stake to one of the various stake
-                pools of Berry or to a third party stake pool. User will have
+                pools of Hodler Services or to a third party stake pool. User will have
                 the sole right to determine the volume to be delegated to a
                 stake pool and may increase or decrease its level of
-                participation at any time. Any information Berry shares
+                participation at any time. Any information Hodler Services shares
                 regarding stakepools, including Rewards, will be for indicative
                 purposes only and may not be accurate. Users may only delegate
                 their stake to a stake pool if their ada is in an updated Nami
@@ -429,11 +429,11 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 stake.
               </p>
               <p>
-                12.3&nbsp;<span style={{ fontSize: 15 }}>Berry Pool</span>
-                &nbsp;Berry operates the Berry stake pool which will be visible
+                12.3&nbsp;<span style={{ fontSize: 15 }}>Hodler Services Pool</span>
+                &nbsp;Hodler Services operates the Hodler Services stake pool which will be visible
                 in Nami. The cost and network and server requirements to
-                reliably operate such stake pools shall be determined by Berry
-                in its sole discretion. Berry will communicate the percentage
+                reliably operate such stake pools shall be determined by Hodler Services
+                in its sole discretion. Hodler Services will communicate the percentage
                 amount of Reward to be shared with Users through the
                 User&rsquo;s Nami wallet. Rewards will accrue at the end of each
                 epoch and will automatically appear in the User&rsquo;s Nami

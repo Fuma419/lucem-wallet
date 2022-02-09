@@ -3,7 +3,7 @@ import { Spinner } from '@chakra-ui/spinner';
 import { Accordion, Button } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import React from 'react';
-import { File } from 'react-kawaii';
+import { Planet } from 'react-kawaii';
 import {
   getTransactions,
   setTransactions,
@@ -85,7 +85,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
           flexDirection="column"
           opacity="0.5"
         >
-          <File size={80} mood="ko" color="#61DDBC" />
+          <Planet size={60} mood="ko" color="gray" />
           <Box height="2" />
           <Text fontWeight="bold" color="GrayText">
             No History
@@ -149,7 +149,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
 
 const HistorySpinner = () => (
   <Box mt="28" display="flex" alignItems="center" justifyContent="center">
-    <Spinner color="teal" speed="0.5s" />
+    <Spinner color="yellow" speed="0.5s" />
   </Box>
 );
 

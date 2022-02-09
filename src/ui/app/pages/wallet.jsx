@@ -96,8 +96,9 @@ import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 
 // Assets
-import Logo from '../../../assets/img/logoWhite.svg';
-
+//import Logo from '../../../assets/img/cardanoWhite.png';
+import LogoWhite from '../../../assets/img/cardanoWhite.png';
+import LogoYellow from '../../../assets/img/cardanoYellow.png';
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
   React.useEffect(() => {
@@ -111,8 +112,9 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const history = useHistory();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('white', 'gray.700');
-  const panelBg = useColorModeValue('#349EA3', 'gray.800');
+  const avatarBg = useColorModeValue('white', 'yellow.500');
+  const panelBg = useColorModeValue('yellow.600', 'gray.800');
+  const Logo = useColorModeValue(LogoWhite, LogoYellow);
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -252,7 +254,7 @@ const Wallet = () => {
             alignItems="center"
             justifyContent="center"
           >
-            <Image draggable={false} width="30px" src={Logo} />
+            <Image draggable={false} width="60px" src={Logo} />
           </Box>
           {/* Delegation */}
           <Box zIndex="1" position="absolute" width="full" bottom="5" left="6">
@@ -277,6 +279,7 @@ const Wallet = () => {
                       variant="solid"
                       size="xs"
                       colorScheme="whiteAlpha"
+                      textColor="gray"
                       rounded="lg"
                     >
                       Delegate
@@ -435,7 +438,7 @@ const Wallet = () => {
                   icon={<AddIcon />}
                   onClick={() => newAccountRef.current.openModal()}
                 >
-                  New Account
+                  New Wallet
                 </MenuItem>
                 {state.account &&
                   state.accounts &&
@@ -449,7 +452,7 @@ const Wallet = () => {
                       icon={<DeleteIcon />}
                       onClick={() => deletAccountRef.current.openModal()}
                     >
-                      Delete Account
+                      Remove Wallet
                     </MenuItem>
                   )}
                 <MenuItem
@@ -628,10 +631,11 @@ const Wallet = () => {
               <PopoverTrigger>
                 <Button
                   rightIcon={<Icon as={BsArrowDownRight} />}
-                  colorScheme="teal"
+                  colorScheme="yellow"
                   size="sm"
                   rounded="xl"
                   shadow="md"
+                  textColor="gray"
                 >
                   Receive
                 </Button>
@@ -680,8 +684,9 @@ const Wallet = () => {
               size="sm"
               rounded="xl"
               rightIcon={<Icon as={BsArrowUpRight} />}
-              colorScheme="orange"
+              colorScheme="yellow"
               shadow="md"
+              textColor="gray"
             >
               Send
             </Button>
@@ -696,7 +701,7 @@ const Wallet = () => {
           display="flex"
           flexDirection="column"
           variant="soft-rounded"
-          colorScheme="teal"
+          colorScheme="yellow"
         >
           <TabList>
             <Tab mr={2}>
@@ -791,9 +796,11 @@ const NewAccountModal = React.forwardRef((props, ref) => {
         <ModalHeader fontSize="md">
           {' '}
           <Box display="flex" alignItems="center">
-            <Icon as={BiWallet} mr="2" /> <Box>Create new account</Box>
+            <Icon as={BiWallet} mr="2" />
+            <Box>Attaching new wallet to the current seed phrase</Box>
           </Box>
         </ModalHeader>
+        
         <ModalCloseButton />
         <ModalBody px="10">
           <Input

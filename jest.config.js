@@ -6,7 +6,7 @@ module.exports = {
     '^(.*)@emurgo/cardano-message-signing-browser(.*)$':
       '$1@emurgo/cardano-message-signing-nodejs$2',
     // blockfrost keys
-    secrets: '../../secrets.testing.js',
+    secrets: 'secrets.development.js',
   },
   modulePathIgnorePatterns: ['<rootDir>/temporary_modules'],
   transform: {

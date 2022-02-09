@@ -44,7 +44,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 THIS TERMS OF SERVICE AGREEMENT ("Agreement") is made between
                 Hodler Services ("Cardano stake pool") and any person or entity ("User")
                 who completes the process to download, utilize, or operate the
-                software known as the Nami Wallet application, and data
+                software known as the Lucem Wallet application, and data
                 processing service, application, communication service or other
                 content or offered or provided with the software by Hodler Services. Hodler Services
                 and User are collectively referred to as the "Parties." BY
@@ -294,7 +294,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               <p>
                 Hodler Services retains all right, title, and interest in and to all of
                 Hodler Services's brands, logos, and trademarks, including, but not
-                limited to Hodler Services, Hodler Services Pool, Nami, Nami Wallet, Nami App, and
+                limited to Hodler Services, Hodler Services Pool, Lucem, Lucem Wallet, Lucem App, and
                 variations of the wording of the aforementioned brands, logos,
                 and trademarks.
               </p>
@@ -423,7 +423,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 participation at any time. Any information Hodler Services shares
                 regarding stakepools, including Rewards, will be for indicative
                 purposes only and may not be accurate. Users may only delegate
-                their stake to a stake pool if their ada is in an updated Nami
+                their stake to a stake pool if their ada is in an updated Lucem
                 Wallet at the time of the setup process. User does not acquire
                 any automatic right to Rewards as a result of delegating its
                 stake.
@@ -431,12 +431,12 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               <p>
                 12.3&nbsp;<span style={{ fontSize: 15 }}>Hodler Services Pool</span>
                 &nbsp;Hodler Services operates the Hodler Services stake pool which will be visible
-                in Nami. The cost and network and server requirements to
+                in Lucem. The cost and network and server requirements to
                 reliably operate such stake pools shall be determined by Hodler Services
                 in its sole discretion. Hodler Services will communicate the percentage
                 amount of Reward to be shared with Users through the
-                User&rsquo;s Nami wallet. Rewards will accrue at the end of each
-                epoch and will automatically appear in the User&rsquo;s Nami
+                User&rsquo;s Lucem Wallet. Rewards will accrue at the end of each
+                epoch and will automatically appear in the User&rsquo;s Lucem
                 wallet.
               </p>
               <p>

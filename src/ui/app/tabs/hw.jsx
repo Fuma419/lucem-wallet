@@ -108,7 +108,7 @@ const ConnectHW = ({ onConfirm }) => {
       </Text>
       <Box h={6} />
       <Text width="300px">
-        Choose the hardware wallet you would like to use with Nami.
+        Choose the hardware wallet you would like to use with Lucem.
       </Text>
       <Box h={8} />
       <Box display="flex" alignItems="center" justifyContent="center">

@@ -67,12 +67,12 @@ export const BalanceWarning = ({ fullBalance, symbol }) => {
             </Box>
             <Text mb="5px">
               To remove this warning and prevent any issue using{' '}
-              <strong>Nami Wallet</strong>, consider the following options:
+              <strong>Lucem Wallet</strong>, consider the following options:
             </Text>
             <UnorderedList mb="15px">
               <ListItem pb="10px">
                 Internal transfer of your complete balance from your usual
-                wallet to your <strong>Nami Wallet</strong> receive address.
+                wallet to your <strong>Lucem Wallet</strong> receive address.
               </ListItem>
               <ListItem>
                 Creating a brand new wallet that will be used only with this

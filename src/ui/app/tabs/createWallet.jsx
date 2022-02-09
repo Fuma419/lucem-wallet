@@ -578,7 +578,7 @@ const SeedDrop = ({ onLoad, ...props }) => {
                 'Invalid file'
               ) : (
                 <span>
-                  From Nami file <Icon ml="2" as={BsFileEarmark} />
+                  From Lucem file <Icon ml="2" as={BsFileEarmark} />
                 </span>
               )}
             </Box>

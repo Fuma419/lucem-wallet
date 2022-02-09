@@ -1,8 +1,8 @@
-<p align="center"><img width="200px" src="./src/assets/img/bannerBlack.svg"></img></p>
+<p align="center"><img width="200px" src="./src/assets/img/cardanoYellow.png"></img></p>
 
-# Nami
+# Lucem
 
-Nami is a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project and built by [**Berry Pool**](https://pipool.online).
+Lucem is a fork of Nami, a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project and built by [**Berry Pool**](https://pipool.online).
 
 ### Injected API
 
@@ -230,16 +230,3 @@ Visit [namiwallet.io](https://namiwallet.io)<br/>
 Visit [Berry Pool](https://pipool.online)
 
 
-/Users/benjaminzawodni/_git/nami-wallet/secrets.testing.js
-/Users/benjaminzawodni/_git/nami-wallet/jest.config.js
-
-### reset dependencies.   If are not updating your packages you can delete the package-lock.json and node_modules
-npm cache clean --force
-rm -rf node_modules
-npm install
-
-### Delete and Reset the prefix
-$ npm config delete prefix 
-$ npm config set prefix $NVM_DIR/versions/node/v???.???
-
-"to-br": "to bottom right",

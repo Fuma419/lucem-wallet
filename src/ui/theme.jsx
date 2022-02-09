@@ -119,7 +119,7 @@ const theme = extendTheme({
     Switch,
   },
   config: {
-    useSystemColorMode: colorMode ? false : true,
+    useSystemColorMode: colorMode ? true : false,
   },
   styles: {
     global: {

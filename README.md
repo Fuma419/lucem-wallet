@@ -2,7 +2,7 @@
 
 # Lucem
 
-Lucem is a fork of Nami, a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project and built by [**Berry Pool**](https://pipool.online).
+Lucem is a fork of Nami, a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project built by [**Berry Pool**](https://pipool.online) with contributions by [**Hodler Staking**](https://www.hodlerstaking.com/)
 
 ### Injected API
 
@@ -226,7 +226,7 @@ npm test
 
 ### Website
 
-Visit [namiwallet.io](https://namiwallet.io)<br/>
+Visit [Hodler Staking](https://www.hodlerstaking.com/)<br/>
 Visit [Berry Pool](https://pipool.online)
 
 

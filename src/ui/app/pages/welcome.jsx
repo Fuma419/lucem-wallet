@@ -65,7 +65,7 @@ const Welcome = () => {
           textAlign="center"
           lineHeight="1.2"
         >
-          Let's get started with a wallet.
+          All accounts requires a seed phrase.
         </Text>
         <Box h="8" />
         <Box height="8" />
@@ -77,7 +77,7 @@ const Welcome = () => {
           colorScheme="teal"
           size="md"
         >
-          New Wallet
+          New Seed
         </Button>
         <Box height="4" />
         <Button
@@ -87,7 +87,7 @@ const Welcome = () => {
           colorScheme="gray"
           size="sm"
         >
-          Import
+          Import Seed
         </Button>
       </Box>
       <WalletModal ref={refWallet} />

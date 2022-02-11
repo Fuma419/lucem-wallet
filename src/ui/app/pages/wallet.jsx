@@ -652,7 +652,7 @@ const Wallet = () => {
                 >
                   <>
                     <Box>
-                      <QrCode value={info.paymentAddr} />
+                      <QrCode value={"https://cardanoscan.io/address/" + info.paymentAddr} />
                     </Box>
                     <Box height="4" />
                     <Copy label="Copied address" copy={info.paymentAddr}>

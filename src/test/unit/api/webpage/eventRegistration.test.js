@@ -66,7 +66,7 @@ describe('webpage/eventRegistring', () => {
     test('clean out matching callbacks fom the given event', () => {
       off(mockEventType, mockCallback);
 
-      expect(window.cardano.nami._events).toEqual({
+      expect(window.cardano.lucem._events).toEqual({
         [mockEventType]: [],
       });
     });

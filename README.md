@@ -11,8 +11,8 @@ The exposed API follows [CIP-0030](https://github.com/cardano-foundation/CIPs/tr
 
 #### Basic Usage
 
-- Detect the Cardano provider (`window.cardano`) and detect Nami (`window.cardano.nami`)
-- Request the `api` from `window.cardano.nami.enable()`
+- Detect the Cardano provider (`window.cardano`) and detect Nami (`window.cardano.lucem`)
+- Request the `api` from `window.cardano.lucem.enable()`
 - Detect which Cardano network the user is connected to (ID 1 = Mainnet, ID 0 = Testnet)
 - Get the user's Cardano account
 

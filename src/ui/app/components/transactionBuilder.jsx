@@ -28,7 +28,7 @@ import {
 } from '@chakra-ui/react';
 import { GoStop } from 'react-icons/go';
 // Assets
-import Logo from '../../../assets/img/Hodler_Green_Icon_round.png';
+import Logo from '../../../assets/img/cardanoYellow.png';
 import { ERROR } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';
@@ -261,7 +261,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             <Image src={Logo} width="40px" />
             <Box h="4" />
             <Text fontSize="sm">
-              Support a carbon neutral Cardano by delegating to{' '}
+              Support a carbon neutral Cardano by delegating to the{' '}
               <Link
                 fontWeight="semibold"
                 onClick={() => window.open('https://www.hodlerstaking.com/')}

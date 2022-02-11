@@ -20,10 +20,10 @@ const qrCode = new QRCodeStyling({
 
 const QrCode = ({ value }) => {
   const ref = React.useRef(null);
-  const bgColor = useColorModeValue('white', '#2D3748');
+  const bgColor = useColorModeValue('white', 'white');
   const contentColor = useColorModeValue(
-    { corner: '#DD6B20', dots: '#319795' },
-    { corner: '#FBD38D', dots: '#81E6D9' }
+    { corner: 'gray', dots: '#000000' },
+    { corner: 'yellow', dots: 'gray.800' }
   );
 
   React.useEffect(() => {

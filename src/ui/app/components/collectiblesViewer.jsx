@@ -118,7 +118,7 @@ export const CollectibleModal = React.forwardRef(({ onUpdateAvatar }, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [asset, setAsset] = React.useState(null);
   const [fallback, setFallback] = React.useState(false); // remove short flickering where image is not instantly loaded
-  const background = useColorModeValue('white', 'gray.800');
+  const background = useColorModeValue('white', 'gray.900');
   const dividerColor = useColorModeValue('gray.200', 'gray.700');
   const [value, setValue] = [
     useStoreState((state) => state.globalModel.sendStore.value),

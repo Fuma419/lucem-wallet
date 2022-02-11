@@ -221,7 +221,7 @@ const GeneralSettings = ({ accountRef }) => {
         }}
         rightIcon={<SunIcon ml="2" />}
       >
-        {colorMode == 'dark' ? 'Light' : 'Dark'}
+        {colorMode == 'dark' ? 'Dark' : 'Light'}
       </Button>
 
       <Box height="6" />

@@ -113,7 +113,7 @@ const Wallet = () => {
   const history = useHistory();
   const settings = useStoreState((state) => state.settings.settings);
   const avatarBg = useColorModeValue('white', 'yellow.500');
-  const panelBg = useColorModeValue('yellow.600', 'gray.800');
+  const panelBg = useColorModeValue('yellow.600', 'gray.900');
   const Logo = useColorModeValue(LogoWhite, LogoYellow);
   const [state, setState] = React.useState({
     account: null,
@@ -319,7 +319,7 @@ const Wallet = () => {
                 </Box>
               </MenuButton>
               <MenuList fontSize="xs">
-                <MenuGroup title="Accounts">
+                <MenuGroup title="Wallets">
                   <Scrollbars
                     style={{ width: '100%' }}
                     autoHeight

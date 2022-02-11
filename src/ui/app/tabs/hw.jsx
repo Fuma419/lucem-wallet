@@ -22,8 +22,8 @@ import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import TrezorConnect from '../../../../temporary_modules/trezor-connect';
 
 // assets
-import LogoOriginal from '../../../assets/img/Hodler_Green_Icon_round.svg';
-import LogoWhite from '../../../assets/img/Hodler_Green_Icon_round.svg';
+import LogoOriginal from '../../../assets/img/cardanoYellow.png';
+import LogoWhite from '../../../assets/img/cardanoYellow.png';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import TrezorLogo from '../../../assets/img/trezorLogo.svg';
 import { CheckCircleIcon, ChevronRightIcon } from '@chakra-ui/icons';

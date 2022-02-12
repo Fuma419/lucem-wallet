@@ -12,7 +12,7 @@ describe('webpage/eventRegistring', () => {
   describe('on', () => {
     beforeEach(() => {
       window.cardano = {
-        nami: {
+        lucem: {
           _events: {},
         },
       };
@@ -55,7 +55,7 @@ describe('webpage/eventRegistring', () => {
       jest.resetAllMocks();
 
       window.cardano = {
-        nami: {
+        lucem: {
           _events: {
             [mockEventType]: [[mockCallback, mockHandler]],
           },

@@ -23,7 +23,7 @@ const QrCode = ({ value }) => {
   const bgColor = useColorModeValue('white', 'white');
   const contentColor = useColorModeValue(
     { corner: 'gray', dots: '#000000' },
-    { corner: 'yellow', dots: 'gray.800' }
+    { corner: 'black', dots: 'gray.800' }
   );
 
   React.useEffect(() => {

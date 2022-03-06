@@ -19,7 +19,7 @@ import { mnemonicToEntropy } from 'bip39';
 import cryptoRandomString from 'crypto-random-string';
 import Loader from '../loader';
 import { createAvatar } from '@dicebear/avatars';
-import * as style from '@dicebear/avatars-bottts-sprites';
+import * as style from '@dicebear/avatars-gridy-sprites';
 import { initTx } from './wallet';
 import {
   blockfrostRequest,

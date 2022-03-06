@@ -257,7 +257,7 @@ const Wallet = () => {
             <Image draggable={false} width="60px" src={Logo} />
           </Box>
           {/* Delegation */}
-          <Box zIndex="1" position="absolute" width="full" bottom="5" left="6">
+          <Box zIndex="1" position="absolute" width="full" bottom="5" left="170">
             {state.delegation && (
               <>
                 {state.delegation.active ? (
@@ -623,7 +623,7 @@ const Wallet = () => {
 
           <Box
             position="absolute"
-            style={{ top: 186, right: 134 }}
+            style={{ top: 186, left: 24 }}
             width="20"
             height="8"
           >
@@ -917,7 +917,7 @@ const DelegationPopover = ({ account, delegation, children }) => {
   const withdrawRef = React.useRef();
   return (
     <>
-      <Popover matchWidth={true} offset={[80, 8]}>
+      <Popover matchWidth={true} offset={[0, 8]}>
         <PopoverTrigger>
           <Button
             style={{

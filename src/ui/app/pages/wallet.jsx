@@ -112,7 +112,8 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const history = useHistory();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('white', 'yellow.500');
+  const avatarBg = useColorModeValue('white', 'yellow.800');
+  const textColor = useColorModeValue('gray.500', 'white');
   const panelBg = useColorModeValue('yellow.600', 'gray.900');
   const Logo = useColorModeValue(LogoWhite, LogoYellow);
   const [state, setState] = React.useState({
@@ -279,7 +280,7 @@ const Wallet = () => {
                       variant="solid"
                       size="xs"
                       colorScheme="whiteAlpha"
-                      textColor="gray"
+                      textColor={textColor}
                       rounded="lg"
                     >
                       Delegate
@@ -494,7 +495,7 @@ const Wallet = () => {
             justifyContent="center"
           >
             <Text
-              color="white"
+              color={textColor}
               fontSize="lg"
               isTruncated={true}
               maxWidth="210px"
@@ -517,7 +518,7 @@ const Wallet = () => {
               />
             )}
             <UnitDisplay
-              color="white"
+              color={textColor}
               fontSize="2xl"
               fontWeight="bold"
               quantity={
@@ -575,7 +576,7 @@ const Wallet = () => {
               >
                 <InfoOutlineIcon
                   cursor="help"
-                  color="white"
+                  color={textColor}
                   ml="10px"
                   width="14px"
                   height="14px"
@@ -595,7 +596,7 @@ const Wallet = () => {
             justifyContent="center"
           >
             <UnitDisplay
-              color="white"
+              color={textColor}
               fontSize="md"
               quantity={
                 state.account &&
@@ -631,11 +632,11 @@ const Wallet = () => {
               <PopoverTrigger>
                 <Button
                   rightIcon={<Icon as={BsArrowDownRight} />}
-                  colorScheme="yellow"
+                  colorScheme="gray"
                   size="sm"
                   rounded="xl"
                   shadow="md"
-                  textColor="gray"
+                  textColor={textColor}
                 >
                   Receive
                 </Button>
@@ -684,9 +685,9 @@ const Wallet = () => {
               size="sm"
               rounded="xl"
               rightIcon={<Icon as={BsArrowUpRight} />}
-              colorScheme="yellow"
+              colorScheme="gray"
               shadow="md"
-              textColor="gray"
+              textColor={textColor}
             >
               Send
             </Button>
@@ -701,7 +702,7 @@ const Wallet = () => {
           display="flex"
           flexDirection="column"
           variant="soft-rounded"
-          colorScheme="yellow"
+          colorScheme="gray"
         >
           <TabList>
             <Tab mr={2}>
@@ -915,6 +916,8 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
 const DelegationPopover = ({ account, delegation, children }) => {
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
+  const avatarBg = useColorModeValue('white', 'yellow.800');
+  const textColor = useColorModeValue('gray.500', 'white');
   return (
     <>
       <Popover matchWidth={true} offset={[0, 8]}>
@@ -926,7 +929,7 @@ const DelegationPopover = ({ account, delegation, children }) => {
               border: 'none',
               outline: 'none',
               cursor: 'pointer',
-              color: 'white',
+              color: '#383838',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -983,7 +986,8 @@ const DelegationPopover = ({ account, delegation, children }) => {
                     withdrawRef.current.initWithdrawal(account, delegation)
                   }
                   isDisabled={BigInt(delegation.rewards) < BigInt('2000000')}
-                  colorScheme="teal"
+                  colorScheme="gray"
+                  textColor={textColor}
                   size="sm"
                 >
                   Withdraw

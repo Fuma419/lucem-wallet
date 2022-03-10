@@ -94,9 +94,9 @@ const theme = extendTheme({
       400: "#A1A1A1",
       500: "#383838",
       600: "#787877",
-      700: "#262229",
-      800: "#262229",
-      900: "#262229",
+      700: "#1B1C1E",
+      800: "#1B1C1E",
+      900: "#1B1C1E",
     },
     orange: { 
       100: "#E8AA00",
@@ -119,7 +119,7 @@ const theme = extendTheme({
     Switch,
   },
   config: {
-    useSystemColorMode: colorMode ? true : false,
+    useSystemColorMode: colorMode ? false : true,
   },
   styles: {
     global: {

@@ -46,11 +46,11 @@ TimeAgo.addDefaultLocale(en);
 
 const txTypeColor = {
   self: 'gray.500',
-  internalIn: 'yellow.500',
-  externalIn: 'yellow.500',
+  internalIn: 'yellow.800',
+  externalIn: 'yellow.800',
   internalOut: 'orange.500',
   externalOut: 'orange.500',
-  withdrawal: 'yellow.400',
+  withdrawal: 'yellow.800',
   delegation: 'purple.500',
   stake: 'cyan.700',
   unstake: 'red.400',
@@ -58,7 +58,7 @@ const txTypeColor = {
   poolRetire: 'red.400',
   mint: 'cyan.500',
   multisig: 'pink.400',
-  contract: 'yellow.400',
+  contract: 'yellow.800',
 };
 
 const txTypeLabel = {
@@ -101,6 +101,8 @@ const Transaction = ({
     txBg: useColorModeValue('yellow.50', 'gray.700'),
     txBgHover: useColorModeValue('yellow.100', 'gray.600'),
     assetsBtnHover: useColorModeValue('yellow.200', 'gray.700'),
+    textColor: useColorModeValue('gray.500', 'white')
+
   };
 
   const getTxDetail = async () => {

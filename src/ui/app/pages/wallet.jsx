@@ -89,9 +89,9 @@ import { currencyToSymbol } from '../../../api/util';
 import TransactionBuilder from '../components/transactionBuilder';
 import { NETWORK_ID, TAB } from '../../../config/config';
 import { BalanceWarning } from '../components/balanceWarning';
-import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
+import { FaRegFileCode } from 'react-icons/fa';
 import { BiWallet } from 'react-icons/bi';
-import { GiTwoCoins, GiUsbKey } from 'react-icons/gi';
+import { GiGlowingArtifact, GiTwoCoins, GiUsbKey } from 'react-icons/gi';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 
@@ -112,9 +112,9 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const history = useHistory();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('white', 'yellow.800');
+  const avatarBg = useColorModeValue('white', 'yellow.500');
   const textColor = useColorModeValue('gray.500', 'white');
-  const panelBg = useColorModeValue('yellow.600', 'gray.900');
+  const panelBg = useColorModeValue('yellow.500', 'gray.900');
   const Logo = useColorModeValue(LogoWhite, LogoYellow);
   const [state, setState] = React.useState({
     account: null,
@@ -709,7 +709,7 @@ const Wallet = () => {
               <Icon as={GiTwoCoins} boxSize={5} />
             </Tab>
             <Tab mr={2}>
-              <Icon as={FaGamepad} boxSize={5} />
+              <Icon as={GiGlowingArtifact} boxSize={5} />
             </Tab>
             <Tab>
               <Icon as={BsClockHistory} boxSize={5} />
@@ -916,7 +916,6 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
 const DelegationPopover = ({ account, delegation, children }) => {
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
-  const avatarBg = useColorModeValue('white', 'yellow.800');
   const textColor = useColorModeValue('gray.500', 'white');
   return (
     <>
@@ -929,7 +928,7 @@ const DelegationPopover = ({ account, delegation, children }) => {
               border: 'none',
               outline: 'none',
               cursor: 'pointer',
-              color: '#383838',
+              color: textColor,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

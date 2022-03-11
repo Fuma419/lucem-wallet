@@ -56,16 +56,16 @@ const Welcome = () => {
         </Box>
         <Box h="3" />
         <Text fontWeight="medium" fontSize="3xl">
-          Welcome
+          Lucem
         </Text>
         <Text
           color="gray"
           fontWeight="light"
           fontSize="sm"
           textAlign="center"
-          lineHeight="1.2"
+          lineHeight="1.5"
         >
-          All accounts requires a seed phrase.
+          Simple Secure Cardano
         </Text>
         <Box h="8" />
         <Box height="8" />
@@ -118,7 +118,7 @@ const WalletModal = React.forwardRef((props, ref) => {
           <ModalBody>
             <Text fontSize="sm">
               Make sure no one is watching the screen, while the seed phrase is
-              visible. <ViewIcon />
+              visible. It is highly recomended to record and secure this seed phrase offline. It is not recoverable.<ViewIcon />
             </Text>
             <Box h="4" />
             <Box display="flex" alignItems="center" justifyContent="center">

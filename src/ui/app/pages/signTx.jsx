@@ -701,7 +701,7 @@ const SignTx = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 isDisabled={isLoading.loading || isLoading.error}
-                colorScheme="teal"
+                colorScheme="yellow"
                 onClick={() => ref.current.openModal(account.index)}
               >
                 Sign

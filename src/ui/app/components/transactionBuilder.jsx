@@ -28,7 +28,7 @@ import {
 } from '@chakra-ui/react';
 import { GoStop } from 'react-icons/go';
 // Assets
-import Logo from '../../../assets/img/cardanoYellow.png';
+import Logo from '../../../assets/img/hodlr-android-chrome-192x192.png';
 import { ERROR } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';

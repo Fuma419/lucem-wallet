@@ -91,9 +91,9 @@ const AssetsViewer = ({ assets }) => {
           </>
         )}
       </Box>
-      <Box position="absolute" left="6" top="240px">
+      {/*<Box position="absolute" left="6" top="240px">
         <Search setSearch={setSearch} assets={assets} />
-      </Box>
+      </Box>*/}
     </>
   );
 };

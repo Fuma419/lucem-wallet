@@ -15,6 +15,12 @@ import {
 import { Messaging } from '../../api/messaging';
 import { APIError, METHOD, POPUP, SENDER, TARGET } from '../../config/config';
 
+const LS = {
+  getAllItems: () => chrome.storage.local.get(),
+  getItem: async key => (await chrome.storage.local.get(key))[key],
+  setItem: (key, val) => chrome.storage.local.set({[key]: val}),
+  removeItems: keys => chrome.storage.local.remove(keys),
+};
 const app = Messaging.createBackgroundController();
 
 /**
@@ -334,11 +340,17 @@ app.add(METHOD.signTx, async (request, sendResponse) => {
 app.listen();
 
 //delete localStorage globalModel
-chrome.runtime.onStartup.addListener(function () {
-  const entry = Object.keys(localStorage).find((l) =>
-    l.includes('globalModel')
-  );
-  window.localStorage.removeItem(entry);
+chrome.runtime.onStartup.addListener(async function () {
+  console.log("ONSTARTUP CLEAN UP")
+  let all = await LS.getAllItems()
+  var entry = all.find(function (l) {
+    return l.includes('globalModel');
+  });
+  await LS.removeItems(entry);
 });
-const entry = Object.keys(localStorage).find((l) => l.includes('globalModel'));
-window.localStorage.removeItem(entry);
+
+let all = async function clear_m() {return await LS.getAllItems()};
+  var entry = Object.keys(all).find(function (l) {
+    return l.includes('globalModel');
+  });
+  let del_entry = async function delete_m() {return await LS.removeItems(entry)};

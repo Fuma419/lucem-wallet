@@ -1,9 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Nami",
   "version": "3.7.3",
-  "description": "A wallet to experience Cardano to the fullest",
-  "background": { "service_worker": "background.bundle.js" },
+  "description": "Featurefull light powered cardano wallet. Beautifully built for security and simplicity.",
+  "name": "Lucem Wallet",
   "action": {
     "default_popup": "mainPopup.html",
     "default_icon": "icon-34.png"

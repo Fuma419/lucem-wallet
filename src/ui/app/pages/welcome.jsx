@@ -53,10 +53,10 @@ const Welcome = () => {
         {/* Footer */}
         <Box position="absolute" bottom="3" fontSize="xs">
           <Link
-            onClick={() => window.open('https://namiwallet.io')}
+            onClick={() => window.open('https://www.hodlerstaking.com/')}
             color="GrayText"
           >
-            namiwallet.io
+            Lucem Wallet
           </Link>
         </Box>
         <Box h="12" />
@@ -70,7 +70,7 @@ const Welcome = () => {
           textAlign="center"
           lineHeight="1.2"
         >
-          Let's get started with creating a wallet.
+          Let's get started by creating a wallet.
         </Text>
         <Box h="8" />
         <Backpack size={120} mood="blissful" color="#61DDBC" />
@@ -219,7 +219,7 @@ const ImportModal = React.forwardRef((props, ref) => {
               Nami wallet.{' '}
               <Link
                 textDecoration="underline"
-                onClick={() => window.open('https://namiwallet.io')}
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
               >
                 More info
               </Link>

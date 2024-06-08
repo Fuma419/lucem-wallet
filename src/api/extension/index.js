@@ -1541,8 +1541,8 @@ export const initHW = async ({ device, id }) => {
     try {
       await TrezorConnect.init({
         manifest: {
-          email: 'namiwallet.cardano@gmail.com',
-          appUrl: 'http://namiwallet.io',
+          email: 'hodlerstaking@gmail.com',
+          appUrl: 'https://www.hodlerstaking.com/',
         },
       });
     } catch (e) {}

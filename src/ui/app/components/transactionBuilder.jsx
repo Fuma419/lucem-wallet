@@ -791,7 +791,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
               <br />
               <Link
                 fontWeight="semibold"
-                onClick={() => window.open('https://namiwallet.io')}
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
               >
                 Read more
               </Link>

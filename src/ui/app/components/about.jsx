@@ -18,6 +18,7 @@ import LogoWhite from '../../../assets/img/logoWhite.svg';
 import LogoBlack from '../../../assets/img/logo.svg';
 import IOHKWhite from '../../../assets/img/iohkWhite.svg';
 import IOHKBlack from '../../../assets/img/iohk.svg';
+import HodlerLogo from '../../../assets/img/Hodler_Green_Icon_round.png';
 import TermsOfUse from './termsOfUse';
 import PrivacyPolicy from './privacyPolicy';
 import { useCaptureEvent } from '../../../features/analytics/hooks';
@@ -63,7 +64,7 @@ const About = React.forwardRef((props, ref) => {
           >
             <Image
               cursor="pointer"
-              onClick={() => window.open('https://namiwallet.io')}
+              onClick={() => window.open('https://www.hodlerstaking.com/')}
               width="90px"
               src={Logo}
             />
@@ -77,20 +78,20 @@ const About = React.forwardRef((props, ref) => {
               flexDirection="column"
             >
               <Text fontSize="xs">
-                Maintained by{' '}
+                Created by{' '}
                 <span
-                  onClick={() => window.open('https://iohk.io/')}
+                  onClick={() => window.open('https://www.hodlerstaking.com/')}
                   style={{ textDecoration: 'underline', cursor: 'pointer' }}
                 >
-                  IOG
+                  Hodler Services
                 </span>
               </Text>
               <Box height="4" />
               <Image
                 cursor="pointer"
-                onClick={() => window.open('https://iohk.io/')}
-                src={IOHK}
                 width="66px"
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
+                src={HodlerLogo}
               />
             </Box>
             <Box height="4" />

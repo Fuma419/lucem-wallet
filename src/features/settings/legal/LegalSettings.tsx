@@ -58,7 +58,7 @@ export const LegalSettings = () => {
                   may include data about how you use our service, your
                   preferences and information about your system. Read more&nbsp;
                   <Link
-                    onClick={() => window.open('https://namiwallet.io')}
+                    onClick={() => window.open('https://www.hodlerstaking.com/')}
                     textDecoration="underline"
                   >
                     here

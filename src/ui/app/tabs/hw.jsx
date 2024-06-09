@@ -128,7 +128,7 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.trezor && 'teal.400'}
+          borderColor={selected === HW.trezor && 'yellow.400'}
           borderWidth={selected === HW.trezor && '3px'}
           p={4}
           _hover={{ opacity: 0.8 }}
@@ -150,7 +150,7 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.ledger && 'teal.400'}
+          borderColor={selected === HW.ledger && 'yellow.400'}
           borderWidth={selected === HW.ledger && '3px'}
           p={1}
           _hover={{ opacity: 0.8 }}

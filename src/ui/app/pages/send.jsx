@@ -464,7 +464,7 @@ const Send = () => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
         ) : (
           <>
@@ -542,7 +542,7 @@ const Send = () => {
                           <Box>{settings.adaSymbol}</Box>
                         ) : (
                           <Spinner
-                            color="teal"
+                            color="yellow"
                             speed="0.5s"
                             boxSize="9px"
                             size="xs"
@@ -681,7 +681,7 @@ const Send = () => {
                 width={'366px'}
                 height={'50px'}
                 isDisabled={!tx || !address.result || fee.error}
-                colorScheme="orange"
+                colorScheme="gray"
                 onClick={() => {
                   capture(Events.SendTransactionDataReviewTransactionClick);
                   ref.current.openModal(account.current.index);
@@ -864,7 +864,7 @@ const AddressPopup = ({
   isLoading,
 }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const checkColor = useColorModeValue('teal.500', 'teal.200');
+  const checkColor = useColorModeValue('yellow.500', 'yellow.200');
   const ref = React.useRef(false);
   const [state, setState] = React.useState({
     currentAccount: null,
@@ -1310,7 +1310,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
 
                 <Box w="3" />
                 <IconButton
-                  colorScheme="teal"
+                  colorScheme="yellow"
                   size="xs"
                   rounded="md"
                   onClick={() => {
@@ -1390,7 +1390,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
                 alignItems="center"
                 justifyContent="center"
               >
-                <Spinner color="teal" speed="0.5s" />
+                <Spinner color="yellow" speed="0.5s" />
               </Box>
             )}
           </Box>

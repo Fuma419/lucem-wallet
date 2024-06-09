@@ -68,7 +68,7 @@ export const TermsAndPrivacyModal = ({ onContinue }: Props) => {
           <ModalFooter>
             <Button
               isDisabled={!accepted}
-              colorScheme="teal"
+              colorScheme="yellow"
               onClick={onContinue}
             >
               Continue

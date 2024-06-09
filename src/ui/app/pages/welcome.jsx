@@ -81,7 +81,7 @@ const Welcome = () => {
             capture(Events.OnboardingCreateClick);
             refWallet.current.openModal();
           }}
-          colorScheme="teal"
+          colorScheme="yellow"
           size="md"
         >
           New Wallet
@@ -92,7 +92,7 @@ const Welcome = () => {
             capture(Events.OnboardingRestoreClick);
             refImport.current.openModal();
           }}
-          colorScheme="orange"
+          colorScheme="gray"
           size="sm"
         >
           Import
@@ -164,7 +164,7 @@ const WalletModal = React.forwardRef((props, ref) => {
             </Button>
             <Button
               isDisabled={!accepted}
-              colorScheme="teal"
+              colorScheme="yellow"
               onClick={() => createTab(TAB.createWallet, `?type=generate`)}
             >
               Continue
@@ -269,7 +269,7 @@ const ImportModal = React.forwardRef((props, ref) => {
             </Button>
             <Button
               isDisabled={!selected || !accepted}
-              colorScheme="teal"
+              colorScheme="yellow"
               onClick={() =>
                 createTab(
                   TAB.createWallet,

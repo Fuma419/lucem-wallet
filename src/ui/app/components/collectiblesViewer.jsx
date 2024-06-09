@@ -80,7 +80,7 @@ const CollectiblesViewer = ({ assets, onUpdateAvatar }) => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
         ) : assetsArray.length <= 0 ? (
           <Box
@@ -315,7 +315,7 @@ const Search = ({ setSearch, assets }) => {
         >
           <InputGroup size="sm">
             <Input
-              focusBorderColor="teal.400"
+              focusBorderColor="yellow.400"
               ref={ref}
               value={input}
               width={290}
@@ -342,7 +342,7 @@ const Search = ({ setSearch, assets }) => {
             aria-label="Search assets"
             size="sm"
             rounded="md"
-            color="teal.400"
+            color="yellow.400"
             onClick={() => input && setSearch(input)}
             icon={<SearchIcon />}
           />

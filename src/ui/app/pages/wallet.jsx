@@ -283,7 +283,7 @@ const Wallet = () => {
                     }}
                     variant="solid"
                     size="xs"
-                    color="whiteAlpha"
+                    color="whiyellowpha"
                     rounded="lg"
                   >
                     Delegate
@@ -638,7 +638,7 @@ const Wallet = () => {
               <PopoverTrigger>
                 <Button
                   rightIcon={<Icon as={BsArrowDownRight} />}
-                  colorScheme="teal"
+                  colorScheme="yellow"
                   size="sm"
                   rounded="xl"
                   shadow="md"
@@ -702,7 +702,7 @@ const Wallet = () => {
               size="sm"
               rounded="xl"
               rightIcon={<Icon as={BsArrowUpRight} />}
-              colorScheme="orange"
+              colorScheme="gray"
               shadow="md"
             >
               Send
@@ -718,7 +718,7 @@ const Wallet = () => {
           display="flex"
           flexDirection="column"
           variant="soft-rounded"
-          colorScheme="teal"
+          colorScheme="yellow"
         >
           <TabList>
             <Tab mr={2}>
@@ -888,7 +888,7 @@ const NewAccountModal = React.forwardRef((props, ref) => {
           <Button
             isDisabled={!state.password || !state.name || isLoading}
             isLoading={isLoading}
-            colorScheme="teal"
+            colorScheme="yellow"
             onClick={confirmHandler}
           >
             Create
@@ -1032,7 +1032,7 @@ const DelegationPopover = ({ account, delegation, children }) => {
                     withdrawRef.current.initWithdrawal(account, delegation)
                   }
                   isDisabled={BigInt(delegation.rewards) < BigInt('2000000')}
-                  colorScheme="teal"
+                  colorScheme="yellow"
                   size="sm"
                 >
                   Withdraw

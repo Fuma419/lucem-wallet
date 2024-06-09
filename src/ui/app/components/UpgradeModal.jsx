@@ -66,7 +66,7 @@ export const UpgradeModal = React.forwardRef((props, ref) => {
           ))}
 
           <Box textAlign="center" mb="15px">
-            <Button colorScheme="teal" onClick={onClose}>
+            <Button colorScheme="yellow" onClick={onClose}>
               Got it!
             </Button>
           </Box>

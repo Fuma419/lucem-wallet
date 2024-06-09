@@ -76,7 +76,7 @@ const theme = extendTheme({
       800: "#758F00",
       900: "#4F6100",
     },
-    teal: { 
+    yellow: { 
       100: "#E1EDAD",
       200: "#DBF07F",
       300: "#D8F261",

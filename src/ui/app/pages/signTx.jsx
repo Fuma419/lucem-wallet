@@ -532,7 +532,7 @@ const SignTx = ({ request, controller }) => {
           alignItems="center"
           justifyContent="center"
         >
-          <Spinner color="teal" speed="0.5s" />
+          <Spinner color="yellow" speed="0.5s" />
         </Box>
       ) : (
         <Box
@@ -602,7 +602,7 @@ const SignTx = ({ request, controller }) => {
                       justifyContent="center"
                       fontSize={lovelace.toString().length < 14 ? '3xl' : '2xl'}
                       fontWeight="bold"
-                      color={lovelace <= 0 ? 'teal.400' : 'red.400'}
+                      color={lovelace <= 0 ? 'yellow.400' : 'red.400'}
                     >
                       <Text>{lovelace <= 0 ? '+' : '-'}</Text>
                       <UnitDisplay
@@ -668,17 +668,17 @@ const SignTx = ({ request, controller }) => {
                                 positiveAssets.length > 0 && <Box w={2} />}
                               {positiveAssets.length > 0 && (
                                 <Button
-                                  colorScheme={'teal'}
+                                  colorScheme={'yellow'}
                                   size={'xs'}
                                   onClick={() =>
                                     assetsModalRef.current.openModal({
-                                      background: 'teal.400',
+                                      background: 'yellow.400',
                                       color: 'white',
                                       assets: positiveAssets,
                                       title: (
                                         <Box>
                                           Receiving{' '}
-                                          <Box as={'span'} color={'teal.400'}>
+                                          <Box as={'span'} color={'yellow.400'}>
                                             {positiveAssets.length}
                                           </Box>{' '}
                                           {positiveAssets.length == 1
@@ -776,7 +776,7 @@ const SignTx = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 isDisabled={isLoading.loading || isLoading.error}
-                colorScheme="teal"
+                colorScheme="yellow"
                 onClick={() => {
                   capture(Events.DappConnectorDappTxSignClick);
                   ref.current.openModal(account.index);
@@ -1042,7 +1042,7 @@ const DetailsModal = React.forwardRef(
                       >
                         <Box
                           as={'b'}
-                          color={keyHash == 'payment' ? 'teal.400' : 'orange'}
+                          color={keyHash == 'payment' ? 'yellow.400' : 'orange'}
                         >
                           {keyHash}
                         </Box>

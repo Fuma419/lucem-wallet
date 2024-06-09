@@ -297,7 +297,7 @@ const GeneralSettings = ({ accountRef }) => {
       </Button>
       <Box height="5" />
       <Button
-        colorScheme="orange"
+        colorScheme="gray"
         size="sm"
         onClick={() => {
           capture(Events.SettingsChangePasswordClick);
@@ -414,7 +414,7 @@ const Whitelisted = () => {
           alignItems="center"
           justifyContent="center"
         >
-          <Spinner color="teal" speed="0.5s" />
+          <Spinner color="yellow" speed="0.5s" />
         </Box>
       )}
 
@@ -542,7 +542,7 @@ const Network = () => {
             size="sm"
             onClick={endpointHandler}
           >
-            {applied ? <CheckIcon color={'teal.400'} /> : 'Apply'}
+            {applied ? <CheckIcon color={'yellow.400'} /> : 'Apply'}
           </Button>
         </InputRightElement>
       </InputGroup>

@@ -126,7 +126,7 @@ const StoreInit = ({ children }) => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
 
           <ConfirmModal

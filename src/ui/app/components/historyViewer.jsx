@@ -137,7 +137,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
                   setLoadNext(true);
                   setTimeout(() => setPage(page + 1));
                 }}
-                colorScheme="orange"
+                colorScheme="gray"
                 aria-label="More"
                 fontSize={20}
                 w="50%"
@@ -156,7 +156,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
 
 const HistorySpinner = () => (
   <Box mt="28" display="flex" alignItems="center" justifyContent="center">
-    <Spinner color="teal" speed="0.5s" />
+    <Spinner color="yellow" speed="0.5s" />
   </Box>
 );
 

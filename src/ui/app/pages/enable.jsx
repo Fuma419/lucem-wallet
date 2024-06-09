@@ -57,12 +57,12 @@ const Enable = ({ request, controller }) => {
           flexDirection={'column'}
         >
           <Box display={'flex'} alignItems={'center'}>
-            <CheckIcon mr="3" color={'teal'} boxSize={4} />{' '}
+            <CheckIcon mr="3" color={'yellow'} boxSize={4} />{' '}
             <Box fontWeight={'bold'}>View your balance and addresses</Box>
           </Box>
           <Box h={4} />
           <Box display={'flex'} alignItems={'center'}>
-            <CheckIcon mr="3" color={'teal'} boxSize={4} />{' '}
+            <CheckIcon mr="3" color={'yellow'} boxSize={4} />{' '}
             <Box fontWeight={'bold'}>Request approval for transactions</Box>
           </Box>
         </Box>
@@ -92,7 +92,7 @@ const Enable = ({ request, controller }) => {
         <Button
           height={'50px'}
           width={'180px'}
-          colorScheme="teal"
+          colorScheme="yellow"
           onClick={async () => {
             capture(Events.DappConnectorAuthorizeDappAuthorizeClick);
             await setWhitelisted(request.origin);

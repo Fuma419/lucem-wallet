@@ -53,7 +53,7 @@ const Main = ({ children }) => {
                 right="15px"
                 size="sm"
                 rounded="xl"
-                colorScheme="teal"
+                colorScheme="yellow"
                 opacity={0.85}
                 icon={<ChevronUpIcon />}
               ></IconButton>

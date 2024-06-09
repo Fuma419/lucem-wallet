@@ -48,8 +48,8 @@ TimeAgo.addDefaultLocale(en);
 
 const txTypeColor = {
   self: 'gray.500',
-  internalIn: 'teal.500',
-  externalIn: 'teal.500',
+  internalIn: 'yellow.500',
+  externalIn: 'yellow.500',
   internalOut: 'orange.500',
   externalOut: 'orange.500',
   withdrawal: 'yellow.400',
@@ -60,7 +60,7 @@ const txTypeColor = {
   poolRetire: 'red.400',
   mint: 'cyan.500',
   multisig: 'pink.400',
-  contract: 'teal.400',
+  contract: 'yellow.400',
 };
 
 const txTypeLabel = {
@@ -100,9 +100,9 @@ const Transaction = ({
 
   const colorMode = {
     iconBg: useColorModeValue('white', 'gray.800'),
-    txBg: useColorModeValue('teal.50', 'gray.700'),
-    txBgHover: useColorModeValue('teal.100', 'gray.600'),
-    assetsBtnHover: useColorModeValue('teal.200', 'gray.700'),
+    txBg: useColorModeValue('yellow.50', 'gray.700'),
+    txBgHover: useColorModeValue('yellow.100', 'gray.600'),
+    assetsBtnHover: useColorModeValue('yellow.200', 'gray.700'),
   };
 
   const getTxDetail = async () => {
@@ -176,7 +176,7 @@ const Transaction = ({
                   symbol={settings.adaSymbol}
                 />
               ) : displayInfo.extra.length ? (
-                <Text fontSize={12} fontWeight="semibold" color="teal.500">
+                <Text fontSize={12} fontWeight="semibold" color="yellow.500">
                   {getTxExtra(displayInfo.extra)}
                 </Text>
               ) : (
@@ -230,7 +230,7 @@ const Transaction = ({
                 ''
               )}
             </Box>
-            <AccordionIcon color="teal.400" mr={5} fontSize={20} />
+            <AccordionIcon color="yellow.400" mr={5} fontSize={20} />
           </AccordionButton>
         ) : (
           <Skeleton width="100%" height="72px" rounded="md" />
@@ -246,7 +246,7 @@ const Transaction = ({
             w={5}
             h={5}
             mb={1}
-            borderColor="teal.400"
+            borderColor="yellow.400"
             borderWidth={5}
             borderRadius={50}
           ></Box>
@@ -327,7 +327,7 @@ const TxDetail = ({ displayInfo, network }) => {
           </Box>
           <Box>
             <Link
-              color="teal"
+              color="yellow"
               href={
                 (() => {
                   switch (network.id) {
@@ -352,7 +352,7 @@ const TxDetail = ({ displayInfo, network }) => {
             {displayInfo.detail.metadata.length > 0 ? (
               <Button
                 display="inline-block"
-                colorScheme="orange"
+                colorScheme="gray"
                 size="xs"
                 fontSize="10px"
                 p="2px 4px"

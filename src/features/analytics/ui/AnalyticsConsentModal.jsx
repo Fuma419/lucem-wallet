@@ -64,7 +64,7 @@ export const AnalyticsConsentModal = ({ askForConsent, setConsent }) => {
             <Button mr={3} variant="ghost" onClick={() => setConsent(false)}>
               No thanks
             </Button>
-            <Button colorScheme="teal" onClick={() => setConsent(true)}>
+            <Button colorScheme="yellow" onClick={() => setConsent(true)}>
               I agree
             </Button>
           </ModalFooter>

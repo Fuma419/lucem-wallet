@@ -107,7 +107,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   </Text>{' '}
                   Our privacy practices are set forth in our{' '}
                   <Link
-                    color="teal"
+                    color="yellow"
                     isExternal
                     textDecoration="underline"
                     onClick={() =>
@@ -369,7 +369,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 you believe content on the Products infringes your intellectual
                 property rights, please read our{' '}
                 <Link
-                  color="teal"
+                  color="yellow"
                   isExternal
                   textDecoration="underline"
                   onClick={() =>
@@ -631,7 +631,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                     </Text>{' '}
                     Feel free to{' '}
                     <Link
-                      color="teal"
+                      color="yellow"
                       isExternal
                       textDecoration="underline"
                       onClick={() => window.open('https://iohk.io/en/contact/')}

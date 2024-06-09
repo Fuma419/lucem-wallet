@@ -98,7 +98,7 @@ const SignData = ({ request, controller }) => {
           alignItems="center"
           justifyContent="center"
         >
-          <Spinner color="teal" speed="0.5s" />
+          <Spinner color="yellow" speed="0.5s" />
         </Box>
       ) : (
         <Box
@@ -173,7 +173,7 @@ const SignData = ({ request, controller }) => {
                     as={'b'}
                     color={
                       address == 'payment'
-                        ? 'teal.400'
+                        ? 'yellow.400'
                         : address == 'stake'
                           ? 'orange'
                           : 'inherit'
@@ -210,7 +210,7 @@ const SignData = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 isDisabled={error}
-                colorScheme="teal"
+                colorScheme="yellow"
                 onClick={() => {
                   capture(Events.DappConnectorDappDataSignClick);
                   ref.current.openModal(account.index);

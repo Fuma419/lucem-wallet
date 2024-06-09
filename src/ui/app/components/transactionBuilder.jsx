@@ -441,7 +441,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                     <Button
                       h={6}
                       size="sm"
-                      colorScheme="teal"
+                      colorScheme="yellow"
                       disabled={data.pool.id === '' || data.pool.isLoading}
                       isLoading={data.pool.isLoading}
                       onClick={() => prepareDelegationTx()}
@@ -450,7 +450,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                     </Button>
                   )}
                   {data.pool.state === PoolStates.DONE && (
-                    <CheckIcon color="teal.500" />
+                    <CheckIcon color="yellow.500" />
                   )}
                   {data.pool.state === PoolStates.ERROR && (
                     <WarningIcon color="red.300" />
@@ -574,7 +574,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                   <UnitDisplay
                     fontSize="xl"
                     fontWeight="bold"
-                    color="teal.500"
+                    color="yellow.500"
                     hide
                     quantity={data.rewards}
                     decimals={6}

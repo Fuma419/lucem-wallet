@@ -211,12 +211,12 @@ const ImportModal = React.forwardRef((props, ref) => {
             </Text>
             <Spacer height="1" />
             <Text fontSize="13px">
-              We always recommend creating a new wallet, as Nami is best
-              experienced when not simultaneously used with Yoroi/Daedalus. Nami
+              We always recommend creating a new wallet, as Lucem is best
+              experienced when not simultaneously used with Yoroi/Daedalus. Lucem
               will not track all addresses associated with your imported wallet,
               and might result in partial reflection of assets. To accurately
               reflect your balance, please transfer all assets into your new
-              Nami wallet.{' '}
+              Lucem wallet.{' '}
               <Link
                 textDecoration="underline"
                 onClick={() => window.open('https://www.hodlerstaking.com/')}

@@ -6,7 +6,7 @@ const migration = {
     {
       title: 'HW support',
       detail:
-        'Nami has now full hardware wallet support for Ledger and Trezor.',
+        'Lucem has now full hardware wallet support for Ledger and Trezor.',
     },
   ],
   pwdRequired: false,

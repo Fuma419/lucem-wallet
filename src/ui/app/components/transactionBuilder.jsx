@@ -382,7 +382,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
               >
                 https://pool.pm
               </Link>
-              , connect your Nami wallet and delegate to a stake pool of your
+              , connect your Lucem wallet and delegate to a stake pool of your
               choice
             </Text>
             <Box h="6" />

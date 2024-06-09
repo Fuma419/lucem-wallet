@@ -114,8 +114,8 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('white', 'gray.700');
-  const panelBg = useColorModeValue('#349EA3', 'gray.800');
+  const avatarBg = useColorModeValue('#b4c5d5', 'gray.700');
+  const panelBg = useColorModeValue('#b4c5d5', 'gray.800');
   const [state, setState] = React.useState({
     account: null,
     accounts: null,

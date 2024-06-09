@@ -20,7 +20,7 @@ const AssetsModal = React.forwardRef((props, ref) => {
     background: '',
     color: 'inherit',
   });
-  const background = useColorModeValue('white', 'gray.800');
+  const background = useColorModeValue('#b4c5d5', 'gray.800');
 
   const abs = (big) => {
     return big < 0 ? BigInt(big) * BigInt(-1) : big;

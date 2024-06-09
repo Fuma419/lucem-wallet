@@ -54,11 +54,11 @@ const txTypeColor = {
   externalOut: 'orange.500',
   withdrawal: 'yellow.400',
   delegation: 'purple.500',
-  stake: 'cyan.700',
+  stake: 'red.700',
   unstake: 'red.400',
   poolUpdate: 'green.400',
   poolRetire: 'red.400',
-  mint: 'cyan.500',
+  mint: 'red.500',
   multisig: 'pink.400',
   contract: 'yellow.400',
 };
@@ -99,7 +99,7 @@ const Transaction = ({
   );
 
   const colorMode = {
-    iconBg: useColorModeValue('white', 'gray.800'),
+    iconBg: useColorModeValue('#b4c5d5', 'gray.800'),
     txBg: useColorModeValue('yellow.50', 'gray.700'),
     txBgHover: useColorModeValue('yellow.100', 'gray.600'),
     assetsBtnHover: useColorModeValue('yellow.200', 'gray.700'),

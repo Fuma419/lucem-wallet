@@ -843,7 +843,7 @@ const DetailsModal = React.forwardRef(
     ref
   ) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const background = useColorModeValue('white', 'gray.800');
+    const background = useColorModeValue('#b4c5d5', 'gray.800');
     const innerBackground = useColorModeValue('gray.100', 'gray.700');
 
     React.useImperativeHandle(ref, () => ({

@@ -124,7 +124,7 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
                 {token.displayName}
               </Box>
               <Box
-                color="gray.600"
+                color="gray.700"
                 fontWeight="semibold"
                 position="absolute"
                 left="15px"

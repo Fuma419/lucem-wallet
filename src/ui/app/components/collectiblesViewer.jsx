@@ -80,7 +80,7 @@ const CollectiblesViewer = ({ assets, onUpdateAvatar }) => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="yellow" speed="0.5s" />
+            <Spinner color="#C5FF0A" speed="0.5s" />
           </Box>
         ) : assetsArray.length <= 0 ? (
           <Box
@@ -119,8 +119,8 @@ export const CollectibleModal = React.forwardRef(({ onUpdateAvatar }, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [asset, setAsset] = React.useState(null);
   const [fallback, setFallback] = React.useState(false); // remove short flickering where image is not instantly loaded
-  const background = useColorModeValue('#b4c5d5', 'gray.800');
-  const dividerColor = useColorModeValue('gray.200', 'gray.700');
+  const background = useColorModeValue('#b4c5d5', 'gray.900');
+  const dividerColor = useColorModeValue('gray.200', 'gray.900');
   const [value, setValue] = [
     useStoreState((state) => state.globalModel.sendStore.value),
     useStoreActions((actions) => actions.globalModel.sendStore.setValue),

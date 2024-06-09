@@ -168,7 +168,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
           <Button
             isDisabled={!state.password || props.ready === false || !waitReady}
             isLoading={!waitReady}
-            colorScheme="yellow"
+            colorScheme="#C5FF0A"
             onClick={confirmHandler}
           >
             Confirm
@@ -267,7 +267,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
             <Button
               isDisabled={props.ready === false || !waitReady}
               isLoading={!waitReady}
-              colorScheme="yellow"
+              colorScheme="#C5FF0A"
               onClick={confirmHandler}
             >
               Confirm

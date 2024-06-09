@@ -29,7 +29,7 @@ const SignData = ({ request, controller }) => {
   const [address, setAddress] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
-  const background = useColorModeValue('gray.100', 'gray.700');
+  const background = useColorModeValue('gray.100', 'gray.900');
   const getAccount = async () => {
     const currentAccount = await getCurrentAccount();
     if (isHW(currentAccount.index)) setError('HW not supported');

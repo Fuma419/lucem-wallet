@@ -244,7 +244,7 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
               state.passwordLen === false
             }
             isLoading={isLoading}
-            colorScheme="yellow"
+            colorScheme="#C5FF0A"
             onClick={confirmHandler}
           >
             Confirm

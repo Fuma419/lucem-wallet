@@ -64,7 +64,6 @@ import {
   TabPanels,
   TabPanel,
   Tooltip,
-  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   SettingsIcon,
@@ -94,6 +93,7 @@ import { BiWallet } from 'react-icons/bi';
 import { GiTwoCoins, GiUsbKey } from 'react-icons/gi';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
+import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
 import Logo from '../../../assets/img/logoWhite.svg';
@@ -114,8 +114,8 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('#b4c5d5', 'gray.700');
-  const panelBg = useColorModeValue('#b4c5d5', 'gray.800');
+  const avatarBg = useColorModeValue('#b4c5d5', 'gray.900');
+  const panelBg = useColorModeValue('#b4c5d5', 'gray.900');
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -283,7 +283,6 @@ const Wallet = () => {
                     }}
                     variant="solid"
                     size="xs"
-                    color="whiyellowpha"
                     rounded="lg"
                   >
                     Delegate
@@ -507,8 +506,8 @@ const Wallet = () => {
             justifyContent="center"
           >
             <Text
-              color="white"
-              fontSize="lg"
+              className="lineClamp"
+              fontSize="xl"
               isTruncated={true}
               maxWidth="210px"
             >
@@ -524,7 +523,7 @@ const Wallet = () => {
             justifyContent="center"
           >
             <UnitDisplay
-              color="white"
+              className="lineClamp"
               fontSize="2xl"
               fontWeight="bold"
               quantity={
@@ -602,7 +601,7 @@ const Wallet = () => {
             justifyContent="center"
           >
             <UnitDisplay
-              color="white"
+              className="lineClamp"
               fontSize="md"
               quantity={
                 state.account &&
@@ -965,18 +964,16 @@ const DelegationPopover = ({ account, delegation, children }) => {
     <>
       <Popover offset={[80, 8]}>
         <PopoverTrigger>
-          <Button
+          <Button className="lineClamp"
             style={{
               all: 'revert',
               background: 'none',
               border: 'none',
               outline: 'none',
               cursor: 'pointer',
-              color: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 'bold',
             }}
             onClick={() => {
               capture(Events.StakingClick);

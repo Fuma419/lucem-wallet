@@ -99,10 +99,10 @@ const Transaction = ({
   );
 
   const colorMode = {
-    iconBg: useColorModeValue('#b4c5d5', 'gray.800'),
-    txBg: useColorModeValue('yellow.50', 'gray.700'),
-    txBgHover: useColorModeValue('yellow.100', 'gray.600'),
-    assetsBtnHover: useColorModeValue('yellow.200', 'gray.700'),
+    iconBg: useColorModeValue('#b4c5d5', 'gray.900'),
+    txBg: useColorModeValue('yellow.50', 'gray.900'),
+    txBgHover: useColorModeValue('yellow.100', 'gray.700'),
+    assetsBtnHover: useColorModeValue('yellow.200', 'gray.900'),
   };
 
   const getTxDetail = async () => {
@@ -319,7 +319,7 @@ const TxDetail = ({ displayInfo, network }) => {
           <Box
             display="flex"
             flexDirection="vertical"
-            color="gray.600"
+            color="gray.700"
             fontSize="sm"
             fontWeight="bold"
           >
@@ -385,7 +385,7 @@ const TxDetail = ({ displayInfo, network }) => {
       {displayInfo.extra.length > 0 ? (
         <Box display="flex" flexDirection="vertical" mt="10px">
           <Box>
-            <Box color="gray.600" fontSize="sm" fontWeight="bold">
+            <Box color="gray.700" fontSize="sm" fontWeight="bold">
               Transaction Extra
             </Box>
             <Box>

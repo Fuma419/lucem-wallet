@@ -34,7 +34,7 @@ const Input = {
 
 const Checkbox = {
   defaultProps: {
-    colorScheme: 'yellow',
+    colorScheme: '#C5FF0A',
   },
 };
 
@@ -59,7 +59,7 @@ const Switch = {
     },
   },
   defaultProps: {
-    colorScheme: 'yellow',
+    colorScheme: '#C5FF0A',
   },
 };
 
@@ -119,7 +119,7 @@ const theme = extendTheme({
     Switch,
   },
   config: {
-    useSystemColorMode: colorMode ? false : true,
+    useSystemColorMode: colorMode ? true : false,
   },
   styles: {
     global: {

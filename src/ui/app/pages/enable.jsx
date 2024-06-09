@@ -10,7 +10,7 @@ import { Events } from '../../../features/analytics/events';
 
 const Enable = ({ request, controller }) => {
   const capture = useCaptureEvent();
-  const background = useColorModeValue('gray.100', 'gray.700');
+  const background = useColorModeValue('gray.100', 'gray.900');
   return (
     <Box
       minHeight="100vh"

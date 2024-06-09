@@ -181,7 +181,7 @@ const Send = () => {
   const ref = React.useRef();
   const [isLoading, setIsLoading] = React.useState(true);
   const focus = React.useRef(false);
-  const background = useColorModeValue('gray.100', 'gray.600');
+  const background = useColorModeValue('gray.100', 'gray.700');
 
   const network = React.useRef();
   const assetsModalRef = React.useRef();
@@ -1403,7 +1403,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
 const Asset = ({ asset, choice, select, setChoice, onClose, addAssets }) => {
   const [token, setToken] = React.useState(null);
   const isMounted = useIsMounted();
-  const hoverColor = useColorModeValue('gray.100', 'gray.600');
+  const hoverColor = useColorModeValue('gray.100', 'gray.700');
 
   const fetchData = async () => {
     const detailedAsset = {

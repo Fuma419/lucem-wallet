@@ -151,7 +151,7 @@ const GenerateSeed = (props) => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow'}
+                      background={'yellow.700'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -179,7 +179,7 @@ const GenerateSeed = (props) => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow'}
+                      background={'yellow.700'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -272,7 +272,7 @@ const VerifySeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow'}
+                      background={'yellow.700'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -312,7 +312,7 @@ const VerifySeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow'}
+                      background={'yellow.700'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -414,7 +414,7 @@ const ImportSeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow'}
+                      background={'yellow.700'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -448,7 +448,7 @@ const ImportSeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow'}
+                      background={'yellow.700'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}

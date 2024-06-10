@@ -228,7 +228,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
-                background={hw.device == HW.ledger ? 'blue.400' : 'green.400'}
+                background={hw.device == HW.ledger ? 'blue.400' : 'gray'}
                 rounded="xl"
                 py={2}
                 width="70%"

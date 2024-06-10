@@ -53,13 +53,13 @@ const txTypeColor = {
   internalOut: 'orange.500',
   externalOut: 'orange.500',
   withdrawal: 'yellow.400',
-  delegation: 'purple.500',
+  delegation: 'blue.500',
   stake: 'red.700',
   unstake: 'red.400',
-  poolUpdate: 'green.400',
+  poolUpdate: 'blue.400',
   poolRetire: 'red.400',
   mint: 'red.500',
-  multisig: 'pink.400',
+  multisig: 'red.400',
   contract: 'yellow.400',
 };
 

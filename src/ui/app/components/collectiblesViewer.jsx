@@ -119,7 +119,7 @@ export const CollectibleModal = React.forwardRef(({ onUpdateAvatar }, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [asset, setAsset] = React.useState(null);
   const [fallback, setFallback] = React.useState(false); // remove short flickering where image is not instantly loaded
-  const background = useColorModeValue('#b4c5d5', 'gray.900');
+  const background = useColorModeValue('blue.100', 'gray.900');
   const dividerColor = useColorModeValue('gray.200', 'gray.900');
   const [value, setValue] = [
     useStoreState((state) => state.globalModel.sendStore.value),
@@ -315,7 +315,7 @@ const Search = ({ setSearch, assets }) => {
         >
           <InputGroup size="sm">
             <Input
-              focusBorderColor="yellow.400"
+              focusBorderColor="yellow.600"
               ref={ref}
               value={input}
               width={290}

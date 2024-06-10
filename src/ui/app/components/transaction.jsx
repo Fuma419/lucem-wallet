@@ -99,7 +99,7 @@ const Transaction = ({
   );
 
   const colorMode = {
-    iconBg: useColorModeValue('#b4c5d5', 'gray.900'),
+    iconBg: useColorModeValue('blue.100', 'gray.900'),
     txBg: useColorModeValue('yellow.50', 'gray.900'),
     txBgHover: useColorModeValue('yellow.100', 'gray.700'),
     assetsBtnHover: useColorModeValue('yellow.200', 'gray.900'),

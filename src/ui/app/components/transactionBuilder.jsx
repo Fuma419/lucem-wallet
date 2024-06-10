@@ -441,7 +441,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                     <Button
                       h={6}
                       size="sm"
-                      colorScheme="yellow"
+                      background="yellow.600"
                       disabled={data.pool.id === '' || data.pool.isLoading}
                       isLoading={data.pool.isLoading}
                       onClick={() => prepareDelegationTx()}

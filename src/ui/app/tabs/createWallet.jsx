@@ -52,7 +52,7 @@ import { Events } from '../../../features/analytics/events';
 const App = () => {
   const Logo = useColorModeValue(LogoOriginal, LogoWhite);
   const backgroundColor = useColorModeValue('gray.200', 'inherit');
-  const cardColor = useColorModeValue('#b4c5d5', 'gray.900');
+  const cardColor = useColorModeValue('blue.100', 'gray.900');
   const navigate = useNavigate();
 
   React.useEffect(() => {

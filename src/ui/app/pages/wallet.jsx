@@ -114,8 +114,10 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('#b4c5d5', 'gray.900');
-  const panelBg = useColorModeValue('#b4c5d5', 'gray.900');
+  const avatarBg = useColorModeValue('blue.100', 'gray.900');
+  const panelBg = useColorModeValue('blue.100', 'gray.900');
+  const receiveButton = useColorModeValue('blue.100', 'gray.600');
+  const sendButton = useColorModeValue('yellow.500', 'yellow.700');
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -636,10 +638,10 @@ const Wallet = () => {
             <Popover>
               <PopoverTrigger>
                 <Button
+                  background={receiveButton}
                   rightIcon={<Icon as={BsArrowDownRight} />}
-                  colorScheme="yellow"
                   size="sm"
-                  rounded="xl"
+                  rounded="lg"
                   shadow="md"
                   onClick={() => {
                     capture(Events.ReceiveClick);
@@ -699,7 +701,8 @@ const Wallet = () => {
                 navigate('/send');
               }}
               size="sm"
-              rounded="xl"
+              background={sendButton}
+              rounded="lg"
               rightIcon={<Icon as={BsArrowUpRight} />}
               colorScheme="gray"
               shadow="md"

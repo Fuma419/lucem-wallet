@@ -51,7 +51,7 @@ const MANUFACTURER = {
 const App = () => {
   const capture = useCaptureEvent();
   const Logo = useColorModeValue(LogoOriginal, LogoWhite);
-  const cardColor = useColorModeValue('#b4c5d5', 'gray.900');
+  const cardColor = useColorModeValue('blue.100', 'gray.900');
   const backgroundColor = useColorModeValue('gray.200', 'inherit');
   const [tab, setTab] = React.useState(0);
   const data = React.useRef({ device: '', id: '' });

@@ -139,7 +139,7 @@ const Autocomplete = ({
             return (
               <ListItem
                 key={option.value}
-                _hover={{ bg: bgHoverColor || 'gray.100' }}
+                _hover={{ bg: bgHoverColor || 'blue.100' }}
                 my={1}
                 p={2}
                 cursor="pointer"
@@ -154,7 +154,7 @@ const Autocomplete = ({
           })}
           {!partialResult?.length && allowCreation && (
             <ListItem
-              _hover={{ bg: bgHoverColor || 'gray.100' }}
+              _hover={{ bg: bgHoverColor || 'blue.100' }}
               my={1}
               p={2}
               cursor="pointer"

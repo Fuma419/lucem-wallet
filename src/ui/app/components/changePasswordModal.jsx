@@ -132,7 +132,7 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
             <InputGroup size="md">
               <Input
                 ref={inputRef}
-                focusBorderColor="yellow.400"
+                focusBorderColor="yellow.600"
                 variant="filled"
                 pr="4.5rem"
                 type={state.show ? 'text' : 'password'}
@@ -158,7 +158,7 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
           <Box>
             <InputGroup size="md">
               <Input
-                focusBorderColor="yellow.400"
+                focusBorderColor="yellow.600"
                 variant="filled"
                 pr="4.5rem"
                 isInvalid={state.passwordLen === false}
@@ -199,7 +199,7 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
           <Box>
             <InputGroup size="md">
               <Input
-                focusBorderColor="yellow.400"
+                focusBorderColor="yellow.600"
                 variant="filled"
                 isInvalid={
                   state.repeatPassword &&

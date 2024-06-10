@@ -517,7 +517,7 @@ const SignTx = ({ request, controller }) => {
     getProperties(tx);
     setIsLoading((l) => ({ ...l, loading: false }));
   };
-  const background = useColorModeValue('gray.100', 'gray.900');
+  const background = useColorModeValue('blue.100', 'gray.900');
 
   React.useEffect(() => {
     getInfo();
@@ -843,8 +843,8 @@ const DetailsModal = React.forwardRef(
     ref
   ) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const background = useColorModeValue('#b4c5d5', 'gray.900');
-    const innerBackground = useColorModeValue('gray.100', 'gray.900');
+    const background = useColorModeValue('blue.100', 'gray.900');
+    const innerBackground = useColorModeValue('blue.100', 'gray.900');
 
     React.useImperativeHandle(ref, () => ({
       openModal() {

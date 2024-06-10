@@ -159,7 +159,7 @@ const Search = ({ setSearch, assets }) => {
         >
           <InputGroup size="sm">
             <Input
-              focusBorderColor="yellow.400"
+              focusBorderColor="yellow.600"
               ref={ref}
               value={input}
               width={290}

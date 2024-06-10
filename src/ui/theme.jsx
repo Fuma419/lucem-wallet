@@ -28,7 +28,7 @@ const Input = {
     },
   },
   defaultProps: {
-    focusBorderColor: 'yellow.500',
+    focusBorderColor: 'yellow.600',
   },
 };
 
@@ -40,7 +40,7 @@ const Checkbox = {
 
 const Select = {
   defaultProps: {
-    focusBorderColor: 'yellow.500',
+    focusBorderColor: 'yellow.600',
   },
 };
 
@@ -66,37 +66,37 @@ const Switch = {
 const theme = extendTheme({
   colors: {
     yellow: { 
-      100: "#E1EDAD",
-      200: "#DBF07F",
-      300: "#D8F261",
-      400: "#D2F538",
-      500: "#CCFA00",
-      600: "#B1D900",
-      700: "#94B500",
-      800: "#758F00",
-      900: "#4F6100",
-    },
-    yellow: { 
-      100: "#E1EDAD",
-      200: "#DBF07F",
-      300: "#D8F261",
-      400: "#D2F538",
-      500: "#CCFA00",
-      600: "#B1D900",
-      700: "#94B500",
-      800: "#758F00",
-      900: "#4F6100",
-    },
+      100: "#F2FFB3", // Lightest shade, very pale yellow-green
+      200: "#E8FF80", // Light yellow-green
+      300: "#DEFF4D", // Light green-yellow
+      400: "#D4FF1A", // Close to base, slightly lighter
+      500: "#C5FF0A", // Base color
+      600: "#ADDC09", // Slightly darker than base
+      700: "#94B507", // Darker shade
+      800: "#7A8E05", // Even darker
+      900: "#566004", // Darkest shade
+    },    
     gray: { 
-      100: "#b4c5d5",
-      200: "#BABAB8",
-      300: "#B3B3B3",
-      400: "#A1A1A1",
-      500: "#8C8C8B",
-      600: "#787877",
-      700: "#616160",
-      800: "#4D4D4D",
-      900: "#383838",
+      100: "#E1E1E1", // Light gray
+      200: "#CFCFCF", // Light gray
+      300: "#BEBEBE", // Light gray
+      400: "#A9A9A9", // Medium gray
+      500: "#8C8C8C", // Gray
+      600: "#787878", // Dark gray
+      700: "#616161", // Darker gray
+      800: "#4D4D4D", // Even darker gray
+      900: "#383838", // Darkest gray
+    },
+    blue: {
+      100: "#b4c5d5", // Light blue
+      200: "#a3b7cc", // Lighter blue
+      300: "#92aac3", // Light blue
+      400: "#819cbc", // Light blue
+      500: "#708fb4", // Base blue
+      600: "#5f81a1", // Slightly darker blue
+      700: "#4e738e", // Darker blue
+      800: "#3d657a", // Even darker blue
+      900: "#2c5767", // Darkest blue
     },
     orange: { 
       100: "#E8AA00",
@@ -109,6 +109,17 @@ const theme = extendTheme({
       800: "#6B4F00",
       900: "#6B4F00",
     },
+    red: { 
+      100: "#F2B3B3", // Very light red
+      200: "#E68080", // Light red
+      300: "#D94D4D", // Red
+      400: "#CC1A1A", // Strong red
+      500: "#B80000", // Base red
+      600: "#A10000", // Dark red
+      700: "#8A0000", // Darker red
+      800: "#730000", // Even darker red
+      900: "#5C0000", // Darkest red
+    }
   },
 
   components: {

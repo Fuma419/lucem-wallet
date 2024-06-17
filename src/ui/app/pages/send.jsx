@@ -1375,7 +1375,6 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
                   flexDirection="column"
                   opacity="0.5"
                 >
-                  <Planet size={80} mood="ko" color="#61DDBC" />
                   <Box height="2" />
                   <Text fontWeight="bold" color="GrayText">
                     No Assets

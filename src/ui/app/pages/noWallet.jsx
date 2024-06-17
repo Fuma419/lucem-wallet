@@ -20,7 +20,6 @@ const NoWallet = () => {
       <Box position="absolute" top="9">
         <Image draggable={false} width="85px" src={Banner} />
       </Box>
-      <Backpack size={140} mood="ko" color="#61DDBC" />
       <Box height="2" />
       <Text fontWeight="bold" color="GrayText">
         No Wallet

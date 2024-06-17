@@ -720,7 +720,7 @@ const Wallet = () => {
           display="flex"
           flexDirection="column"
           variant="soft-rounded"
-          colorScheme="yellow"
+          colorScheme="gray"
         >
           <TabList>
             <Tab mr={2}>
@@ -890,7 +890,7 @@ const NewAccountModal = React.forwardRef((props, ref) => {
           <Button
             isDisabled={!state.password || !state.name || isLoading}
             isLoading={isLoading}
-            colorScheme="yellow"
+            colorScheme="yellow.500"
             onClick={confirmHandler}
           >
             Create
@@ -1032,7 +1032,6 @@ const DelegationPopover = ({ account, delegation, children }) => {
                     withdrawRef.current.initWithdrawal(account, delegation)
                   }
                   isDisabled={BigInt(delegation.rewards) < BigInt('2000000')}
-                  colorScheme="yellow"
                   size="sm"
                 >
                   Withdraw

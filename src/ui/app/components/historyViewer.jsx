@@ -86,7 +86,6 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
           flexDirection="column"
           opacity="0.5"
         >
-          <File size={80} mood="ko" color="#61DDBC" />
           <Box height="2" />
           <Text fontWeight="bold" color="GrayText">
             No History

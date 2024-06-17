@@ -97,7 +97,7 @@ const Autocomplete = ({
       if (props.renderCheckIcon) {
         return props.renderCheckIcon;
       } else {
-        return <CheckCircleIcon color="green.500" mr={2} />;
+        return <CheckCircleIcon color="gray" mr={2} />;
       }
     }
     return null;
@@ -107,7 +107,7 @@ const Autocomplete = ({
     if (props.renderCreateIcon) {
       return props.renderCreateIcon;
     } else {
-      return <SmallAddIcon color="green.500" mr={2} />;
+      return <SmallAddIcon color="gray" mr={2} />;
     }
   };
 

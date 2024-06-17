@@ -18,8 +18,8 @@ import { POPUP_WINDOW } from '../../config/config';
 import { mnemonicToEntropy } from 'bip39';
 import cryptoRandomString from 'crypto-random-string';
 import Loader from '../loader';
-import { createAvatar } from '@dicebear/avatars';
-import * as style from '@dicebear/avatars-bottts-sprites';
+import { createAvatar } from '@dicebear/core';
+import { shapes } from '@dicebear/collection';
 import { initTx } from './wallet';
 import {
   blockfrostRequest,
@@ -1709,11 +1709,43 @@ export const mnemonicFromObject = (mnemonicMap) => {
   );
 };
 
+// Helper function to generate a random string for the seed
+const generateRandomSeed = () => Math.random().toString(36).substring(2, 15);
+
+// Helper function to get a random color
+const getRandomBackgroundColor = () => {
+  const colors = ["BEBEBE", "8C8C8C", "616161"];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
+
+const getRandomColor = () => {
+  const colors = ["C5FF0A", "B08102", "708fb4", "B80000"];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
+
+const getRandomRotation = () => {
+  const degrees = [0,90,180,270];
+  return degrees[Math.floor(Math.random() * degrees.length)];
+};
+
+const getRandomShape = () => {
+  const shape = ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled","rectangle"];
+  return shape[Math.floor(Math.random() * shape.length)];
+};
+
 export const avatarToImage = (avatar) => {
   const blob = new Blob(
     [
-      createAvatar(style, {
+      createAvatar(shapes, {
         seed: avatar,
+        shape1: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled","rectangle"],
+        shape2: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled","rectangle"],
+        shape3: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled","rectangle"],
+        shape1Color: ["C5FF0A", "92aac3", "DEFF4D"],
+        shape2Color: ["B08102", "708fb4", "B80000"],
+        shape3Color: ["BEBEBE", "8C8C8C", "616161", "4e738e"],
+        backgroundColor: ["B08102", "8A0000", "708fb4", "C49000"], 
+        backgroundType: ["gradientLinear"],
       }),
     ],
     { type: 'image/svg+xml' }

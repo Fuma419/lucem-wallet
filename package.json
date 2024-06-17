@@ -21,6 +21,8 @@
     "@dcspark/milkomeda-constants": "^0.4.0",
     "@dicebear/avatars": "^4.6.4",
     "@dicebear/avatars-bottts-sprites": "^4.6.4",
+    "@dicebear/collection": "^9.0.0",
+    "@dicebear/core": "^9.0.0",
     "@emotion/react": "^11.4.0",
     "@emotion/styled": "^11.3.0",
     "@emurgo/cip14-js": "^3.0.1",

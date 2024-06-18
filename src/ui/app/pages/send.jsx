@@ -401,7 +401,13 @@ const Send = () => {
     };
     utxos.current = _utxos;
     _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'));
-    const { current_address: milkomedaAddress } = await getMilkomedaData('');
+    let milkomedaAddress = '';
+    try {
+      const { current_address: milkomedaAddressFromReq } = await getMilkomedaData('');
+      milkomedaAddress = milkomedaAddressFromReq
+    } catch (e) {
+      console.log("ERROR: Couldn't get Milkomeda address.")
+    }
     if (!isMounted.current) return;
     setIsLoading(false);
     setTxInfo({ protocolParameters, utxos: _utxos, balance, milkomedaAddress });

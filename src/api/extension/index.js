@@ -1584,38 +1584,25 @@ export const getAdaHandle = async (assetName) => {
  */
 export const getMilkomedaData = async (ethAddress) => {
   const network = await getNetwork();
+  
+  let backendEndpoint, protocolMagic;
+
   if (network.id === NETWORK_ID.mainnet) {
-    const { isAllowed } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-mainnet'].backendEndpoint +
-        `/v1/isAddressAllowed?address=${ethAddress}`
-    ).then((res) => res.json());
-    const { ada, ttl_expiry, assets, current_address } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-mainnet'].backendEndpoint +
-        '/v1/stargate'
-    ).then((res) => res.json());
-    const protocolMagic = milkomedaNetworks['c1-mainnet'].protocolMagic;
-    return {
-      isAllowed,
-      assets: [],
-      ada,
-      current_address,
-      protocolMagic,
-      ttl: ttl_expiry,
-    };
+    backendEndpoint = milkomedaNetworks['c1-mainnet'].backendEndpoint;
+    protocolMagic = milkomedaNetworks['c1-mainnet'].protocolMagic;
+  } else if (network.id === NETWORK_ID.devnet) {
+    backendEndpoint = milkomedaNetworks['c1-devnet'].backendEndpoint;
+    protocolMagic = milkomedaNetworks['c1-devnet'].protocolMagic;
   } else {
-    const { isAllowed } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-devnet'].backendEndpoint +
-        `/v1/isAddressAllowed?address=${ethAddress}`
-    ).then((res) => res.json());
-    const { ada, ttl_expiry, assets, current_address } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-devnet'].backendEndpoint +
-        '/v1/stargate'
-    ).then((res) => res.json());
-    const protocolMagic = milkomedaNetworks['c1-devnet'].protocolMagic;
+    throw new Error('Unsupported network id');
+  }
+  try {
+    const isAllowedResponse = await fetch(`https://${backendEndpoint}/v1/isAddressAllowed?address=${ethAddress}`);
+    const { isAllowed } = await isAllowedResponse.json();
+
+    const stargateResponse = await fetch(`https://${backendEndpoint}/v1/stargate`);
+    const { ada, ttl_expiry, assets, current_address } = await stargateResponse.json();
+
     return {
       isAllowed,
       assets: [],
@@ -1624,8 +1611,12 @@ export const getMilkomedaData = async (ethAddress) => {
       protocolMagic,
       ttl: ttl_expiry,
     };
+  } catch (error) {
+    console.error('Error fetching Milkomeda data:', error);
+    throw error;
   }
 };
+
 
 export const createWallet = async (name, seedPhrase, password) => {
   await Loader.load();

@@ -64,18 +64,18 @@ const Welcome = () => {
           Welcome
         </Text>
         <Text
-          color="grey"
+          color="gray"
           fontWeight="light"
           fontSize="sm"
           textAlign="center"
           lineHeight="1.2"
         >
-          Let's get started by creating a wallet.
+          Let's setup a wallet.
         </Text>
         <Box h="8" />
-        <Backpack size={120} mood="blissful" color="#61DDBC" />
         <Box height="8" />
         <Button
+          fontWeight="light"
           display="inline-flex"
           onClick={() => {
             capture(Events.OnboardingCreateClick);
@@ -92,8 +92,9 @@ const Welcome = () => {
             capture(Events.OnboardingRestoreClick);
             refImport.current.openModal();
           }}
+          fontWeight="light"
           colorScheme="gray"
-          size="sm"
+          size="md"
         >
           Import
         </Button>

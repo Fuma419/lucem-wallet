@@ -151,11 +151,11 @@ const GenerateSeed = (props) => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.700'}
+                      background={'yellow.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -179,11 +179,11 @@ const GenerateSeed = (props) => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.700'}
+                      background={'yellow.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -272,11 +272,11 @@ const VerifySeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.700'}
+                      background={'yellow.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -312,11 +312,11 @@ const VerifySeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.700'}
+                      background={'yellow.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -414,11 +414,11 @@ const ImportSeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.700'}
+                      background={'yellow.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -448,11 +448,11 @@ const ImportSeed = () => {
                       fontSize={'xs'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.700'}
+                      background={'yellow.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'white'}
+                      color={'gray'}
                     >
                       {index}
                     </Box>
@@ -628,8 +628,6 @@ const SuccessAndClose = () => {
       >
         Successfully created wallet!
       </Text>
-      <Box h={6} />
-      <Planet mood="blissful" size={150} color="#61DDBC" />
       <Box h={10} />
       <Text width="300px">
         You can now close this tab and continue with the extension.

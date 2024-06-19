@@ -7,7 +7,7 @@ import AvatarLoader from './avatarLoader';
 
 const Account = React.forwardRef((props, ref) => {
   const avatarBg = useColorModeValue('blue.100', 'gray.900');
-  const panelBg = useColorModeValue('blue.500', 'gray.900');
+  const panelBg = useColorModeValue('blue.100', 'gray.900');
   const [account, setAccount] = React.useState(null);
 
   const initAccount = () =>

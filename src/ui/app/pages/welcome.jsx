@@ -30,7 +30,7 @@ import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
 
 const Welcome = () => {
   const capture = useCaptureEvent();
-  const Banner = useColorModeValue(BannerBlack, BannerWhite);
+  const Banner = useColorModeValue(BannerBlack, BannerBlack);
   const refWallet = React.useRef();
   const refImport = React.useRef();
 
@@ -81,7 +81,9 @@ const Welcome = () => {
             capture(Events.OnboardingCreateClick);
             refWallet.current.openModal();
           }}
-          colorScheme="yellow"
+          backgroundColor="yellow.400"
+          _hover={{ backgroundColor: 'yellow.500' }}
+          _active={{ backgroundColor: 'yellow.600' }}
           size="md"
         >
           New Wallet
@@ -93,7 +95,9 @@ const Welcome = () => {
             refImport.current.openModal();
           }}
           fontWeight="light"
-          colorScheme="gray"
+          backgroundColor="gray.400"
+          _hover={{ backgroundColor: 'gray.500' }}
+          _active={{ backgroundColor: 'gray.600' }}
           size="md"
         >
           Import
@@ -137,7 +141,10 @@ const WalletModal = React.forwardRef((props, ref) => {
             </Text>
             <Box h="4" />
             <Box display="flex" alignItems="center" justifyContent="center">
-              <Checkbox onChange={(e) => setAccepted(e.target.checked)} />
+              <Checkbox onChange={(e) => setAccepted(e.target.checked)}               
+              _focus={false}
+              colorScheme="yellow"
+              />
               <Box w="2" />
               <Text fontWeight={600}>
                 I read and accepted the{' '}
@@ -183,7 +190,6 @@ const ImportModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { accepted, setAccepted } = useAcceptDocs();
   const [selected, setSelected] = React.useState(null);
-
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
 
@@ -242,7 +248,11 @@ const ImportModal = React.forwardRef((props, ref) => {
             </Select>
             <Box h="5" />
             <Box display="flex" alignItems="center" justifyContent="center">
-              <Checkbox onChange={(e) => setAccepted(e.target.checked)} />
+              <Checkbox onChange={(e) => setAccepted(e.target.checked)}               
+              isFocusable={false}
+              _focusVisible={false}
+              colorScheme="yellow"
+              />
               <Box w="2" />
               <Text fontWeight={600}>
                 I read and accepted the{' '}

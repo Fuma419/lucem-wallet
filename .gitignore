@@ -23,3 +23,5 @@ secrets.development.js
 
 # IDEs
 .idea
+build.pem
+BugList.text

@@ -197,7 +197,7 @@ const GenerateSeed = (props) => {
       <Box height={3} />
       <Stack alignItems="center" direction="column">
         <Stack direction="row" width="64" spacing="6">
-          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" />
+          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme="yellow"/>
           <Text wordBreak="break-word" fontWeight="bold" fontSize="xs">
             I've stored the seed phrase in a secure place.
           </Text>

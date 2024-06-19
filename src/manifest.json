@@ -36,5 +36,5 @@
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; frame-src https://connect.trezor.io/;"
   },
   "permissions": ["storage", "unlimitedStorage", "favicon"],
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoy3Y6s5Q72zsN6+sBJL8EBCyGL/USyXXjTJGIIV/3xfcrkoZ53I+o9B0Euo8yz2GXnBjm3+ZIC1YwN5ZPC/uQpPHyq8GLksu3VvDdupKMNIWXvMByLjF0pyD4YNdNueU4r3fWPPBsbvG98cmNbeZ1NmwV2Byad4PQtUMx76jSk6KHcp3qNTMEo8utY49EIPaC9wr/Fg9gaqI83SFKNoe2FeKrb1HXaTT366myKLupHXm7hoD7U87a2itNfR7kohBoO6RBlrTNmYuq65wYO1eY5h/4tCkZrztjTKjfMWbuVc0kjL8VFv2IR1ETV8dMDgaBKxWGpccaDzF2GJfYNjK2QIDAQAB"
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuCztYe/C0f2S5N9bxCBWq4eSRqa9sszpJV6WCJBLdKURa5c9lJXXWwjsdZ40U+XtrhadK5gmZq1oNkp8gKIUBHqp3Sm/AlyioLth6RgTRl4NGYzeQ8nl0z3FWlVQN/e6zPe7/RCJ0KIxdzPs1p2su5LO4X+YRKA/hO5+hIvR9DUTfckoAA5PF/0VlscGf7bjahq4ppWF8Z6NF6uD3vz67ygGqMu4/04CRj9i28G24k7BHc805+gqK1hfMX0f/qxj0s3RtOK/Z1Y9fp1vfNjSnF5RjPd/oOo4DPub03vquAmHnqW4s+hrBeYstdsfJJ9JcUTgCNTNmLEgydWVxFvqhwIDAQAB"
 }

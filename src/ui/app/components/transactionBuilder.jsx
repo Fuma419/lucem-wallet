@@ -375,15 +375,14 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           >
             <Text fontSize="sm">
               Enter the Stake Pool ID to delegate your funds and start receiving
-              rewards. Alternatively, head to{' '}
+              rewards, Or condsider supporting the continued development of Lucem 
+              Wallet by delegating with Hodler Staking by{' '}
               <Link
                 fontWeight="semibold"
-                onClick={() => window.open('https://pool.pm')}
+                onClick={() => window.open('https://www.hodlerstaking.kozow.com/')}
               >
-                https://pool.pm
+              clicking here.
               </Link>
-              , connect your Lucem wallet and delegate to a stake pool of your
-              choice
             </Text>
             <Box h="6" />
             <Tooltip

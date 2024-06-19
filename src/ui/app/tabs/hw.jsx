@@ -394,8 +394,6 @@ const SuccessAndClose = () => {
       >
         Successfully added accounts!
       </Text>
-      <Box h={6} />
-      <Planet mood="blissful" size={150} color="#61DDBC" />
       <Box h={10} />
       <Text width="300px">
         You can now close this tab and continue with the extension.

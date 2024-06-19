@@ -83,7 +83,14 @@ const About = React.forwardRef((props, ref) => {
                   onClick={() => window.open('https://www.hodlerstaking.com/')}
                   style={{ textDecoration: 'underline', cursor: 'pointer' }}
                 >
-                  Hodler Services
+                  Hodler Staking{' '}
+                </span>
+                {' '}and{' '}
+                <span
+                  onClick={() => window.open('https://www.namiwallet.io/')}
+                  style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  IOG
                 </span>
               </Text>
               <Box height="4" />

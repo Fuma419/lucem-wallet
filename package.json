@@ -26,6 +26,7 @@
     "@emotion/react": "^11.4.0",
     "@emotion/styled": "^11.3.0",
     "@emurgo/cip14-js": "^3.0.1",
+    "@fontsource/roboto": "^5.0.13",
     "@fontsource/ubuntu": "^5.0.8",
     "@ledgerhq/hw-transport-webusb": "^6.28.0",
     "@trezor/connect-web": "^9.0.11",

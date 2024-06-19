@@ -2,7 +2,6 @@ import React from 'react';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import { POPUP_WINDOW } from '../config/config';
 import './app/components/styles.css';
-import '@fontsource/ubuntu/latin.css';
 import 'focus-visible/dist/focus-visible';
 
 const colorMode = localStorage['chakra-ui-color-mode'];
@@ -142,7 +141,7 @@ const theme = extendTheme({
     },
   },
   fonts: {
-    body: 'Ubuntu, sans-serif',
+    body: 'sans-serif', // Updated font
   },
 });
 

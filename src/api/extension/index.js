@@ -18,7 +18,6 @@ import { POPUP_WINDOW } from '../../config/config';
 import { mnemonicToEntropy } from 'bip39';
 import cryptoRandomString from 'crypto-random-string';
 import Loader from '../loader';
-import { createAvatar } from '@dicebear/core';
 import { shapes } from '@dicebear/collection';
 import { initTx } from './wallet';
 import {
@@ -1584,25 +1583,47 @@ export const getAdaHandle = async (assetName) => {
  */
 export const getMilkomedaData = async (ethAddress) => {
   const network = await getNetwork();
-  
-  let backendEndpoint, protocolMagic;
-
+  const isAddressAllowedController = new AbortController();
+  const stargateController = new AbortController();
+  setTimeout(() => isAddressAllowedController.abort(), 500);
   if (network.id === NETWORK_ID.mainnet) {
-    backendEndpoint = milkomedaNetworks['c1-mainnet'].backendEndpoint;
-    protocolMagic = milkomedaNetworks['c1-mainnet'].protocolMagic;
-  } else if (network.id === NETWORK_ID.devnet) {
-    backendEndpoint = milkomedaNetworks['c1-devnet'].backendEndpoint;
-    protocolMagic = milkomedaNetworks['c1-devnet'].protocolMagic;
+    const { isAllowed } = await fetch(
+      'https://' +
+        milkomedaNetworks['c1-mainnet'].backendEndpoint +
+        `/v1/isAddressAllowed?address=${ethAddress}`,
+        { signal: isAddressAllowedController.signal }
+    ).then((res) => res.json());
+    setTimeout(() => stargateController.abort(), 500);
+    const { ada, ttl_expiry, assets, current_address } = await fetch(
+      'https://' +
+        milkomedaNetworks['c1-mainnet'].backendEndpoint +
+        '/v1/stargate',
+        { signal: stargateController.signal }
+    ).then((res) => res.json());
+    const protocolMagic = milkomedaNetworks['c1-mainnet'].protocolMagic;
+    return {
+      isAllowed,
+      assets: [],
+      ada,
+      current_address,
+      protocolMagic,
+      ttl: ttl_expiry,
+    };
   } else {
-    throw new Error('Unsupported network id');
-  }
-  try {
-    const isAllowedResponse = await fetch(`https://${backendEndpoint}/v1/isAddressAllowed?address=${ethAddress}`);
-    const { isAllowed } = await isAllowedResponse.json();
-
-    const stargateResponse = await fetch(`https://${backendEndpoint}/v1/stargate`);
-    const { ada, ttl_expiry, assets, current_address } = await stargateResponse.json();
-
+    const { isAllowed } = await fetch(
+      'https://' +
+        milkomedaNetworks['c1-devnet'].backendEndpoint +
+        `/v1/isAddressAllowed?address=${ethAddress}`,
+        { signal: isAddressAllowedController.signal }
+    ).then((res) => res.json());
+    setTimeout(() => stargateController.abort(), 500);
+    const { ada, ttl_expiry, assets, current_address } = await fetch(
+      'https://' +
+        milkomedaNetworks['c1-devnet'].backendEndpoint +
+        '/v1/stargate',
+        { signal: stargateController.signal }
+    ).then((res) => res.json());
+    const protocolMagic = milkomedaNetworks['c1-devnet'].protocolMagic;
     return {
       isAllowed,
       assets: [],

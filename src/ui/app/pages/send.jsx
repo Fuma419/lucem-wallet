@@ -956,6 +956,8 @@ const AddressPopup = ({
         };
       }
     } else if (isM1) {
+      // We allow failure here because we fail to get the user's Milkomeda
+      //   address when they are creating an M1 transaction.
       const { isAllowed, ada, current_address, protocolMagic, assets, ttl } =
         await getMilkomedaData(value);
 

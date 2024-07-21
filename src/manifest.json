@@ -3,6 +3,7 @@
   "version": "3.7.3",
   "description": "Featurefull light powered cardano wallet. Beautifully built for security and simplicity.",
   "name": "Lucem Wallet",
+  "background": { "service_worker": "background.bundle.js" },
   "action": {
     "default_popup": "mainPopup.html",
     "default_icon": "icon-34.png"

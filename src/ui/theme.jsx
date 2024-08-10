@@ -4,8 +4,6 @@ import { POPUP_WINDOW } from '../config/config';
 import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
 
-const colorMode = localStorage['chakra-ui-color-mode'];
-
 const inputSizes = {
   sm: {
     borderRadius: 'lg',
@@ -129,7 +127,8 @@ const theme = extendTheme({
     Switch,
   },
   config: {
-    useSystemColorMode: colorMode ? true : false,
+    initialColorMode: 'dark', // Force dark mode
+    useSystemColorMode: false, // Disable system color mode preference
   },
   styles: {
     global: {
@@ -137,6 +136,8 @@ const theme = extendTheme({
         // width: POPUP_WINDOW.width + 'px',
         // height: POPUP_WINDOW.height + 'px',
         overflow: 'hidden',
+        bg: '#1B1C1E', // Ensure the background is dark
+        color: 'gray.100', // Ensure text is light-colored
       },
     },
   },

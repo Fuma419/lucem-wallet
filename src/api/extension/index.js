@@ -18,6 +18,7 @@ import { POPUP_WINDOW } from '../../config/config';
 import { mnemonicToEntropy } from 'bip39';
 import cryptoRandomString from 'crypto-random-string';
 import Loader from '../loader';
+import { createAvatar } from '@dicebear/avatars';
 import { shapes } from '@dicebear/collection';
 import { initTx } from './wallet';
 import {
@@ -1582,56 +1583,60 @@ export const getAdaHandle = async (assetName) => {
  * @param {string} ethAddress
  */
 export const getMilkomedaData = async (ethAddress) => {
-  const network = await getNetwork();
-  const isAddressAllowedController = new AbortController();
-  const stargateController = new AbortController();
-  setTimeout(() => isAddressAllowedController.abort(), 500);
-  if (network.id === NETWORK_ID.mainnet) {
-    const { isAllowed } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-mainnet'].backendEndpoint +
-        `/v1/isAddressAllowed?address=${ethAddress}`,
+  try {
+    const network = await getNetwork();
+    const isAddressAllowedController = new AbortController();
+    const stargateController = new AbortController();
+    setTimeout(() => isAddressAllowedController.abort(), 500);
+    let result;
+    if (network.id === NETWORK_ID.mainnet) {
+      const { isAllowed } = await fetch(
+        'https://' +
+          milkomedaNetworks['c1-mainnet'].backendEndpoint +
+          `/v1/isAddressAllowed?address=${ethAddress}`,
         { signal: isAddressAllowedController.signal }
-    ).then((res) => res.json());
-    setTimeout(() => stargateController.abort(), 500);
-    const { ada, ttl_expiry, assets, current_address } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-mainnet'].backendEndpoint +
-        '/v1/stargate',
+      ).then((res) => res.json());
+      setTimeout(() => stargateController.abort(), 500);
+      const { ada, ttl_expiry, assets, current_address } = await fetch(
+        'https://' +
+          milkomedaNetworks['c1-mainnet'].backendEndpoint +
+          '/v1/stargate',
         { signal: stargateController.signal }
-    ).then((res) => res.json());
-    const protocolMagic = milkomedaNetworks['c1-mainnet'].protocolMagic;
-    return {
-      isAllowed,
-      assets: [],
-      ada,
-      current_address,
-      protocolMagic,
-      ttl: ttl_expiry,
-    };
-  } else {
-    const { isAllowed } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-devnet'].backendEndpoint +
-        `/v1/isAddressAllowed?address=${ethAddress}`,
-        { signal: isAddressAllowedController.signal }
-    ).then((res) => res.json());
-    setTimeout(() => stargateController.abort(), 500);
-    const { ada, ttl_expiry, assets, current_address } = await fetch(
-      'https://' +
-        milkomedaNetworks['c1-devnet'].backendEndpoint +
-        '/v1/stargate',
+      ).then((res) => res.json());
+      const protocolMagic = milkomedaNetworks['c1-mainnet'].protocolMagic;
+      result = {
+        isAllowed,
+        assets: [],
+        ada,
+        current_address,
+        protocolMagic,
+        ttl: ttl_expiry,
+      };
+    } else {
+      const { isAllowed } = await fetch(
+        'https://' +
+          milkomedaNetworks['c1-devnet'].backendEndpoint +
+          `/v1/isAddressAllowed?address=${ethAddress}`,
+          { signal: isAddressAllowedController.signal }
+        ).then((res) => res.json());
+      setTimeout(() => stargateController.abort(), 500);
+      const { ada, ttl_expiry, assets, current_address } = await fetch(
+        'https://' +
+          milkomedaNetworks['c1-devnet'].backendEndpoint +
+          '/v1/stargate',
         { signal: stargateController.signal }
-    ).then((res) => res.json());
-    const protocolMagic = milkomedaNetworks['c1-devnet'].protocolMagic;
-    return {
-      isAllowed,
-      assets: [],
-      ada,
-      current_address,
-      protocolMagic,
-      ttl: ttl_expiry,
-    };
+      ).then((res) => res.json());
+      const protocolMagic = milkomedaNetworks['c1-devnet'].protocolMagic;
+      result = {
+        isAllowed,
+        assets: [],
+        ada,
+        current_address,
+        protocolMagic,
+        ttl: ttl_expiry,
+      };
+    }
+    return result;
   } catch (error) {
     console.error('Error fetching Milkomeda data:', error);
     throw error;
@@ -1746,22 +1751,19 @@ const getRandomShape = () => {
 };
 
 export const avatarToImage = (avatar) => {
-  const blob = new Blob(
-    [
-      createAvatar(shapes, {
-        seed: avatar,
-        shape1: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled","rectangle"],
-        shape2: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled","rectangle"],
-        shape3: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled","rectangle"],
-        shape1Color: ["C5FF0A", "92aac3", "DEFF4D"],
-        shape2Color: ["B08102", "708fb4", "B80000"],
-        shape3Color: ["BEBEBE", "8C8C8C", "616161", "4e738e"],
-        backgroundColor: ["B08102", "8A0000", "708fb4", "C49000"], 
-        backgroundType: ["gradientLinear"],
-      }),
-    ],
-    { type: 'image/svg+xml' }
-  );
+  const svg = createAvatar(shapes, {
+    seed: avatar,
+    shape1: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled", "rectangle"],
+    shape2: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled", "rectangle"],
+    shape3: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled", "rectangle"],
+    shape1Color: ["C5FF0A", "92aac3", "DEFF4D"],
+    shape2Color: ["B08102", "708fb4", "B80000"],
+    shape3Color: ["BEBEBE", "8C8C8C", "616161", "4e738e"],
+    backgroundColor: ["B08102", "8A0000", "708fb4", "C49000"],
+    backgroundType: ["gradientLinear"],
+  });
+
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
   return URL.createObjectURL(blob);
 };
 

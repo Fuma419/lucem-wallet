@@ -25,3 +25,4 @@ secrets.development.js
 .idea
 build.pem
 BugList.text
+lucem-wallet.code-workspace

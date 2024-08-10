@@ -1,3 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400&display=swap');
+
+
+
 .lineClamp {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -13,3 +18,195 @@
 body::-webkit-scrollbar {
   display: none;
 }
+
+.welcome {
+opacity: 1;
+color: rgba(255, 255, 255, 1);
+font-family: 'Orbitron', sans-serif;
+font-size: 24px;
+font-weight: 600;
+font-style: SemiBold;
+letter-spacing: 1.2px;
+text-align: center;
+line-height: 28px;
+}
+
+
+.message {
+  opacity: 1;
+color: rgba(138, 138, 138, 1);
+font-family: 'Barlow', sans-serif;
+font-size: 14px;
+font-weight: 400;
+font-style: Regular;
+letter-spacing: 0px;
+text-align: center;
+line-height: 20px;
+padding: 10px;
+}
+
+.glow {
+border-radius: 8px;
+border: 1px solid rgba(206, 250, 0, 1);
+box-shadow: 0px 0px 30px rgba(206, 250, 0, 1);
+opacity: 1;
+background-color: rgba(27, 28, 30, 1);
+}
+
+/* Base button styles */
+/* Base button styles */
+/* Base button styles */
+.button {
+  opacity: 1;
+color: rgba(255, 255, 255, 1);
+  display: inline-block;
+  padding: 10px 30px;
+  max-height: 70px;
+  font-size: 12px;
+  text-transform: uppercase;
+  text-align: center;
+  color: #ffffff; /* White text */
+  border-radius: 8px; /* Rounded corners */
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 0.5px solid; /* Thin border */
+}
+
+/* Green-Yellow Radial Gradient Button (New HW Wallet) */
+
+  .button.new-wallet {
+      opacity: .5;
+      letter-spacing: 2px;
+      font-size: 14px;
+color: rgba(255, 255, 255, 1);
+  background-image: radial-gradient(rgba(49, 60, 0, 1) 0%, rgba(27, 28, 30, 1) 100%);
+  border-color: rgba(206, 250, 0, 1); /* Green-Yellow border */
+  opacity: 1;
+}
+
+/* Teal-Cyan Radial Gradient Button (New Wallet) */
+.button.hw-wallet {
+  opacity: .5;
+  letter-spacing: 2px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 1);
+  background-image: radial-gradient(rgba(0, 47, 57, 1) 0%, rgba(27, 28, 30, 1) 100%);
+  border-color: rgba(0, 255, 240, 1); /* Teal-Cyan border */
+  opacity: 1;
+}
+
+/* Gray Radial Gradient Button (Import) */
+.button.import-wallet {
+  opacity: .5;
+  letter-spacing: 2px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 1);
+  background-image: radial-gradient(rgba(30, 30, 30, 1) 0%, rgba(27, 28, 30, 1) 100%);
+  border-color: rgba(120, 120, 120, 1); /* Gray border */
+  opacity: 1;
+}
+
+/* Hover States */
+.button:hover {
+  transform: translateY(-2px);
+}
+
+.button.new-wallet:hover {
+  background-image: radial-gradient(rgba(70, 80, 0, 1) 0%, rgba(40, 41, 43, 1) 100%);
+  border-color: rgba(230, 255, 100, 1); /* Brighter Green-Yellow */
+}
+
+.button.hw-wallet:hover {
+  background-image: radial-gradient(rgba(0, 80, 90, 1) 0%, rgba(40, 41, 43, 1) 100%);
+  border-color: rgba(0, 255, 240, 1); /* Brighter Teal-Cyan */
+}
+
+.button.import-wallet:hover {
+  background-image: radial-gradient(rgba(50, 50, 50, 1) 0%, rgba(40, 41, 43, 1) 100%);
+  border-color: rgba(150, 150, 150, 1); /* Brighter Gray */
+}
+
+
+
+
+/* Glowing Button Styles */
+.button-glow {
+  padding: 15px 30px;
+  font-size: 16px;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+  color: #ffffff;
+  background-color: transparent; /* Transparent background */
+  border-radius: 8px;
+  border: 1px solid rgba(206, 250, 0, 1); /* Green-Yellow border */
+  box-shadow: 0px 0px 0px rgba(204, 250, 0, 0.509); /* Glowing effect */
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.button-glow:hover {
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1); /* Stronger glow on hover */
+  transform: translateY(-2px); /* Slight lift on hover */
+}
+
+/* Glowing Button Styles */
+.modal-glow {
+  font-size: 16px;
+  font-family: 'Barlow', sans-serif;
+  padding: 5px 15px;
+  text-align: left;
+  color: #ffffff;
+  background-color: transparent; /* Transparent background */
+  border: 1px solid rgba(206, 250, 0, 1); /* Green-Yellow border */
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75); /* Glowing effect */
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-glow:hover {
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1); /* Stronger glow on hover */
+  transform: translateY(-2px); /* Slight lift on hover */
+}
+/* 
+.modal-glow {
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  border: 1px solid rgba(206, 250, 0, 1); 
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75); 
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-glow .modal-header {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.modal-glow .modal-body {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 20px;
+}
+
+.modal-glow .modal-footer {
+  display: flex;
+  justify-content: space-between;
+}
+
+.modal-glow .modal-footer button {
+  background-color: transparent;
+  color: #ffffffc3;
+  border: 1px solid rgba(206, 250, 0, 1);
+  box-shadow: 0px 0px 10px rgba(206, 250, 0, 0.75);
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.modal-glow .modal-footer button:hover {
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 1);
+} */

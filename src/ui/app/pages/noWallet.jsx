@@ -2,11 +2,9 @@ import { Box, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import React from 'react';
 import { Backpack } from 'react-kawaii';
 
-import BannerWhite from '../../../assets/img/bannerWhite.svg';
 import BannerBlack from '../../../assets/img/bannerBlack.svg';
 
 const NoWallet = () => {
-  const Banner = useColorModeValue(BannerBlack, BannerWhite);
   return (
     <Box
       height="100vh"
@@ -18,7 +16,7 @@ const NoWallet = () => {
       position="relative"
     >
       <Box position="absolute" top="9">
-        <Image draggable={false} width="85px" src={Banner} />
+        <Image draggable={false} width="85px" src={BannerBlack} />
       </Box>
       <Box height="2" />
       <Text fontWeight="bold" color="GrayText">

@@ -1,8 +1,5 @@
-/**
- * hw.jsx is the entry point for the harware wallet extension tab
- */
-
 import React from 'react';
+// import '../../app/components/styles.css';
 import {
   createWallet,
   mnemonicFromObject,
@@ -26,7 +23,6 @@ import {
   InputGroup,
   InputRightElement,
   Image,
-  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   generateMnemonic,
@@ -41,18 +37,16 @@ import { EventTracker } from '../../../features/analytics/event-tracker';
 import { ExtensionViews } from '../../../features/analytics/types';
 import Main from '../../index';
 import { TAB } from '../../../config/config';
-import { Planet } from 'react-kawaii';
-
-import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import BackgroundImagePurple from '../../../assets/img/background-purple';
+import BackgroundImageCyan from '../../../assets/img/background-cyan';
+import BackgroundImageGreen from '../../../assets/img/background-green';
+import LogoWhite from '../../../assets/img/bannerBlack'; // Use the white logo directly for dark mode
 import { useStoreActions } from 'easy-peasy';
 import { useCaptureEvent } from '../../../features/analytics/hooks';
 import { Events } from '../../../features/analytics/events';
 
 const App = () => {
-  const Logo = useColorModeValue(LogoOriginal, LogoWhite);
-  const backgroundColor = useColorModeValue('gray.200', 'inherit');
-  const cardColor = useColorModeValue('blue.100', 'gray.900');
+
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -64,6 +58,10 @@ const App = () => {
     else navigate('/generate');
   }, []);
 
+  // Conditionally setting the background image based on the current route
+  const backgroundImage = location.pathname === '/import' ? BackgroundImageCyan : BackgroundImagePurple;
+  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
+
   return (
     <Box
       display="flex"
@@ -72,13 +70,19 @@ const App = () => {
       width="full"
       height="100vh"
       position="relative"
-      background={backgroundColor}
+      opacity={.9}
+      backgroundImage={`url(${backgroundImage})`}
+      backgroundSize="cover"
+      backgroundPosition="center"
+      backgroundRepeat="no-repeat"
     >
       {/* Logo */}
-      <Box position="absolute" left="40px" top="40px">
-        <Image draggable={false} src={Logo} width="36px" />
+      <Box position="absolute" left="80px" top="80px">
+        <Image draggable={false} src={LogoWhite} width="100px" />
       </Box>
+      {/* Content */}
       <Box
+        className={`modal-glow-${colorTheme}`}
         rounded="2xl"
         shadow="md"
         display="flex"
@@ -86,12 +90,12 @@ const App = () => {
         flexDirection="column"
         justifyContent="center"
         width="90%"
-        maxWidth="460px"
-        maxHeight="650px"
-        height="80vh"
+        maxWidth="560px"
+        maxHeight="850px"
         p={10}
-        background={cardColor}
-        fontSize="sm"
+        background="rgba(0, 0, 0, .85)"  // Optional: Add a semi-transparent background to improve text visibility
+        color="whiteAlpha.900"
+        fontSize="md"
       >
         <Routes>
           <Route path="/generate" element={<GenerateSeed />} />
@@ -104,7 +108,8 @@ const App = () => {
   );
 };
 
-const GenerateSeed = (props) => {
+
+const GenerateSeed = () => {
   const capture = useCaptureEvent();
   const navigate = useNavigate();
   const [mnemonic, setMnemonic] = React.useState({});
@@ -118,27 +123,28 @@ const GenerateSeed = (props) => {
   React.useEffect(() => {
     generate();
   }, []);
+  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
 
   return (
     <Box>
-      <Text textAlign="center" fontWeight="bold" fontSize="xl">
-        Seed Phrase
+      <Text className='walletTitle' textAlign="center" fontWeight="bold" fontSize="xl">
+        New Seed Phrase
       </Text>
-      <Spacer height="4" />
+      <Spacer height="10" />
       <Stack
-        spacing={3}
+        spacing={10}
         direction="row"
         alignItems="center"
         justifyContent="center"
       >
         {[0, 1].map((colIndex) => (
-          <Box key={colIndex} width={140}>
+          <Box  key={colIndex} width={140}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
                 <Box
                   key={index}
-                  marginBottom={2}
+                  marginBottom={3}
                   display="flex"
                   alignItems={'center'}
                   justifyContent={'center'}
@@ -146,44 +152,49 @@ const GenerateSeed = (props) => {
                   {!Boolean(colIndex) && (
                     <Box
                       mr={2}
-                      width={5}
-                      height={5}
-                      fontSize={'xs'}
+                      width={6}
+                      height={6}
                       fontWeight="bold"
+                      fontSize={'sm'}
                       rounded="full"
-                      background={'yellow.500'}
+                      borderRadius={20}
+                      background={'purple.600'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'gray'}
+                      color={'cyan.100'} // Dark text on  background
                     >
                       {index}
                     </Box>
                   )}
-                  <Input
+                  <Input 
+                    focusBorderColor={`${colorTheme}.300`}
                     width={110}
-                    size={'xs'}
+                    size={'sm'}
                     isReadOnly={true}
                     value={mnemonic ? mnemonic[index] : '...'}
                     textAlign="center"
                     variant="filled"
                     fontWeight="bold"
                     rounded="full"
+                    background="gray.900" // Dark input background
+                    color="whiteAlpha.900" // White input text color
                     placeholder={`Word ${index}`}
                   ></Input>
                   {Boolean(colIndex) && (
                     <Box
                       ml={2}
-                      width={5}
-                      height={5}
-                      fontSize={'xs'}
+                      width={6}
+                      height={6}
+                      fontSize={'sm'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.500'}
+                      borderRadius={20}
+                      background={'purple.600'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'gray'}
+                      color={'cyan.100'} // Dark text on cyan background
                     >
                       {index}
                     </Box>
@@ -197,15 +208,16 @@ const GenerateSeed = (props) => {
       <Box height={3} />
       <Stack alignItems="center" direction="column">
         <Stack direction="row" width="64" spacing="6">
-          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme="yellow"/>
-          <Text wordBreak="break-word" fontWeight="bold" fontSize="xs">
+          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme="purple"/>
+          <Text className='walletTitle' wordBreak="break-word" fontSize="sm">
             I've stored the seed phrase in a secure place.
           </Text>
         </Stack>
         <Box height={4} />
-        <Button
+        <Button className="button new-wallet"
           isDisabled={!checked}
           rightIcon={<ChevronRightIcon />}
+          colorScheme="purple"
           onClick={() => {
             capture(Events.OnboardingCreateWritePassphraseNextClick);
             navigate('/verify', { state: { mnemonic } });
@@ -241,17 +253,19 @@ const VerifySeed = () => {
     verifyAll();
   }, [input]);
 
+  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
+
   return (
     <Box>
-      <Text textAlign="center" fontWeight="bold" fontSize="xl">
+      <Text className='walletTitle' textAlign="center" fontWeight="bold" fontSize="xl">
         Verify Seed Phrase
       </Text>
-      <Spacer height="2" />
+      {/* <Spacer height="10" />
       <Text fontSize="xs" textAlign="center">
         Enter the seed phrase you've just stored.
-      </Text>
-      <Spacer height="6" />
-      <Stack spacing={3} direction="row">
+      </Text> */}
+      <Spacer height="10" />
+      <Stack spacing={10} direction="row">
         {[0, 1].map((colIndex) => (
           <Box key={colIndex} width={140}>
             {[...Array(12)].map((_, rowIndex) => {
@@ -259,24 +273,25 @@ const VerifySeed = () => {
               return (
                 <Box
                   key={index}
-                  marginBottom={2}
+                  marginBottom={3}
                   display="flex"
                   alignItems={'center'}
                   justifyContent={'center'}
                 >
                   {!Boolean(colIndex) && (
                     <Box
-                      mr={2}
-                      width={5}
-                      height={5}
-                      fontSize={'xs'}
-                      fontWeight="bold"
-                      rounded="full"
-                      background={'yellow.500'}
-                      display={'flex'}
-                      alignItems={'center'}
-                      justifyContent={'center'}
-                      color={'gray'}
+                    mr={2}
+                    width={6}
+                    height={6}
+                    fontSize={'sm'}
+                    fontWeight="bold"
+                    rounded="full"
+                    borderRadius={20}
+                    background={'purple.600'}
+                    display={'flex'}
+                    alignItems={'center'}
+                    justifyContent={'center'}
+                    color={'gray.900'} // Dark text on gray background
                     >
                       {index}
                     </Box>
@@ -285,8 +300,9 @@ const VerifySeed = () => {
                     variant={index % 5 !== 0 ? 'filled' : 'outline'}
                     defaultValue={index % 5 !== 0 ? mnemonic[index] : ''}
                     isReadOnly={index % 5 !== 0}
+                    focusBorderColor={`${colorTheme}.300`}
                     width={110}
-                    size={'xs'}
+                    size={'sm'}
                     isInvalid={input[index] && input[index] !== mnemonic[index]}
                     ref={(el) => (refs.current[index] = el)}
                     onChange={(e) => {
@@ -302,21 +318,22 @@ const VerifySeed = () => {
                     textAlign="center"
                     fontWeight="bold"
                     rounded="full"
+                    background="gray.900" // Dark input background
                     placeholder={`Word ${index}`}
                   ></Input>
                   {Boolean(colIndex) && (
                     <Box
                       ml={2}
-                      width={5}
-                      height={5}
-                      fontSize={'xs'}
+                      width={6}
+                      height={6}
+                      fontsize={'sm'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.500'}
+                      background={'purple.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'gray'}
+                      color={'gray.900'}
                     >
                       {index}
                     </Box>
@@ -331,8 +348,7 @@ const VerifySeed = () => {
       <Stack alignItems="center" justifyContent="center" direction="row">
         <Button
           fontWeight="medium"
-          color="gray.400"
-          variant="ghost"
+          className="button"
           onClick={() => {
             capture(Events.OnboardingCreateEnterPassphraseSkipClick);
             navigate('/account', {
@@ -344,6 +360,7 @@ const VerifySeed = () => {
         </Button>
         <Button
           ml="3"
+          className="button new-wallet"
           isDisabled={!allValid}
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
@@ -382,17 +399,19 @@ const ImportSeed = () => {
     verifyAll();
   }, [input]);
 
+  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
+
   return (
     <Box>
-      <Text textAlign="center" fontWeight="bold" fontSize="xl">
+      <Text className='walletTitle' textAlign="center" fontWeight="bold" fontSize="xl">
         Import Seed Phrase
       </Text>
-      <Spacer height="2" />
-      <Text fontSize="xs" textAlign="center">
+      <Spacer height="5" />
+      <Text className='walletTitle' fontSize="sm" textAlign="center">
         Enter a {seedLength}-word seed phrase.
       </Text>
-      <Spacer height="4" />
-      <Stack spacing={3} direction="row">
+      <Spacer height="10" />
+      <Stack spacing={10} direction="row">
         {[0, 1].map((colIndex) => (
           <Box key={colIndex} width={140}>
             {[...Array(12)].map((_, rowIndex) => {
@@ -401,7 +420,7 @@ const ImportSeed = () => {
               return (
                 <Box
                   key={index}
-                  marginBottom={2}
+                  marginBottom={3}
                   display="flex"
                   alignItems={'center'}
                   justifyContent={'center'}
@@ -409,16 +428,16 @@ const ImportSeed = () => {
                   {!Boolean(colIndex) && (
                     <Box
                       mr={2}
-                      width={5}
-                      height={5}
-                      fontSize={'xs'}
+                      width={6}
+                      height={6}
+                      fontSize={'sm'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.500'}
+                      background={'cyan.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'gray'}
+                      color={'gray.900'}
                     >
                       {index}
                     </Box>
@@ -426,7 +445,8 @@ const ImportSeed = () => {
                   <Input
                     variant={'filled'}
                     width={110}
-                    size={'xs'}
+                    focusBorderColor={`${colorTheme}.300`}
+                    size={'sm'}
                     isInvalid={input[index] && !words.includes(input[index])}
                     ref={(el) => (refs.current[index] = el)}
                     onChange={(e) => {
@@ -438,21 +458,23 @@ const ImportSeed = () => {
                     textAlign="center"
                     fontWeight="bold"
                     rounded="full"
+                    background="gray.900" // Dark input background
+
                     placeholder={`Word ${index}`}
                   ></Input>
                   {Boolean(colIndex) && (
                     <Box
                       ml={2}
-                      width={5}
-                      height={5}
-                      fontSize={'xs'}
+                      width={6}
+                      height={6}
+                      fontSize={'sm'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'yellow.500'}
+                      background={'cyan.500'}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'gray'}
+                      color={'gray.900'}
                     >
                       {index}
                     </Box>
@@ -503,8 +525,8 @@ const MakeAccount = (props) => {
       justifyContent="center"
       width="100%"
     >
-      <Box width="70%">
-        <Text fontWeight="bold" fontSize="xl">
+      <Box width="65%">
+        <Text className='walletTitle' fontWeight="bold" fontSize="lg">
           Create Account
         </Text>
         <Spacer height="10" />
@@ -512,7 +534,7 @@ const MakeAccount = (props) => {
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
           placeholder="Enter account name"
         ></Input>
-        <Spacer height="6" />
+        <Spacer height="10" />
 
         <InputGroup size="md" width="100%">
           <Input
@@ -531,6 +553,7 @@ const MakeAccount = (props) => {
             }
             placeholder="Enter password"
           />
+          <Spacer height="10" />
           <InputRightElement width="4.5rem">
             <Button
               h="1.75rem"
@@ -542,7 +565,7 @@ const MakeAccount = (props) => {
           </InputRightElement>
         </InputGroup>
         {state.regularPassword === false && (
-          <Text fontSize={'xs'} color="red.300">
+          <Text fontsize={'sm'} color="red.300">
             Password must be at least 8 characters long
           </Text>
         )}
@@ -576,12 +599,12 @@ const MakeAccount = (props) => {
           </InputRightElement>
         </InputGroup>
         {state.matchingPassword === false && (
-          <Text fontSize={'xs'} color="red.300">
+          <Text fontsize={'sm'} color="red.300">
             Password doesn't match
           </Text>
         )}
-        <Spacer height="8" />
-        <Button
+        <Spacer height="10" />
+        <Button className="button new-wallet"
           isDisabled={
             !state.password ||
             !state.password.length >= 8 ||
@@ -589,7 +612,6 @@ const MakeAccount = (props) => {
             !state.name
           }
           isLoading={loading}
-          colorScheme="yellow"
           loadingText="Creating"
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
@@ -621,7 +643,7 @@ const SuccessAndClose = () => {
     <>
       <Text
         mt={10}
-        fontSize="x-large"
+        fontSize="xl"
         fontWeight="semibold"
         width={200}
         textAlign="center"
@@ -629,10 +651,9 @@ const SuccessAndClose = () => {
         Successfully created wallet!
       </Text>
       <Box h={10} />
-      <Text width="300px">
-        You can now close this tab and continue with the extension.
-      </Text>
-      <Button mt="auto" onClick={async () => window.close()}>
+      <Text>You can now close this tab and continue with the extension.</Text>
+      <Box h={10} />
+      <Button className="button new-wallet" mt="auto" onClick={async () => window.close()}>
         Close
       </Button>
     </>

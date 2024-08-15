@@ -25,13 +25,13 @@ const Input = {
     },
   },
   defaultProps: {
-    focusBorderColor: 'yellow.600',
+    focusBorderColor: 'gray.300',
   },
 };
 
 const Checkbox = {
   defaultProps: {
-    colorScheme: '#C5FF0A',
+    colorScheme: 'yellow',
   },
 };
 
@@ -63,27 +63,49 @@ const Switch = {
 const theme = extendTheme({
   colors: {
     yellow: { 
-      100: "#F2FFB3", // Lightest shade, very pale yellow-green
-      200: "#E8FF80", // Light yellow-green
-      300: "#DEFF4D", // Light green-yellow
-      400: "#D4FF1A", // Close to base, slightly lighter
-      500: "#C5FF0A", // Base color
-      600: "#ADDC09", // Slightly darker than base
-      700: "#94B507", // Darker shade
-      800: "#7A8E05", // Even darker
-      900: "#566004", // Darkest shade
+      100: "#F8FFC7", // Lightest shade, very pale yellow-green
+      200: "#EDFF8E", // Light yellow-green
+      300: "#E2FF55", // Light green-yellow
+      400: "#D7FF1C", // Slightly lighter than base
+      500: "#CEFA00", // Base color
+      600: "#B2D300", // Slightly darker than base
+      700: "#97AC00", // Darker shade
+      800: "#7C8600", // Even darker
+      900: "#5E6300", // Darkest shade
+    },
+    cyan: { 
+      100: "#C7FEFF", // Lightest shade, very pale cyan
+      200: "#8EF9FF", // Light cyan
+      300: "#55F4FF", // Light blue-cyan
+      400: "#1CEFFF", // Slightly lighter than base
+      500: "#00F5FF", // Base color
+      600: "#00CED3", // Slightly darker than base
+      700: "#00A7AC", // Darker shade
+      800: "#008085", // Even darker
+      900: "#005A5E", // Darkest shade
+    },
+    purple: { 
+      100: "#F8C7FF", // Lightest shade, very pale purple
+      200: "#F18EFF", // Light purple
+      300: "#EA55FF", // Light pink-purple
+      400: "#E31CFF", // Slightly lighter than base
+      500: "#DC1BFA", // Base color
+      600: "#B217D3", // Slightly darker than base
+      700: "#8811AC", // Darker shade
+      800: "#5E0B85", // Even darker
+      900: "#35055E", // Darkest shade
     },    
     gray: { 
-      100: "#E1E1E1", // Light gray
-      200: "#CFCFCF", // Light gray
-      300: "#BEBEBE", // Light gray
-      400: "#A9A9A9", // Medium gray
-      500: "#8C8C8C", // Gray
-      600: "#787878", // Dark gray
-      700: "#616161", // Darker gray
-      800: "#4D4D4D", // Even darker gray
-      900: "#383838", // Darkest gray
-    },
+      100: "#CFCFCF", // Darker light gray
+      200: "#BEBEBE", // Darker light gray
+      300: "#A9A9A9", // Darker medium gray
+      400: "#8C8C8C", // Darker gray
+      500: "#707070", // Dark gray
+      600: "#5A5A5A", // Darker gray
+      700: "#464646", // Even darker gray
+      800: "#2F2F2F", // Much darker gray
+      900: "#2A2A2A", // Darkest gray
+    },    
     blue: {
       100: "#b4c5d5", // Light blue
       200: "#a3b7cc", // Lighter blue

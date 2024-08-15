@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400&display=swap');
 
 
@@ -22,7 +22,7 @@ body::-webkit-scrollbar {
 .welcome {
 opacity: 1;
 color: rgba(255, 255, 255, 1);
-font-family: 'Orbitron', sans-serif;
+font-family: 'Barlow', sans-serif;
 font-size: 24px;
 font-weight: 600;
 font-style: SemiBold;
@@ -30,6 +30,12 @@ letter-spacing: 1.2px;
 text-align: center;
 line-height: 28px;
 }
+
+.walletTitle {
+  opacity: 1;
+  color: rgba(255, 255, 255, 1);
+  font-family: 'Barlow', sans-serif;
+  }
 
 
 .message {
@@ -68,106 +74,126 @@ color: rgba(255, 255, 255, 1);
   color: #ffffff; /* White text */
   border-radius: 8px; /* Rounded corners */
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease-in-out;
   border: 0.5px solid; /* Thin border */
 }
 
-/* Green-Yellow Radial Gradient Button (New HW Wallet) */
-
-  .button.new-wallet {
-      opacity: .5;
-      letter-spacing: 2px;
-      font-size: 14px;
-color: rgba(255, 255, 255, 1);
-  background-image: radial-gradient(rgba(49, 60, 0, 1) 0%, rgba(27, 28, 30, 1) 100%);
-  border-color: rgba(206, 250, 0, 1); /* Green-Yellow border */
-  opacity: 1;
-}
-
-/* Teal-Cyan Radial Gradient Button (New Wallet) */
-.button.hw-wallet {
-  opacity: .5;
+.button.new-wallet {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
   letter-spacing: 2px;
   font-size: 14px;
   color: rgba(255, 255, 255, 1);
-  background-image: radial-gradient(rgba(0, 47, 57, 1) 0%, rgba(27, 28, 30, 1) 100%);
-  border-color: rgba(0, 255, 240, 1); /* Teal-Cyan border */
-  opacity: 1;
+  box-shadow: 0 0 4px rgba(220, 27, 250, 0.8), 0 0 30px rgba(220, 27, 250, 0.6); /* Stronger purple glow */
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, .5));
+  border: thin solid rgba(220, 27, 250, 1); /* Solid purple border */
+  transition: all 0.4s ease-in-out;
 }
 
-/* Gray Radial Gradient Button (Import) */
 .button.import-wallet {
-  opacity: .5;
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
   letter-spacing: 2px;
   font-size: 14px;
   color: rgba(255, 255, 255, 1);
-  background-image: radial-gradient(rgba(30, 30, 30, 1) 0%, rgba(27, 28, 30, 1) 100%);
-  border-color: rgba(120, 120, 120, 1); /* Gray border */
-  opacity: 1;
+  box-shadow: 0 0 4px rgba(0, 245, 255, 0.8), 0 0 30px rgba(0, 245, 255, 0.6); /* Stronger cyan glow */
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, .5));
+  border: thin solid rgba(0, 245, 255, 1); /* Solid cyan border */
+  transition: all 0.4s ease-in-out;
+}
+
+.button.hw-wallet {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 4px rgba(206, 250, 0, 0.8), 0 0 30px rgba(206, 250, 0, 0.6); /* Stronger yellow-green glow */
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, .5));
+  border: thin solid rgba(206, 250, 0, 1); /* Solid yellow-green border */
+  transition: all 0.4s ease-in-out;
 }
 
 /* Hover States */
 .button:hover {
   transform: translateY(-2px);
+  box-shadow: 10px 0px 20px rgba(255, 255, 255, 0.7), 0 0 40px rgba(255, 255, 255, 0.9); /* Enhanced glow on hover */
+  transition: all 4s ease-in-out;
 }
 
 .button.new-wallet:hover {
-  background-image: radial-gradient(rgba(70, 80, 0, 1) 0%, rgba(40, 41, 43, 1) 100%);
-  border-color: rgba(230, 255, 100, 1); /* Brighter Green-Yellow */
-}
-
-.button.hw-wallet:hover {
-  background-image: radial-gradient(rgba(0, 80, 90, 1) 0%, rgba(40, 41, 43, 1) 100%);
-  border-color: rgba(0, 255, 240, 1); /* Brighter Teal-Cyan */
+  box-shadow: 10px 0px 20px rgba(220, 27, 250, .5), 0 0 40px rgba(220, 27, 250, 0.9); /* Stronger purple glow on hover */
+  border: thin solid rgba(220, 27, 250, 1); /* Solid purple border */
 }
 
 .button.import-wallet:hover {
-  background-image: radial-gradient(rgba(50, 50, 50, 1) 0%, rgba(40, 41, 43, 1) 100%);
-  border-color: rgba(150, 150, 150, 1); /* Brighter Gray */
+  box-shadow: 10px 0px 20px rgba(0, 245, 255, .5), 0 0 40px rgba(0, 245, 255, 0.9); /* Stronger cyan glow on hover */
+  border: thin solid rgba(0, 245, 255, 1); /* Solid cyan border */
 }
 
-
-
-
-/* Glowing Button Styles */
-.button-glow {
-  padding: 15px 30px;
-  font-size: 16px;
-  font-weight: bold;
-  text-transform: uppercase;
-  text-align: center;
-  color: #ffffff;
-  background-color: transparent; /* Transparent background */
-  border-radius: 8px;
-  border: 1px solid rgba(206, 250, 0, 1); /* Green-Yellow border */
-  box-shadow: 0px 0px 0px rgba(204, 250, 0, 0.509); /* Glowing effect */
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.button-glow:hover {
-  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1); /* Stronger glow on hover */
-  transform: translateY(-2px); /* Slight lift on hover */
+.button.hw-wallet:hover {
+  box-shadow: 10px 0px 20px rgba(206, 250, 0, .5), 0 0 40px rgba(206, 250, 0, 0.9); /* Stronger yellow-green glow on hover */
+  border: thin solid rgba(206, 250, 0, 1); /* Solid yellow-green border */
 }
 
 /* Glowing Button Styles */
-.modal-glow {
+.modal-glow-yellow-green {
   font-size: 16px;
   font-family: 'Barlow', sans-serif;
   padding: 5px 15px;
   text-align: left;
   color: #ffffff;
   background-color: transparent; /* Transparent background */
-  border: 1px solid rgba(206, 250, 0, 1); /* Green-Yellow border */
-  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75); /* Glowing effect */
+  border: 1px solid rgba(206, 250, 0, 1); /* Yellow-Green border */
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75); /* Yellow-Green glowing effect */
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all .5s ease-in-out ;
 }
 
-.modal-glow:hover {
-  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1); /* Stronger glow on hover */
+.modal-glow-yellow-green:hover {
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1); /* Stronger yellow-green glow on hover */
   transform: translateY(-2px); /* Slight lift on hover */
+  transition: all .5s ease-in-out;
 }
+
+.modal-glow-purple {
+  font-size: 16px;
+  font-family: 'Barlow', sans-serif;
+  padding: 5px 15px;
+  text-align: left;
+  color: #ffffff;
+  background-color: transparent; /* Transparent background */
+  border: 1px solid rgba(220, 27, 250, 0.75); /* Slightly thicker purple border */
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.75); /* Stronger purple glow from the start */
+  cursor: pointer;
+  transition: all 0.5s ease-in-out;
+}
+
+.modal-glow-purple:hover {
+  box-shadow: 0px 0px 35px rgba(220, 27, 250, 1); /* Even stronger purple glow on hover */
+  transform: translateY(-2px); /* Slight lift on hover */
+  transition: all 0.5s ease-in-out;
+}
+
+.modal-glow-cyan {
+  font-size: 16px;
+  font-family: 'Barlow', sans-serif;
+  padding: 5px 15px;
+  text-align: left;
+  color: #ffffff;
+  background-color: transparent; /* Transparent background */
+  border: 1px solid rgba(0, 245, 255, 1); /* Cyan border */
+  box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75); /* Cyan glowing effect */
+  cursor: pointer;
+  transition: all .5s ease-in-out ;
+}
+
+.modal-glow-cyan:hover {
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 1); /* Stronger cyan glow on hover */
+  transform: translateY(-2px); /* Slight lift on hover */
+  transition: all .5s ease-in-out;
+}
+
 /* 
 .modal-glow {
   border-radius: 8px;
@@ -177,7 +203,7 @@ color: rgba(255, 255, 255, 1);
   border: 1px solid rgba(206, 250, 0, 1); 
   box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75); 
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease-in-out;
 }
 
 .modal-glow .modal-header {

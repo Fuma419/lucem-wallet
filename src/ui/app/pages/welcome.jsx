@@ -48,7 +48,7 @@ const Welcome = () => {
       >
         {/* Header */}
         <Box position="absolute" top="9">
-          <Image draggable={false} width="85px" src={BannerDark} />
+          <Image draggable={false} width="150px" src={BannerDark} />
         </Box>
         {/* Footer */}
         <Box position="absolute" bottom="3" fontSize="xs" color="gray.500">
@@ -58,15 +58,15 @@ const Welcome = () => {
             Lucem Wallet
           </Link>
         </Box>
-        <Box h="12" />
+        <Box height="10"/>
         <Text className="welcome">
-          Welcome
+          Greetings
         </Text>
+        <Box height="6"/>
         <Text className="message">
           Let's setup a wallet.
         </Text>
-        <Box h="8" />
-        <Box height="8" />
+        <Box height="6"/>
         <Button className="button new-wallet"
           onClick={() => {
             capture(Events.OnboardingCreateClick);
@@ -75,7 +75,7 @@ const Welcome = () => {
         >
           New Wallet
         </Button >
-        <Box height="4" />
+        <Box height="6"/>
         <Button className="button import-wallet"
           onClick={() => {
             capture(Events.OnboardingRestoreClick);
@@ -105,7 +105,7 @@ const WalletModal = React.forwardRef((props, ref) => {
   }));
   return (
     <>
-      <Modal className="modal-glow"
+      <Modal className="modal-glow-purple"
         size="xs"
         isOpen={isOpen}
         onClose={onClose}
@@ -114,10 +114,10 @@ const WalletModal = React.forwardRef((props, ref) => {
       >
           <ModalOverlay
             style={{
-              backgroundColor: 'rgba(206, 250, 0, 0.2)', // Opaque yellow background
-              backdropFilter: 'blur(5px)', // Optional: Add blur for a frosted glass effect
+              backgroundColor: 'rgba(220, 27, 250, 0.15)',
+              backdropFilter: 'blur(5px)',
             }}/>
-        <ModalContent className="modal-glow" backgroundColor="#1a1a1a" >
+        <ModalContent className="modal-glow-purple" backgroundColor="#1a1a1a" >
           <ModalHeader fontSize="md">Create a wallet</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -136,7 +136,7 @@ const WalletModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => termsRef.current.openModal()}
                   textDecoration="underline"
-                  color="yellow.400"
+                  color="purple.700"
                 >
                   Terms of use
                 </Link>
@@ -144,7 +144,7 @@ const WalletModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => privacyPolicyRef.current.openModal()}
                   textDecoration="underline"
-                  color="yellow.400"
+                  color="purple.700"
                 >
                   Privacy Policy
                 </Link>
@@ -160,7 +160,7 @@ const WalletModal = React.forwardRef((props, ref) => {
             <Button
               className="button new-wallet"
               isDisabled={!accepted}
-              colorScheme="yellow"
+              colorScheme="purple"
               onClick={() => createTab(TAB.createWallet, `?type=generate`)}
             >
               Continue
@@ -196,10 +196,10 @@ const ImportModal = React.forwardRef((props, ref) => {
         blockScrollOnMount={false}
       >
         <ModalOverlay            style={{
-              backgroundColor: 'rgba(206, 250, 0, 0.2)', // Opaque yellow background
+              backgroundColor: 'rgba(0, 245, 255, 0.2)',
               backdropFilter: 'blur(5px)', // Optional: Add blur for a frosted glass effect
             }}/>
-        <ModalContent className="modal-glow" backgroundColor="#1a1a1a">
+        <ModalContent className="modal-glow-cyan" backgroundColor="#1a1a1a">
           <ModalHeader fontSize="md">Import a wallet</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -217,7 +217,7 @@ const ImportModal = React.forwardRef((props, ref) => {
               Lucem wallet.{' '}
               <Link
                 textDecoration="underline"
-                color="yellow.400"
+                color="cyan.700"
                 onClick={() => window.open('https://www.hodlerstaking.com/')}
               >
                 More info
@@ -245,7 +245,7 @@ const ImportModal = React.forwardRef((props, ref) => {
               <Checkbox onChange={(e) => setAccepted(e.target.checked)}               
               isFocusable={false}
               _focusVisible={false}
-              colorScheme="yellow"
+              colorScheme="cyan"
               />
               <Box w="2" />
               <Text fontWeight={600}>
@@ -253,7 +253,7 @@ const ImportModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => termsRef.current.openModal()}
                   textDecoration="underline"
-                  color="yellow.400"
+                  color="cyan.700"
                 >
                   Terms of use
                 </Link>
@@ -261,7 +261,7 @@ const ImportModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => privacyPolicyRef.current.openModal()}
                   textDecoration="underline"
-                  color="yellow.400"
+                  color="cyan.700"
                 >
                   Privacy Policy
                 </Link>
@@ -276,8 +276,8 @@ const ImportModal = React.forwardRef((props, ref) => {
             </Button>
             <Button
               isDisabled={!selected || !accepted}
-              className="button new-wallet"
-              colorScheme="yellow"
+              className="button import-wallet"
+              colorScheme="cyan"
               onClick={() =>
                 createTab(
                   TAB.createWallet,

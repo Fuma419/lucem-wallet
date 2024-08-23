@@ -127,7 +127,7 @@ const WalletModal = React.forwardRef((props, ref) => {
             </Text>
             <Box h="4" />
             <Box display="flex" alignItems="center" justifyContent="center">
-              <Checkbox onChange={(e) => setAccepted(e.target.checked)}               
+              <Checkbox colorScheme="purple" onChange={(e) => setAccepted(e.target.checked)}               
               _focus={false}
               />
               <Box w="2" />

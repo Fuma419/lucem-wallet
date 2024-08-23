@@ -31,7 +31,7 @@ const Input = {
 
 const Checkbox = {
   defaultProps: {
-    colorScheme: 'yellow',
+    colorScheme: 'gray',
   },
 };
 

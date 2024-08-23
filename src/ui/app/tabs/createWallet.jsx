@@ -1,5 +1,5 @@
 import React from 'react';
-// import '../../app/components/styles.css';
+import '../../app/components/styles.css';
 import {
   createWallet,
   mnemonicFromObject,

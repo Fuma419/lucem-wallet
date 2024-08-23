@@ -33,7 +33,7 @@ export const TermsAndPrivacyModal = ({ onContinue }: Props) => {
         blockScrollOnMount={false}
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent className="modal-glow-purple">
           <ModalHeader fontSize="md">
             Terms of use and Privacy Policy
           </ModalHeader>
@@ -43,7 +43,7 @@ export const TermsAndPrivacyModal = ({ onContinue }: Props) => {
                 The terms of use and privacy policy have been updated.
               </Text>
               <Box display="flex" mb="2">
-                <Checkbox onChange={(e) => setAccepted(e.target.checked)} />
+                <Checkbox colorScheme="cyan" onChange={(e) => setAccepted(e.target.checked)} />
                 <Box display="inline" ml="2">
                   <Text fontWeight={600}>
                     I read and accepted the{' '}
@@ -68,7 +68,7 @@ export const TermsAndPrivacyModal = ({ onContinue }: Props) => {
           <ModalFooter>
             <Button
               isDisabled={!accepted}
-              colorScheme="yellow"
+              colorScheme="gray"
               onClick={onContinue}
             >
               Continue

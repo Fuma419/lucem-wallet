@@ -26,21 +26,10 @@ import AssetFingerprint from '@emurgo/cip14-js';
 import { hexToAscii } from '../../../api/util';
 import { NETWORK_ID } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
-import {
-  FaCoins,
-  FaPiggyBank,
-  FaTrashAlt,
-  FaRegEdit,
-  FaUserCheck,
-  FaUsers,
-  FaRegFileCode,
-  IoRemoveCircleSharp,
-  TiArrowForward,
-  TiArrowBack,
-  TiArrowShuffle,
-  TiArrowLoop,
-  GiAnvilImpact,
-} from 'react-icons/all';
+import { FaCoins, FaPiggyBank, FaTrashAlt, FaRegEdit, FaUserCheck, FaUsers, FaRegFileCode } from 'react-icons/fa';
+import { IoRemoveCircleSharp } from 'react-icons/io5';
+import { TiArrowForward, TiArrowBack, TiArrowShuffle, TiArrowLoop } from 'react-icons/ti';
+import { GiAnvilImpact } from 'react-icons/gi';
 import { useCaptureEvent } from '../../../features/analytics/hooks';
 import { Events } from '../../../features/analytics/events';
 
@@ -101,7 +90,7 @@ const Transaction = ({
   const colorMode = {
     iconBg: useColorModeValue('blue.100', 'gray.900'),
     txBg: useColorModeValue('blue.100', 'gray.900'),
-    txBgHover: useColorModeValue('blue.300', 'gray.700'),
+    txBgHover: useColorModeValue('blue.300', 'gray.900'),
     assetsBtnHover: useColorModeValue('yellow.300', 'gray.900'),
   };
 
@@ -246,7 +235,7 @@ const Transaction = ({
             w={5}
             h={5}
             mb={1}
-            borderColor="yellow.500"
+            borderColor="yellow.600"
             borderWidth={5}
             borderRadius={50}
           ></Box>
@@ -319,7 +308,7 @@ const TxDetail = ({ displayInfo, network }) => {
           <Box
             display="flex"
             flexDirection="vertical"
-            color="gray.700"
+            color="gray.900"
             fontSize="sm"
             fontWeight="bold"
           >

@@ -17,7 +17,7 @@ import {
   ModalHeader,
   ModalOverlay,
 } from '@chakra-ui/react';
-import BannerDark from '../../../assets/img/bannerBlack.svg'; // Directly using the dark banner
+import BannerDark from '../../../assets/img/bannerBlack.png'; // Directly using the dark banner
 import TermsOfUse from '../components/termsOfUse';
 import PrivacyPolicy from '../components/privacyPolicy';
 import { ViewIcon, WarningTwoIcon } from '@chakra-ui/icons';
@@ -160,7 +160,6 @@ const WalletModal = React.forwardRef((props, ref) => {
             <Button
               className="button new-wallet"
               isDisabled={!accepted}
-              colorScheme="purple"
               onClick={() => createTab(TAB.createWallet, `?type=generate`)}
             >
               Continue
@@ -236,10 +235,13 @@ const ImportModal = React.forwardRef((props, ref) => {
               placeholder="Choose seed phrase length"
               backgroundColor="#2a2a2a"
               color="white"
+              focusBorderColor={`cyan.700`}  // Dynamic focus border color
+              borderColor={`cyan.700`}  // Dynamic border color
             >
               <option value="15">15-word seed phrase</option>
               <option value="24">24-word seed phrase</option>
             </Select>
+
             <Box h="5" />
             <Box display="flex" alignItems="center" justifyContent="center">
               <Checkbox onChange={(e) => setAccepted(e.target.checked)}               
@@ -277,7 +279,6 @@ const ImportModal = React.forwardRef((props, ref) => {
             <Button
               isDisabled={!selected || !accepted}
               className="button import-wallet"
-              colorScheme="cyan"
               onClick={() =>
                 createTab(
                   TAB.createWallet,

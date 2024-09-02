@@ -2,7 +2,7 @@ import { Box, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import React from 'react';
 import { Backpack } from 'react-kawaii';
 
-import BannerBlack from '../../../assets/img/bannerBlack.svg';
+import BannerBlack from '../../../assets/img/bannerBlack.png';
 
 const NoWallet = () => {
   return (

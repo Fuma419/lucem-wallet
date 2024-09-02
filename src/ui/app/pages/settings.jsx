@@ -88,7 +88,7 @@ const Settings = () => {
 const Overview = () => {
   const capture = useCaptureEvent();
   const navigate = useNavigate();
-  const { colorMode, toggleColorMode } = useColorMode();
+  // const { colorMode, toggleColorMode } = useColorMode();
   return (
     <>
       <Box height="10" />
@@ -158,7 +158,7 @@ const GeneralSettings = ({ accountRef }) => {
   const [refreshed, setRefreshed] = React.useState(false);
   const [account, setAccount] = React.useState({ name: '', avatar: '' });
   const [originalName, setOriginalName] = React.useState('');
-  const { colorMode, toggleColorMode } = useColorMode();
+  // const { colorMode, toggleColorMode } = useColorMode();
   const ref = React.useRef();
   const changePasswordRef = React.useRef();
 
@@ -257,7 +257,7 @@ const GeneralSettings = ({ accountRef }) => {
           icon={<RepeatIcon />}
         />
       </Box>
-      <Box height="6" />
+      {/* <Box height="6" />
       <Button
         size="sm"
         rounded="md"
@@ -272,7 +272,7 @@ const GeneralSettings = ({ accountRef }) => {
         rightIcon={<SunIcon ml="2" />}
       >
         {colorMode == 'dark' ? 'Light' : 'Dark'}
-      </Button>
+      </Button> */}
 
       <Box height="6" />
       <Box display="flex" alignItems="center" justifyContent="center">

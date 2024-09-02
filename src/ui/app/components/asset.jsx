@@ -169,7 +169,7 @@ const Asset = ({ asset, enableSend, ...props }) => {
             <Box width="full" display="flex" justifyContent="right">
               <Button
                 mr="4"
-                background={background === 'blue.100' ? 'gray.200' : 'gray.700'}
+                background={'cyan.700'}
                 size="xs"
                 rightIcon={<BsArrowUpRight />}
                 onClick={(e) => {

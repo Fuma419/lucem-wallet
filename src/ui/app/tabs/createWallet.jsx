@@ -1,18 +1,6 @@
 import React from 'react';
 import '../../app/components/styles.css';
 import {
-  createWallet,
-  mnemonicFromObject,
-  mnemonicToObject,
-} from '../../../api/extension';
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes,
-  useNavigate,
-  useLocation,
-} from 'react-router-dom';
-import {
   Box,
   Spacer,
   Stack,
@@ -24,12 +12,7 @@ import {
   InputRightElement,
   Image,
 } from '@chakra-ui/react';
-import {
-  generateMnemonic,
-  getDefaultWordlist,
-  validateMnemonic,
-  wordlists,
-} from 'bip39';
+import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import { createRoot } from 'react-dom/client';
 import { AnalyticsProvider } from '../../../features/analytics/provider';
@@ -37,17 +20,20 @@ import { EventTracker } from '../../../features/analytics/event-tracker';
 import { ExtensionViews } from '../../../features/analytics/types';
 import Main from '../../index';
 import { TAB } from '../../../config/config';
-import BackgroundImagePurple from '../../../assets/img/background-purple';
-import BackgroundImageCyan from '../../../assets/img/background-cyan';
-import BackgroundImageGreen from '../../../assets/img/background-green';
-import LogoWhite from '../../../assets/img/bannerBlack'; // Use the white logo directly for dark mode
 import { useStoreActions } from 'easy-peasy';
 import { useCaptureEvent } from '../../../features/analytics/hooks';
 import { Events } from '../../../features/analytics/events';
+import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
+import { createWallet, mnemonicFromObject, mnemonicToObject } from '../../../api/extension';
+
+// Use the same paths as preloaded in the HTML
+const BackgroundImagePurple = '/assets/img/background-purple.webp';
+const BackgroundImageCyan = '/assets/img/background-cyan.webp';
+const LogoWhite = '/assets/img/logoWhite.png';
 
 const App = () => {
-
   const navigate = useNavigate();
+  const location = useLocation();
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -70,7 +56,7 @@ const App = () => {
       width="full"
       height="100vh"
       position="relative"
-      opacity={.9}
+      opacity={0.9}
       backgroundImage={`url(${backgroundImage})`}
       backgroundSize="cover"
       backgroundPosition="center"
@@ -123,7 +109,7 @@ const GenerateSeed = () => {
   React.useEffect(() => {
     generate();
   }, []);
-  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
+  const colorTheme = location.pathname === '/generate' ? 'cyan' : 'purple';
 
   return (
     <Box>
@@ -214,13 +200,13 @@ const GenerateSeed = () => {
           </Text>
         </Stack>
         <Box height={4} />
-        <Button className="button new-wallet"
+        <Button
+          className="button new-wallet"
           isDisabled={!checked}
           rightIcon={<ChevronRightIcon />}
-          colorScheme="purple"
           onClick={() => {
             capture(Events.OnboardingCreateWritePassphraseNextClick);
-            navigate('/verify', { state: { mnemonic } });
+            navigate('/verify', { state: { mnemonic, colorTheme: 'purple' } });
           }}
         >
           Next
@@ -253,7 +239,7 @@ const VerifySeed = () => {
     verifyAll();
   }, [input]);
 
-  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
+  const colorTheme = location.pathname === '/verify' ? 'cyan' : 'purple';
 
   return (
     <Box>
@@ -366,7 +352,7 @@ const VerifySeed = () => {
           onClick={() => {
             capture(Events.OnboardingCreateEnterPassphraseNextClick);
             navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet' },
+              state: { mnemonic, flow: 'create-wallet', colorTheme }, // Pass colorTheme
             });
           }}
         >
@@ -488,28 +474,29 @@ const ImportSeed = () => {
       <Spacer height="1" />
       <Spacer height="5" />
       <Stack alignItems="center" direction="column">
-        <Button
-          isDisabled={!allValid}
-          rightIcon={<ChevronRightIcon />}
-          onClick={() => {
-            capture(Events.OnboardingRestoreEnterPassphraseNextClick);
-            navigate('/account', {
-              state: { mnemonic: input, flow: 'restore-wallet' },
-            });
-          }}
-        >
-          Next
-        </Button>
+      <Button
+        isDisabled={!allValid}
+        className="button import-wallet"
+        rightIcon={<ChevronRightIcon />}
+        onClick={() => {
+          capture(Events.OnboardingRestoreEnterPassphraseNextClick);
+          navigate('/account', {
+            state: { mnemonic: input, flow: 'restore-wallet', colorTheme }, // Pass colorTheme
+          });
+        }}
+      >
+        Next
+      </Button>
       </Stack>
     </Box>
   );
 };
 
-const MakeAccount = (props) => {
+const MakeAccount = () => {
   const capture = useCaptureEvent();
   const [state, setState] = React.useState({});
   const [loading, setLoading] = React.useState(false);
-  const { state: { mnemonic, flow } = {} } = useLocation();
+  const { state: { mnemonic, flow, colorTheme } = {} } = useLocation(); // Get colorTheme from state
   const [isDone, setIsDone] = React.useState(false);
   const setRoute = useStoreActions(
     (actions) => actions.globalModel.routeStore.setRoute
@@ -531,6 +518,7 @@ const MakeAccount = (props) => {
         </Text>
         <Spacer height="10" />
         <Input
+          focusBorderColor={`${colorTheme}.300`} // Use colorTheme directly
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
           placeholder="Enter account name"
         ></Input>
@@ -538,6 +526,7 @@ const MakeAccount = (props) => {
 
         <InputGroup size="md" width="100%">
           <Input
+            focusBorderColor={`${colorTheme}.300`} // Use colorTheme directly
             isInvalid={state.regularPassword === false}
             pr="4.5rem"
             type={state.show ? 'text' : 'password'}
@@ -559,6 +548,7 @@ const MakeAccount = (props) => {
               h="1.75rem"
               size="sm"
               onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+              colorScheme={colorTheme}  // Apply the correct color scheme
             >
               {state.show ? 'Hide' : 'Show'}
             </Button>
@@ -593,6 +583,7 @@ const MakeAccount = (props) => {
               h="1.75rem"
               size="sm"
               onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+              colorScheme={colorTheme}  // Apply the correct color scheme
             >
               {state.show ? 'Hide' : 'Show'}
             </Button>

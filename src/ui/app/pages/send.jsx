@@ -181,7 +181,7 @@ const Send = () => {
   const ref = React.useRef();
   const [isLoading, setIsLoading] = React.useState(true);
   const focus = React.useRef(false);
-  const background = useColorModeValue('blue.100', 'gray.700');
+  const background = useColorModeValue('yellow.500', 'yellow.500');
 
   const network = React.useRef();
   const assetsModalRef = React.useRef();
@@ -1268,7 +1268,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
           + Assets
         </Button>
       </PopoverTrigger>
-      <PopoverContent w="98%">
+      <PopoverContent w="98%" sx={{ backgroundColor: '#2D3748 !important' }}>
         <PopoverArrow ml="4px" />
         <PopoverHeader
           display="flex"
@@ -1410,7 +1410,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
 const Asset = ({ asset, choice, select, setChoice, onClose, addAssets }) => {
   const [token, setToken] = React.useState(null);
   const isMounted = useIsMounted();
-  const hoverColor = useColorModeValue('blue.100', 'gray.700');
+  const hoverColor = useColorModeValue('blue.100', 'gray.900');
 
   const fetchData = async () => {
     const detailedAsset = {

@@ -26,7 +26,7 @@ import { ExtensionViews } from '../../../features/analytics/types';
 
 // assets
 import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import LogoWhite from '../../../assets/img/logoWhite.png';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import TrezorLogo from '../../../assets/img/trezorLogo.svg';
 import { ChevronRightIcon } from '@chakra-ui/icons';

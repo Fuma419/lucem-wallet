@@ -1756,10 +1756,10 @@ export const avatarToImage = (avatar) => {
     shape1: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled", "rectangle"],
     shape2: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled", "rectangle"],
     shape3: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled", "rectangle"],
-    shape1Color: ["C5FF0A", "92aac3", "DEFF4D"],
-    shape2Color: ["B08102", "708fb4", "B80000"],
-    shape3Color: ["BEBEBE", "8C8C8C", "616161", "4e738e"],
-    backgroundColor: ["B08102", "8A0000", "708fb4", "C49000"],
+    shape1Color: ["00F5FF", "DC1BFA"],
+    shape2Color: ["CEFA00", "DC1BFA"],
+    shape3Color: ["CEFA00", "00F5FF"],
+    backgroundColor: ["CEFA00", "00F5FF", "DC1BFA", "ffffff"],
     backgroundType: ["gradientLinear"],
   });
 

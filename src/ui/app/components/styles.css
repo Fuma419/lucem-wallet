@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400&display=swap');
 
-
-
 .lineClamp {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -20,219 +18,153 @@ body::-webkit-scrollbar {
 }
 
 .welcome {
-opacity: 1;
-color: rgba(255, 255, 255, 1);
-font-family: 'Barlow', sans-serif;
-font-size: 24px;
-font-weight: 600;
-font-style: SemiBold;
-letter-spacing: 1.2px;
-text-align: center;
-line-height: 28px;
+  opacity: 1;
+  color: rgba(255, 255, 255, 1);
+  font-family: 'Barlow', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-align: center;
+  line-height: 28px;
 }
 
 .walletTitle {
   opacity: 1;
   color: rgba(255, 255, 255, 1);
   font-family: 'Barlow', sans-serif;
-  }
-
+}
 
 .message {
   opacity: 1;
-color: rgba(138, 138, 138, 1);
-font-family: 'Barlow', sans-serif;
-font-size: 14px;
-font-weight: 400;
-font-style: Regular;
-letter-spacing: 0px;
-text-align: center;
-line-height: 20px;
-padding: 10px;
+  color: rgba(138, 138, 138, 1);
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: center;
+  line-height: 20px;
+  padding: 10px;
 }
 
 .glow {
-border-radius: 8px;
-border: 1px solid rgba(206, 250, 0, 1);
-box-shadow: 0px 0px 30px rgba(206, 250, 0, 1);
-opacity: 1;
-background-color: rgba(27, 28, 30, 1);
+  border-radius: 8px;
+  border: 1px solid rgba(206, 250, 0, 1);
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 1);
+  background-color: rgba(27, 28, 30, 1);
+  transition: box-shadow 0.3s ease-in-out;
+  will-change: box-shadow;
 }
 
 /* Base button styles */
-/* Base button styles */
-/* Base button styles */
 .button {
-  opacity: 1;
-color: rgba(255, 255, 255, 1);
   display: inline-block;
   padding: 10px 30px;
   max-height: 70px;
-  font-size: 12px;
+  font-size: 14px;
   text-transform: uppercase;
   text-align: center;
-  color: #ffffff; /* White text */
-  border-radius: 8px; /* Rounded corners */
+  color: #ffffff;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.4s ease-in-out;
-  border: 0.5px solid; /* Thin border */
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
 }
 
+/* Specific button styles */
 .button.new-wallet {
   font-family: 'Barlow', sans-serif;
   opacity: .85;
   letter-spacing: 2px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 1);
-  box-shadow: 0 0 4px rgba(220, 27, 250, 0.8), 0 0 30px rgba(220, 27, 250, 0.6); /* Stronger purple glow */
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, .5));
-  border: thin solid rgba(220, 27, 250, 1); /* Solid purple border */
-  transition: all 0.4s ease-in-out;
+  border: thin solid rgba(220, 27, 250, 1);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
 }
 
 .button.import-wallet {
   font-family: 'Barlow', sans-serif;
   opacity: .85;
   letter-spacing: 2px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 1);
-  box-shadow: 0 0 4px rgba(0, 245, 255, 0.8), 0 0 30px rgba(0, 245, 255, 0.6); /* Stronger cyan glow */
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, .5));
-  border: thin solid rgba(0, 245, 255, 1); /* Solid cyan border */
-  transition: all 0.4s ease-in-out;
+  border: thin solid rgba(0, 245, 255, 1);
+  box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75);
 }
 
 .button.hw-wallet {
   font-family: 'Barlow', sans-serif;
   opacity: .85;
   letter-spacing: 2px;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 1);
-  box-shadow: 0 0 4px rgba(206, 250, 0, 0.8), 0 0 30px rgba(206, 250, 0, 0.6); /* Stronger yellow-green glow */
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, .5));
-  border: thin solid rgba(206, 250, 0, 1); /* Solid yellow-green border */
-  transition: all 0.4s ease-in-out;
+  border: thin solid rgba(206, 250, 0, 1);
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75);
 }
 
 /* Hover States */
 .button:hover {
   transform: translateY(-2px);
-  box-shadow: 10px 0px 20px rgba(255, 255, 255, 0.7), 0 0 40px rgba(255, 255, 255, 0.9); /* Enhanced glow on hover */
-  transition: all 4s ease-in-out;
+  box-shadow: 0px 0px 25px rgba(255, 255, 255, 0.9); /* Standard glow on hover */
 }
 
 .button.new-wallet:hover {
-  box-shadow: 10px 0px 20px rgba(220, 27, 250, .5), 0 0 40px rgba(220, 27, 250, 0.9); /* Stronger purple glow on hover */
-  border: thin solid rgba(220, 27, 250, 1); /* Solid purple border */
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9);
 }
 
 .button.import-wallet:hover {
-  box-shadow: 10px 0px 20px rgba(0, 245, 255, .5), 0 0 40px rgba(0, 245, 255, 0.9); /* Stronger cyan glow on hover */
-  border: thin solid rgba(0, 245, 255, 1); /* Solid cyan border */
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.9);
 }
 
 .button.hw-wallet:hover {
-  box-shadow: 10px 0px 20px rgba(206, 250, 0, .5), 0 0 40px rgba(206, 250, 0, 0.9); /* Stronger yellow-green glow on hover */
-  border: thin solid rgba(206, 250, 0, 1); /* Solid yellow-green border */
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
 }
 
-/* Glowing Button Styles */
-.modal-glow-yellow-green {
+/* Glowing Modal Styles */
+.chakra-modal__content.modal-glow-yellow-green, .modal-glow-yellow-green {
   font-size: 16px;
   font-family: 'Barlow', sans-serif;
   padding: 5px 15px;
-  text-align: left;
   color: #ffffff;
-  background-color: transparent; /* Transparent background */
-  border: 1px solid rgba(206, 250, 0, 1); /* Yellow-Green border */
-  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75); /* Yellow-Green glowing effect */
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75)!important;
   cursor: pointer;
-  transition: all .5s ease-in-out ;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
 }
 
-.modal-glow-yellow-green:hover {
-  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1); /* Stronger yellow-green glow on hover */
-  transform: translateY(-2px); /* Slight lift on hover */
-  transition: all .5s ease-in-out;
-}
+/* .modal-glow-yellow-green:hover {
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1);
+  transform: translateY(-2px);
+} */
 
-.modal-glow-purple {
+
+
+.chakra-modal__content.modal-glow-purple, .modal-glow-purple  {
   font-size: 16px;
   font-family: 'Barlow', sans-serif;
   padding: 5px 15px;
-  text-align: left;
   color: #ffffff;
-  background-color: transparent; /* Transparent background */
-  border: 1px solid rgba(220, 27, 250, 0.75); /* Slightly thicker purple border */
-  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.75); /* Stronger purple glow from the start */
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.75)!important;
   cursor: pointer;
-  transition: all 0.5s ease-in-out;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
 }
 
-.modal-glow-purple:hover {
-  box-shadow: 0px 0px 35px rgba(220, 27, 250, 1); /* Even stronger purple glow on hover */
-  transform: translateY(-2px); /* Slight lift on hover */
-  transition: all 0.5s ease-in-out;
-}
+/* .modal-glow-purple:hover {
+  box-shadow: 0px 0px 35px rgba(220, 27, 250, 1);
+  transform: translateY(-2px);
+} */
 
-.modal-glow-cyan {
+.chakra-modal__content.modal-glow-cyan, .modal-glow-cyan {
   font-size: 16px;
   font-family: 'Barlow', sans-serif;
   padding: 5px 15px;
-  text-align: left;
   color: #ffffff;
-  background-color: transparent; /* Transparent background */
-  border: 1px solid rgba(0, 245, 255, 1); /* Cyan border */
-  box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75); /* Cyan glowing effect */
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.75)!important;
   cursor: pointer;
-  transition: all .5s ease-in-out ;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
 }
 
-.modal-glow-cyan:hover {
-  box-shadow: 0px 0px 25px rgba(0, 245, 255, 1); /* Stronger cyan glow on hover */
-  transform: translateY(-2px); /* Slight lift on hover */
-  transition: all .5s ease-in-out;
-}
-
-/* 
-.modal-glow {
-  border-radius: 8px;
-  padding: 20px;
-  background-color: #1a1a1a;
-  border-radius: 8px;
-  border: 1px solid rgba(206, 250, 0, 1); 
-  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75); 
-  cursor: pointer;
-  transition: all 0.4s ease-in-out;
-}
-
-.modal-glow .modal-header {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 15px;
-}
-
-.modal-glow .modal-body {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 20px;
-}
-
-.modal-glow .modal-footer {
-  display: flex;
-  justify-content: space-between;
-}
-
-.modal-glow .modal-footer button {
-  background-color: transparent;
-  color: #ffffffc3;
-  border: 1px solid rgba(206, 250, 0, 1);
-  box-shadow: 0px 0px 10px rgba(206, 250, 0, 0.75);
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-.modal-glow .modal-footer button:hover {
-  box-shadow: 0px 0px 15px rgba(206, 250, 0, 1);
+/* .modal-glow-cyan:hover {
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 1);
+  transform: translateY(-2px);
 } */

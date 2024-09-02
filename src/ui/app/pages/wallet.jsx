@@ -96,7 +96,7 @@ import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
-import Logo from '../../../assets/img/logoWhite.svg';
+import Logo from '../../../assets/img/icon-128.png';
 import { useCaptureEvent } from '../../../features/analytics/hooks';
 import { Events } from '../../../features/analytics/events';
 
@@ -114,10 +114,10 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('blue.100', 'gray.900');
-  const panelBg = useColorModeValue('blue.100', 'gray.900');
-  const receiveButton = useColorModeValue('blue.100', 'gray.600');
-  const sendButton = useColorModeValue('yellow.500', 'yellow.700');
+  const avatarBg = useColorModeValue('yellow.100', 'gray.900');
+  const panelBg = useColorModeValue('yellow.100', 'black');
+  const receiveButton = useColorModeValue('yellow.100', 'cyan.700');
+  const sendButton = useColorModeValue('yellow.500', 'yellow.600');
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -243,7 +243,6 @@ const Wallet = () => {
       >
         <Box
           height="52"
-          roundedBottom="3xl"
           background={panelBg}
           shadow="md"
           width="full"
@@ -254,13 +253,11 @@ const Wallet = () => {
             position="absolute"
             top="6"
             left="6"
-            width="14"
-            height="14"
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
-            <Image draggable={false} width="30px" src={Logo} />
+          <Image draggable={false} width="70px" src={Logo} />
           </Box>
           {/* Delegation */}
           <Box zIndex="1" position="absolute" width="full" bottom="5" left="6">
@@ -306,8 +303,6 @@ const Wallet = () => {
                 background={avatarBg}
                 width="14"
                 height="14"
-                _hover={{ filter: 'brightness(0.92)' }}
-                _active={{ filter: 'brightness(0.84)' }}
               >
                 <Box
                   position="absolute"
@@ -319,10 +314,10 @@ const Wallet = () => {
                   alignItems={'center'}
                   justifyContent={'center'}
                 >
-                  <AvatarLoader avatar={info.avatar} width="14" smallRobot />
+                  <AvatarLoader avatar={info.avatar} width="14" />
                 </Box>
               </MenuButton>
-              <MenuList fontSize="xs">
+              <MenuList fontSize="md">
                 <MenuGroup title="Accounts">
                   <Scrollbars
                     style={{ width: '100%' }}
@@ -334,7 +329,7 @@ const Wallet = () => {
                       const account =
                         state.accounts && state.accounts[accountIndex];
                       return (
-                        <MenuItem
+                        <MenuItem 
                           isDisabled={!state.account}
                           position="relative"
                           key={accountIndex}
@@ -643,6 +638,7 @@ const Wallet = () => {
                   size="sm"
                   rounded="lg"
                   shadow="md"
+                  colorScheme="black"
                   onClick={() => {
                     capture(Events.ReceiveClick);
                   }}
@@ -704,7 +700,7 @@ const Wallet = () => {
               background={sendButton}
               rounded="lg"
               rightIcon={<Icon as={BsArrowUpRight} />}
-              colorScheme="gray"
+              colorScheme="black"
               shadow="md"
             >
               Send
@@ -720,7 +716,7 @@ const Wallet = () => {
           display="flex"
           flexDirection="column"
           variant="soft-rounded"
-          colorScheme="gray"
+          colorScheme="black"
         >
           <TabList>
             <Tab mr={2}>
@@ -996,6 +992,8 @@ const DelegationPopover = ({ account, delegation, children }) => {
             display="flex"
             flexDirection="column"
             textAlign="center"
+            background="black"
+            border="black"
           >
             <Text
               fontWeight="bold"

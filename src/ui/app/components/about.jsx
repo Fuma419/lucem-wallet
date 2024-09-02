@@ -14,7 +14,7 @@ import {
   Link,
 } from '@chakra-ui/react';
 
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import LogoWhite from '../../../assets/img/logoWhite.png';
 import LogoBlack from '../../../assets/img/logo.svg';
 import IOHKWhite from '../../../assets/img/iohkWhite.svg';
 import IOHKBlack from '../../../assets/img/iohk.svg';

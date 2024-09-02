@@ -366,12 +366,13 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           delegationRef.current.closeModal();
         }}
         info={
-          <Box
+          <Box 
             width="100%"
             display="flex"
             alignItems="center"
             justifyContent="center"
             flexDirection="column"
+
           >
             <Text fontSize="sm">
               Enter the Stake Pool ID to delegate your funds and start receiving
@@ -440,7 +441,8 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                     <Button
                       h={6}
                       size="sm"
-                      background="yellow.600"
+                      color="black"
+                      background="yellow.700"
                       disabled={data.pool.id === '' || data.pool.isLoading}
                       isLoading={data.pool.isLoading}
                       onClick={() => prepareDelegationTx()}
@@ -449,7 +451,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                     </Button>
                   )}
                   {data.pool.state === PoolStates.DONE && (
-                    <CheckIcon color="yellow.500" />
+                    <CheckIcon color="yellow.700" />
                   )}
                   {data.pool.state === PoolStates.ERROR && (
                     <WarningIcon color="red.300" />
@@ -573,7 +575,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                   <UnitDisplay
                     fontSize="xl"
                     fontWeight="bold"
-                    color="yellow.500"
+                    color="yellow.700"
                     hide
                     quantity={data.rewards}
                     decimals={6}
@@ -821,7 +823,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
 
       <Modal size="xs" isCentered isOpen={isOpenCol} onClose={onCloseCol}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent >
           <ModalHeader fontSize="md">
             {' '}
             <Box display="flex" alignItems="center">

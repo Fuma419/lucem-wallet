@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
   "version": "3.7.4",
-  "description": "Featurefull light powered cardano wallet. Beautifully built for security and simplicity.",
+  "description": "Featurefull light powered Cardano wallet. Beautifully built for security and simplicity.",
   "name": "Lucem Wallet",
   "background": { "service_worker": "background.bundle.js" },
   "action": {
     "default_popup": "mainPopup.html",
-    "default_icon": "icon-128.png"
+    "default_icon": "/assets/img/icon-128.png"
   },
   "icons": {
-    "128": "icon-128.png"
+    "16": "/assets/img/icon-16.png",
+    "48": "/assets/img/icon-48.png",
+    "128": "/assets/img/icon-128.png"
   },
   "content_scripts": [
     {
@@ -26,6 +28,8 @@
     {
       "resources": [
         "icon-128.png",
+        "icon-48.png",
+        "icon-16.png",
         "injected.bundle.js",
         "internalPopup.html"
       ],

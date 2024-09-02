@@ -10,8 +10,12 @@ module.exports = {
   },
   transform: {
     '^.+\\.(ts|tsx)?$': 'ts-jest',
-    '^.+\\.(js|jsx)$': 'babel-jest',
+    '^.+\\.js$': ['babel-jest', { configFile: './babel.config.js' }],
+    'src/wasm/cardano_multiplatform_lib/cardano_multiplatform_lib.generated\\.js$': ['babel-jest', { configFile: './babel.config.js' }],
   },
-  transformIgnorePatterns: [`/node_modules/(?!crypto-random-string)`],
+
+  transformIgnorePatterns: [
+    '/node_modules/(?!crypto-random-string|@dicebear/core|@dicebear/collection|@dicebear/adventurer|@dicebear/avatars|@babel/runtime)', // Include @babel/runtime
+  ],
   setupFilesAfterEnv: ['./jest.setup.js'],
 };

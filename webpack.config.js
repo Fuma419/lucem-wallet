@@ -1,23 +1,24 @@
-var webpack = require('webpack'),
-  path = require('path'),
-  fileSystem = require('fs-extra'),
-  env = require('./utils/env'),
-  { CleanWebpackPlugin } = require('clean-webpack-plugin'),
-  CopyWebpackPlugin = require('copy-webpack-plugin'),
-  HtmlWebpackPlugin = require('html-webpack-plugin'),
-  TerserPlugin = require('terser-webpack-plugin'),
-  NodePolyfillPlugin = require('node-polyfill-webpack-plugin'),
-  ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const webpack = require('webpack');
+const path = require('path');
+const fileSystem = require('fs-extra');
+const env = require('./utils/env');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 
 const ASSET_PATH = process.env.ASSET_PATH || '/';
 
-var alias = {};
+let alias = {};
 
-// load the secrets
-var secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
+// Load the secrets
+let secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
 
-var fileExtensions = [
+let fileExtensions = [
   'jpg',
+  'webp',
   'jpeg',
   'png',
   'gif',
@@ -35,7 +36,15 @@ if (fileSystem.existsSync(secretsPath)) {
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-var options = {
+// Preloadable assets
+const preloadImages = `
+  <link rel="preload" as="image" href="/assets/img/background-cyan.webp">
+  <link rel="preload" as="image" href="/assets/img/background-purple.webp">
+  <link rel="preload" as="image" href="/assets/img/background-green.webp">
+  <link rel="preload" as="image" href="/assets/img/logoWhite.png">
+`;
+
+const options = {
   experiments: {
     asyncWebAssembly: true,
   },
@@ -44,25 +53,12 @@ var options = {
     mainPopup: path.join(__dirname, 'src', 'ui', 'indexMain.jsx'),
     internalPopup: path.join(__dirname, 'src', 'ui', 'indexInternal.jsx'),
     hwTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'hw.jsx'),
-    createWalletTab: path.join(
-      __dirname,
-      'src',
-      'ui',
-      'app',
-      'tabs',
-      'createWallet.jsx'
-    ),
+    createWalletTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'createWallet.jsx'),
     trezorTx: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'trezorTx.jsx'),
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
     contentScript: path.join(__dirname, 'src', 'pages', 'Content', 'index.js'),
     injected: path.join(__dirname, 'src', 'pages', 'Content', 'injected.js'),
-    trezorContentScript: path.join(
-      __dirname,
-      'src',
-      'pages',
-      'Content',
-      'trezorContentScript.js'
-    ),
+    trezorContentScript: path.join(__dirname, 'src', 'pages', 'Content', 'trezorContentScript.js'),
   },
   chromeExtensionBoilerplate: {
     notHotReload: ['contentScript', 'devtools', 'injected'],
@@ -102,9 +98,7 @@ var options = {
         },
       },
       {
-        // look for .css or .scss files
         test: /\.(css|scss)$/,
-        // in the `src` directory
         use: [
           {
             loader: 'style-loader',
@@ -157,21 +151,23 @@ var options = {
     }),
     new NodePolyfillPlugin(),
     new webpack.ProgressPlugin(),
-    // clean the build folder
     new CleanWebpackPlugin({
       verbose: true,
       cleanStaleWebpackAssets: true,
     }),
-    // expose and write the allowed env vars on the compiled bundle
     new webpack.EnvironmentPlugin(['NODE_ENV']),
     new CopyWebpackPlugin({
       patterns: [
         {
+          from: 'src/assets/img',
+          to: path.join(__dirname, 'build', 'assets', 'img'),
+          force: true,
+        },
+        {
           from: 'src/manifest.json',
           to: path.join(__dirname, 'build'),
           force: true,
-          transform: function (content, path) {
-            // generates the manifest file using the package.json informations
+          transform: function (content) {
             return Buffer.from(
               JSON.stringify({
                 description: process.env.npm_package_description,
@@ -183,74 +179,70 @@ var options = {
         },
       ],
     }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/assets/img/icon-128.png',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/assets/img/icon-128.png',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
-    }),
     new HtmlWebpackPlugin({
-      template: path.join(
-        __dirname,
-        'src',
-        'pages',
-        'Popup',
-        'internalPopup.html'
-      ),
+      template: path.join(__dirname, 'src', 'pages', 'Popup', 'internalPopup.html'),
       filename: 'internalPopup.html',
       chunks: ['internalPopup'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'src', 'pages', 'Popup', 'mainPopup.html'),
       filename: 'mainPopup.html',
       chunks: ['mainPopup'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'src', 'pages', 'Tab', 'hwTab.html'),
       filename: 'hwTab.html',
       chunks: ['hwTab'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
-      template: path.join(
-        __dirname,
-        'src',
-        'pages',
-        'Tab',
-        'createWalletTab.html'
-      ),
+      template: path.join(__dirname, 'src', 'pages', 'Tab', 'createWalletTab.html'),
       filename: 'createWalletTab.html',
       chunks: ['createWalletTab'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'src', 'pages', 'Tab', 'trezorTx.html'),
       filename: 'trezorTx.html',
       chunks: ['trezorTx'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
   ],
   infrastructureLogging: {
     level: 'info',
   },
+  ignoreWarnings: [
+    {
+      module: /node_modules\/@trezor/,
+      message: /Failed to parse source map/,
+    },
+  ],
 };
 
 if (env.NODE_ENV === 'development') {
-  options.devtool = 'cheap-module-source-map';
+  options.devtool = 'eval-source-map';
 } else {
   options.optimization = {
     minimize: true,

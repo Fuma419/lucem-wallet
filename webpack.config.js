@@ -13,7 +13,6 @@ const ASSET_PATH = process.env.ASSET_PATH || '/';
 
 let alias = {};
 
-// Load the secrets
 let secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
 
 let fileExtensions = [
@@ -141,7 +140,7 @@ const options = {
       .concat(['.js', '.jsx', '.css', '.ts', '.tsx']),
   },
   plugins: [
-    ...(isDevelopment ? [new ReactRefreshWebpackPlugin()] : []),
+    ...(isDevelopment ? [new ReactRefreshWebpackPlugin(), new webpack.HotModuleReplacementPlugin()] : []),
     new webpack.BannerPlugin({
       banner: () => {
         return 'globalThis.document={getElementsByTagName:()=>[],createElement:()=>({ setAttribute:()=>{}}),head:{appendChild:()=>{}}};';
@@ -241,8 +240,8 @@ const options = {
   ],
 };
 
-if (env.NODE_ENV === 'development') {
-  options.devtool = 'eval-source-map';
+if (isDevelopment) {
+  options.devtool = 'cheap-module-source-map';
 } else {
   options.optimization = {
     minimize: true,

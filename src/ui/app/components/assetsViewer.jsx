@@ -107,7 +107,13 @@ const AssetsGrid = ({ assets }) => {
       flexDirection="column"
     >
       {assets.map((asset, index) => (
-        <Box key={index} width="full">
+        <Box key={index}
+        borderRadius={20}
+        width="75%"  // Adjust the width here
+        maxWidth="75%"
+        height="80px"
+        >
+          
           <LazyLoadComponent>
             <Box
               width="full"

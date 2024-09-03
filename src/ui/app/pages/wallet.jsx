@@ -261,15 +261,16 @@ const Wallet = () => {
           </Box>
           {/* Delegation */}
           <Box 
-  display="flex"
-  justifyContent="center"
-  alignItems="center"
-  position="absolute"
-  top="90%"  /* Adjust the vertical position as needed */
-  left="50%"
-  transform="translate(-50%, -50%)"
-  flexDirection="row"  /* Ensure the direction is row (horizontal) */
-  flexWrap="nowrap"  /* Prevent wrapping */
+            zIndex="1"
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            position="absolute"
+            top="90%"  /* Adjust the vertical position as needed */
+            left="50%"
+            transform="translate(-50%, -50%)"
+            flexDirection="row"  /* Ensure the direction is row (horizontal) */
+            flexWrap="nowrap"  /* Prevent wrapping */
             >
             {state.delegation && (
               <>

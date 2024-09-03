@@ -267,7 +267,7 @@ const AssetsGrid = React.forwardRef(({ assets }, ref) => {
       alignItems="center"
       justifyContent="center"
     >
-      <SimpleGrid columns={2} spacing={4}>
+      <SimpleGrid columns={3} spacing={7}>
         {assets.map((asset, index) => (
           <Box key={index}>
             <LazyLoadComponent>

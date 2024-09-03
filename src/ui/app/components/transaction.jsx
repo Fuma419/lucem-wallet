@@ -126,14 +126,18 @@ const Transaction = ({
         {displayInfo ? (
           <AccordionButton
             display="flex"
-            wordBreak="break-word"
             justifyContent="space-between"
             bg={colorMode.txBg}
-            borderRadius={10}
+            borderRadius={20}
             borderLeftRadius={30}
             p={0}
+            width="70%"  // Adjust the width here
+            maxWidth="70%" // Set a maximum width, optional
             _hover={{ backgroundColor: colorMode.txBgHover }}
             _focus={{ border: 'none' }}
+            whiteSpace="nowrap"
+            overflowWrap="normal"
+            wordBreak="normal"
           >
             <Box
               display="flex"

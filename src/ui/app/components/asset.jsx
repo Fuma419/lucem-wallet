@@ -71,7 +71,8 @@ const Asset = ({ asset, enableSend, ...props }) => {
       display="flex"
       alignItems="center"
       width="90%"
-      rounded="xl"
+      height="70px"
+      borderRadius={20}
       background={background}
       onClick={() => token.unit !== 'lovelace' && setShow(!show)}
       cursor="pointer"

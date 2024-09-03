@@ -251,16 +251,26 @@ const Wallet = () => {
           <Box
             zIndex="2"
             position="absolute"
-            top="6"
-            left="6"
+            top="5"
+            left="5"
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
-          <Image draggable={false} width="70px" src={Logo} />
+            <Image draggable={false} width="70px" src={Logo} />
           </Box>
           {/* Delegation */}
-          <Box zIndex="1" position="absolute" width="full" bottom="5" left="6">
+          <Box 
+  display="flex"
+  justifyContent="center"
+  alignItems="center"
+  position="absolute"
+  top="90%"  /* Adjust the vertical position as needed */
+  left="50%"
+  transform="translate(-50%, -50%)"
+  flexDirection="row"  /* Ensure the direction is row (horizontal) */
+  flexWrap="nowrap"  /* Prevent wrapping */
+            >
             {state.delegation && (
               <>
                 {state.delegation.active ? (
@@ -329,7 +339,7 @@ const Wallet = () => {
                       const account =
                         state.accounts && state.accounts[accountIndex];
                       return (
-                        <MenuItem 
+                        <MenuItem
                           isDisabled={!state.account}
                           position="relative"
                           key={accountIndex}
@@ -393,7 +403,8 @@ const Wallet = () => {
                                             account[state.network.id].minAda
                                           ) -
                                           BigInt(
-                                            account[state.network.id].collateral
+                                            account[state.network.id]
+                                              .collateral
                                               ? account[state.network.id]
                                                   .collateral.lovelace
                                               : 0
@@ -493,6 +504,7 @@ const Wallet = () => {
               </MenuList>
             </Menu>
           </Box>
+
           <Box
             zIndex="1"
             position="absolute"
@@ -624,21 +636,26 @@ const Wallet = () => {
             />
           </Box>
 
+          {/* Single Flex Container for Both Buttons */}
           <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
             position="absolute"
-            style={{ top: 186, right: 134 }}
-            width="20"
-            height="8"
+            top="90%" /* Adjust the vertical position as needed */
+            left="50%"
+            transform="translate(-50%, -50%)"
+            gap="250px" /* Adjust this value to control space between buttons */
           >
             <Popover>
               <PopoverTrigger>
                 <Button
+                  className="button hw-wallet"
                   background={receiveButton}
                   rightIcon={<Icon as={BsArrowDownRight} />}
                   size="sm"
                   rounded="lg"
                   shadow="md"
-                  colorScheme="black"
                   onClick={() => {
                     capture(Events.ReceiveClick);
                   }}
@@ -683,24 +700,17 @@ const Wallet = () => {
                 </PopoverBody>
               </PopoverContent>
             </Popover>
-          </Box>
 
-          <Box
-            position="absolute"
-            style={{ top: 186, right: 24 }}
-            width="20"
-            height="8"
-          >
             <Button
               onClick={() => {
                 capture(Events.SendClick);
                 navigate('/send');
               }}
+              className="button import-wallet"
               size="sm"
               background={sendButton}
               rounded="lg"
               rightIcon={<Icon as={BsArrowUpRight} />}
-              colorScheme="black"
               shadow="md"
             >
               Send

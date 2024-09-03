@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "3.7.4",
+  "version": "3.8.0",
   "description": "Featurefull light powered Cardano wallet. Beautifully built for security and simplicity.",
   "name": "Lucem Wallet",
   "background": { "service_worker": "background.bundle.js" },

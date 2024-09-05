@@ -98,7 +98,7 @@ const About = React.forwardRef((props, ref) => {
                 cursor="pointer"
                 width="66px"
                 onClick={() => window.open('https://www.hodlerstaking.com/')}
-                src={HodlerLogo}
+                src={IOHKWhite}
               />
             </Box>
             <Box height="4" />

@@ -104,6 +104,18 @@ const theme = extendTheme({
       800: '#2F2F2F',
       900: '#2A2A2A',
     },
+    customGray: {
+      50: "#2F2F2F",
+      100: "#2F2F2F",
+      200: "#2F2F2F",
+      300: "#2F2F2F",
+      400: "#2F2F2F",
+      500: "#ffffff",
+      600: "#ffffff",
+      700: "#ffffff",
+      800: "#ffffff",
+      900: "#ffffff",
+    },
     blue: {
       100: '#b4c5d5',
       200: '#a3b7cc',
@@ -137,6 +149,30 @@ const theme = extendTheme({
       800: '#730000',
       900: '#5C0000',
     },
+    components: {
+      components: {
+        Tabs: {
+          baseStyle: {
+            tab: {
+              fontWeight: 'bold',
+              _selected: {
+                bgGradient: 'linear(to-r, cyan.500, purple.500)', // Define the gradient here
+                color: 'white', // Set text color when selected
+              },
+              _hover: {
+                bgGradient: 'linear(to-r, yellow.400, orange.400)', // Gradient on hover
+                color: 'white',
+              },
+              _focus: {
+                boxShadow: 'none', // No focus outline
+              },
+              padding: '12px', // Padding inside the tabs
+              borderRadius: '8px', // To give a rounded effect
+            },
+          },
+        },
+      },
+    },
   },
 
   components: {
@@ -145,40 +181,58 @@ const theme = extendTheme({
     Select,
     Button,
     Switch,
-    // Menu: {
-    //   baseStyle: {
-    //     list: {
-    //       bg: 'black', // Force the background of the MenuList to be black
-    //       boxShadow: '0 0 40px 6px rgba(255, 255, 0, 0.75)',
-    //     },
-    //   },
-    // },
-    // MenuList: {
-    //   baseStyle: {
-    //     bg: 'yellow', // Default background
-    //     boxShadow: '0 0 40px 6px rgba(255, 255, 0, 0.75)',
-    //   },
-    // },
-    // MenuGroup: {
-    //   baseStyle: {
-    //     bg: 'yellow', // Default background
-    //     boxShadow: '0 0 40px 6px rgba(255, 255, 0, 0.75)',
-    //   },
-    // },
-    // MenuItem: {
-    //   baseStyle: {
-    //     bg: 'yellow', // Default background
-    //     boxShadow: '0 0 40px 6px rgba(255, 255, 0, 0.75)',
-    //   },
-    // // },
-    // Modal: {
-    //   baseStyle: {
-    //     dialog: {
-    //       background: 'black',
-    //       boxShadow: '0 0 40px 6px rgba(255, 255, 0, 0.75)',
-    //     },
-    //   },
-    // },
+    Popover: {
+      baseStyle: {
+        content: {
+          bg: '#1a1a1a', // Popover content background color
+          color: 'white', // Text color for popover content
+          borderColor: 'black', // Border color to match the background
+          zIndex: '1', // Set zIndex to 1
+        },
+        arrow: {
+          bg: 'black', // Arrow color to match the popover content background
+        },
+      },
+    },
+    PopoverContent: {
+  baseStyle: {
+    bg: 'black',
+    borderColor: 'rgba(255, 255, 0, 0.75)',
+    borderWidth: '2px',
+    zIndex: '1',  // Set a high z-index to ensure it is on top
+  },
+},
+    Modal: {
+      baseStyle: {
+        overlay: {
+          bg: 'black', // This sets the background of the overlay to a near black color
+        },
+        dialog: {
+          bg: '#1a1a1a',  // This sets the background of the modal content to black
+          color: 'white', // This sets the text color to white for readability on the black background
+        },
+      },
+    },
+    Menu: {
+      baseStyle: {
+        list: {
+          bg: '#1a1a1a', // Set the background for the MenuList container
+        },
+        item: {
+          bg: '#1a1a1a', // Default background for each MenuItem
+          color: 'white', // Text color
+          _hover: {
+            bg: 'black', // Hover state background for each MenuItem
+          },
+          _focus: {
+            bg: 'black', // Focus state background for each MenuItem
+          },
+          _active: {
+            bg: 'black', // Active state background for each MenuItem
+          },
+        },
+      },
+    },
   },
 
   config: {

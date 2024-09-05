@@ -58,6 +58,7 @@ import {
   PopoverBody,
   PopoverArrow,
   PopoverCloseButton,
+  Portal,
   Tabs,
   TabList,
   Tab,
@@ -89,8 +90,10 @@ import { currencyToSymbol, fromAssetUnit } from '../../../api/util';
 import TransactionBuilder from '../components/transactionBuilder';
 import { NETWORK_ID, TAB } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
+import { RxTokens } from "react-icons/rx";
+import { GoHistory } from "react-icons/go";
 import { BiWallet } from 'react-icons/bi';
-import { GiTwoCoins, GiUsbKey } from 'react-icons/gi';
+import { GiToken, GiUsbKey } from 'react-icons/gi';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorModeValue } from '@chakra-ui/react';
@@ -648,23 +651,24 @@ const Wallet = () => {
             transform="translate(-50%, -50%)"
             gap="250px" /* Adjust this value to control space between buttons */
           >
-            <Popover>
-              <PopoverTrigger>
-                <Button
-                  className="button hw-wallet"
-                  background={receiveButton}
-                  rightIcon={<Icon as={BsArrowDownRight} />}
-                  size="sm"
-                  rounded="lg"
-                  shadow="md"
-                  onClick={() => {
-                    capture(Events.ReceiveClick);
-                  }}
-                >
-                  Receive
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent width="60">
+          <Popover>
+            <PopoverTrigger>
+              <Button
+                className="button hw-wallet"
+                background={receiveButton}
+                rightIcon={<Icon as={BsArrowDownRight} />}
+                size="sm"
+                rounded="lg"
+                shadow="md"
+                onClick={() => {
+                  capture(Events.ReceiveClick);
+                }}
+              >
+                Receive
+              </Button>
+            </PopoverTrigger>
+            <Portal>
+              <PopoverContent width="70">
                 <PopoverArrow />
                 <PopoverBody
                   mt="5"
@@ -687,7 +691,7 @@ const Wallet = () => {
                       }}
                     >
                       <Text
-                        maxWidth="200px"
+                        maxWidth="250px"
                         fontSize="xs"
                         lineHeight="1.2"
                         cursor="pointer"
@@ -700,8 +704,9 @@ const Wallet = () => {
                   </>
                 </PopoverBody>
               </PopoverContent>
-            </Popover>
-
+            </Portal>
+          </Popover>
+          
             <Button
               onClick={() => {
                 capture(Events.SendClick);
@@ -727,11 +732,11 @@ const Wallet = () => {
           display="flex"
           flexDirection="column"
           variant="soft-rounded"
-          colorScheme="black"
+          colorScheme="customGray"
         >
           <TabList>
             <Tab mr={2}>
-              <Icon as={GiTwoCoins} boxSize={5} />
+              <Icon as={GiToken} boxSize={5} />
             </Tab>
             <Tab
               mr={2}
@@ -739,11 +744,11 @@ const Wallet = () => {
                 capture(Events.NFTsClick);
               }}
             >
-              <Icon as={FaGamepad} boxSize={5} />
+              <Icon as={RxTokens} boxSize={5} />
             </Tab>
             <Tab>
               <Icon
-                as={BsClockHistory}
+                as={GoHistory}
                 boxSize={5}
                 onClick={() => {
                   capture(Events.ActivityActivityClick);
@@ -839,7 +844,7 @@ const NewAccountModal = React.forwardRef((props, ref) => {
       isCentered
     >
       <ModalOverlay />
-      <ModalContent>
+      <ModalContent className='modal-glow-yellow-green'>
         <ModalHeader fontSize="md">
           {' '}
           <Box display="flex" alignItems="center">

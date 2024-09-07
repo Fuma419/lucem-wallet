@@ -10,7 +10,7 @@ import { ExtensionViews } from '../../../features/analytics/types';
 
 // assets
 import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.png';
+import LogoWhite from '../../../assets/img/bannerBlack.png';
 import { getCurrentAccount, indexToHw, initHW } from '../../../api/extension';
 import { signAndSubmitHW } from '../../../api/extension/wallet';
 import Loader from '../../../api/loader';

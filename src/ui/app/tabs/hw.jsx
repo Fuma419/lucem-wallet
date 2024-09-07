@@ -26,7 +26,7 @@ import { ExtensionViews } from '../../../features/analytics/types';
 
 // assets
 import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.png';
+import LogoWhite from '../../../assets/img/bannerBlack.png';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import TrezorLogo from '../../../assets/img/trezorLogo.svg';
 import { ChevronRightIcon } from '@chakra-ui/icons';
@@ -67,8 +67,8 @@ const App = () => {
       background={backgroundColor}
     >
       {/* Logo */}
-      <Box position="absolute" left="40px" top="40px">
-        <Image draggable={false} src={Logo} width="36px" />
+      <Box position="absolute" left="70px" top="70px">
+        <Image draggable={false} src={Logo} width="190px" />
       </Box>
 
       <Box

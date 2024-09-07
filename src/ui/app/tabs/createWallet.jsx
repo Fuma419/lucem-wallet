@@ -29,7 +29,7 @@ import { createWallet, mnemonicFromObject, mnemonicToObject } from '../../../api
 // Use the same paths as preloaded in the HTML
 const BackgroundImagePurple = '/assets/img/background-purple.webp';
 const BackgroundImageCyan = '/assets/img/background-cyan.webp';
-const LogoWhite = '/assets/img/logoWhite.png';
+const LogoWhite = '/assets/img/bannerBlack.png';
 
 const App = () => {
   const navigate = useNavigate();

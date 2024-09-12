@@ -99,7 +99,7 @@ import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
-import Logo from '../../../assets/img/icon-128.png';
+import Logo from '../../../assets/img/logo.png';
 import { useCaptureEvent } from '../../../features/analytics/hooks';
 import { Events } from '../../../features/analytics/events';
 
@@ -260,7 +260,7 @@ const Wallet = () => {
             alignItems="center"
             justifyContent="center"
           >
-            <Image draggable={false} width="70px" src={Logo} />
+            <Image draggable={false} width="85px" src={Logo} />
           </Box>
           {/* Delegation */}
           <Box 
@@ -304,7 +304,7 @@ const Wallet = () => {
               </>
             )}
           </Box>
-          <Box zIndex="2" position="absolute" top="6" right="6">
+          <Box zIndex="2" position="absolute" top="8" right="8">
             <Menu
               isOpen={menu}
               autoSelect={false}

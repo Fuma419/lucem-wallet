@@ -831,7 +831,15 @@ const Send = () => {
             toast({
               title: 'Transaction submitted',
               status: 'success',
-              duration: 5000,
+              duration: 2000,
+              variant: 'success',
+              isClosable: true,
+              containerStyle: {
+                background: 'cyan.300', // Custom background color
+                color: 'black', // Text color
+                borderRadius: 'lg',
+                padding: '.5rem',
+              },
             });
             if (await isValidAddress(address.result))
               await updateRecentSentToAddress(address.result);
@@ -840,8 +848,15 @@ const Send = () => {
               title: 'Transaction failed',
               description: 'Mempool full. Try again.',
               status: 'error',
-              duration: 3000,
+              duration: 4000,
+              variant: 'success',
               isClosable: true,
+              containerStyle: {
+                background: 'yellow.300', // Custom background color
+                color: 'black', // Text color
+                borderRadius: 'md',
+                padding: '2rem',
+              },
             });
             ref.current.closeModal();
             return; // don't go back to home screen. let user try to submit same tx again
@@ -849,7 +864,15 @@ const Send = () => {
             toast({
               title: 'Transaction failed',
               status: 'error',
-              duration: 3000,
+              duration: 4000,
+              variant: 'success',
+              isClosable: true,
+              containerStyle: {
+                background: 'purple.300', // Custom background color
+                color: 'black', // Text color
+                borderRadius: 'md',
+                padding: '2rem',
+              },
             });
           ref.current.closeModal();
           setTimeout(() => {

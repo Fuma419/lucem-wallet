@@ -405,7 +405,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
 
           >
             <Text fontSize="sm">
-              Consider delegating an account with Hodler Staking and enjoy the lowest fees on Cardano [Press 'Verify']. Otherwise paste the ID of your favorite Pool{' '}
+              Consider delegating an account with Hodler Staking and enjoy the lowest fees on Cardano [Press 'Verify' twice]. Otherwise paste the ID of your favorite Pool{' '}
             </Text>
             <Box h="6" />
             <Tooltip

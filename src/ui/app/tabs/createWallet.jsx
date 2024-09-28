@@ -194,7 +194,7 @@ const GenerateSeed = () => {
       <Box height={3} />
       <Stack alignItems="center" direction="column">
         <Stack direction="row" width="64" spacing="6">
-          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme="purple"/>
+          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme={colorTheme}/>
           <Text className='walletTitle' wordBreak="break-word" fontSize="sm">
             I've stored the seed phrase in a secure place.
           </Text>
@@ -246,10 +246,6 @@ const VerifySeed = () => {
       <Text className='walletTitle' textAlign="center" fontWeight="bold" fontSize="xl">
         Verify Seed Phrase
       </Text>
-      {/* <Spacer height="10" />
-      <Text fontSize="xs" textAlign="center">
-        Enter the seed phrase you've just stored.
-      </Text> */}
       <Spacer height="10" />
       <Stack spacing={10} direction="row">
         {[0, 1].map((colIndex) => (
@@ -352,7 +348,7 @@ const VerifySeed = () => {
           onClick={() => {
             capture(Events.OnboardingCreateEnterPassphraseNextClick);
             navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet', colorTheme }, // Pass colorTheme
+              state: { mnemonic, flow: 'create-wallet', colorTheme: 'purple' }, // Pass colorTheme
             });
           }}
         >
@@ -481,7 +477,7 @@ const ImportSeed = () => {
         onClick={() => {
           capture(Events.OnboardingRestoreEnterPassphraseNextClick);
           navigate('/account', {
-            state: { mnemonic: input, flow: 'restore-wallet', colorTheme }, // Pass colorTheme
+            state: { mnemonic: input, flow: 'restore-wallet', colorTheme: 'cyan' }, // Pass colorTheme
           });
         }}
       >

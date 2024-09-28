@@ -95,11 +95,11 @@ export const POPUP = {
 export const TAB = {
   hw: 'hwTab',
   createWallet: 'createWalletTab',
-  trezorTx: 'trezorTx',
+  keystoneTx: 'keystoneTx',
 };
 
 export const HW = {
-  trezor: 'trezor',
+  keystone: 'keystone',
   ledger: 'ledger',
 };
 

@@ -405,7 +405,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
 
           >
             <Text fontSize="sm">
-              Consider delegating an account with Hodler Staking and enjoy the lowest fees on Cardano [Press 'Verify' twice]. Otherwise paste the ID of your favorite Pool{' '}
+              Support Lucem wallet's continued development by delegating with HODLR and enjoy the lowest fees on Cardano [Press 'Verify' twice]. Otherwise paste the ID of your prefered Pool{' '}
             </Text>
             <Box h="6" />
             <Tooltip

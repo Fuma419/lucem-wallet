@@ -28,7 +28,7 @@ import { ExtensionViews } from '../../../features/analytics/types';
 import LogoOriginal from '../../../assets/img/logo.svg';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
-import TrezorLogo from '../../../assets/img/trezorLogo.svg';
+import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import TrezorWidget from '../components/trezorWidget';
 import {
@@ -45,7 +45,7 @@ import { Events } from '../../../features/analytics/events';
 
 const MANUFACTURER = {
   ledger: 'Ledger',
-  trezor: 'SatoshiLabs',
+  keystone: 'keystone',
 };
 
 const App = () => {
@@ -115,7 +115,7 @@ const ConnectHW = ({ onConfirm }) => {
       </Text>
       <Box h={6} />
       <Text width="300px">
-        Choose the hardware wallet you would like to use with Lucem.
+        Lucem currently supports Ledger HW devices. Keystone QR based device, support coming soon!
       </Text>
       <Box h={8} />
       <Box display="flex" alignItems="center" justifyContent="center">
@@ -128,15 +128,16 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.trezor && 'yellow.400'}
-          borderWidth={selected === HW.trezor && '3px'}
+          borderColor={selected === HW.keystone && 'cyan.400'}
+          borderWidth={selected === HW.keystone && '3px'}
+          opacity={0.5} // Reduce opacity to indicate it's disabled
           p={4}
-          _hover={{ opacity: 0.8 }}
-          onClick={() => setSelected(HW.trezor)}
+          //_hover={{ opacity: 0.8 }}
+          // onClick={() => setSelected(HW.keystone)}
         >
           <Image
             draggable={false}
-            src={TrezorLogo}
+            src={KeystoneLogo}
             filter={colorMode == 'dark' && 'invert(1)'}
           />
         </Box>
@@ -150,7 +151,7 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.ledger && 'yellow.400'}
+          borderColor={selected === HW.ledger && 'purple.400'}
           borderWidth={selected === HW.ledger && '3px'}
           p={1}
           _hover={{ opacity: 0.8 }}
@@ -164,10 +165,9 @@ const ConnectHW = ({ onConfirm }) => {
         </Box>
       </Box>
       <Box h={10} />
-      {selected === HW.trezor && (
+      {selected === HW.keystone && (
         <Text width="300px">
-          Connect your <b>Trezor</b> device directly to your computer. Unlock
-          the device and then click Continue.
+          <b>Keysone</b> are not currently supported. Please check back soon.
         </Text>
       )}
       {selected === HW.ledger && (
@@ -191,7 +191,7 @@ const ConnectHW = ({ onConfirm }) => {
             });
             if (device.manufacturerName !== MANUFACTURER[selected]) {
               setError(
-                `Device is not a ${selected == HW.ledger ? 'Ledger' : 'Trezor'}`
+                `Device is not a ${selected == HW.ledger ? 'Ledger' : 'Keystone'}`
               );
               setIsLoading(false);
               return;
@@ -337,23 +337,23 @@ const SelectAccounts = ({ data, onConfirm }) => {
                     name: `Ledger ${parseInt(accountIndexes[index]) + 1}`,
                   })
                 );
-              } else if (device == HW.trezor) {
-                await initHW({ device });
-                const trezorKeys = await TrezorConnect.cardanoGetPublicKey({
-                  bundle: accountIndexes.map((index) => ({
-                    path: `m/1852'/1815'/${parseInt(index)}'`,
-                    showOnTrezor: false,
-                  })),
-                });
-                if (trezorKeys.success == false) {
-                  trezorRef.current.closeModal();
-                }
-                accounts = trezorKeys.payload.map(({ publicKey }, index) => ({
-                  accountIndex: `${HW.trezor}-${id}-${accountIndexes[index]}`,
-                  publicKey,
-                  name: `Trezor ${parseInt(accountIndexes[index]) + 1}`,
-                }));
-                trezorRef.current.closeModal();
+              } else if (device == HW.keystone) {
+                // await initHW({ device });
+                // const trezorKeys = await TrezorConnect.cardanoGetPublicKey({
+                //   bundle: accountIndexes.map((index) => ({
+                //     path: `m/1852'/1815'/${parseInt(index)}'`,
+                //     showOnTrezor: false,
+                //   })),
+                // });
+                // if (trezorKeys.success == false) {
+                //   trezorRef.current.closeModal();
+                // }
+                // accounts = trezorKeys.payload.map(({ publicKey }, index) => ({
+                //   accountIndex: `${HW.keystone}-${id}-${accountIndexes[index]}`,
+                //   publicKey,
+                //   name: `Keystone ${parseInt(accountIndexes[index]) + 1}`,
+                // }));
+                // trezorRef.current.closeModal();
               }
               await createHWAccounts(accounts);
               capture(Events.HWSelectAccountNextClick, {

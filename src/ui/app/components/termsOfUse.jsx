@@ -52,11 +52,11 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 <Text display="inline" fontWeight="bold">
                   "Terms"
                 </Text>
-                ) set forth the binding legal agreement between you and Input
-                Output Global, Inc. (together with our subsidiaries and
+                ) set forth the binding legal agreement between you and Hodler BC
+                (together with our subsidiaries and
                 affiliates, referred to as{' '}
                 <Text display="inline" fontWeight="bold">
-                  "IOG,"
+                  "Hodler,"
                 </Text>{' '}
                 <Text display="inline" fontWeight="bold">
                   "we,"
@@ -67,7 +67,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 </Text>{' '}
                 in this Agreement). These Terms govern your use of this website
                 and all of the related websites, mobile apps, products and
-                services offered by IOG and its affiliated entities including
+                services offered by Hodler and its affiliated entities including
                 our plug-ins and browser extensions (collectively, the{' '}
                 <Text display="inline" fontWeight="bold">
                   "Products"
@@ -77,7 +77,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               <Text mb="4">
                 We encourage you to review these Terms carefully. By accessing
                 or using the Products in any way, including browsing any
-                IOG-owned website, you are agreeing to these Terms in their
+                Hodler-owned website, you are agreeing to these Terms in their
                 entirety. If you do not agree to any of the Terms, you may not
                 use the Products.
               </Text>
@@ -198,17 +198,17 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   for any reason, except as required by applicable law. You
                   further agree that we may use Your Content in any manner that
                   we deem appropriate or necessary, including but not limited to
-                  IOG Business Purposes.{' '}
+                  Hodler Business Purposes.{' '}
                   <Text fontWeight="bold" display="inline">
-                    "IOG Business Purposes"
+                    "Hodler Business Purposes"
                   </Text>{' '}
-                  means any use in connection with a Product or IOG cobranded
+                  means any use in connection with a Product or Hodler cobranded
                   website, application, publication or service, or any use which
                   advertises, markets or promotes Products, the services or the
-                  information within the Products, IOG, or its affiliates. IOG
+                  information within the Products, Hodler, or its affiliates. Hodler
                   Business Purpose specifically includes the use of Your Content
                   within the Products in connection with features and functions
-                  offered by IOG to our users that enable them to view and
+                  offered by Hodler to our users that enable them to view and
                   interact with Your Content (such as DApp reviews).
                 </ListItem>
                 <ListItem>
@@ -221,7 +221,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   the paragraph above, and that no ownership of such copyrights
                   is transferred to us under these Terms, except as may
                   otherwise be provided in these Terms or another agreement
-                  between you and IOG.
+                  between you and Hodler.
                 </ListItem>
                 <ListItem>
                   <Text fontWeight="bold" display="inline">
@@ -264,11 +264,11 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   </Text>{' '}
                   All intellectual property in or related to the Products
                   (specifically including, but not limited to, our software, the
-                  IOG marks, the IOG logos) (
+                    Hodler marks, the Hodler logos) (
                   <Text fontWeight="bold" display="inline">
                     "Our Content and Materials"
                   </Text>
-                  ) is the property of IOG.
+                  ) is the property of Hodler.
                 </ListItem>
                 <ListItem>
                   <Text fontWeight="bold" display="inline">
@@ -304,7 +304,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   reasonable number of copies of web pages located on the
                   Products for your own personal use, provided that you retain
                   all proprietary notices contained in the original materials,
-                  including attribution to IOG. We have no obligation to delete
+                  including attribution to Hodler. We have no obligation to delete
                   content that you personally may find objectionable or
                   offensive.
                 </ListItem>
@@ -312,8 +312,8 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   <Text fontWeight="bold" display="inline">
                     Ownership.
                   </Text>{' '}
-                  You acknowledge and agree that the Products and IOG marks will
-                  remain the property of IOG. The content, information and
+                  You acknowledge and agree that the Products and Hodler marks will
+                  remain the property of Hodler. The content, information and
                   services made available on the Products are protected by U.S.
                   and international copyright, trademark, and other laws, and
                   you acknowledge that these rights are valid and enforceable.
@@ -389,10 +389,10 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               </Text>
               <Text mb="3" fontWeight="bold">
                 PLEASE READ THIS SECTION CAREFULLY SINCE IT LIMITS THE LIABILITY
-                OF IOG ENTITIES TO YOU.
+                OF HODLER BC ENTITIES TO YOU.
               </Text>
               <Text mb="2">
-                THE "IOG ENTITIES" MEANS IO GLOBAL, INC., IOG SINGAPORE PTE.
+                THE "HODLER BC ENTITIES" MEANS IO GLOBAL, INC., HODLER SINGAPORE PTE.
                 LTD. AND ANY SUBSIDIARIES, AFFILIATES, RELATED COMPANIES,
                 SUPPLIERS, LICENSORS AND PARTNERS, AND THE OFFICERS, DIRECTORS,
                 EMPLOYEES, AGENTS AND REPRESENTATIVES OF EACH OF THEM. EACH
@@ -405,7 +405,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   CONTENT AND MATERIALS, PRODUCT DESCRIPTIONS, AND THIRD-PARTY
                   CONTENT ON AN "AS IS" AND "AS AVAILABLE" BASIS, WITHOUT
                   WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. WITHOUT LIMITING THE
-                  FOREGOING, THE IOG ENTITIES EXPRESSLY DISCLAIM ANY AND ALL
+                  FOREGOING, THE HODLER ENTITIES EXPRESSLY DISCLAIM ANY AND ALL
                   WARRANTIES AND CONDITIONS OF MERCHANTABILITY, TITLE, ACCURACY
                   AND COMPLETENESS, UNINTERRUPTED OR ERROR-FREE SERVICE, FITNESS
                   FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT, AND
@@ -414,41 +414,41 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   INTENDED TO BE LEGAL, FINANCIAL, OR TAX ADVICE.
                 </ListItem>
                 <ListItem>
-                  THE IOG ENTITIES MAKE NO PROMISES WITH RESPECT TO, AND
+                  THE HODLER ENTITIES MAKE NO PROMISES WITH RESPECT TO, AND
                   EXPRESSLY DISCLAIM ALL LIABILITY, TO THE MAXIMUM EXTENT
                   PERMITTED BY LAW, FOR: (i) CONTENT POSTED BY ANY THIRD-PARTY
                   ON THE PRODUCTS, (ii) THE PRODUCT DESCRIPTIONS OR PRODUCTS,
                   (iii) THIRD-PARTY SITES AND ANY THIRD-PARTY PRODUCT OR SERVICE
-                  LISTED ON OR ACCESSIBLE TO YOU THROUGH THE IOG PRODUCTS, AND
+                  LISTED ON OR ACCESSIBLE TO YOU THROUGH THE HODLER PRODUCTS, AND
                   (iv) THE QUALITY OR CONDUCT OF ANY THIRD PARTY YOU ENCOUNTER
-                  IN CONNECTION WITH YOUR USE OF THIS WEBSITE OR ANY IOG
+                  IN CONNECTION WITH YOUR USE OF THIS WEBSITE OR ANY HODLER
                   PRODUCT.
                 </ListItem>
                 <ListItem>
-                  THE IOG ENTITIES DO NOT WARRANT OR MAKE ANY REPRESENTATIONS AS
+                  THE HODLER ENTITIES DO NOT WARRANT OR MAKE ANY REPRESENTATIONS AS
                   TO THE SECURITY OF ANY OF ITS WEBSITES. YOU ACKNOWLEDGE ANY
-                  INFORMATION SENT THROUGH A WEBSITE MAY BE INTERCEPTED. THE IOG
+                  INFORMATION SENT THROUGH A WEBSITE MAY BE INTERCEPTED. THE HODLER
                   ENTITIES DO NOT WARRANT THAT ITS WEBSITES OR THE SERVERS WHICH
                   MAKE THIS WEBSITE AVAILABLE OR ELECTRONIC COMMUNICATIONS SENT
-                  BY IOG ENTITIES ARE FREE FROM VIRUSES OR ANY OTHER HARMFUL
-                  ELEMENTS. THE IOG ENTITIES DO NOT WARRANT THAT ANY E-MAIL OR
-                  OTHER ELECTRONIC CORRESPONDENCE BEING SENT TO IOG WILL BE
-                  TIMELY RECEIVED OR PROCESSED. THE IOG ENTITIES SHALL IN NO
+                  BY HODLER ENTITIES ARE FREE FROM VIRUSES OR ANY OTHER HARMFUL
+                  ELEMENTS. THE HODLER ENTITIES DO NOT WARRANT THAT ANY E-MAIL OR
+                  OTHER ELECTRONIC CORRESPONDENCE BEING SENT TO HODLER WILL BE
+                  TIMELY RECEIVED OR PROCESSED. THE HODLER ENTITIES SHALL IN NO
                   EVENT BE LIABLE FOR ANY CONSEQUENCES OF NOT TIMELY RECEIVING
                   OR PROCESSING ANY E-MAIL OR OTHER ELECTRONIC CORRESPONDENCE.
                 </ListItem>
                 <ListItem>
-                  YOU AGREE THAT TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE IOG
+                  YOU AGREE THAT TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE HODLER
                   ENTITIES WILL NOT BE LIABLE TO YOU UNDER ANY THEORY OF
                   LIABILITY. WITHOUT LIMITING THE FOREGOING, YOU AGREE THAT THE
-                  IOG ENTITIES SPECIFICALLY WILL NOT BE LIABLE FOR (i) ANY
+                  HODLER ENTITIES SPECIFICALLY WILL NOT BE LIABLE FOR (i) ANY
                   INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, INCIDENTAL OR
                   EXEMPLARY DAMAGES, LOSS OF PROFITS, LOSS OF BUSINESS, BUSINESS
                   INTERRUPTION, REPUTATIONAL HARM, OR LOSS OF DATA (EVEN IF THE
-                  IOG ENTITIES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH
+                  HODLER ENTITIES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH
                   DAMAGES OR SUCH DAMAGES ARE FORESEEABLE) ARISING OUT OF AND IN
                   ANY WAY CONNECTED WITH YOUR USE OF, OR INABILITY TO USE, THIS
-                  WEBSITE OR ANY IOG PRODUCTS OR (ii) ANY AMOUNT, IN THE
+                  WEBSITE OR ANY HODLER PRODUCTS OR (ii) ANY AMOUNT, IN THE
                   AGGREGATE, IN EXCESS OF ONE-HUNDRED DOLLARS (USD$100). YOUR
                   USE OF THE PRODUCTS, INFORMATION, OR SERVICES IS AT YOUR SOLE
                   RISK.
@@ -456,7 +456,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               </OrderedList>
               <Text fontWeight="bold">7. Indemnification.</Text>
               <Text mb="3">
-                You agree to fully indemnify, defend, and hold the IOG Entities
+                You agree to fully indemnify, defend, and hold the HODLER Entities
                 and their directors, officers, employees, consultants, and other
                 representatives, harmless from and against any and all claims,
                 damages, losses, costs (including reasonable attorneys' fees),
@@ -473,7 +473,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               </Text>
               <Text fontWeight="bold">8. Dispute Resolution.</Text>
               <Text mb="3">
-                If you have a dispute with IOG, you agree to contact us using
+                If you have a dispute with HODLER, you agree to contact us using
                 the form at{' '}
                 <Link
                   isExternal
@@ -491,7 +491,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
               </Text>{' '}
               <Text>
                 By electing to submit your phone number to us and agreeing to
-                these Terms, you agree to receive communications from the IOG
+                these Terms, you agree to receive communications from the HODLER
                 Entities, including via text messages, calls, pre-recorded
                 messages, and push notifications, any of which may be generated
                 by automatic telephone dialing systems. These communications
@@ -502,10 +502,10 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                 Products and industry developments. Standard text message
                 charges applied by your telephone carrier may apply to text
                 messages we send. If you submit someone else's phone number or
-                email address to us to receive communications from the IOG
+                email address to us to receive communications from the HODLER
                 Entities, you represent and warrant that each person for whom
                 you provide a phone number or email address has consented to
-                receive communications from IOG.
+                receive communications from HODLER.
                 <Text fontWeight="bold" mb="3">
                   If you wish to stop receiving promotional emails or
                   promotional text messages, we provide the following methods
@@ -522,8 +522,8 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   <Text fontWeight="bold" display="inline">
                     Application Provider Terms.
                   </Text>{' '}
-                  If you access the Products through an IOG application, you
-                  acknowledge that these Terms are between you and IOG only, and
+                  If you access the Products through an HODLER application, you
+                  acknowledge that these Terms are between you and HODLER only, and
                   not with an application service or application platform
                   provider (such as Apple, Inc., or Google Inc.), which may
                   provide you the application subject to its own terms of use.
@@ -535,7 +535,7 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   These Terms will be interpreted in accordance with the laws of
                   the State of New York and the United States of America,
                   without regard to their conflict-of-law provisions. You and
-                  IOG agree to submit to the personal jurisdiction of a federal
+                  HODLER agree to submit to the personal jurisdiction of a federal
                   or state court located in New York, New York for any actions
                   for which the dispute resolution provision, as set forth in
                   Section 8, does not resolve.
@@ -572,9 +572,9 @@ const TermsOfUse = React.forwardRef((props, ref) => {
                   </Text>{' '}
                   No terms of these Terms, nor any right, obligation, or remedy
                   hereunder is assignable, transferable, delegable, or
-                  sublicensable by you except with IOG's prior written consent,
+                  sublicensable by you except with HODLER's prior written consent,
                   and any attempted assignment, transfer, delegation, or
-                  sublicense shall be null and void. IOG may assign, transfer,
+                  sublicense shall be null and void. HODLER may assign, transfer,
                   or delegate these Terms or any right or obligation or remedy
                   hereunder in its sole discretion.
                 </ListItem>

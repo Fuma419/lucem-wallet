@@ -42,9 +42,11 @@ import { MdUsb } from 'react-icons/md';
 import { Planet } from 'react-kawaii';
 import { useCaptureEvent } from '../../../features/analytics/hooks';
 import { Events } from '../../../features/analytics/events';
+import { ledgerUSBVendorId } from '@ledgerhq/devices';
 
-const MANUFACTURER = {
-  ledger: 'Ledger',
+const VENDOR_IDS = {
+  ledger: [ledgerUSBVendorId],
+  trezor: [0x534c, 0x1209], // Model T HID 0x534c and others 0x1209 - taken from https://github.com/vacuumlabs/trezor-suite/blob/develop/packages/transport/src/constants.ts#L13-L21
   keystone: 'keystone',
 };
 
@@ -115,7 +117,7 @@ const ConnectHW = ({ onConfirm }) => {
       </Text>
       <Box h={6} />
       <Text width="300px">
-        Lucem currently supports Ledger HW devices. Keystone QR based device, support coming soon!
+        Lucem currently supports Ledger HW devices. Keystone Wallet support coming soon!
       </Text>
       <Box h={8} />
       <Box display="flex" alignItems="center" justifyContent="center">
@@ -189,7 +191,7 @@ const ConnectHW = ({ onConfirm }) => {
             const device = await navigator.usb.requestDevice({
               filters: [],
             });
-            if (device.manufacturerName !== MANUFACTURER[selected]) {
+            if (!VENDOR_IDS[selected].some((vendorId) => vendorId === device.vendorId)) {
               setError(
                 `Device is not a ${selected == HW.ledger ? 'Ledger' : 'Keystone'}`
               );

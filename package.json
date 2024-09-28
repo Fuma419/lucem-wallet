@@ -14,7 +14,9 @@
     "test": "NODE_ENV=test jest"
   },
   "dependencies": {
+    "@blaze-cardano/sdk": "^0.1.32",
     "@cardano-foundation/ledgerjs-hw-app-cardano": "^7.1.3",
+    "@cardano-sdk/core": "^0.39.2",
     "@chakra-ui/css-reset": "^2.3.0",
     "@chakra-ui/icons": "^2.1.1",
     "@chakra-ui/react": "^2.8.2",
@@ -59,6 +61,7 @@
     "react-router-dom": "^6.18.0",
     "react-time-ago": "^7.0.0",
     "react-window": "^1.8.10",
+    "rxjs": "^7.8.1",
     "styled-components": "^6.1.1",
     "use-constant": "^1.1.0",
     "web3-validator": "^2.0.3"

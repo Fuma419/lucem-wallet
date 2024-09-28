@@ -1,12 +1,11 @@
 import {
-  ADA_HANDLE,
   APIError,
   DataSignError,
   ERROR,
   EVENT,
   HW,
   LOCAL_STORAGE,
-  NETWORK_ID,
+  NETWORK_ID, NETWORKD_ID_NUMBER,
   NODE,
   SENDER,
   STORAGE,
@@ -40,6 +39,15 @@ import TrezorConnect from '@trezor/connect-web';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { isAddress } from 'web3-validator';
 import { milkomedaNetworks } from '@dcspark/milkomeda-constants';
+import { Cardano, Serialization } from '@cardano-sdk/core';
+import { Blaze, Blockfrost } from '@blaze-cardano/sdk';
+import provider from '../../config/provider';
+import { WebWallet } from '@blaze-cardano/wallet';
+
+const hasTaggedSets = (cbor) => {
+  const tx = Serialization.Transaction.fromCbor(cbor);
+  return tx.body().hasTaggedSets();
+}
 
 const compareValues = (value1, value2) => {
   try {
@@ -668,32 +676,17 @@ export const bytesAddressToBinary = (bytes) =>
   bytes.reduce((str, byte) => str + byte.toString(2).padStart(8, '0'), '');
 
 export const isValidAddress = async (address) => {
-  await Loader.load();
   const network = await getNetwork();
-  try {
-    const addr = Loader.Cardano.Address.from_bech32(address);
-    if (
-      (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
-      (addr.network_id() === 0 &&
-        (network.id === NETWORK_ID.testnet ||
-          network.id === NETWORK_ID.preview ||
-          network.id === NETWORK_ID.preprod))
-    )
-      return addr.to_raw_bytes();
-    return false;
-  } catch (e) {}
-  try {
-    const addr = Loader.Cardano.ByronAddress.from_base58(address);
-    if (
-      (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
-      (addr.network_id() === 0 &&
-        (network.id === NETWORK_ID.testnet ||
-          network.id === NETWORK_ID.preview ||
-          network.id === NETWORK_ID.preprod))
-    )
-      return addr.to_address().to_raw_bytes();
-    return false;
-  } catch (e) {}
+  const addr = Cardano.Address.fromString(address)
+  if (!addr) return false;
+  if (
+      (addr.getNetworkId() === 1 && network.id === NETWORK_ID.mainnet) ||
+      (addr.getNetworkId() === 0 &&
+          (network.id === NETWORK_ID.testnet ||
+              network.id === NETWORK_ID.preview ||
+              network.id === NETWORK_ID.preprod))
+  )
+    return Buffer.from(addr.toBytes(), 'hex');
   return false;
 };
 
@@ -1061,7 +1054,12 @@ export const signTxHW = async (
       Buffer.from(address.to_raw_bytes()).toString('hex'),
       hw.account
     );
-    const result = await appAda.signTransaction(ledgerTx);
+    const result = await appAda.signTransaction({
+      ...ledgerTx,
+      options: {
+        tagCborSets: hasTaggedSets(tx)
+      }
+    });
     // getting public keys
     const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
     const vkeys = Loader.Cardano.VkeywitnessList.new();
@@ -1118,7 +1116,7 @@ export const signTxHW = async (
       Buffer.from(address.to_raw_bytes()).toString('hex'),
       hw.account
     );
-    const result = await TrezorConnect.cardanoSignTransaction(trezorTx);
+    const result = await TrezorConnect.cardanoSignTransaction({ ...trezorTx, tagCborSets: hasTaggedSets(tx) });
     if (!result.success) throw new Error('Trezor could not sign tx');
     // getting public keys
     const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
@@ -2055,3 +2053,19 @@ export const toUnit = (amount, decimals = 6) => {
   else if (result == 'NaN') return '0';
   return result;
 };
+
+export const getBlazeProvider = async () => {
+  const network = await getNetwork();
+  const blockfrost = new Blockfrost({
+    network: `cardano-${network.name || network.id}`,
+    projectId: provider.api.key(network.name || network.id).project_id,
+  });
+
+  const wallet = new WebWallet({
+    getUtxos: async (amount, paginate) => (await getUtxos(amount, paginate)).map((utxo) => Buffer.from(utxo.to_cbor_bytes()).toString('hex')),
+    getChangeAddress: () => getAddress(),
+    getNetworkId: async () => NETWORKD_ID_NUMBER[network.name || network.id]
+  });
+
+  return Blaze.from(blockfrost, wallet);
+}

@@ -34,19 +34,33 @@ const LogoWhite = '/assets/img/bannerBlack.png';
 const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [colorTheme, setColorTheme] = React.useState('purple');
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const type = params.get('type');
     const length = params.get('length');
-    if (type === 'import')
-      navigate('/import', { state: { seedLength: parseInt(length) } });
-    else navigate('/generate');
+    if (type === 'import') {
+      navigate('/import', { state: { seedLength: parseInt(length), colorTheme: 'cyan' } });
+      setColorTheme('cyan');
+    } else {
+      navigate('/generate', { state: { colorTheme: 'purple' } });
+      setColorTheme('purple');
+    }
   }, []);
 
-  // Conditionally setting the background image based on the current route
-  const backgroundImage = location.pathname === '/import' ? BackgroundImageCyan : BackgroundImagePurple;
-  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
+  React.useEffect(() => {
+    if (location.state && location.state.colorTheme) {
+      setColorTheme(location.state.colorTheme);
+    } else if (location.pathname === '/import') {
+      setColorTheme('cyan');
+    } else if (location.pathname === '/generate') {
+      setColorTheme('purple');
+    }
+  }, [location]);
+
+  // Conditionally setting the background image based on the current theme
+  const backgroundImage = colorTheme === 'cyan' ? BackgroundImageCyan : BackgroundImagePurple;
 
   return (
     <Box
@@ -79,23 +93,22 @@ const App = () => {
         maxWidth="560px"
         maxHeight="850px"
         p={10}
-        background="rgba(0, 0, 0, .85)"  // Optional: Add a semi-transparent background to improve text visibility
+        background="rgba(0, 0, 0, .85)" // Optional: Add a semi-transparent background to improve text visibility
         color="whiteAlpha.900"
         fontSize="md"
       >
         <Routes>
-          <Route path="/generate" element={<GenerateSeed />} />
-          <Route path="/verify" element={<VerifySeed />} />
-          <Route path="/account" element={<MakeAccount />} />
-          <Route path="/import" element={<ImportSeed />} />
+          <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
+          <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
+          <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
+          <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
         </Routes>
       </Box>
     </Box>
   );
 };
 
-
-const GenerateSeed = () => {
+const GenerateSeed = ({ colorTheme }) => {
   const capture = useCaptureEvent();
   const navigate = useNavigate();
   const [mnemonic, setMnemonic] = React.useState({});
@@ -109,11 +122,10 @@ const GenerateSeed = () => {
   React.useEffect(() => {
     generate();
   }, []);
-  const colorTheme = location.pathname === '/generate' ? 'cyan' : 'purple';
 
   return (
     <Box>
-      <Text className='walletTitle' textAlign="center" fontWeight="bold" fontSize="xl">
+      <Text className="walletTitle" textAlign="center" fontWeight="bold" fontSize="xl">
         New Seed Phrase
       </Text>
       <Spacer height="10" />
@@ -124,7 +136,7 @@ const GenerateSeed = () => {
         justifyContent="center"
       >
         {[0, 1].map((colIndex) => (
-          <Box  key={colIndex} width={140}>
+          <Box key={colIndex} width={140}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
@@ -144,17 +156,17 @@ const GenerateSeed = () => {
                       fontSize={'sm'}
                       rounded="full"
                       borderRadius={20}
-                      background={'purple.600'}
+                      background={`${colorTheme}.600`}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'cyan.100'} // Dark text on  background
+                      color={`${colorTheme === 'purple' ? 'cyan.100' : 'gray.900'}`}
                     >
                       {index}
                     </Box>
                   )}
-                  <Input 
-                    focusBorderColor={`${colorTheme}.300`}
+                  <Input
+                    focusBorderColor={`${colorTheme}.700`}
                     width={110}
                     size={'sm'}
                     isReadOnly={true}
@@ -163,8 +175,8 @@ const GenerateSeed = () => {
                     variant="filled"
                     fontWeight="bold"
                     rounded="full"
-                    background="gray.900" // Dark input background
-                    color="whiteAlpha.900" // White input text color
+                    background="gray.900"
+                    color="whiteAlpha.900"
                     placeholder={`Word ${index}`}
                   ></Input>
                   {Boolean(colIndex) && (
@@ -176,11 +188,11 @@ const GenerateSeed = () => {
                       fontWeight="bold"
                       rounded="full"
                       borderRadius={20}
-                      background={'purple.600'}
+                      background={`${colorTheme}.600`}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
-                      color={'cyan.100'} // Dark text on cyan background
+                      color={`${colorTheme === 'purple' ? 'cyan.100' : 'gray.900'}`}
                     >
                       {index}
                     </Box>
@@ -194,19 +206,19 @@ const GenerateSeed = () => {
       <Box height={3} />
       <Stack alignItems="center" direction="column">
         <Stack direction="row" width="64" spacing="6">
-          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme={colorTheme}/>
-          <Text className='walletTitle' wordBreak="break-word" fontSize="sm">
+          <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme={colorTheme} />
+          <Text className="walletTitle" wordBreak="break-word" fontSize="sm">
             I've stored the seed phrase in a secure place.
           </Text>
         </Stack>
-        <Box height={4} />
+        <Box height="4" />
         <Button
           className="button new-wallet"
           isDisabled={!checked}
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
             capture(Events.OnboardingCreateWritePassphraseNextClick);
-            navigate('/verify', { state: { mnemonic, colorTheme: 'purple' } });
+            navigate('/verify', { state: { mnemonic, colorTheme } });
           }}
         >
           Next
@@ -216,20 +228,24 @@ const GenerateSeed = () => {
   );
 };
 
-const VerifySeed = () => {
+const VerifySeed = ({ colorTheme }) => {
   const capture = useCaptureEvent();
   const navigate = useNavigate();
-  const { state: { mnemonic } = {} } = useLocation();
+  const { state: { mnemonic, colorTheme: stateColorTheme } = {} } = useLocation();
+
+  // Use the colorTheme from state if not passed as a prop
+  colorTheme = colorTheme || stateColorTheme;
+
   const [input, setInput] = React.useState({});
   const [allValid, setAllValid] = React.useState(false);
   const refs = React.useRef([]);
 
   const verifyAll = () => {
     if (
-      input[5] == mnemonic[5] &&
-      input[10] == mnemonic[10] &&
-      input[15] == mnemonic[15] &&
-      input[20] == mnemonic[20]
+      input[5] === mnemonic[5] &&
+      input[10] === mnemonic[10] &&
+      input[15] === mnemonic[15] &&
+      input[20] === mnemonic[20]
     )
       setAllValid(true);
     else setAllValid(false);
@@ -239,11 +255,9 @@ const VerifySeed = () => {
     verifyAll();
   }, [input]);
 
-  const colorTheme = location.pathname === '/verify' ? 'cyan' : 'purple';
-
   return (
     <Box>
-      <Text className='walletTitle' textAlign="center" fontWeight="bold" fontSize="xl">
+      <Text className="walletTitle" textAlign="center" fontWeight="bold" fontSize="xl">
         Verify Seed Phrase
       </Text>
       <Spacer height="10" />
@@ -262,18 +276,18 @@ const VerifySeed = () => {
                 >
                   {!Boolean(colIndex) && (
                     <Box
-                    mr={2}
-                    width={6}
-                    height={6}
-                    fontSize={'sm'}
-                    fontWeight="bold"
-                    rounded="full"
-                    borderRadius={20}
-                    background={'purple.600'}
-                    display={'flex'}
-                    alignItems={'center'}
-                    justifyContent={'center'}
-                    color={'gray.900'} // Dark text on gray background
+                      mr={2}
+                      width={6}
+                      height={6}
+                      fontSize={'sm'}
+                      fontWeight="bold"
+                      rounded="full"
+                      borderRadius={20}
+                      background={`${colorTheme}.600`}
+                      display={'flex'}
+                      alignItems={'center'}
+                      justifyContent={'center'}
+                      color={'gray.900'}
                     >
                       {index}
                     </Box>
@@ -282,7 +296,7 @@ const VerifySeed = () => {
                     variant={index % 5 !== 0 ? 'filled' : 'outline'}
                     defaultValue={index % 5 !== 0 ? mnemonic[index] : ''}
                     isReadOnly={index % 5 !== 0}
-                    focusBorderColor={`${colorTheme}.300`}
+                    focusBorderColor={`${colorTheme}.700`}
                     width={110}
                     size={'sm'}
                     isInvalid={input[index] && input[index] !== mnemonic[index]}
@@ -300,7 +314,7 @@ const VerifySeed = () => {
                     textAlign="center"
                     fontWeight="bold"
                     rounded="full"
-                    background="gray.900" // Dark input background
+                    background="gray.900"
                     placeholder={`Word ${index}`}
                   ></Input>
                   {Boolean(colIndex) && (
@@ -308,10 +322,10 @@ const VerifySeed = () => {
                       ml={2}
                       width={6}
                       height={6}
-                      fontsize={'sm'}
+                      fontSize={'sm'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'purple.500'}
+                      background={`${colorTheme}.700`}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -334,7 +348,7 @@ const VerifySeed = () => {
           onClick={() => {
             capture(Events.OnboardingCreateEnterPassphraseSkipClick);
             navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet' },
+              state: { mnemonic, flow: 'create-wallet', colorTheme },
             });
           }}
         >
@@ -348,7 +362,7 @@ const VerifySeed = () => {
           onClick={() => {
             capture(Events.OnboardingCreateEnterPassphraseNextClick);
             navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet', colorTheme: 'purple' }, // Pass colorTheme
+              state: { mnemonic, flow: 'create-wallet', colorTheme },
             });
           }}
         >
@@ -359,10 +373,14 @@ const VerifySeed = () => {
   );
 };
 
-const ImportSeed = () => {
+const ImportSeed = ({ colorTheme }) => {
   const capture = useCaptureEvent();
   const navigate = useNavigate();
-  const { state: { seedLength } = {} } = useLocation();
+  const { state: { seedLength, colorTheme: stateColorTheme } = {} } = useLocation();
+
+  // Use the colorTheme from state if not passed as a prop
+  colorTheme = colorTheme || stateColorTheme;
+
   const [input, setInput] = React.useState({});
   const [allValid, setAllValid] = React.useState(false);
   const refs = React.useRef([]);
@@ -370,26 +388,24 @@ const ImportSeed = () => {
 
   const verifyAll = () => {
     if (
-      Object.keys(input).length == seedLength &&
+      Object.keys(input).length === seedLength &&
       validateMnemonic(mnemonicFromObject(input))
     )
       setAllValid(true);
     else setAllValid(false);
   };
 
-  React.useEffect(() => { 
+  React.useEffect(() => {
     verifyAll();
   }, [input]);
 
-  const colorTheme = location.pathname === '/import' ? 'cyan' : 'purple';
-
   return (
     <Box>
-      <Text className='walletTitle' textAlign="center" fontWeight="bold" fontSize="xl">
+      <Text className="walletTitle" textAlign="center" fontWeight="bold" fontSize="xl">
         Import Seed Phrase
       </Text>
       <Spacer height="5" />
-      <Text className='walletTitle' fontSize="sm" textAlign="center">
+      <Text className="walletTitle" fontSize="sm" textAlign="center">
         Enter a {seedLength}-word seed phrase.
       </Text>
       <Spacer height="10" />
@@ -398,7 +414,7 @@ const ImportSeed = () => {
           <Box key={colIndex} width={140}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
-              if (index > seedLength) return;
+              if (index > seedLength) return null;
               return (
                 <Box
                   key={index}
@@ -415,7 +431,7 @@ const ImportSeed = () => {
                       fontSize={'sm'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'cyan.500'}
+                      background={`${colorTheme}.700`}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -427,7 +443,7 @@ const ImportSeed = () => {
                   <Input
                     variant={'filled'}
                     width={110}
-                    focusBorderColor={`${colorTheme}.300`}
+                    focusBorderColor={`${colorTheme}.700`}
                     size={'sm'}
                     isInvalid={input[index] && !words.includes(input[index])}
                     ref={(el) => (refs.current[index] = el)}
@@ -440,8 +456,7 @@ const ImportSeed = () => {
                     textAlign="center"
                     fontWeight="bold"
                     rounded="full"
-                    background="gray.900" // Dark input background
-
+                    background="gray.900"
                     placeholder={`Word ${index}`}
                   ></Input>
                   {Boolean(colIndex) && (
@@ -452,7 +467,7 @@ const ImportSeed = () => {
                       fontSize={'sm'}
                       fontWeight="bold"
                       rounded="full"
-                      background={'cyan.500'}
+                      background={`${colorTheme}.700`}
                       display={'flex'}
                       alignItems={'center'}
                       justifyContent={'center'}
@@ -470,36 +485,41 @@ const ImportSeed = () => {
       <Spacer height="1" />
       <Spacer height="5" />
       <Stack alignItems="center" direction="column">
-      <Button
-        isDisabled={!allValid}
-        className="button import-wallet"
-        rightIcon={<ChevronRightIcon />}
-        onClick={() => {
-          capture(Events.OnboardingRestoreEnterPassphraseNextClick);
-          navigate('/account', {
-            state: { mnemonic: input, flow: 'restore-wallet', colorTheme: 'cyan' }, // Pass colorTheme
-          });
-        }}
-      >
-        Next
-      </Button>
+        <Button
+          isDisabled={!allValid}
+          className="button import-wallet"
+          rightIcon={<ChevronRightIcon />}
+          onClick={() => {
+            capture(Events.OnboardingRestoreEnterPassphraseNextClick);
+            navigate('/account', {
+              state: { mnemonic: input, flow: 'restore-wallet', colorTheme },
+            });
+          }}
+        >
+          Next
+        </Button>
       </Stack>
     </Box>
   );
 };
 
-const MakeAccount = () => {
+const MakeAccount = ({ colorTheme }) => {
   const capture = useCaptureEvent();
   const [state, setState] = React.useState({});
   const [loading, setLoading] = React.useState(false);
-  const { state: { mnemonic, flow, colorTheme } = {} } = useLocation(); // Get colorTheme from state
+  const { state: navigationState = {} } = useLocation();
+  const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
+
+  // Use the colorTheme from state if not passed as a prop
+  colorTheme = colorTheme || stateColorTheme || 'purple';
+
   const [isDone, setIsDone] = React.useState(false);
   const setRoute = useStoreActions(
     (actions) => actions.globalModel.routeStore.setRoute
   );
 
   return isDone ? (
-    <SuccessAndClose />
+    <SuccessAndClose flow={flow} />
   ) : (
     <Box
       textAlign="center"
@@ -509,12 +529,12 @@ const MakeAccount = () => {
       width="100%"
     >
       <Box width="65%">
-        <Text className='walletTitle' fontWeight="bold" fontSize="lg">
+        <Text className="walletTitle" fontWeight="bold" fontSize="lg">
           Create Account
         </Text>
         <Spacer height="10" />
         <Input
-          focusBorderColor={`${colorTheme}.300`} // Use colorTheme directly
+          focusBorderColor={`${colorTheme}.700`}
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
           placeholder="Enter account name"
         ></Input>
@@ -522,7 +542,7 @@ const MakeAccount = () => {
 
         <InputGroup size="md" width="100%">
           <Input
-            focusBorderColor={`${colorTheme}.300`} // Use colorTheme directly
+            focusBorderColor={`${colorTheme}.700`}
             isInvalid={state.regularPassword === false}
             pr="4.5rem"
             type={state.show ? 'text' : 'password'}
@@ -544,14 +564,14 @@ const MakeAccount = () => {
               h="1.75rem"
               size="sm"
               onClick={() => setState((s) => ({ ...s, show: !s.show }))}
-              colorScheme={colorTheme}  // Apply the correct color scheme
+              colorScheme={colorTheme}
             >
               {state.show ? 'Hide' : 'Show'}
             </Button>
           </InputRightElement>
         </InputGroup>
         {state.regularPassword === false && (
-          <Text fontsize={'sm'} color="red.300">
+          <Text fontSize={'sm'} color="red.300">
             Password must be at least 8 characters long
           </Text>
         )}
@@ -559,6 +579,7 @@ const MakeAccount = () => {
 
         <InputGroup size="md">
           <Input
+            focusBorderColor={`${colorTheme}.700`}
             isInvalid={state.matchingPassword === false}
             pr="4.5rem"
             onChange={(e) =>
@@ -579,22 +600,23 @@ const MakeAccount = () => {
               h="1.75rem"
               size="sm"
               onClick={() => setState((s) => ({ ...s, show: !s.show }))}
-              colorScheme={colorTheme}  // Apply the correct color scheme
+              colorScheme={colorTheme}
             >
               {state.show ? 'Hide' : 'Show'}
             </Button>
           </InputRightElement>
         </InputGroup>
         {state.matchingPassword === false && (
-          <Text fontsize={'sm'} color="red.300">
+          <Text fontSize={'sm'} color="red.300">
             Password doesn't match
           </Text>
         )}
         <Spacer height="10" />
-        <Button className="button new-wallet"
+        <Button
+          className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
           isDisabled={
             !state.password ||
-            !state.password.length >= 8 ||
+            state.password.length < 8 ||
             state.password !== state.passwordConfirm ||
             !state.name
           }
@@ -625,7 +647,7 @@ const MakeAccount = () => {
   );
 };
 
-const SuccessAndClose = () => {
+const SuccessAndClose = ({ flow }) => {
   return (
     <>
       <Text
@@ -640,7 +662,11 @@ const SuccessAndClose = () => {
       <Box h={10} />
       <Text>You can now close this tab and continue with the extension.</Text>
       <Box h={10} />
-      <Button className="button new-wallet" mt="auto" onClick={async () => window.close()}>
+      <Button
+        className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
+        mt="auto"
+        onClick={async () => window.close()}
+      >
         Close
       </Button>
     </>

@@ -1,33 +1,33 @@
 <p align="center"><img width="200px" src="./src/assets/img/bannerBlack.svg"></img></p>
 
-# Nami
+# Lucem
 
-Nami is a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project maintained by [**IOG**](https://iohk.io/en/blog/posts/2023/11/01/nami-has-a-new-home/).
+Lucem is a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project forked from Nami, which is maintained by [**IOG**](https://iohk.io/en/blog/posts/2023/11/01/nami-has-a-new-home/).
 
 ### Testnet
 
-Download and extract the zip attached to the latest [Release](https://github.com/input-output-hk/nami/releases). Then go to `chrome://extensions`, click Load unpacked at the top left and select the build folder.
+Download and extract the zip attached to the latest [Release](https://github.com/Fuma419/lucem-wallet/releases). Then go to `chrome://extensions`, click Load unpacked at the top left and select the build folder.
 
 ### Injected API
 
-Since Nami is a browser extension, it can inject content inside the web context, which means you can connect the wallet to any website.
+Since Lucem is a browser extension, it can inject content inside the web context, which means you can connect the wallet to any website.
 The exposed API follows [CIP-0030](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0030). The returned types are in `cbor`/`bytes` format. A helpful library for serializing and de-serializing these low-level data structures is the [serialization-lib](https://github.com/Emurgo/cardano-serialization-lib). To verify a signature returned from `cardano.dataSign(address, payload)` the [message-signing](https://github.com/Emurgo/message-signing) library helps.
 
 #### Basic Usage
 
 - Detect the Cardano provider (`window.cardano`) and detect Nami (`window.cardano.nami`)
-- Request the `api` from `window.cardano.nami.enable()`
+- Request the `api` from `window.cardano.lucem.enable()`
 - Detect which Cardano network the user is connected to (ID 1 = Mainnet, ID 0 = Testnet)
 - Get the user's Cardano account
 
 #### Methods
 
 The full list of methods can be found in [CIP-0030](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0030).
-For the wallet namespace Nami uses `nami`.
+For the wallet namespace Lucem uses `lucem`.
 
 **Note:** Nami follows the ongoing [PR](https://github.com/cardano-foundation/CIPs/pull/148) for the `dataSign` endpoint. (Very similar to the previous `dataSign` endpoint from Nami).
 
-Nami also uses a few custom endpoints, which are available under `api.experimental`:
+Lucem also uses a few custom endpoints, which are available under `api.experimental`:
 
 ##### api.experimental.getCollateral()
 
@@ -37,7 +37,7 @@ cardano.getCollateral() : [TransactionUnspentOutput]
 
 ##### api.experimental.on(eventName, callback)
 
-Register events coming from Nami. Available events are:
+Register events coming from Lucem. Available events are:
 
 ```
 accountChange: ((addresses : [BaseAddress]) => void)
@@ -110,7 +110,7 @@ cardano.getUsedAddresses() : [BaseAddress]
 
 `BaseAddress` is a hex encoded bytes string.
 
-**Note** Nami doesn't utilize the concept of multipe addresses per wallet. This function will return an array of length `1` and will always return the same single address. Just to follow the standards of the proposed [CIP](https://github.com/cardano-foundation/CIPs/pull/88), it will return the address in an array.
+**Note** Lcuem doesn't utilize the concept of multipe addresses per wallet. This function will return an array of length `1` and will always return the same single address. Just to follow the standards of the proposed [CIP](https://github.com/cardano-foundation/CIPs/pull/88), it will return the address in an array.
 
 ##### cardano.getUnusedAddresses()
 
@@ -194,7 +194,7 @@ Returns the transaction hash, if transaction was submitted successfully, otherwi
 cardano.onAccountChange((addresses : [BaseAddress]) => void)
 ```
 
-**Note** To follow the standards of multiple addresses the callback will return an array, although Nami will just return an array with a single address, which is the same as the one in `cardano.getUsedAddresses()`.
+**Note** To follow the standards of multiple addresses the callback will return an array, although Lucem will just return an array with a single address, which is the same as the one in `cardano.getUsedAddresses()`.
 
 ##### cardano.onNetworkChange(network)
 

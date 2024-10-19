@@ -100,8 +100,6 @@ import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
 import Logo from '../../../assets/img/logo.png';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
@@ -113,7 +111,6 @@ const useIsMounted = () => {
 };
 
 const Wallet = () => {
-  const capture = useCaptureEvent();
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
@@ -288,7 +285,6 @@ const Wallet = () => {
                 ) : (
                   <Button
                     onClick={() => {
-                      capture(Events.StakingClick);
                       builderRef.current.initDelegation(
                         state.account,
                         state.delegation
@@ -451,7 +447,6 @@ const Wallet = () => {
                 <MenuItem
                   icon={<AddIcon />}
                   onClick={() => {
-                    capture(Events.SettingsNewAccountClick);
                     newAccountRef.current.openModal();
                   }}
                 >
@@ -468,7 +463,6 @@ const Wallet = () => {
                       color="red.300"
                       icon={<DeleteIcon />}
                       onClick={() => {
-                        capture(Events.AccountDeleteClick);
                         deletAccountRef.current.openModal();
                       }}
                     >
@@ -478,7 +472,6 @@ const Wallet = () => {
                 <MenuItem
                   icon={<Icon as={GiUsbKey} w={3} h={3} />}
                   onClick={() => {
-                    capture(Events.HWConnectClick);
                     createTab(TAB.hw);
                   }}
                 >
@@ -488,7 +481,6 @@ const Wallet = () => {
                 <MenuItem
                   icon={<Icon as={FaRegFileCode} w={3} h={3} />}
                   onClick={() => {
-                    capture(Events.SettingsCollateralClick);
                     builderRef.current.initCollateral(state.account);
                   }}
                 >
@@ -661,7 +653,6 @@ const Wallet = () => {
                 rounded="lg"
                 shadow="md"
                 onClick={() => {
-                  capture(Events.ReceiveClick);
                 }}
               >
                 Receive
@@ -687,7 +678,6 @@ const Wallet = () => {
                       label="Copied address"
                       copy={info.paymentAddr}
                       onClick={() => {
-                        capture(Events.ReceiveCopyAddressIconClick);
                       }}
                     >
                       <Text
@@ -709,7 +699,6 @@ const Wallet = () => {
           
             <Button
               onClick={() => {
-                capture(Events.SendClick);
                 navigate('/send');
               }}
               className="button import-wallet"
@@ -741,7 +730,6 @@ const Wallet = () => {
             <Tab
               mr={2}
               onClick={() => {
-                capture(Events.NFTsClick);
               }}
             >
               <Icon as={RxTokens} boxSize={5} />
@@ -751,7 +739,6 @@ const Wallet = () => {
                 as={GoHistory}
                 boxSize={5}
                 onClick={() => {
-                  capture(Events.ActivityActivityClick);
                 }}
               />
             </Tab>
@@ -797,7 +784,6 @@ const Wallet = () => {
 };
 
 const NewAccountModal = React.forwardRef((props, ref) => {
-  const capture = useCaptureEvent();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = React.useState(false);
   const [state, setState] = React.useState({
@@ -811,7 +797,6 @@ const NewAccountModal = React.forwardRef((props, ref) => {
     try {
       const index = await createAccount(state.name, state.password);
       await switchAccount(index);
-      capture(Events.SettingsNewAccountConfirmClick);
       onClose();
     } catch (e) {
       setState((s) => ({ ...s, wrongPassword: true }));
@@ -838,7 +823,6 @@ const NewAccountModal = React.forwardRef((props, ref) => {
       size="xs"
       isOpen={isOpen}
       onClose={() => {
-        capture(Events.SettingsNewAccountXClick);
         onClose();
       }}
       isCentered
@@ -893,7 +877,6 @@ const NewAccountModal = React.forwardRef((props, ref) => {
             mr={3}
             variant="ghost"
             onClick={() => {
-              capture(Events.SettingsNewAccountXClick);
               onClose();
             }}
           >
@@ -917,7 +900,6 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = React.useState(false);
   const cancelRef = React.useRef();
-  const capture = useCaptureEvent();
 
   React.useImperativeHandle(ref, () => ({
     openModal() {
@@ -957,7 +939,6 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
                 setIsLoading(true);
                 await deleteAccount();
                 await switchAccount(0);
-                capture(Events.AccountDeleteConfirmClick);
                 onClose();
                 setIsLoading(false);
               }}
@@ -972,7 +953,6 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
 });
 
 const DelegationPopover = ({ account, delegation, children }) => {
-  const capture = useCaptureEvent();
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
   return (
@@ -991,7 +971,6 @@ const DelegationPopover = ({ account, delegation, children }) => {
               justifyContent: 'center',
             }}
             onClick={() => {
-              capture(Events.StakingClick);
             }}
             rightIcon={<ChevronDownIcon />}
           >
@@ -1054,7 +1033,6 @@ const DelegationPopover = ({ account, delegation, children }) => {
             </Tooltip>
             <Button
               onClick={() => {
-                capture(Events.StakingUnstakeClick);
                 withdrawRef.current.initUndelegate(account, delegation);
               }}
               mt="10px"

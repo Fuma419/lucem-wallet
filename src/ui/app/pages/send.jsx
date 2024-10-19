@@ -75,8 +75,6 @@ import Copy from '../components/copy';
 import AssetsModal from '../components/assetsModal';
 import { MdModeEdit } from 'react-icons/md';
 import useConstant from 'use-constant';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 import debouncePromise from 'debounce-promise';
 import latest from 'promise-latest';
 
@@ -136,7 +134,6 @@ export const sendStore = {
 };
 
 const Send = () => {
-  const capture = useCaptureEvent();
   const isMounted = useIsMounted();
   const settings = useStoreState((state) => state.settings.settings);
   const [address, setAddress] = [
@@ -690,7 +687,6 @@ const Send = () => {
                 isDisabled={!tx || !address.result || fee.error}
                 colorScheme="gray"
                 onClick={() => {
-                  capture(Events.SendTransactionDataReviewTransactionClick);
                   ref.current.openModal(account.current.index);
                 }}
               >
@@ -801,7 +797,6 @@ const Send = () => {
         }
         ref={ref}
         sign={async (password, hw) => {
-          capture(Events.SendTransactionConfirmationConfirmClick);
           await Loader.load();
           const txDes = Loader.Cardano.Transaction.from_cbor_bytes(
             Buffer.from(tx, 'hex')
@@ -827,7 +822,6 @@ const Send = () => {
         }}
         onConfirm={async (status, signedTx) => {
           if (status === true) {
-            capture(Events.SendTransactionConfirmed);
             toast({
               title: 'Transaction submitted',
               status: 'success',

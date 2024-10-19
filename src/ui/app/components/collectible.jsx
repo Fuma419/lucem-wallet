@@ -8,8 +8,6 @@ import {
 import React from 'react';
 import './styles.css';
 import { getAsset } from '../../../api/extension';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
@@ -21,7 +19,6 @@ const useIsMounted = () => {
 };
 
 const Collectible = React.forwardRef(({ asset }, ref) => {
-  const capture = useCaptureEvent();
   const isMounted = useIsMounted();
   const [token, setToken] = React.useState(null);
   const background = useColorModeValue('gray.300', 'white');
@@ -46,7 +43,6 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
     <>
       <Box
         onClick={() => {
-          capture(Events.NFTsImageClick);
           token && ref.current.openModal(token);
         }}
         position="relative"

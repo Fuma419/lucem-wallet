@@ -15,14 +15,9 @@ import {
 import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import { createRoot } from 'react-dom/client';
-import { AnalyticsProvider } from '../../../features/analytics/provider';
-import { EventTracker } from '../../../features/analytics/event-tracker';
-import { ExtensionViews } from '../../../features/analytics/types';
 import Main from '../../index';
 import { TAB } from '../../../config/config';
 import { useStoreActions } from 'easy-peasy';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
 import { createWallet, mnemonicFromObject, mnemonicToObject } from '../../../api/extension';
 
@@ -109,7 +104,6 @@ const App = () => {
 };
 
 const GenerateSeed = ({ colorTheme }) => {
-  const capture = useCaptureEvent();
   const navigate = useNavigate();
   const [mnemonic, setMnemonic] = React.useState({});
   const generate = () => {
@@ -217,7 +211,6 @@ const GenerateSeed = ({ colorTheme }) => {
           isDisabled={!checked}
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
-            capture(Events.OnboardingCreateWritePassphraseNextClick);
             navigate('/verify', { state: { mnemonic, colorTheme } });
           }}
         >
@@ -229,7 +222,6 @@ const GenerateSeed = ({ colorTheme }) => {
 };
 
 const VerifySeed = ({ colorTheme }) => {
-  const capture = useCaptureEvent();
   const navigate = useNavigate();
   const { state: { mnemonic, colorTheme: stateColorTheme } = {} } = useLocation();
 
@@ -346,7 +338,6 @@ const VerifySeed = ({ colorTheme }) => {
           fontWeight="medium"
           className="button"
           onClick={() => {
-            capture(Events.OnboardingCreateEnterPassphraseSkipClick);
             navigate('/account', {
               state: { mnemonic, flow: 'create-wallet', colorTheme },
             });
@@ -360,7 +351,6 @@ const VerifySeed = ({ colorTheme }) => {
           isDisabled={!allValid}
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
-            capture(Events.OnboardingCreateEnterPassphraseNextClick);
             navigate('/account', {
               state: { mnemonic, flow: 'create-wallet', colorTheme },
             });
@@ -374,7 +364,6 @@ const VerifySeed = ({ colorTheme }) => {
 };
 
 const ImportSeed = ({ colorTheme }) => {
-  const capture = useCaptureEvent();
   const navigate = useNavigate();
   const { state: { seedLength, colorTheme: stateColorTheme } = {} } = useLocation();
 
@@ -490,7 +479,6 @@ const ImportSeed = ({ colorTheme }) => {
           className="button import-wallet"
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
-            capture(Events.OnboardingRestoreEnterPassphraseNextClick);
             navigate('/account', {
               state: { mnemonic: input, flow: 'restore-wallet', colorTheme },
             });
@@ -504,7 +492,6 @@ const ImportSeed = ({ colorTheme }) => {
 };
 
 const MakeAccount = ({ colorTheme }) => {
-  const capture = useCaptureEvent();
   const [state, setState] = React.useState({});
   const [loading, setLoading] = React.useState(false);
   const { state: navigationState = {} } = useLocation();
@@ -624,11 +611,6 @@ const MakeAccount = ({ colorTheme }) => {
           loadingText="Creating"
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
-            capture(
-              flow === 'create-wallet'
-                ? Events.OnboardingCreateWalletNamePasswordNextClick
-                : Events.OnboardingRestoreWalletNamePasswordNextClick
-            );
             setLoading(true);
             await createWallet(
               state.name,
@@ -675,14 +657,11 @@ const SuccessAndClose = ({ flow }) => {
 
 const root = createRoot(window.document.querySelector(`#${TAB.createWallet}`));
 root.render(
-  <AnalyticsProvider view={ExtensionViews.Extended}>
-    <EventTracker />
     <Main>
       <Router>
         <App />
       </Router>
     </Main>
-  </AnalyticsProvider>
 );
 
 if (module.hot) module.hot.accept();

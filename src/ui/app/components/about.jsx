@@ -21,13 +21,11 @@ import IOHKBlack from '../../../assets/img/iohk.svg';
 import HodlerLogo from '../../../assets/img/Hodler_Green_Icon_round.png';
 import TermsOfUse from './termsOfUse';
 import PrivacyPolicy from './privacyPolicy';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const { version } = require('../../../../package.json');
 
 const About = React.forwardRef((props, ref) => {
-  const capture = useCaptureEvent();
+
   const { isOpen, onOpen, onClose } = useDisclosure();
   const Logo = useColorModeValue(LogoBlack, LogoWhite);
   const IOHK = useColorModeValue(IOHKWhite, IOHKBlack);
@@ -106,7 +104,6 @@ const About = React.forwardRef((props, ref) => {
             <Box>
               <Link
                 onClick={() => {
-                  capture(Events.SettingsTermsAndConditionsClick);
                   termsRef.current.openModal();
                 }}
                 color="GrayText"

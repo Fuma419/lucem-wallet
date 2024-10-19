@@ -30,8 +30,6 @@ import { FaCoins, FaPiggyBank, FaTrashAlt, FaRegEdit, FaUserCheck, FaUsers, FaRe
 import { IoRemoveCircleSharp } from 'react-icons/io5';
 import { TiArrowForward, TiArrowBack, TiArrowShuffle, TiArrowLoop } from 'react-icons/ti';
 import { GiAnvilImpact } from 'react-icons/gi';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 import Loader from '../../../api/loader';
 
 TimeAgo.addDefaultLocale(en);
@@ -301,7 +299,6 @@ const TxIcon = ({ txType, extra }) => {
 };
 
 const TxDetail = ({ displayInfo, network }) => {
-  const capture = useCaptureEvent();
   const colorMode = {
     extraDetail: useColorModeValue('black', 'white'),
   };
@@ -338,7 +335,6 @@ const TxDetail = ({ displayInfo, network }) => {
               }
               isExternal
               onClick={() => {
-                capture(Events.ActivityActivityDetailTransactionHashClick);
               }}
             >
               {displayInfo.txHash} <ExternalLinkIcon mx="2px" />

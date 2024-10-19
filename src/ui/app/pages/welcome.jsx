@@ -23,12 +23,9 @@ import PrivacyPolicy from '../components/privacyPolicy';
 import { ViewIcon, WarningTwoIcon } from '@chakra-ui/icons';
 import { createTab } from '../../../api/extension';
 import { TAB } from '../../../config/config';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
 
 const Welcome = () => {
-  const capture = useCaptureEvent();
   const refWallet = React.useRef();
   const refImport = React.useRef();
 
@@ -69,7 +66,6 @@ const Welcome = () => {
         <Box height="6"/>
         <Button className="button new-wallet"
           onClick={() => {
-            capture(Events.OnboardingCreateClick);
             refWallet.current.openModal();
           }}
         >
@@ -78,7 +74,6 @@ const Welcome = () => {
         <Box height="6"/>
         <Button className="button import-wallet"
           onClick={() => {
-            capture(Events.OnboardingRestoreClick);
             refImport.current.openModal();
           }}
         >

@@ -12,7 +12,6 @@ import {
 } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { POPUP } from '../config/config';
-import { AnalyticsConsentModal } from '../features/analytics/ui/AnalyticsConsentModal';
 import Main from './index';
 import { Box, Spinner } from '@chakra-ui/react';
 import Welcome from './app/pages/welcome';
@@ -21,12 +20,6 @@ import { getAccounts } from '../api/extension';
 import Settings from './app/pages/settings';
 import Send from './app/pages/send';
 import { useStoreActions, useStoreState } from 'easy-peasy';
-import {
-  AnalyticsProvider,
-  useAnalyticsContext,
-} from '../features/analytics/provider';
-import { EventTracker } from '../features/analytics/event-tracker';
-import { ExtensionViews } from '../features/analytics/types';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
 
 const App = () => {
@@ -37,7 +30,6 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoading, setIsLoading] = React.useState(true);
-  const [analytics, setAnalyticsConsent] = useAnalyticsContext();
   const init = async () => {
     const hasWallet = await getAccounts();
     if (hasWallet) {
@@ -94,24 +86,17 @@ const App = () => {
         <Route path="/settings/*" element={<Settings />} />
         <Route path="/send" element={<Send />} />
       </Routes>
-      {/* <AnalyticsConsentModal
-        askForConsent={analytics.consent === undefined}
-        setConsent={setAnalyticsConsent}
-      /> */}
     </div>
   );
 };
 
 const root = createRoot(window.document.querySelector(`#${POPUP.main}`));
 root.render(
-  <AnalyticsProvider view={ExtensionViews.Popup}>
-    <EventTracker />
     <Main>
       <Router>
         <App />
       </Router>
     </Main>
-  </AnalyticsProvider>
 );
 
 if (module.hot) module.hot.accept();

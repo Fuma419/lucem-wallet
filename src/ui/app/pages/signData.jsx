@@ -18,11 +18,8 @@ import {
 import ConfirmModal from '../components/confirmModal';
 import Loader from '../../../api/loader';
 import { DataSignError } from '../../../config/config';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const SignData = ({ request, controller }) => {
-  const capture = useCaptureEvent();
   const ref = React.useRef();
   const [account, setAccount] = React.useState(null);
   const [payload, setPayload] = React.useState('');
@@ -196,7 +193,6 @@ const SignData = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 onClick={async () => {
-                  capture(Events.DappConnectorDappDataCancelClick);
                   await controller.returnData({
                     error: DataSignError.UserDeclined,
                   });
@@ -212,7 +208,6 @@ const SignData = ({ request, controller }) => {
                 isDisabled={error}
                 colorScheme="yellow"
                 onClick={() => {
-                  capture(Events.DappConnectorDappDataSignClick);
                   ref.current.openModal(account.index);
                 }}
               >
@@ -241,7 +236,6 @@ const SignData = ({ request, controller }) => {
               )
         }
         onCloseBtn={() => {
-          capture(Events.DappConnectorDappDataCancelClick);
         }}
         onConfirm={async (status, signedMessage) => {
           if (status === true) {

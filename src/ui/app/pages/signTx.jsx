@@ -34,15 +34,12 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import AssetsModal from '../components/assetsModal';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const abs = (big) => {
   return big < 0 ? big * BigInt(-1) : big;
 };
 
 const SignTx = ({ request, controller }) => {
-  const capture = useCaptureEvent();
   const settings = useStoreState((state) => state.settings.settings);
   const ref = React.useRef();
   const [account, setAccount] = React.useState(null);
@@ -782,7 +779,6 @@ const SignTx = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 onClick={async () => {
-                  capture(Events.DappConnectorDappTxCancelClick);
                   await controller.returnData({
                     error: TxSignError.UserDeclined,
                   });
@@ -798,7 +794,6 @@ const SignTx = ({ request, controller }) => {
                 isDisabled={isLoading.loading || isLoading.error}
                 colorScheme="yellow"
                 onClick={() => {
-                  capture(Events.DappConnectorDappTxSignClick);
                   ref.current.openModal(account.index);
                 }}
               >
@@ -821,7 +816,6 @@ const SignTx = ({ request, controller }) => {
       <ConfirmModal
         ref={ref}
         onCloseBtn={() => {
-          capture(Events.DappConnectorDappTxCancelClick);
         }}
         sign={async (password, hw) => {
           if (hw) {
@@ -843,7 +837,6 @@ const SignTx = ({ request, controller }) => {
         }}
         onConfirm={async (status, signedTx) => {
           if (status === true) {
-            capture(Events.DappConnectorDappTxConfirmClick);
             await controller.returnData({
               data: Buffer.from(signedTx.to_cbor_bytes(), 'hex').toString('hex'),
             });

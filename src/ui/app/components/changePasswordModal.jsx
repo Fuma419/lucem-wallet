@@ -23,11 +23,8 @@ import {
   setStorage,
 } from '../../../api/extension';
 import Loader from '../../../api/loader';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 export const ChangePasswordModal = React.forwardRef((props, ref) => {
-  const capture = useCaptureEvent();
   const cancelRef = React.useRef();
   const inputRef = React.useRef();
   const toast = useToast();
@@ -96,8 +93,6 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
         status: 'success',
         duration: 5000,
       });
-
-      capture(Events.SettingsChangePasswordConfirm);
 
       onClose();
     } catch (e) {

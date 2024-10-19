@@ -14,11 +14,8 @@ import {
   Link,
 } from '@chakra-ui/react';
 import { Scrollbars } from './scrollbar';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const TermsOfUse = React.forwardRef((props, ref) => {
-  const capture = useCaptureEvent();
   const { isOpen, onOpen, onClose } = useDisclosure();
   React.useImperativeHandle(ref, () => ({
     openModal() {
@@ -33,7 +30,6 @@ const TermsOfUse = React.forwardRef((props, ref) => {
       size="xs"
       isOpen={isOpen}
       onClose={() => {
-        capture(Events.SettingsTermsAndConditionsXClick);
         onClose();
       }}
       isCentered

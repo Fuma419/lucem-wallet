@@ -1,19 +1,27 @@
-const webpack = require('webpack');
-const path = require('path');
-const fileSystem = require('fs-extra');
-const env = require('./utils/env');
-const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const TerserPlugin = require('terser-webpack-plugin');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+var webpack = require('webpack'),
+  path = require('path'),
+  fileSystem = require('fs-extra'),
+  env = require('./utils/env'),
+  { CleanWebpackPlugin } = require('clean-webpack-plugin'),
+  CopyWebpackPlugin = require('copy-webpack-plugin'),
+  HtmlWebpackPlugin = require('html-webpack-plugin'),
+  TerserPlugin = require('terser-webpack-plugin'),
+  NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
+
+
+require('dotenv').config();
 
 const ASSET_PATH = process.env.ASSET_PATH || '/';
 
 let alias = {};
 
-let secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
+// load the secrets
+var secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
+
+require('dotenv-defaults').config({
+  path: './.env',
+  encoding: 'utf8',
+});
 
 let fileExtensions = [
   'jpg',
@@ -35,6 +43,8 @@ if (fileSystem.existsSync(secretsPath)) {
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+const envsToExpose = ['NODE_ENV'];
+
 // Preloadable assets
 const preloadImages = `
   <link rel="preload" as="image" href="/assets/img/background-cyan.webp">
@@ -44,6 +54,7 @@ const preloadImages = `
 `;
 
 const options = {
+  devtool: 'source-map',
   experiments: {
     asyncWebAssembly: true,
   },
@@ -154,7 +165,7 @@ const options = {
       verbose: true,
       cleanStaleWebpackAssets: true,
     }),
-    new webpack.EnvironmentPlugin(['NODE_ENV']),
+    new webpack.EnvironmentPlugin(envsToExpose),
     new CopyWebpackPlugin({
       patterns: [
         {
@@ -234,15 +245,12 @@ const options = {
   },
   ignoreWarnings: [
     {
-      module: /node_modules\/@trezor/,
       message: /Failed to parse source map/,
     },
   ],
 };
 
-if (isDevelopment) {
-  options.devtool = 'cheap-module-source-map';
-} else {
+if (!isDevelopment) {
   options.optimization = {
     minimize: true,
     minimizer: [

@@ -1,14 +1,17 @@
-import { Button } from '@chakra-ui/button';
+
 import {
+  Button,
+  Checkbox,
+  Link,
+  Text,
+  Box,
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-} from '@chakra-ui/modal';
-import { Checkbox } from '@chakra-ui/checkbox';
-import { Link, Text, Box } from '@chakra-ui/layout';
+} from '@chakra-ui/react';
 import React, { useRef } from 'react';
 import PrivacyPolicy from '../../../ui/app/components/privacyPolicy';
 import TermsOfUse from '../../../ui/app/components/termsOfUse';

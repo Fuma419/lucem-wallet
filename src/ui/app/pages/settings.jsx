@@ -14,6 +14,9 @@ import {
   InputRightElement,
   Icon,
   Select,
+  useToast,
+  Badge,
+  Flex,
 } from '@chakra-ui/react';
 import {
   ChevronLeftIcon,
@@ -23,7 +26,7 @@ import {
   RepeatIcon,
   CheckIcon,
 } from '@chakra-ui/icons';
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   getCurrentAccount,
   getCurrentAccountIndex,

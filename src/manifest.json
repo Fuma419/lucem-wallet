@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "3.8.5",
+  "version": "3.8.6",
   "description": "A featurefull Cardano wallet. Beautifully built for security and simplicity.",
   "name": "Lucem Wallet",
   "background": { "service_worker": "background.bundle.js" },
@@ -39,6 +39,5 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; frame-src https://connect.trezor.io/;"
   },
-  "permissions": ["storage", "unlimitedStorage", "favicon"],
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuCztYe/C0f2S5N9bxCBWq4eSRqa9sszpJV6WCJBLdKURa5c9lJXXWwjsdZ40U+XtrhadK5gmZq1oNkp8gKIUBHqp3Sm/AlyioLth6RgTRl4NGYzeQ8nl0z3FWlVQN/e6zPe7/RCJ0KIxdzPs1p2su5LO4X+YRKA/hO5+hIvR9DUTfckoAA5PF/0VlscGf7bjahq4ppWF8Z6NF6uD3vz67ygGqMu4/04CRj9i28G24k7BHc805+gqK1hfMX0f/qxj0s3RtOK/Z1Y9fp1vfNjSnF5RjPd/oOo4DPub03vquAmHnqW4s+hrBeYstdsfJJ9JcUTgCNTNmLEgydWVxFvqhwIDAQAB"
+  "permissions": ["storage", "unlimitedStorage", "favicon"]
 }

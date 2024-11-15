@@ -1682,7 +1682,7 @@ export const createWallet = async (name, seedPhrase, password) => {
 
   const index = await createAccount(name, password);
 
-  //check for sub accounts
+  // Check for sub-accounts
   let searchIndex = 1;
   while (true) {
     let { paymentKey, stakeKey } = await requestAccountKey(
@@ -1693,23 +1693,15 @@ export const createWallet = async (name, seedPhrase, password) => {
       .to_public()
       .hash()
       .to_bech32('addr_vkh');
-    // const stakeKeyHash = stakeKey.to_public().hash();
+
     paymentKey.free();
-    // stakeKey.free();
     paymentKey = null;
-    // stakeKey = null;
-    // const paymentAddr = Loader.Cardano.BaseAddress.new(
-    //   Loader.Cardano.NetworkInfo.mainnet().network_id(),
-    //   Loader.Cardano.Credential.new_pub_key(paymentKeyHash),
-    //   Loader.Cardano.Credential.new_pub_key(stakeKeyHash)
-    // )
-    //   .to_address()
-    //   .to_bech32();
+
     const transactions = await blockfrostRequest(
       `/addresses/${paymentKeyHashBech32}/transactions`
     );
     if (transactions && !transactions.error && transactions.length >= 1)
-      createAccount(`Account ${searchIndex}`, password, searchIndex);
+      await createAccount(`Account ${searchIndex}`, password, searchIndex);
     else break;
     searchIndex++;
   }

@@ -90,10 +90,36 @@ export enum Events {
   StakingConfirmClick = 'staking | staking | confirm | click',
   StakingUnstakeClick = 'staking | staking | unstake | click',
   StakingUnstakeConfirmClick = 'staking | staking | unstake | confirm | click',
+
+  // Migration events
+  NamiOpenedMigrationNotStarted = 'nami tool | nami | opened | status: not started',
+  NamiOpenedMigrationWaitingForLace = 'nami tool | nami | opened | status: waiting Lace installation',
+  NamiOpenedMigrationInProgress = 'nami tool | nami | opened | status: waiting finalization in Lace',
+  NamiOpenedMigrationCompleted = 'nami tool | nami | opened | status: process done',
+  MigrationSlideSwitched = 'nami tool | nami | carousel slide switched | click',
+  MigrationSlideViewed = 'nami tool | nami | carousel slide viewed | pageview',
+  MigrationDownloadLaceScreenViewed = 'nami tool | nami | download lace | pageview',
+  MigrationOpenLaceScreenViewed = 'nami tool | nami | open lace view | pageview',
+  MigrationAllDoneScreenViewed = 'nami tool | nami | all done view | pageview',
+  MigrationUpgradeYourWalletClicked = 'nami tool | nami | upgrade your wallet | click',
+  MigrationDownloadLaceClicked = 'nami tool | nami | download lace | click',
+  MigrationOpenLaceClicked = 'nami tool | nami | open lace | click',
+  NamiMigrationDismissed = 'nami tool | nami | migration dismissed | click',
+
+  // Enhanced migration events
+  MigrationViewed = 'nami tool | nami | migration tool viewed',
+  MigrationViewNoWalletViewed = 'nami tool | nami | migration tool | no wallet viewed',
+  MigrationNoStartedViewed = 'nami tool | nami | migration tool | not started viewed',
+  MigrationInProgressViewed = 'nami tool | nami | migration tool | in progress viewed',
+  NamiMigrationDismissedNoWallet = 'nami tool | nami | migration dismissed | no wallet | click',
+  NamiMigrationDismissedNotStarted = 'nami tool | nami | migration dismissed | not started | click',
+  NamiMigrationDismissedInProgress = 'nami tool | nami | migration dismissed | in progress | click',
+  NamiMigrationOpenLaceOrOpenChromeStore = 'nami tool | nami | open lace or open chrome store link | click',
 }
 
 export type Property =
   | string
+  | number
   | boolean
   | Record<string, any>
   | Array<Record<string, any>>;

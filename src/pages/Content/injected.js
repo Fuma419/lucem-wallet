@@ -67,11 +67,9 @@ window.cardano = {
           getChangeAddress: () => getAddress(),
           getRewardAddresses: async () => [await getRewardAddress()],
           getNetworkId: () => getNetworkId(),
-          experimental: {
-            on: (eventName, callback) => on(eventName, callback),
-            off: (eventName, callback) => off(eventName, callback),
-            getCollateral: () => getCollateral(),
-          },
+          on: (eventName, callback) => on(eventName, callback),
+          off: (eventName, callback) => off(eventName, callback),
+          getCollateral: () => getCollateral(),
         };
       }
     },

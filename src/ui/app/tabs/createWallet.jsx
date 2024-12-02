@@ -11,6 +11,7 @@ import {
   InputGroup,
   InputRightElement,
   Image,
+  Textarea, // Import Textarea
 } from '@chakra-ui/react';
 import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRightIcon } from '@chakra-ui/icons';
@@ -32,18 +33,31 @@ const App = () => {
   const [colorTheme, setColorTheme] = React.useState('purple');
 
   React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const type = params.get('type');
     const length = params.get('length');
+
+    const validLengths = [12, 15, 24];
+    const seedLength = parseInt(length, 10);
+
     if (type === 'import') {
-      navigate('/import', { state: { seedLength: parseInt(length), colorTheme: 'cyan' } });
+      if (!validLengths.includes(seedLength)) {
+        // Handle invalid seed length
+        navigate('/', { replace: true });
+        return;
+      }
+      navigate('/import', { state: { seedLength, colorTheme: 'cyan' }, replace: true });
       setColorTheme('cyan');
-    } else {
-      navigate('/generate', { state: { colorTheme: 'purple' } });
+    } else if (type === 'generate') {
+      navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
       setColorTheme('purple');
+    } else {
+      // If 'type' is missing or invalid, redirect to the main page
+      navigate('/', { replace: true });
     }
   }, []);
 
+  // Optional: Adjusted second useEffect
   React.useEffect(() => {
     if (location.state && location.state.colorTheme) {
       setColorTheme(location.state.colorTheme);
@@ -52,7 +66,7 @@ const App = () => {
     } else if (location.pathname === '/generate') {
       setColorTheme('purple');
     }
-  }, [location]);
+  }, [location.pathname, location.state]);
 
   // Conditionally setting the background image based on the current theme
   const backgroundImage = colorTheme === 'cyan' ? BackgroundImageCyan : BackgroundImagePurple;
@@ -86,7 +100,7 @@ const App = () => {
         justifyContent="center"
         width="90%"
         maxWidth="560px"
-        maxHeight="850px"
+        maxHeight="925px"
         p={10}
         background="rgba(0, 0, 0, .85)" // Optional: Add a semi-transparent background to improve text visibility
         color="whiteAlpha.900"
@@ -229,7 +243,7 @@ const VerifySeed = ({ colorTheme }) => {
   colorTheme = colorTheme || stateColorTheme;
 
   const [input, setInput] = React.useState({});
-  const [allValid, setAllValid] = React.useState(false);
+  const [allValid, setAllValid] = React.useState(null);
   const refs = React.useRef([]);
 
   const verifyAll = () => {
@@ -365,28 +379,64 @@ const VerifySeed = ({ colorTheme }) => {
 
 const ImportSeed = ({ colorTheme }) => {
   const navigate = useNavigate();
-  const { state: { seedLength, colorTheme: stateColorTheme } = {} } = useLocation();
+  const location = useLocation();
+  const { state } = location;
+
+  if (!state || !state.seedLength) {
+    // Redirect to seed length selection
+    navigate('/', { replace: true });
+    return null;
+  }
+
+  const { seedLength, colorTheme: stateColorTheme } = state;
+  const validSeedLengths = [12, 15, 24];
+
+  if (!validSeedLengths.includes(seedLength)) {
+    // Redirect to seed length selection
+    navigate('/', { replace: true });
+    return null;
+  }
 
   // Use the colorTheme from state if not passed as a prop
   colorTheme = colorTheme || stateColorTheme;
 
   const [input, setInput] = React.useState({});
-  const [allValid, setAllValid] = React.useState(false);
+  const [fullSeedPhrase, setFullSeedPhrase] = React.useState('');
+  const [allValid, setAllValid] = React.useState(null); // Initialize to null
   const refs = React.useRef([]);
   const words = wordlists[getDefaultWordlist()];
 
-  const verifyAll = () => {
-    if (
-      Object.keys(input).length === seedLength &&
-      validateMnemonic(mnemonicFromObject(input))
-    )
-      setAllValid(true);
-    else setAllValid(false);
-  };
-
   React.useEffect(() => {
-    verifyAll();
-  }, [input]);
+    const hasFullPhrase = fullSeedPhrase.trim().length > 0;
+    const hasWordInputs = Object.keys(input).length > 0;
+  
+    if (hasFullPhrase) {
+      // Full seed phrase entry
+      const cleanedPhrase = fullSeedPhrase.trim().toLowerCase();
+      const wordsArray = cleanedPhrase.split(/\s+/);
+      if (
+        wordsArray.length === seedLength &&
+        validateMnemonic(cleanedPhrase)
+      ) {
+        setAllValid(true);
+      } else {
+        setAllValid(false);
+      }
+    } else if (hasWordInputs) {
+      // Word-by-word entry
+      if (
+        Object.keys(input).length === seedLength &&
+        validateMnemonic(mnemonicFromObject(input))
+      ) {
+        setAllValid(true);
+      } else {
+        setAllValid(false);
+      }
+    } else {
+      // No input provided yet
+      setAllValid(null);
+    }
+  }, [input, fullSeedPhrase]);
 
   return (
     <Box>
@@ -397,7 +447,8 @@ const ImportSeed = ({ colorTheme }) => {
       <Text className="walletTitle" fontSize="sm" textAlign="center">
         Enter a {seedLength}-word seed phrase.
       </Text>
-      <Spacer height="10" />
+      <Spacer height="5" />
+
       <Stack spacing={10} direction="row">
         {[0, 1].map((colIndex) => (
           <Box key={colIndex} width={140}>
@@ -439,7 +490,7 @@ const ImportSeed = ({ colorTheme }) => {
                     onChange={(e) => {
                       setInput((i) => ({
                         ...i,
-                        [index]: e.target.value,
+                        [index]: e.target.value.trim().toLowerCase(),
                       }));
                     }}
                     textAlign="center"
@@ -471,16 +522,44 @@ const ImportSeed = ({ colorTheme }) => {
           </Box>
         ))}
       </Stack>
-      <Spacer height="1" />
+
       <Spacer height="5" />
+
+      <Textarea
+        placeholder={`Or paste your ${seedLength}-word seed phrase here`}
+        size="sm"
+        focusBorderColor={`${colorTheme}.700`}
+        background="gray.900"
+        color="whiteAlpha.900"
+        value={fullSeedPhrase}
+        borderRadius={20}
+        resize="none"
+        onChange={(e) => setFullSeedPhrase(e.target.value)}
+      />
+
+      <Spacer height="2" />
+
+      {allValid === false && (
+        <Text color="red.300" className="walletTitle" fontSize="sm" textAlign="center">
+          Invalid seed phrase. Please check and try again.
+        </Text>
+      )}
+
+      <Spacer height="2" />
+
       <Stack alignItems="center" direction="column">
         <Button
           isDisabled={!allValid}
           className="button import-wallet"
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
+            const hasFullPhrase = fullSeedPhrase.trim().length > 0;
+            const mnemonic = hasFullPhrase
+              ? fullSeedPhrase.trim().toLowerCase()
+              : mnemonicFromObject(input);
+
             navigate('/account', {
-              state: { mnemonic: input, flow: 'restore-wallet', colorTheme },
+              state: { mnemonic, flow: 'restore-wallet', colorTheme },
             });
           }}
         >
@@ -614,7 +693,7 @@ const MakeAccount = ({ colorTheme }) => {
             setLoading(true);
             await createWallet(
               state.name,
-              mnemonicFromObject(mnemonic),
+              mnemonic,
               state.password
             );
             setRoute('/wallet');
@@ -657,11 +736,11 @@ const SuccessAndClose = ({ flow }) => {
 
 const root = createRoot(window.document.querySelector(`#${TAB.createWallet}`));
 root.render(
-    <Main>
-      <Router>
-        <App />
-      </Router>
-    </Main>
+  <Main>
+    <Router>
+      <App />
+    </Router>
+  </Main>
 );
 
 if (module.hot) module.hot.accept();

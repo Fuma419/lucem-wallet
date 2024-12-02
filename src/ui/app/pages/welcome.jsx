@@ -1,3 +1,4 @@
+// Welcome.js
 import React from 'react';
 import { Backpack } from 'react-kawaii';
 import { Checkbox, Image } from '@chakra-ui/react';
@@ -50,7 +51,7 @@ const Welcome = () => {
         {/* Footer */}
         <Box position="absolute" bottom="3" fontSize="xs" color="gray.500">
           <Link
-            onClick={() => window.open('https://www.hodlerstaking.com/')}
+            onClick={() => window.open('https://www.hodlerstaking.com/lucem-wallet')}
           >
             Lucem Wallet
           </Link>
@@ -61,7 +62,7 @@ const Welcome = () => {
         </Text>
         <Box height="6"/>
         <Text className="message">
-          Let's setup a wallet.
+          Let's setup a wallet
         </Text>
         <Box height="6"/>
         <Button className="button new-wallet"
@@ -172,6 +173,8 @@ const ImportModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { accepted, setAccepted } = useAcceptDocs();
   const [selected, setSelected] = React.useState(null);
+  const [hasProceeded, setHasProceeded] = React.useState(false);
+
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
 
@@ -180,6 +183,22 @@ const ImportModal = React.forwardRef((props, ref) => {
       onOpen();
     },
   }));
+
+  const handleContinue = () => {
+    const validLengths = [12, 15, 24];
+    const seedLength = parseInt(selected, 10);
+
+    if (!validLengths.includes(seedLength)) {
+      // Handle invalid seed length
+      return;
+    }
+
+    setHasProceeded(true);
+
+    // Include seed length in the URL parameters
+    createTab(TAB.createWallet, `?type=import&length=${seedLength}`);
+  };
+
   return (
     <>
       <Modal
@@ -189,10 +208,12 @@ const ImportModal = React.forwardRef((props, ref) => {
         isCentered
         blockScrollOnMount={false}
       >
-        <ModalOverlay            style={{
-              backgroundColor: 'rgba(0, 245, 255, 0.2)',
-              backdropFilter: 'blur(5px)', // Optional: Add blur for a frosted glass effect
-            }}/>
+        <ModalOverlay
+          style={{
+            backgroundColor: 'rgba(0, 245, 255, 0.2)',
+            backdropFilter: 'blur(5px)',
+          }}
+        />
         <ModalContent className="modal-glow-cyan" backgroundColor="#1a1a1a">
           <ModalHeader fontSize="md">Import a wallet</ModalHeader>
           <ModalCloseButton />
@@ -203,16 +224,16 @@ const ImportModal = React.forwardRef((props, ref) => {
             </Text>
             <Spacer height="1" />
             <Text fontSize="13px">
-              We always recommend creating a new wallet, as Lucem is best
-              experienced when not simultaneously used with Yoroi/Daedalus. Lucem
-              will not track all addresses associated with your imported wallet,
-              and might result in partial reflection of assets. To accurately
+              Lucem is best experienced when not simultaneously used with Multi-Address wallets 
+              like Yoroi/Daedalus. Lucem allows the user to have multiple accounts but
+              will only track the first wallet from your imported wallet.
+              This might result in partial reflection of assets. To accurately
               reflect your balance, please transfer all assets into your new
-              Lucem wallet.{' '}
+              Lucem wallet address using a Multi-Address wallet.{' '}
               <Link
                 textDecoration="underline"
                 color="cyan.700"
-                onClick={() => window.open('https://www.hodlerstaking.com/')}
+                onClick={() => window.open('https://www.hodlerstaking.com/lucem-wallet')}
               >
                 More info
               </Link>
@@ -226,13 +247,16 @@ const ImportModal = React.forwardRef((props, ref) => {
             <Select
               size="sm"
               rounded="md"
+              value={selected}
               onChange={(e) => setSelected(e.target.value)}
               placeholder="Choose seed phrase length"
               backgroundColor="#2a2a2a"
               color="white"
-              focusBorderColor={`cyan.700`}  // Dynamic focus border color
-              borderColor={`cyan.700`}  // Dynamic border color
+              focusBorderColor={`cyan.700`}
+              borderColor={`cyan.700`}
+              isDisabled={hasProceeded} // Disable after proceeding
             >
+              <option value="12">12-word seed phrase</option>
               <option value="15">15-word seed phrase</option>
               <option value="24">24-word seed phrase</option>
             </Select>
@@ -266,20 +290,13 @@ const ImportModal = React.forwardRef((props, ref) => {
               <Box h="2" />
             </Box>
           </ModalBody>
-
           <ModalFooter>
             <Button mr={3} variant="ghost" onClick={onClose}>
               Close
             </Button>
             <Button
               isDisabled={!selected || !accepted}
-              className="button import-wallet"
-              onClick={() =>
-                createTab(
-                  TAB.createWallet,
-                  `?type=import&length=${parseInt(selected)}`
-                )
-              }
+              onClick={handleContinue}
             >
               Continue
             </Button>

@@ -296,6 +296,7 @@ const ImportModal = React.forwardRef((props, ref) => {
             </Button>
             <Button
               isDisabled={!selected || !accepted}
+              className="button import-wallet"
               onClick={handleContinue}
             >
               Continue

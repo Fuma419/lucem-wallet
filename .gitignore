@@ -27,3 +27,4 @@ secrets.development.js
 build.pem
 BugList.text
 lucem-wallet.code-workspace
+Lucem_Wallet_*

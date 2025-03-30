@@ -45,6 +45,9 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 
 const envsToExpose = ['NODE_ENV'];
 
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+
+
 // Preloadable assets
 const preloadImages = `
   <link rel="preload" as="image" href="/assets/img/background-cyan.webp">

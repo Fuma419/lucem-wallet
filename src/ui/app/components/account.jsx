@@ -1,7 +1,7 @@
 import React from 'react';
 import { getCurrentAccount } from '../../../api/extension';
 
-import Logo from '../../../assets/img/logo.png';
+import Logo from '../../../assets/img/icon-128.svg';
 import { Box, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import AvatarLoader from './avatarLoader';
 

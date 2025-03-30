@@ -266,7 +266,7 @@ const Wallet = () => {
             justifyContent="center"
             alignItems="center"
             position="absolute"
-            top="90%"  /* Adjust the vertical position as needed */
+            top="85%"  /* Adjust the vertical position as needed */
             left="50%"
             transform="translate(-50%, -50%)"
             flexDirection="row"  /* Ensure the direction is row (horizontal) */
@@ -300,7 +300,7 @@ const Wallet = () => {
               </>
             )}
           </Box>
-          <Box zIndex="2" position="absolute" top="8" right="8">
+          <Box zIndex="2" position="absolute" top="7" right="7">
             <Menu
               isOpen={menu}
               autoSelect={false}

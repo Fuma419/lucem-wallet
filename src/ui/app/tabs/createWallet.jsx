@@ -11,7 +11,7 @@ import {
   InputGroup,
   InputRightElement,
   Image,
-  Textarea, // Import Textarea
+  Textarea,
 } from '@chakra-ui/react';
 import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronRightIcon } from '@chakra-ui/icons';
@@ -57,7 +57,6 @@ const App = () => {
     }
   }, []);
 
-  // Optional: Adjusted second useEffect
   React.useEffect(() => {
     if (location.state && location.state.colorTheme) {
       setColorTheme(location.state.colorTheme);
@@ -68,7 +67,6 @@ const App = () => {
     }
   }, [location.pathname, location.state]);
 
-  // Conditionally setting the background image based on the current theme
   const backgroundImage = colorTheme === 'cyan' ? BackgroundImageCyan : BackgroundImagePurple;
 
   return (
@@ -85,11 +83,9 @@ const App = () => {
       backgroundPosition="center"
       backgroundRepeat="no-repeat"
     >
-      {/* Logo */}
       <Box position="absolute" left="80px" top="80px">
         <Image draggable={false} src={LogoWhite} width="100px" />
       </Box>
-      {/* Content */}
       <Box
         className={`modal-glow-${colorTheme}`}
         rounded="2xl"
@@ -102,7 +98,7 @@ const App = () => {
         maxWidth="560px"
         maxHeight="925px"
         p={10}
-        background="rgba(0, 0, 0, .85)" // Optional: Add a semi-transparent background to improve text visibility
+        background="rgba(0, 0, 0, .85)"
         color="whiteAlpha.900"
         fontSize="md"
       >
@@ -119,17 +115,21 @@ const App = () => {
 
 const GenerateSeed = ({ colorTheme }) => {
   const navigate = useNavigate();
-  const [mnemonic, setMnemonic] = React.useState({});
+  // Store only the mnemonic string in state
+  const [mnemonicStr, setMnemonicStr] = React.useState('');
+  const [checked, setChecked] = React.useState(false);
+
   const generate = () => {
     const mnemonic = generateMnemonic(256);
-    const mnemonicMap = mnemonicToObject(mnemonic);
-    setMnemonic(mnemonicMap);
+    setMnemonicStr(mnemonic);
   };
-  const [checked, setChecked] = React.useState(false);
 
   React.useEffect(() => {
     generate();
   }, []);
+
+  // Convert to object for display only
+  const mnemonicObj = mnemonicStr ? mnemonicToObject(mnemonicStr) : {};
 
   return (
     <Box>
@@ -137,37 +137,26 @@ const GenerateSeed = ({ colorTheme }) => {
         New Seed Phrase
       </Text>
       <Spacer height="10" />
-      <Stack
-        spacing={10}
-        direction="row"
-        alignItems="center"
-        justifyContent="center"
-      >
+      <Stack spacing={10} direction="row" alignItems="center" justifyContent="center">
         {[0, 1].map((colIndex) => (
           <Box key={colIndex} width={140}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
-                <Box
-                  key={index}
-                  marginBottom={3}
-                  display="flex"
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                >
+                <Box key={index} marginBottom={3} display="flex" alignItems="center" justifyContent="center">
                   {!Boolean(colIndex) && (
                     <Box
                       mr={2}
                       width={6}
                       height={6}
                       fontWeight="bold"
-                      fontSize={'sm'}
+                      fontSize="sm"
                       rounded="full"
                       borderRadius={20}
                       background={`${colorTheme}.600`}
-                      display={'flex'}
-                      alignItems={'center'}
-                      justifyContent={'center'}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
                       color={`${colorTheme === 'purple' ? 'cyan.100' : 'gray.900'}`}
                     >
                       {index}
@@ -176,9 +165,9 @@ const GenerateSeed = ({ colorTheme }) => {
                   <Input
                     focusBorderColor={`${colorTheme}.700`}
                     width={110}
-                    size={'sm'}
+                    size="sm"
                     isReadOnly={true}
-                    value={mnemonic ? mnemonic[index] : '...'}
+                    value={mnemonicObj ? mnemonicObj[index] : '...'}
                     textAlign="center"
                     variant="filled"
                     fontWeight="bold"
@@ -186,20 +175,20 @@ const GenerateSeed = ({ colorTheme }) => {
                     background="gray.900"
                     color="whiteAlpha.900"
                     placeholder={`Word ${index}`}
-                  ></Input>
+                  />
                   {Boolean(colIndex) && (
                     <Box
                       ml={2}
                       width={6}
                       height={6}
-                      fontSize={'sm'}
+                      fontSize="sm"
                       fontWeight="bold"
                       rounded="full"
                       borderRadius={20}
                       background={`${colorTheme}.600`}
-                      display={'flex'}
-                      alignItems={'center'}
-                      justifyContent={'center'}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
                       color={`${colorTheme === 'purple' ? 'cyan.100' : 'gray.900'}`}
                     >
                       {index}
@@ -225,7 +214,8 @@ const GenerateSeed = ({ colorTheme }) => {
           isDisabled={!checked}
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
-            navigate('/verify', { state: { mnemonic, colorTheme } });
+            // Pass the mnemonic string (not the object) to the next page
+            navigate('/verify', { state: { mnemonic: mnemonicStr, colorTheme } });
           }}
         >
           Next
@@ -238,23 +228,24 @@ const GenerateSeed = ({ colorTheme }) => {
 const VerifySeed = ({ colorTheme }) => {
   const navigate = useNavigate();
   const { state: { mnemonic, colorTheme: stateColorTheme } = {} } = useLocation();
-
-  // Use the colorTheme from state if not passed as a prop
   colorTheme = colorTheme || stateColorTheme;
-
+  // Convert mnemonic string to object for display/verification
+  const mnemonicObj = typeof mnemonic === 'string' ? mnemonicToObject(mnemonic) : mnemonic;
   const [input, setInput] = React.useState({});
   const [allValid, setAllValid] = React.useState(null);
   const refs = React.useRef([]);
 
   const verifyAll = () => {
     if (
-      input[5] === mnemonic[5] &&
-      input[10] === mnemonic[10] &&
-      input[15] === mnemonic[15] &&
-      input[20] === mnemonic[20]
-    )
+      input[5] === mnemonicObj[5] &&
+      input[10] === mnemonicObj[10] &&
+      input[15] === mnemonicObj[15] &&
+      input[20] === mnemonicObj[20]
+    ) {
       setAllValid(true);
-    else setAllValid(false);
+    } else {
+      setAllValid(false);
+    }
   };
 
   React.useEffect(() => {
@@ -273,39 +264,33 @@ const VerifySeed = ({ colorTheme }) => {
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
-                <Box
-                  key={index}
-                  marginBottom={3}
-                  display="flex"
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                >
+                <Box key={index} marginBottom={3} display="flex" alignItems="center" justifyContent="center">
                   {!Boolean(colIndex) && (
                     <Box
                       mr={2}
                       width={6}
                       height={6}
-                      fontSize={'sm'}
+                      fontSize="sm"
                       fontWeight="bold"
                       rounded="full"
                       borderRadius={20}
                       background={`${colorTheme}.600`}
-                      display={'flex'}
-                      alignItems={'center'}
-                      justifyContent={'center'}
-                      color={'gray.900'}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="gray.900"
                     >
                       {index}
                     </Box>
                   )}
                   <Input
                     variant={index % 5 !== 0 ? 'filled' : 'outline'}
-                    defaultValue={index % 5 !== 0 ? mnemonic[index] : ''}
+                    defaultValue={index % 5 !== 0 ? mnemonicObj[index] : ''}
                     isReadOnly={index % 5 !== 0}
                     focusBorderColor={`${colorTheme}.700`}
                     width={110}
-                    size={'sm'}
-                    isInvalid={input[index] && input[index] !== mnemonic[index]}
+                    size="sm"
+                    isInvalid={input[index] && input[index] !== mnemonicObj[index]}
                     ref={(el) => (refs.current[index] = el)}
                     onChange={(e) => {
                       setInput((i) => ({
@@ -313,7 +298,7 @@ const VerifySeed = ({ colorTheme }) => {
                         [index]: e.target.value,
                       }));
                       const next = refs.current[index + 1];
-                      if (next && e.target.value === mnemonic[index]) {
+                      if (next && e.target.value === mnemonicObj[index]) {
                         refs.current[index].blur();
                       }
                     }}
@@ -322,20 +307,20 @@ const VerifySeed = ({ colorTheme }) => {
                     rounded="full"
                     background="gray.900"
                     placeholder={`Word ${index}`}
-                  ></Input>
+                  />
                   {Boolean(colIndex) && (
                     <Box
                       ml={2}
                       width={6}
                       height={6}
-                      fontSize={'sm'}
+                      fontSize="sm"
                       fontWeight="bold"
                       rounded="full"
                       background={`${colorTheme}.700`}
-                      display={'flex'}
-                      alignItems={'center'}
-                      justifyContent={'center'}
-                      color={'gray.900'}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="gray.900"
                     >
                       {index}
                     </Box>
@@ -383,7 +368,6 @@ const ImportSeed = ({ colorTheme }) => {
   const { state } = location;
 
   if (!state || !state.seedLength) {
-    // Redirect to seed length selection
     navigate('/', { replace: true });
     return null;
   }
@@ -392,17 +376,14 @@ const ImportSeed = ({ colorTheme }) => {
   const validSeedLengths = [12, 15, 24];
 
   if (!validSeedLengths.includes(seedLength)) {
-    // Redirect to seed length selection
     navigate('/', { replace: true });
     return null;
   }
 
-  // Use the colorTheme from state if not passed as a prop
   colorTheme = colorTheme || stateColorTheme;
-
   const [input, setInput] = React.useState({});
   const [fullSeedPhrase, setFullSeedPhrase] = React.useState('');
-  const [allValid, setAllValid] = React.useState(null); // Initialize to null
+  const [allValid, setAllValid] = React.useState(null);
   const refs = React.useRef([]);
   const words = wordlists[getDefaultWordlist()];
 
@@ -411,29 +392,20 @@ const ImportSeed = ({ colorTheme }) => {
     const hasWordInputs = Object.keys(input).length > 0;
   
     if (hasFullPhrase) {
-      // Full seed phrase entry
       const cleanedPhrase = fullSeedPhrase.trim().toLowerCase();
       const wordsArray = cleanedPhrase.split(/\s+/);
-      if (
-        wordsArray.length === seedLength &&
-        validateMnemonic(cleanedPhrase)
-      ) {
+      if (wordsArray.length === seedLength && validateMnemonic(cleanedPhrase)) {
         setAllValid(true);
       } else {
         setAllValid(false);
       }
     } else if (hasWordInputs) {
-      // Word-by-word entry
-      if (
-        Object.keys(input).length === seedLength &&
-        validateMnemonic(mnemonicFromObject(input))
-      ) {
+      if (Object.keys(input).length === seedLength && validateMnemonic(mnemonicFromObject(input))) {
         setAllValid(true);
       } else {
         setAllValid(false);
       }
     } else {
-      // No input provided yet
       setAllValid(null);
     }
   }, [input, fullSeedPhrase]);
@@ -456,35 +428,29 @@ const ImportSeed = ({ colorTheme }) => {
               const index = colIndex * 12 + rowIndex + 1;
               if (index > seedLength) return null;
               return (
-                <Box
-                  key={index}
-                  marginBottom={3}
-                  display="flex"
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                >
+                <Box key={index} marginBottom={3} display="flex" alignItems="center" justifyContent="center">
                   {!Boolean(colIndex) && (
                     <Box
                       mr={2}
                       width={6}
                       height={6}
-                      fontSize={'sm'}
+                      fontSize="sm"
                       fontWeight="bold"
                       rounded="full"
                       background={`${colorTheme}.700`}
-                      display={'flex'}
-                      alignItems={'center'}
-                      justifyContent={'center'}
-                      color={'gray.900'}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="gray.900"
                     >
                       {index}
                     </Box>
                   )}
                   <Input
-                    variant={'filled'}
+                    variant="filled"
                     width={110}
                     focusBorderColor={`${colorTheme}.700`}
-                    size={'sm'}
+                    size="sm"
                     isInvalid={input[index] && !words.includes(input[index])}
                     ref={(el) => (refs.current[index] = el)}
                     onChange={(e) => {
@@ -498,20 +464,20 @@ const ImportSeed = ({ colorTheme }) => {
                     rounded="full"
                     background="gray.900"
                     placeholder={`Word ${index}`}
-                  ></Input>
+                  />
                   {Boolean(colIndex) && (
                     <Box
                       ml={2}
                       width={6}
                       height={6}
-                      fontSize={'sm'}
+                      fontSize="sm"
                       fontWeight="bold"
                       rounded="full"
                       background={`${colorTheme}.700`}
-                      display={'flex'}
-                      alignItems={'center'}
-                      justifyContent={'center'}
-                      color={'gray.900'}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="gray.900"
                     >
                       {index}
                     </Box>
@@ -575,25 +541,14 @@ const MakeAccount = ({ colorTheme }) => {
   const [loading, setLoading] = React.useState(false);
   const { state: navigationState = {} } = useLocation();
   const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
-
-  // Use the colorTheme from state if not passed as a prop
   colorTheme = colorTheme || stateColorTheme || 'purple';
-
   const [isDone, setIsDone] = React.useState(false);
-  const setRoute = useStoreActions(
-    (actions) => actions.globalModel.routeStore.setRoute
-  );
+  const setRoute = useStoreActions((actions) => actions.globalModel.routeStore.setRoute);
 
   return isDone ? (
     <SuccessAndClose flow={flow} />
   ) : (
-    <Box
-      textAlign="center"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      width="100%"
-    >
+    <Box textAlign="center" display="flex" alignItems="center" justifyContent="center" width="100%">
       <Box width="65%">
         <Text className="walletTitle" fontWeight="bold" fontSize="lg">
           Create Account
@@ -603,7 +558,7 @@ const MakeAccount = ({ colorTheme }) => {
           focusBorderColor={`${colorTheme}.700`}
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
           placeholder="Enter account name"
-        ></Input>
+        />
         <Spacer height="10" />
 
         <InputGroup size="md" width="100%">
@@ -612,9 +567,7 @@ const MakeAccount = ({ colorTheme }) => {
             isInvalid={state.regularPassword === false}
             pr="4.5rem"
             type={state.show ? 'text' : 'password'}
-            onChange={(e) =>
-              setState((s) => ({ ...s, password: e.target.value }))
-            }
+            onChange={(e) => setState((s) => ({ ...s, password: e.target.value }))}
             onBlur={(e) =>
               e.target.value &&
               setState((s) => ({
@@ -637,7 +590,7 @@ const MakeAccount = ({ colorTheme }) => {
           </InputRightElement>
         </InputGroup>
         {state.regularPassword === false && (
-          <Text fontSize={'sm'} color="red.300">
+          <Text fontSize="sm" color="red.300">
             Password must be at least 8 characters long
           </Text>
         )}
@@ -648,9 +601,7 @@ const MakeAccount = ({ colorTheme }) => {
             focusBorderColor={`${colorTheme}.700`}
             isInvalid={state.matchingPassword === false}
             pr="4.5rem"
-            onChange={(e) =>
-              setState((s) => ({ ...s, passwordConfirm: e.target.value }))
-            }
+            onChange={(e) => setState((s) => ({ ...s, passwordConfirm: e.target.value }))}
             onBlur={(e) =>
               e.target.value &&
               setState((s) => ({
@@ -673,7 +624,7 @@ const MakeAccount = ({ colorTheme }) => {
           </InputRightElement>
         </InputGroup>
         {state.matchingPassword === false && (
-          <Text fontSize={'sm'} color="red.300">
+          <Text fontSize="sm" color="red.300">
             Password doesn't match
           </Text>
         )}
@@ -691,11 +642,7 @@ const MakeAccount = ({ colorTheme }) => {
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
             setLoading(true);
-            await createWallet(
-              state.name,
-              mnemonic,
-              state.password
-            );
+            await createWallet(state.name, mnemonic, state.password);
             setRoute('/wallet');
             setLoading(false);
             setIsDone(true);
@@ -711,13 +658,7 @@ const MakeAccount = ({ colorTheme }) => {
 const SuccessAndClose = ({ flow }) => {
   return (
     <>
-      <Text
-        mt={10}
-        fontSize="xl"
-        fontWeight="semibold"
-        width={200}
-        textAlign="center"
-      >
+      <Text mt={10} fontSize="xl" fontWeight="semibold" width={200} textAlign="center">
         Successfully created wallet!
       </Text>
       <Box h={10} />

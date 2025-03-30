@@ -1,6 +1,6 @@
 {
   "name": "lucem-wallet",
-  "version": "3.10.3",
+  "version": "3.10.4",
   "description": "A wallet to experience Cardano to the fullest",
   "license": "Apache-2.0",
   "repository": {
@@ -14,7 +14,7 @@
     "test": "NODE_ENV=test jest"
   },
   "dependencies": {
-    "@blaze-cardano/sdk": "^0.1.32",
+    "@blaze-cardano/sdk": "^0.2.28",
     "@cardano-foundation/ledgerjs-hw-app-cardano": "^7.1.3",
     "@cardano-sdk/core": "^0.39.2",
     "@chakra-ui/css-reset": "^2.3.0",

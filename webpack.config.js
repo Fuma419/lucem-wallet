@@ -152,6 +152,11 @@ const options = {
     extensions: fileExtensions
       .map((extension) => '.' + extension)
       .concat(['.js', '.jsx', '.css', '.ts', '.tsx']),
+      fallback: {
+        fs: false, // disable fs module for browser builds
+        net: false,
+        tls: false,
+      },
   },
   plugins: [
     ...(isDevelopment ? [new ReactRefreshWebpackPlugin(), new webpack.HotModuleReplacementPlugin()] : []),

@@ -128,7 +128,7 @@ const GenerateSeed = ({ colorTheme }) => {
     generate();
   }, []);
 
-  // Convert to object for display only
+  // For display only, convert to an object
   const mnemonicObj = mnemonicStr ? mnemonicToObject(mnemonicStr) : {};
 
   return (
@@ -214,7 +214,7 @@ const GenerateSeed = ({ colorTheme }) => {
           isDisabled={!checked}
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
-            // Pass the mnemonic string (not the object) to the next page
+            // Pass the original mnemonic string (not the object)
             navigate('/verify', { state: { mnemonic: mnemonicStr, colorTheme } });
           }}
         >
@@ -229,18 +229,18 @@ const VerifySeed = ({ colorTheme }) => {
   const navigate = useNavigate();
   const { state: { mnemonic, colorTheme: stateColorTheme } = {} } = useLocation();
   colorTheme = colorTheme || stateColorTheme;
-  // Convert mnemonic string to object for display/verification
-  const mnemonicObj = typeof mnemonic === 'string' ? mnemonicToObject(mnemonic) : mnemonic;
+  // Use a separate variable for display purposes
+  const displayMnemonic = typeof mnemonic === 'string' ? mnemonicToObject(mnemonic) : mnemonic;
   const [input, setInput] = React.useState({});
   const [allValid, setAllValid] = React.useState(null);
   const refs = React.useRef([]);
 
   const verifyAll = () => {
     if (
-      input[5] === mnemonicObj[5] &&
-      input[10] === mnemonicObj[10] &&
-      input[15] === mnemonicObj[15] &&
-      input[20] === mnemonicObj[20]
+      input[5] === displayMnemonic[5] &&
+      input[10] === displayMnemonic[10] &&
+      input[15] === displayMnemonic[15] &&
+      input[20] === displayMnemonic[20]
     ) {
       setAllValid(true);
     } else {
@@ -285,12 +285,12 @@ const VerifySeed = ({ colorTheme }) => {
                   )}
                   <Input
                     variant={index % 5 !== 0 ? 'filled' : 'outline'}
-                    defaultValue={index % 5 !== 0 ? mnemonicObj[index] : ''}
+                    defaultValue={index % 5 !== 0 ? displayMnemonic[index] : ''}
                     isReadOnly={index % 5 !== 0}
                     focusBorderColor={`${colorTheme}.700`}
                     width={110}
                     size="sm"
-                    isInvalid={input[index] && input[index] !== mnemonicObj[index]}
+                    isInvalid={input[index] && input[index] !== displayMnemonic[index]}
                     ref={(el) => (refs.current[index] = el)}
                     onChange={(e) => {
                       setInput((i) => ({
@@ -298,7 +298,7 @@ const VerifySeed = ({ colorTheme }) => {
                         [index]: e.target.value,
                       }));
                       const next = refs.current[index + 1];
-                      if (next && e.target.value === mnemonicObj[index]) {
+                      if (next && e.target.value === displayMnemonic[index]) {
                         refs.current[index].blur();
                       }
                     }}
@@ -337,6 +337,7 @@ const VerifySeed = ({ colorTheme }) => {
           fontWeight="medium"
           className="button"
           onClick={() => {
+            // Pass the original mnemonic string for account creation
             navigate('/account', {
               state: { mnemonic, flow: 'create-wallet', colorTheme },
             });
@@ -642,6 +643,7 @@ const MakeAccount = ({ colorTheme }) => {
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
             setLoading(true);
+            // Pass the original mnemonic string to createWallet.
             await createWallet(state.name, mnemonic, state.password);
             setRoute('/wallet');
             setLoading(false);

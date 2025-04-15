@@ -1,3 +1,4 @@
+// webpack.config.js
 var webpack = require('webpack'),
   path = require('path'),
   fileSystem = require('fs-extra'),
@@ -6,8 +7,11 @@ var webpack = require('webpack'),
   CopyWebpackPlugin = require('copy-webpack-plugin'),
   HtmlWebpackPlugin = require('html-webpack-plugin'),
   TerserPlugin = require('terser-webpack-plugin'),
-  NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
+  NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
+// Use only this import for EsbuildPlugin.
+const { EsbuildPlugin } = require('esbuild-loader');
+console.log("EsbuildPlugin:", EsbuildPlugin);
 
 require('dotenv').config();
 
@@ -57,6 +61,12 @@ const preloadImages = `
 `;
 
 const options = {
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename]
+    }
+  },
   devtool: 'source-map',
   experiments: {
     asyncWebAssembly: true,
@@ -262,8 +272,9 @@ if (!isDevelopment) {
   options.optimization = {
     minimize: true,
     minimizer: [
-      new TerserPlugin({
-        extractComments: false,
+      new EsbuildPlugin({
+        target: 'esnext',
+        legalComments: 'none'
       }),
     ],
   };

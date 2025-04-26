@@ -10,5 +10,9 @@
     "allowJs": true,
     "moduleResolution": "node",
     "incremental": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "build"
+  ]
 }

@@ -630,6 +630,29 @@ const MakeAccount = ({ colorTheme }) => {
           </Text>
         )}
         <Spacer height="10" />
+        
+        {/* TEMPORARY: Development Reset Button */}
+        {process.env.NODE_ENV === 'development' && (
+          <>
+            <Button
+              colorScheme="red"
+              variant="outline"
+              size="sm"
+              mb={4}
+              onClick={async () => {
+                if (confirm('This will clear all wallet data. Are you sure?')) {
+                  await chrome.storage.local.clear();
+                  alert('Storage cleared! You can now create a new wallet.');
+                  window.location.reload();
+                }
+              }}
+            >
+              🧹 Clear Storage (Dev Only)
+            </Button>
+            <Spacer height="2" />
+          </>
+        )}
+        
         <Button
           className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
           isDisabled={

@@ -66,10 +66,10 @@ export const LOCAL_STORAGE = {
 };
 
 export const NODE = {
-  mainnet: 'https://cardano-mainnet.blockfrost.io/api/v0',
-  testnet: 'https://cardano-testnet.blockfrost.io/api/v0',
-  preview: 'https://cardano-preview.blockfrost.io/api/v0',
-  preprod: 'https://cardano-preprod.blockfrost.io/api/v0',
+  mainnet: 'https://api.koios.rest/api/v1',
+  testnet: 'https://testnet.koios.rest/api/v1',
+  preview: 'https://preview.koios.rest/api/v1',
+  preprod: 'https://preprod.koios.rest/api/v1',
 };
 
 export const NETWORK_ID = {

@@ -36,7 +36,7 @@ export async function delay(delayInMs) {
   });
 }
 
-export async function blockfrostRequest(endpoint, headers, body, signal) {
+export async function koiosRequest(endpoint, headers, body, signal) {
   const network = await getNetwork();
   let result;
 
@@ -44,21 +44,94 @@ export async function blockfrostRequest(endpoint, headers, body, signal) {
     if (result) {
       await delay(100);
     }
-    const rawResult = await fetch(provider.api.base(network.node) + endpoint, {
-      headers: {
-        ...provider.api.key(network.name || network.id),
-        ...provider.api.header,
-        ...headers,
-        'Cache-Control': 'no-cache',
-      },
+    
+    // Koios API endpoints
+    const koiosEndpoints = {
+      mainnet: 'https://api.koios.rest/api/v1',
+      testnet: 'https://testnet.koios.rest/api/v1',
+      preview: 'https://preview.koios.rest/api/v1',
+      preprod: 'https://preprod.koios.rest/api/v1',
+    };
+    
+    const networkKey = network.name || network.id;
+    const baseUrl = koiosEndpoints[networkKey];
+    
+    console.log('Koios request debug:', {
+      network,
+      networkKey,
+      baseUrl,
+      endpoint,
+      fullUrl: baseUrl + endpoint
+    });
+    
+    // Prepare headers - optionally include API key
+    const requestHeaders = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      ...headers,
+      'Cache-Control': 'no-cache',
+    };
+
+    // Add API key from environment variable if available
+    const getEnvVar = (key) => {
+      if (typeof process !== 'undefined' && process.env) {
+        return process.env[key];
+      }
+      return null;
+    };
+
+    const apiKey = getEnvVar(`KOIOS_API_KEY_${networkKey.toUpperCase()}`);
+    
+    if (apiKey && apiKey !== 'your-koios-api-key-here') {
+      requestHeaders['Authorization'] = `Bearer ${apiKey}`;
+    }
+    
+    const fullUrl = baseUrl + endpoint;
+    
+    const rawResult = await fetch(fullUrl, {
+      headers: requestHeaders,
       method: body ? 'POST' : 'GET',
-      body,
+      body: body ? JSON.stringify(body) : undefined,
       signal,
     });
+    
+    if (!rawResult.ok) {
+      const errorText = await rawResult.text();
+      console.error(`Koios API error: ${rawResult.status} ${rawResult.statusText}`);
+      console.error(`Response: ${errorText}`);
+      throw new Error(`Koios API error: ${rawResult.status} ${rawResult.statusText}`);
+    }
+    
     result = await rawResult.json();
   }
 
   return result;
+}
+
+// Update blockfrostRequest to use Koios (for backward compatibility)
+export async function blockfrostRequest(endpoint, headers, body, signal) {
+  // Map Blockfrost endpoints to Koios equivalents
+  const endpointMapping = {
+    '/addresses/{address}/transactions': '/addresses/{address}/txs',
+    '/addresses/{address}/utxos': '/addresses/{address}/utxos',
+    '/accounts/{stake_address}': '/accounts/{stake_address}',
+    '/txs/{tx_hash}': '/tx_info',
+    '/txs/{tx_hash}/utxos': '/tx_utxos',
+    '/txs/{tx_hash}/metadata': '/tx_metadata',
+    '/assets/{asset}': '/assets/{asset}',
+    '/pools/{pool_id}/metadata': '/pools/{pool_id}/metadata',
+  };
+
+  // Convert Blockfrost endpoint to Koios endpoint
+  let koiosEndpoint = endpoint;
+  for (const [blockfrost, koios] of Object.entries(endpointMapping)) {
+    if (endpoint.includes(blockfrost.replace('{', '').replace('}', ''))) {
+      koiosEndpoint = koios;
+      break;
+    }
+  }
+
+  return koiosRequest(koiosEndpoint, headers, body, signal);
 }
 
 /**
@@ -211,14 +284,19 @@ export const linkToSrc = (link, base64 = false) => {
  */
 export const utxoFromJson = async (output, address) => {
   await Loader.load();
+  
+  // Ensure output_index exists and is a valid number
+  const outputIndex = output.output_index ?? output.txId ?? 0;
+  if (outputIndex === undefined || outputIndex === null) {
+    throw new Error('Invalid UTXO: missing output_index');
+  }
+  
   return Loader.Cardano.TransactionUnspentOutput.new(
     Loader.Cardano.TransactionInput.new(
       Loader.Cardano.TransactionHash.from_raw_bytes(
         Buffer.from(output.tx_hash || output.txHash, 'hex')
       ),
-      BigInt(
-        output.output_index ?? output.txId
-      )
+      BigInt(outputIndex)
     ),
     Loader.Cardano.TransactionOutput.new_alonzo_format_tx_out(
       Loader.Cardano.AlonzoFormatTxOut.new(
@@ -1511,4 +1589,91 @@ export class Data {
   static empty() {
     return 'd87980';
   }
+}
+
+// Koios-specific utility functions
+export const koiosEndpoints = {
+  mainnet: 'https://api.koios.rest/api/v1',
+  testnet: 'https://testnet.koios.rest/api/v1',
+  preview: 'https://preview.koios.rest/api/v1',
+  preprod: 'https://preprod.koios.rest/api/v1',
+};
+
+// Convert Koios response format to match Blockfrost format for compatibility
+export const convertKoiosResponse = (response, endpoint) => {
+  if (!response) {
+    return response;
+  }
+
+  // Handle different response formats based on endpoint
+  switch (endpoint) {
+    case '/blocks/latest':
+      // For test networks, response is an array, so take the first (latest) block
+      if (Array.isArray(response) && response.length > 0) {
+        const latestBlock = response[0];
+        return {
+          ...latestBlock,
+          slot: latestBlock.abs_slot, // Map abs_slot to slot for compatibility
+        };
+      }
+      // For mainnet, response is a single object
+      return {
+        ...response,
+        slot: response.absolute_slot, // Map absolute_slot to slot for compatibility
+      };
+    case '/epoch_params/latest':
+      // For test networks, response is an array, so take the first (latest) epoch params
+      if (Array.isArray(response) && response.length > 0) {
+        return response[0];
+      }
+      // For mainnet, response is a single object
+      return response;
+    case '/addresses/{address}/utxos':
+      // Koios returns array directly, Blockfrost wraps in object
+      return Array.isArray(response) ? response : [response];
+    case '/txs/{tx_hash}':
+      return response; // Already in correct format
+    case '/assets/{asset_id}':
+      // For asset_info endpoint, response is an array, take the first item
+      if (Array.isArray(response) && response.length > 0) {
+        return response[0];
+      }
+      return response;
+    case '/assets/{asset_id}/addresses':
+      // For asset_addresses endpoint, response is already in correct format
+      return response;
+    default:
+      return response;
+  }
+};
+
+// Enhanced Koios request with response conversion
+export async function koiosRequestEnhanced(endpoint, headers, body, signal) {
+  // Handle test networks that don't support certain endpoints
+  let actualEndpoint = endpoint;
+  let actualBody = body;
+  let actualHeaders = headers;
+  
+  if (endpoint === '/blocks/latest') {
+    // For test networks, use /blocks and take the first (latest) block
+    actualEndpoint = '/blocks';
+  } else if (endpoint === '/epoch_params/latest') {
+    // For test networks, use /epoch_params and take the first (latest) epoch params
+    actualEndpoint = '/epoch_params';
+  } else if (endpoint.startsWith('/assets/') && !endpoint.includes('/addresses')) {
+    // Convert /assets/{asset_id} to /asset_info POST request
+    const assetId = endpoint.replace('/assets/', '');
+    actualEndpoint = '/asset_info';
+    actualBody = { _asset_list: [assetId] };
+    actualHeaders = { ...headers, 'Content-Type': 'application/json' };
+  } else if (endpoint.includes('/assets/') && endpoint.includes('/addresses')) {
+    // Convert /assets/{asset_id}/addresses to /asset_addresses GET request
+    const assetId = endpoint.replace('/assets/', '').replace('/addresses', '');
+    actualEndpoint = `/asset_addresses?_asset_policy=${assetId.substring(0, 56)}&_asset_name=${assetId.substring(56)}`;
+  }
+  
+  const response = await koiosRequest(actualEndpoint, actualHeaders, actualBody, signal);
+  
+  // Convert response based on the original endpoint
+  return convertKoiosResponse(response, endpoint);
 }

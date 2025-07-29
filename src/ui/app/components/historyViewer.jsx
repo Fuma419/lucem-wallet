@@ -20,6 +20,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
   const [page, setPage] = React.useState(1);
   const [final, setFinal] = React.useState(false);
   const [loadNext, setLoadNext] = React.useState(false);
+
   const getTxs = async () => {
     if (!history) {
       slice = [];

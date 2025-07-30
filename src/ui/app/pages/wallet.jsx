@@ -301,32 +301,53 @@ const Wallet = () => {
               </>
             )}
           </Box>
+          {/* Upper right wallet icon - non-interactive */}
           <Box zIndex="2" position="absolute" top="7" right="7">
+            <Box
+              position="relative"
+              rounded="full"
+              background={avatarBg}
+              width="14"
+              height="14"
+            >
+              <Box
+                position="absolute"
+                top="0"
+                right="0"
+                width={'full'}
+                height={'full'}
+                display={'flex'}
+                alignItems={'center'}
+                justifyContent={'center'}
+              >
+                <AvatarLoader avatar={info.avatar} width="14" />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Lower right settings button */}
+          <Box zIndex="2" position="fixed" bottom="7" right="7">
             <Menu
               isOpen={menu}
               autoSelect={false}
               onClose={() => setMenu(false)}
             >
               <MenuButton
+                as={Button}
                 onClick={() => setMenu(true)}
-                position="relative"
-                rounded="full"
-                background={avatarBg}
-                width="14"
-                height="14"
+                className="button settings"
+                size="sm"
+                background="purple.500"
+                rounded="lg"
+                shadow="md"
+                w="35px"
+                h="35px"
+                p={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
               >
-                <Box
-                  position="absolute"
-                  top="0"
-                  right="0"
-                  width={'full'}
-                  height={'full'}
-                  display={'flex'}
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                >
-                  <AvatarLoader avatar={info.avatar} width="14" />
-                </Box>
+                <SettingsIcon boxSize={4}/>
               </MenuButton>
               <MenuList fontSize="md">
                 <MenuGroup title="Accounts">

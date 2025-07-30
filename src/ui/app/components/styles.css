@@ -97,6 +97,15 @@ body::-webkit-scrollbar {
   box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
 }
 
+.button.settings {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(183, 183, 183, 0.5), rgba(0, 0, 0, .5));
+  border: thin solid rgb(253, 253, 253);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+}
+
 .button.hw-wallet {
   font-family: 'Barlow', sans-serif;
   opacity: .85;

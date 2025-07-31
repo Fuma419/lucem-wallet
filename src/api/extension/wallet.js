@@ -16,20 +16,40 @@ import {
 const RETRIES = 5;
 
 export const initTx = async () => {
-  // Get latest block from Koios
-  const latest_block = await koiosRequestEnhanced('/blocks/latest');
-  
-  // Get protocol parameters from Koios
-  const p = await koiosRequestEnhanced('/epoch_params/latest');
+  try {
+    // Get latest block from Koios
+    const latest_block = await koiosRequestEnhanced('/blocks/latest');
+    console.log('Latest block response:', latest_block);
+    
+    // Get protocol parameters from Koios
+    const p = await koiosRequestEnhanced('/epoch_params/latest');
+    console.log('Protocol parameters response:', p);
 
-  return {
+    // Validate required fields
+    if (!p.min_fee_a || !p.min_fee_b) {
+      throw new Error('Missing required protocol parameters: min_fee_a or min_fee_b');
+    }
+
+    if (!p.pool_deposit || !p.key_deposit || !p.coins_per_utxo_size) {
+      throw new Error('Missing required protocol parameters: pool_deposit, key_deposit, or coins_per_utxo_size');
+    }
+
+    if (!p.max_val_size || !p.max_tx_size) {
+      throw new Error('Missing required protocol parameters: max_val_size or max_tx_size');
+    }
+
+    if (!latest_block.slot) {
+      throw new Error('Missing required block information: slot');
+    }
+
+    const protocolParams = {
     linearFee: {
       minFeeA: p.min_fee_a.toString(),
       minFeeB: p.min_fee_b.toString(),
     },
-    minUtxo: '1000000', // minUTxOValue protocol parameter has been removed since Alonzo HF
-    poolDeposit: p.pool_deposit,
-    keyDeposit: p.key_deposit,
+      minUtxo: '1000000', // minUTxOValue protocol parameter has been removed since Alonzo HF
+      poolDeposit: p.pool_deposit.toString(),
+      keyDeposit: p.key_deposit.toString(),
     coinsPerUtxoWord: p.coins_per_utxo_size.toString(),
     maxValSize: p.max_val_size,
     priceMem: p.price_mem,
@@ -37,10 +57,17 @@ export const initTx = async () => {
     // might not be available for pre-conway networks; set to 0 in that case
     minFeeRefScriptCostPerByte: p.min_fee_ref_script_cost_per_byte || 0,
     maxTxSize: parseInt(p.max_tx_size),
-    slot: parseInt(latest_block.slot), // Now using converted slot
+      slot: parseInt(latest_block.slot), // Now using converted slot
     collateralPercentage: parseInt(p.collateral_percent),
     maxCollateralInputs: parseInt(p.max_collateral_inputs),
   };
+
+    console.log('Processed protocol parameters:', protocolParams);
+    return protocolParams;
+  } catch (error) {
+    console.error('Error in initTx:', error);
+    throw error;
+  }
 };
 
 /**
@@ -51,7 +78,7 @@ export const initTx = async () => {
  * @return {Transaction} the new canonical transaction
  */
 const toCanonicalTx = (tx) => {
-  const canonicalCbor = encodeTx(transformTx(decodeTx(tx.to_cbor_bytes())));
+      const canonicalCbor = encodeTx(transformTx(decodeTx(tx.to_bytes())));
   return Loader.Cardano.Transaction.from_cbor_bytes(canonicalCbor);
 }
 
@@ -67,6 +94,115 @@ export const buildTx = async (
 ) => {
   try {
     await Loader.load();
+
+    // Validate protocol parameters
+    if (!protocolParameters) {
+      throw new Error('Protocol parameters are required but not provided');
+    }
+
+    if (!protocolParameters.linearFee || !protocolParameters.linearFee.minFeeA || !protocolParameters.linearFee.minFeeB) {
+      throw new Error('Invalid protocol parameters: linearFee configuration is missing');
+    }
+
+    if (!protocolParameters.poolDeposit || !protocolParameters.keyDeposit || !protocolParameters.coinsPerUtxoWord) {
+      throw new Error('Invalid protocol parameters: poolDeposit, keyDeposit, or coinsPerUtxoWord is missing');
+    }
+
+    if (!protocolParameters.maxValSize || !protocolParameters.maxTxSize) {
+      throw new Error('Invalid protocol parameters: maxValSize or maxTxSize is missing');
+    }
+
+    if (!protocolParameters.slot) {
+      throw new Error('Invalid protocol parameters: slot is missing');
+    }
+
+    // Debug logging for protocol parameters
+    console.log('Protocol parameters received in buildTx:', protocolParameters);
+    console.log('linearFee object:', protocolParameters.linearFee);
+    console.log('linearFee type:', typeof protocolParameters.linearFee);
+    console.log('minFeeA value:', protocolParameters.linearFee?.minFeeA);
+    console.log('minFeeA type:', typeof protocolParameters.linearFee?.minFeeA);
+    console.log('minFeeB value:', protocolParameters.linearFee?.minFeeB);
+    console.log('minFeeB type:', typeof protocolParameters.linearFee?.minFeeB);
+    console.log('poolDeposit value:', protocolParameters.poolDeposit);
+    console.log('poolDeposit type:', typeof protocolParameters.poolDeposit);
+    console.log('keyDeposit value:', protocolParameters.keyDeposit);
+    console.log('coinsPerUtxoWord value:', protocolParameters.coinsPerUtxoWord);
+    
+    // Debug Cardano library loading
+    console.log('Loader.Cardano:', Loader.Cardano);
+    console.log('Loader.Cardano keys:', Object.keys(Loader.Cardano));
+    console.log('Loader.Cardano.BigNum:', Loader.Cardano?.BigNum);
+    console.log('Loader.Cardano.LinearFee:', Loader.Cardano?.LinearFee);
+    console.log('Loader.Cardano.TransactionBuilder:', Loader.Cardano?.TransactionBuilder);
+    
+    // Search for BigNum in the keys
+    const bigNumKeys = Object.keys(Loader.Cardano).filter(key => key.toLowerCase().includes('bignum'));
+    console.log('Keys containing "bignum":', bigNumKeys);
+    
+    // Also check for common variations
+    console.log('Loader.Cardano.BigInt:', Loader.Cardano?.BigInt);
+    console.log('Loader.Cardano.Int:', Loader.Cardano?.Int);
+    
+    // Search for any class that might handle numbers
+    const numberKeys = Object.keys(Loader.Cardano).filter(key => 
+      key.toLowerCase().includes('num') || 
+      key.toLowerCase().includes('int') || 
+      key.toLowerCase().includes('coin') ||
+      key.toLowerCase().includes('value')
+    );
+    console.log('Keys containing number-related terms:', numberKeys);
+    
+    // Check if Int has from_str method
+    console.log('Loader.Cardano.Int.from_str:', Loader.Cardano?.Int?.from_str);
+    
+    // Debug the specific values being converted
+    console.log('Converting minFeeA:', protocolParameters.linearFee.minFeeA, 'type:', typeof protocolParameters.linearFee.minFeeA);
+    console.log('Converting minFeeB:', protocolParameters.linearFee.minFeeB, 'type:', typeof protocolParameters.linearFee.minFeeB);
+    console.log('Converting poolDeposit:', protocolParameters.poolDeposit, 'type:', typeof protocolParameters.poolDeposit);
+    console.log('Converting keyDeposit:', protocolParameters.keyDeposit, 'type:', typeof protocolParameters.keyDeposit);
+    console.log('Converting coinsPerUtxoWord:', protocolParameters.coinsPerUtxoWord, 'type:', typeof protocolParameters.coinsPerUtxoWord);
+    
+    // Test Int.from_str to see what it returns
+    const testInt = Loader.Cardano.Int.from_str('44');
+    console.log('Test Int.from_str result:', testInt, 'type:', typeof testInt);
+    console.log('Test Int.from_str constructor:', testInt.constructor.name);
+    
+    // Check if the Int object has methods to get its value
+    console.log('Test Int methods:', Object.getOwnPropertyNames(testInt));
+    console.log('Test Int prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(testInt)));
+    
+    // Try to get the value from the Int object
+    if (testInt.to_str) {
+      console.log('Test Int.to_str():', testInt.to_str());
+    }
+    if (testInt.toString) {
+      console.log('Test Int.toString():', testInt.toString());
+    }
+    
+    // Check LinearFee constructor
+    console.log('LinearFee constructor:', Loader.Cardano.LinearFee);
+    console.log('LinearFee static methods:', Object.getOwnPropertyNames(Loader.Cardano.LinearFee));
+    console.log('LinearFee prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(Loader.Cardano.LinearFee)));
+    
+    // Check if BigInteger is available
+    console.log('BigInteger available:', Loader.Cardano.BigInteger);
+    console.log('BigInteger.from_str available:', Loader.Cardano.BigInteger?.from_str);
+    
+    // Test BigInteger.from_str if available
+    if (Loader.Cardano.BigInteger?.from_str) {
+      const testBigInt = Loader.Cardano.BigInteger.from_str('44');
+      console.log('Test BigInteger.from_str result:', testBigInt, 'type:', typeof testBigInt);
+      console.log('Test BigInteger constructor:', testBigInt.constructor.name);
+    }
+
+    // Show the number-related keys to see what other options we have
+    console.log('Number-related keys:', Object.keys(Loader.Cardano).filter(key => 
+      key.toLowerCase().includes('num') || 
+      key.toLowerCase().includes('int') || 
+      key.toLowerCase().includes('coin') ||
+      key.toLowerCase().includes('value')
+    ));
 
     // Create transaction using Cardano serialization library
     const txBuilder = Loader.Cardano.TransactionBuilder.new(
@@ -97,10 +233,11 @@ export const buildTx = async (
 
     // Add outputs
     for (const output of outputs) {
-      const txOutput = Loader.Cardano.TransactionOutput.new(
-        Loader.Cardano.Address.from_bech32(output.address),
-        output.amount
-      );
+      const txOutput = Loader.Cardano.TransactionOutputBuilder.new()
+        .with_address(Loader.Cardano.Address.from_bech32(output.address))
+        .next()
+        .with_value(output.amount)
+        .build();
       txBuilder.add_output(txOutput);
     }
 
@@ -110,7 +247,7 @@ export const buildTx = async (
     // Set validity interval
     const slot = Loader.Cardano.BigNum.from_str(protocolParameters.slot.toString());
     const invalidHereafter = Loader.Cardano.BigNum.from_str(
-      (protocolParameters.slot + TX.invalid_hereafter).toString()
+      (parseInt(protocolParameters.slot) + TX.invalid_hereafter).toString()
     );
     txBuilder.set_validity_start_interval(slot);
     txBuilder.set_ttl(invalidHereafter);
@@ -142,7 +279,7 @@ export const signAndSubmit = async (
 ) => {
   await Loader.load();
   const witnessSet = await signTx(
-    Buffer.from(tx.to_cbor_bytes(), 'hex').toString('hex'),
+    Buffer.from(tx.to_bytes(), 'hex').toString('hex'),
     keyHashes,
     password,
     accountIndex
@@ -155,7 +292,7 @@ export const signAndSubmit = async (
   );
 
   const txHash = await submitTx(
-    Buffer.from(transaction.to_cbor_bytes(), 'hex').toString('hex')
+    Buffer.from(transaction.to_bytes(), 'hex').toString('hex')
   );
   return txHash;
 };
@@ -167,7 +304,7 @@ export const signAndSubmitHW = async (
   await Loader.load();
 
   const witnessSet = await signTxHW(
-    Buffer.from(tx.to_cbor_bytes(), 'hex').toString('hex'),
+    Buffer.from(tx.to_bytes(), 'hex').toString('hex'),
     keyHashes,
     account,
     hw,
@@ -183,7 +320,7 @@ export const signAndSubmitHW = async (
 
   try {
     const txHash = await submitTx(
-      Buffer.from(transaction.to_cbor_bytes(), 'hex').toString('hex')
+      Buffer.from(transaction.to_bytes(), 'hex').toString('hex')
     );
     return txHash;
   } catch (e) {
@@ -387,7 +524,7 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
         Loader.Cardano.SingleCertificateBuilder.new(
           Loader.Cardano.Certificate.new_stake_deregistration(
             Loader.Cardano.Credential.new_pub_key(
-              Loader.Cardano.Ed25519KeyHash.from_raw_bytes(
+              Loader.Cardano.Ed25519KeyHash.from_bytes(
                 Buffer.from(account.stakeKeyHash, 'hex')
               )
             )

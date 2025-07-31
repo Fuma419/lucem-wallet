@@ -696,21 +696,21 @@ export const getCollateral = async () => {
   if (collateral) {
     const collateralUtxo = Loader.Cardano.TransactionUnspentOutput.new(
       Loader.Cardano.TransactionInput.new(
-        Loader.Cardano.TransactionHash.from_raw_bytes(
+        Loader.Cardano.TransactionHash.from_bytes(
           Buffer.from(collateral.txHash, 'hex')
         ),
-        BigInt(collateral.txId.toString())
+        Loader.Cardano.BigNum.from_str(collateral.txId.toString())
       ),
-      Loader.Cardano.TransactionOutput.new_alonzo_format_tx_out(
-        Loader.Cardano.AlonzoFormatTxOut.new(
-          Loader.Cardano.Address.from_bech32(
-            currentAccount[network.id].paymentAddr
-          ),
-          Loader.Cardano.Value.new(
-            BigInt(collateral.lovelace), Loader.Cardano.MultiAsset.new()
-          )
-        )
-      )
+      Loader.Cardano.TransactionOutputBuilder.new()
+        .with_address(Loader.Cardano.Address.from_bech32(
+          currentAccount[network.id].paymentAddr
+        ))
+        .next()
+        .with_value(Loader.Cardano.Value.new(
+          Loader.Cardano.BigNum.from_str(collateral.lovelace.toString()), 
+          Loader.Cardano.MultiAsset.new()
+        ))
+        .build()
     );
     return [collateralUtxo];
   }
@@ -933,17 +933,38 @@ export const bytesAddressToBinary = (bytes) =>
   bytes.reduce((str, byte) => str + byte.toString(2).padStart(8, '0'), '');
 
 export const isValidAddress = async (address) => {
+  await Loader.load();
   const network = await getNetwork();
-  const addr = Cardano.Address.fromString(address)
-  if (!addr) return false;
-  if (
-      (addr.getNetworkId() === 1 && network.id === NETWORK_ID.mainnet) ||
-      (addr.getNetworkId() === 0 &&
+  try {
+    // Try to parse as bech32 address first
+    const addr = Loader.Cardano.Address.from_bech32(address);
+    if (
+      (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
+      (addr.network_id() === 0 &&
+        (network.id === NETWORK_ID.testnet ||
+          network.id === NETWORK_ID.preview ||
+          network.id === NETWORK_ID.preprod))
+    ) {
+      return Buffer.from(addr.to_raw_bytes());
+    }
+  } catch (e) {
+    // If bech32 fails, try raw bytes
+    try {
+      const addr = Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'));
+      if (
+        (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
+        (addr.network_id() === 0 &&
           (network.id === NETWORK_ID.testnet ||
-              network.id === NETWORK_ID.preview ||
-              network.id === NETWORK_ID.preprod))
-  )
-    return Buffer.from(addr.toBytes(), 'hex');
+            network.id === NETWORK_ID.preview ||
+            network.id === NETWORK_ID.preprod))
+      ) {
+        return Buffer.from(addr.to_raw_bytes());
+      }
+    } catch (e2) {
+      // Both parsing methods failed
+      return false;
+    }
+  }
   return false;
 };
 
@@ -951,7 +972,7 @@ const isValidAddressBytes = async (address) => {
   await Loader.load();
   const network = await getNetwork();
   try {
-    const addr = Loader.Cardano.Address.from_raw_bytes(address);
+    const addr = Loader.Cardano.Address.from_bytes(address);
     if (
       (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
       (addr.network_id() === 0 &&
@@ -963,7 +984,7 @@ const isValidAddressBytes = async (address) => {
     return false;
   } catch (e) {}
   try {
-    const addr = Loader.Cardano.Byronfrom_raw_bytes(address);
+    const addr = Loader.Cardano.ByronAddress.from_bytes(address);
     if (
       (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
       (addr.network_id() === 0 &&
@@ -987,25 +1008,25 @@ export const extractKeyHash = async (address) => {
     throw DataSignError.InvalidFormat;
   try {
     const addr = Loader.Cardano.BaseAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment().as_pub_key().to_bech32('addr_vkh');
   } catch (e) {}
   try {
     const addr = Loader.Cardano.EnterpriseAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment().as_pub_key().to_bech32('addr_vkh');
   } catch (e) {}
   try {
     const addr = Loader.Cardano.PointerAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment().as_pub_key().to_bech32('addr_vkh');
   } catch (e) {}
   try {
     const addr = Loader.Cardano.RewardAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment().as_pub_key().to_bech32('stake_vkh');
   } catch (e) {}
@@ -1019,7 +1040,7 @@ export const extractKeyOrScriptHash = async (address) => {
     throw DataSignError.InvalidFormat;
   try {
     const addr = Loader.Cardano.BaseAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
 
     const credential = addr.payment();
@@ -1030,7 +1051,7 @@ export const extractKeyOrScriptHash = async (address) => {
   } catch (e) {}
   try {
     const addr = Loader.Cardano.EnterpriseAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     const credential = addr.payment();
     if (credential.kind() === 0)
@@ -1040,7 +1061,7 @@ export const extractKeyOrScriptHash = async (address) => {
   } catch (e) {}
   try {
     const addr = Loader.Cardano.PointerAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     const credential = addr.payment();
     if (credential.kind() === 0)
@@ -1050,7 +1071,7 @@ export const extractKeyOrScriptHash = async (address) => {
   } catch (e) {}
   try {
     const addr = Loader.Cardano.RewardAddress.from_address(
-      Loader.Cardano.Address.from_raw_bytes(Buffer.from(address, 'hex'))
+      Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     const credential = addr.payment();
     if (credential.kind() === 0)
@@ -1324,7 +1345,7 @@ export const signTxHW = async (
       if (
         witness.path[3] == 0 // payment key
       ) {
-        const vkey = Loader.Cardano.Bip32PublicKey.from_raw_bytes(
+        const vkey = Loader.Cardano.Bip32PublicKey.from_bytes(
           Buffer.from(account.publicKey, 'hex')
         )
           .derive(0)
@@ -1337,7 +1358,7 @@ export const signTxHW = async (
       } else if (
         witness.path[3] == 2 // stake key
       ) {
-        const vkey = Loader.Cardano.Bip32PublicKey.from_raw_bytes(
+        const vkey = Loader.Cardano.Bip32PublicKey.from_bytes(
           Buffer.from(account.publicKey, 'hex')
         )
           .derive(2)
@@ -1398,31 +1419,41 @@ export const signTxHW = async (
 
 export const submitTx = async (tx) => {
   const network = await getNetwork();
+  
+  // Convert CBOR to hex if needed
+  const txHex = typeof tx === 'string' ? tx : Buffer.from(tx).toString('hex');
+  
   if (network[network.id + 'Submit']) {
     const result = await fetch(network[network.id + 'Submit'], {
       method: 'POST',
       headers: { 'Content-Type': 'application/cbor' },
-      body: Buffer.from(tx, 'hex'),
+      body: Buffer.from(txHex, 'hex'),
     });
     if (result.ok) {
       return await result.json();
     }
     throw APIError.InvalidRequest;
   }
-  const result = await koiosRequest(
-    `/tx/submit`,
-    { 'Content-Type': 'application/cbor' },
-    Buffer.from(tx, 'hex')
-  );
-  if (result.error) {
-    if (result.status_code === 400)
-      throw { ...TxSendError.Failure, message: result.message };
-    else if (result.status_code === 500) throw APIError.InternalError;
-    else if (result.status_code === 429) throw TxSendError.Refused;
-    else if (result.status_code === 425) throw ERROR.fullMempool;
-    else throw APIError.InvalidRequest;
+  
+  try {
+    const result = await koiosRequestEnhanced(
+      `/tx/submit`,
+      { method: 'POST', body: { tx: txHex } }
+    );
+    
+    if (result.error) {
+      if (result.status_code === 400)
+        throw { ...TxSendError.Failure, message: result.message };
+      else if (result.status_code === 500) throw APIError.InternalError;
+      else if (result.status_code === 429) throw TxSendError.Refused;
+      else if (result.status_code === 425) throw ERROR.fullMempool;
+      else throw APIError.InvalidRequest;
+    }
+    return result;
+  } catch (error) {
+    console.error('Koios transaction submission error:', error);
+    throw new Error(`Transaction submission failed: ${error.message}`);
   }
-  return result;
 };
 
 const emitNetworkChange = async (networkId) => {
@@ -1508,7 +1539,7 @@ export const requestAccountKey = async (password, accountIndex) => {
   const encryptedRootKey = await getStorage(STORAGE.encryptedKey);
   let accountKey;
   try {
-    accountKey = Loader.Cardano.Bip32PrivateKey.from_raw_bytes(
+    accountKey = Loader.Cardano.Bip32PrivateKey.from_bytes(
       Buffer.from(await decryptWithPassword(password, encryptedRootKey), 'hex')
     )
       .derive(harden(1852)) // purpose
@@ -1651,7 +1682,7 @@ export const createHWAccounts = async (accounts) => {
   await Loader.load();
   const existingAccounts = await getStorage(STORAGE.accounts);
   accounts.forEach((account) => {
-    const publicKey = Loader.Cardano.Bip32PublicKey.from_raw_bytes(
+    const publicKey = Loader.Cardano.Bip32PublicKey.from_bytes(
       Buffer.from(account.publicKey, 'hex')
     );
 
@@ -2193,15 +2224,19 @@ export const updateBalance = async (currentAccount, network) => {
     );
     if (currentAccount[network.id].assets.length > 0) {
       const protocolParameters = await initTx();
-      const checkOutput = Loader.Cardano.TransactionOutput.new(
-        Loader.Cardano.Address.from_bech32(
+      const checkOutput = Loader.Cardano.TransactionOutputBuilder.new()
+        .with_address(Loader.Cardano.Address.from_bech32(
           currentAccount[network.id].paymentAddr
-        ),
-        amount
+        ))
+        .next()
+        .with_value(amount)
+        .build();
+      const dataCost = Loader.Cardano.DataCost.new_coins_per_byte(
+        Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord.toString())
       );
-      const minAda = Loader.Cardano.min_ada_required(
+      const minAda = Loader.Cardano.min_ada_for_output(
         checkOutput,
-        BigInt(protocolParameters.coinsPerUtxoWord)
+        dataCost
       ).toString();
       currentAccount[network.id].minAda = minAda;
     } else {

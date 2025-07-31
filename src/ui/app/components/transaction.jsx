@@ -500,15 +500,15 @@ const getAddressCredentials = (address) => {
   
   try {
     const cmlAddress = Loader.Cardano.Address.from_bech32(address);
-    const paymentCred = cmlAddress.payment_cred()?.to_cbor_hex() || null;
-    const stakingCred = cmlAddress.staking_cred()?.to_cbor_hex() || null;
+    const paymentCred = cmlAddress.payment_cred()?.to_hex() || null;
+    const stakingCred = cmlAddress.staking_cred()?.to_hex() || null;
     return [paymentCred, stakingCred];
   } catch (error) {
     try {
       // try casting as byron address
       const cmlAddress = Loader.Cardano.ByronAddress.from_base58(address);
-      const paymentCred = cmlAddress.to_address()?.payment_cred()?.to_cbor_hex() || null;
-      const stakingCred = cmlAddress.to_address()?.staking_cred()?.to_cbor_hex() || null;
+      const paymentCred = cmlAddress.to_address()?.payment_cred()?.to_hex() || null;
+      const stakingCred = cmlAddress.to_address()?.staking_cred()?.to_hex() || null;
       return [paymentCred, stakingCred];
     } catch (byronError) {
       console.error('Failed to parse address:', address, error);

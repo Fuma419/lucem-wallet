@@ -49,18 +49,19 @@ const migration = {
           let assets = currentAccountNetwork.assets;
           if (assets.length > 0) {
             const amount = await assetsToValue(assets);
-            const checkOutput = Loader.Cardano.TransactionOutput.new(
-              Loader.Cardano.Address.from_bech32(
+            const checkOutput = Loader.Cardano.TransactionOutputBuilder.new()
+              .with_address(Loader.Cardano.Address.from_bech32(
                 currentAccountNetwork.paymentAddr
-              ),
-              amount
+              ))
+              .next()
+              .with_value(amount)
+              .build();
+            const dataCost = Loader.Cardano.DataCost.new_coins_per_byte(
+              Loader.Cardano.BigNum.from_str((4310).toString())
             );
-            currentAccountNetwork.minAda = Loader.Cardano.min_ada_required(
+            currentAccountNetwork.minAda = Loader.Cardano.min_ada_for_output(
               checkOutput,
-              BigInt(
-                // protocolParameters.coinsPerUtxoWord
-                (4310).toString() // We hardcode this, since we don't know if Blockfrost switches PP quickly during the epoch transition
-              )
+              dataCost
             ).toString();
           } else {
             currentAccountNetwork.minAda = 0;

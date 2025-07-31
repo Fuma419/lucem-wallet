@@ -7,11 +7,9 @@ import {
   getAdaHandle,
   getAsset,
   getCurrentAccount,
-  getMilkomedaData,
   getNetwork,
   getUtxos,
   isValidAddress,
-  isValidEthAddress,
   toUnit,
   updateRecentSentToAddress,
 } from '../../../api/extension';
@@ -99,7 +97,6 @@ const initialState = {
     protocolParameters: null,
     utxos: [],
     balance: { lovelace: '0', assets: null },
-    milkomedaAddress: '',
   },
 };
 
@@ -246,14 +243,13 @@ const Send = () => {
         });
       }
 
-      const checkOutput = Loader.Cardano.TransactionOutput.new(
-        _address.isM1
-          ? Loader.Cardano.Address.from_bech32(_address.result)
-          : Loader.Cardano.Address.from_raw_bytes(
-              await isValidAddress(_address.result)
-            ),
-        await assetsToValue(output.amount)
-      );
+      const checkOutput = Loader.Cardano.TransactionOutputBuilder.new()
+        .with_address(Loader.Cardano.Address.from_bytes(
+          await isValidAddress(_address.result)
+        ))
+        .next()
+        .with_value(await assetsToValue(output.amount))
+        .build();
 
       const minAda = await minAdaRequired(
         checkOutput,
@@ -284,39 +280,19 @@ const Send = () => {
 
       const outputs = Loader.Cardano.TransactionOutputList.new();
       outputs.add(
-        Loader.Cardano.TransactionOutput.new(
-          _address.isM1
-            ? Loader.Cardano.Address.from_bech32(_address.result)
-            : Loader.Cardano.Address.from_raw_bytes(
-                await isValidAddress(_address.result)
-              ),
-          await assetsToValue(output.amount)
-        )
+        Loader.Cardano.TransactionOutputBuilder.new()
+          .with_address(Loader.Cardano.Address.from_bytes(
+            await isValidAddress(_address.result)
+          ))
+          .next()
+          .with_value(await assetsToValue(output.amount))
+          .build()
       );
 
       const auxiliaryData = Loader.Cardano.AuxiliaryData.new();
       const generalMetadata = Loader.Cardano.Metadata.new();
 
-      // setting metadata for MilkomedaM1
-      if (_address.isM1) {
-        const ethAddress = _address.display;
-        if (!isValidEthAddress(ethAddress))
-          throw new Error('Not a valid ETH address');
-        generalMetadata.set(
-          BigInt('87'),
-          Loader.Cardano.encode_json_str_to_metadatum(
-            JSON.stringify(_address.protocolMagic),
-            0
-          )
-        );
-        generalMetadata.set(
-          BigInt('88'),
-          Loader.Cardano.encode_json_str_to_metadatum(
-            JSON.stringify(ethAddress),
-            0
-          )
-        );
-      }
+
 
       // setting metadata for optional message (CIP-0020)
       if (_message) {
@@ -349,7 +325,7 @@ const Send = () => {
         auxiliaryData.metadata() ? auxiliaryData : null
       );
       setFee({ fee: tx.body().fee().toString() });
-      setTx(Buffer.from(tx.to_cbor_bytes()).toString('hex'));
+              setTx(Buffer.from(tx.to_bytes()).toString('hex'));
     } catch (e) {
       console.warn(e);
       setFee({ error: 'Transaction not possible' });
@@ -370,7 +346,7 @@ const Send = () => {
     account.current = currentAccount;
     if (txInfo.protocolParameters) {
       const _utxos = txInfo.utxos.map((utxo) =>
-        Loader.Cardano.TransactionUnspentOutput.from_cbor_bytes(
+        Loader.Cardano.TransactionUnspentOutput.from_bytes(
           Buffer.from(utxo, 'hex')
         )
       );
@@ -381,10 +357,11 @@ const Send = () => {
     let _utxos = await getUtxos();
     const protocolParameters = await initTx();
 
-    const checkOutput = Loader.Cardano.TransactionOutput.new(
-      Loader.Cardano.Address.from_bech32(currentAccount.paymentAddr),
-      Loader.Cardano.Value.zero()
-    );
+    const checkOutput = Loader.Cardano.TransactionOutputBuilder.new()
+      .with_address(Loader.Cardano.Address.from_bech32(currentAccount.paymentAddr))
+      .next()
+      .with_value(Loader.Cardano.Value.zero())
+      .build();
     const minUtxo = await minAdaRequired(
       checkOutput,
       BigInt(protocolParameters.coinsPerUtxoWord)
@@ -398,17 +375,10 @@ const Send = () => {
       assets: balance.filter((v) => v.unit !== 'lovelace'),
     };
     utxos.current = _utxos;
-    _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_cbor_bytes()).toString('hex'));
-    let milkomedaAddress = '';
-    try {
-      const { current_address: milkomedaAddressFromReq } = await getMilkomedaData('');
-      milkomedaAddress = milkomedaAddressFromReq
-    } catch (e) {
-      console.log("ERROR: Couldn't get Milkomeda address.")
-    }
+    _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'));
     if (!isMounted.current) return;
     setIsLoading(false);
-    setTxInfo({ protocolParameters, utxos: _utxos, balance, milkomedaAddress });
+    setTxInfo({ protocolParameters, utxos: _utxos, balance });
   };
 
   const objectToArray = (obj) => Object.keys(obj).map((key) => obj[key]);
@@ -514,24 +484,7 @@ const Send = () => {
                   {address.error}
                 </Text>
               )}
-              {!address.error && address.isM1 && (
-                <Box
-                  mb={-2}
-                  mt={1}
-                  width="full"
-                  display="flex"
-                  alignItems="center"
-                >
-                  <Box>Milkomeda Mode</Box>{' '}
-                  <Tooltip
-                    offset={[40, 8]}
-                    hasArrow
-                    label="Transfer ADA from your Cardano wallet to an address on the Milkomeda Sidechain."
-                  >
-                    <InfoOutlineIcon ml="1" cursor="help" />
-                  </Tooltip>
-                </Box>
-              )}
+
               <Box height="5" />
               <Stack
                 direction="row"
@@ -581,14 +534,10 @@ const Send = () => {
                     isDisabled={isLoading}
                     isInvalid={
                       value.ada &&
-                      (address.isM1
-                        ? BigInt(toUnit(value.ada)) <
-                          BigInt(address.ada.minLovelace) +
-                            BigInt(address.ada.fromADAFeeLovelace) // milkomeda requires a minimium ada amount which is higher than the Cardano protocol min ada
-                        : BigInt(toUnit(value.ada)) <
-                            BigInt(txInfo.protocolParameters.minUtxo) ||
-                          BigInt(toUnit(value.ada)) >
-                            BigInt(txInfo.balance.lovelace || '0'))
+                      (BigInt(toUnit(value.ada)) <
+                        BigInt(txInfo.protocolParameters.minUtxo) ||
+                      BigInt(toUnit(value.ada)) >
+                        BigInt(txInfo.balance.lovelace || '0'))
                     }
                     onFocus={() => (focus.current = true)}
                     placeholder="0.000000"
@@ -601,7 +550,6 @@ const Send = () => {
                   assets={txInfo.balance.assets}
                   setValue={setValue}
                   value={value}
-                  isM1={address.isM1}
                 />
               </Stack>
               <Box height="4" />
@@ -905,49 +853,19 @@ const AddressPopup = ({
     setState({ currentAccount, accounts, recentAddress });
   };
 
-  const milkomedaAddress = React.useRef(txInfo.milkomedaAddress);
 
-  React.useEffect(() => {
-    milkomedaAddress.current = txInfo.milkomedaAddress;
-  }, [txInfo]);
 
   const handleInput = async (e) => {
     const value = e.target.value;
     let addr;
     let isHandle = false;
-    let isM1 = false;
+    
     if (!e.target.value) {
       addr = { result: '', display: '' };
     } else if (value.startsWith('$')) {
       isHandle = true;
       addr = { display: value };
-    } else if (value.startsWith('0x')) {
-      if (isValidEthAddress(value)) {
-        isM1 = true;
-        addr = {
-          display: value,
-          isM1: true,
-          ada: {
-            minLovelace: '2000000',
-            fromADAFeeLovelace: '500000',
-          },
-        };
-      } else {
-        addr = {
-          result: value,
-          display: value,
-          isM1: true,
-          ada: {
-            minLovelace: '2000000',
-            fromADAFeeLovelace: '500000',
-          },
-          error: 'Address is invalid (Milkomeda)',
-        };
-      }
-    } else if (
-      (await isValidAddress(value)) &&
-      value !== milkomedaAddress.current
-    ) {
+    } else if (await isValidAddress(value)) {
       addr = { result: value, display: value };
     } else {
       addr = {
@@ -971,34 +889,6 @@ const AddressPopup = ({
           result: '',
           display: handle,
           error: '$handle not found',
-        };
-      }
-    } else if (isM1) {
-      // We allow failure here because we fail to get the user's Milkomeda
-      //   address when they are creating an M1 transaction.
-      const { isAllowed, ada, current_address, protocolMagic, assets, ttl } =
-        await getMilkomedaData(value);
-
-      if (!isAllowed || !isValidEthAddress(value)) {
-        addr = {
-          result: '',
-          display: value,
-          isM1: true,
-          ada,
-          ttl,
-          protocolMagic,
-          assets,
-          error: 'Address is invalid (Milkomeda)',
-        };
-      } else {
-        addr = {
-          result: current_address,
-          display: value,
-          isM1: true,
-          ada,
-          ttl,
-          protocolMagic,
-          assets,
         };
       }
     }
@@ -1053,7 +943,7 @@ const AddressPopup = ({
               setTimeout(() => e.target.blur());
             }}
             fontSize="xs"
-            placeholder="Address, $handle or Milkomeda"
+            placeholder="Address or $handle"
             onInput={async (e) => {
               const handleInputToken = latestHandleInputToken.current + 1;
               latestHandleInputToken.current = handleInputToken;
@@ -1064,7 +954,7 @@ const AddressPopup = ({
                 return;
               }
 
-              if (addr.isM1) removeAllAssets();
+
               triggerTxUpdate(() => setAddress(addr));
               onClose();
             }}
@@ -1107,19 +997,6 @@ const AddressPopup = ({
                   width="full"
                   onClick={() => {
                     const address = state.recentAddress;
-                    if (address == milkomedaAddress.current) {
-                      triggerTxUpdate(() =>
-                        setAddress({
-                          result: '',
-                          display: address,
-                          error:
-                            'Disallowed sending directly to Milkomeda stargate',
-                        })
-                      );
-                      onClose();
-                      return;
-                    }
-
                     triggerTxUpdate(() =>
                       setAddress({
                         result: address,
@@ -1253,7 +1130,7 @@ const CustomScrollbarsVirtualList = React.forwardRef((props, ref) => (
   <CustomScrollbars {...props} forwardedRef={ref} />
 ));
 
-const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
+const AssetsSelector = ({ assets, addAssets, value }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [search, setSearch] = React.useState('');
   const select = React.useRef(false);
@@ -1272,14 +1149,14 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
   };
 
   React.useEffect(() => {
-    if (isM1) onClose();
-  }, [isM1]);
+    // Empty effect
+  }, []);
 
   return (
     <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose}>
       <PopoverTrigger>
         <Button
-          isDisabled={isM1 || !assets || assets.length < 1}
+                          isDisabled={!assets || assets.length < 1}
           flex={1}
           size="sm"
         >

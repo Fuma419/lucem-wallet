@@ -243,17 +243,28 @@ const Send = () => {
         });
       }
 
-      const checkOutput = Loader.Cardano.TransactionOutputBuilder.new()
-        .with_address(Loader.Cardano.Address.from_bytes(
-          await isValidAddress(_address.result)
-        ))
-        .next()
-        .with_value(await assetsToValue(output.amount))
-        .build();
+      console.log('_address.result:', _address.result);
+      const addressBytes = await isValidAddress(_address.result);
+      console.log('addressBytes:', addressBytes, 'type:', typeof addressBytes);
+      
+      let checkOutput, address, value;
+      try {
+        address = Loader.Cardano.Address.from_bytes(new Uint8Array(addressBytes));
+        console.log('Address created successfully');
+        
+        value = await assetsToValue(output.amount);
+        console.log('Value created successfully');
+        
+        checkOutput = Loader.Cardano.TransactionOutput.new(address, value);
+        console.log('TransactionOutput created successfully');
+      } catch (error) {
+        console.error('Error in TransactionOutput creation:', error);
+        throw error;
+      }
 
       const minAda = await minAdaRequired(
         checkOutput,
-        BigInt(protocolParameters.coinsPerUtxoWord)
+        protocolParameters.coinsPerUtxoWord
       );
 
       if (BigInt(minAda) <= BigInt(toUnit(_value.personalAda || '0'))) {
@@ -278,19 +289,24 @@ const Send = () => {
         return;
       }
 
-      const outputs = Loader.Cardano.TransactionOutputList.new();
-      outputs.add(
-        Loader.Cardano.TransactionOutputBuilder.new()
-          .with_address(Loader.Cardano.Address.from_bytes(
-            await isValidAddress(_address.result)
-          ))
-          .next()
-          .with_value(await assetsToValue(output.amount))
-          .build()
-      );
+      // Let's see what's actually available in the Emurgo library
+      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('Output')));
+      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('List')));
+      
+      // Try to find the correct way to create a list of outputs
+      const outputKeys = Object.keys(Loader.Cardano).filter(key => key.includes('Output'));
+      console.log('Output-related keys:', outputKeys);
+      
+      // Create outputs using the correct Emurgo library class
+      const outputs = Loader.Cardano.TransactionOutputs.new();
+      outputs.add(Loader.Cardano.TransactionOutput.new(address, value));
+      console.log('Outputs created:', outputs);
 
+      // Check what's available for auxiliary data
+      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('Auxiliary') || key.includes('Metadata')));
+      
       const auxiliaryData = Loader.Cardano.AuxiliaryData.new();
-      const generalMetadata = Loader.Cardano.Metadata.new();
+      const generalMetadata = Loader.Cardano.GeneralTransactionMetadata.new();
 
 
 
@@ -357,11 +373,10 @@ const Send = () => {
     let _utxos = await getUtxos();
     const protocolParameters = await initTx();
 
-    const checkOutput = Loader.Cardano.TransactionOutputBuilder.new()
-      .with_address(Loader.Cardano.Address.from_bech32(currentAccount.paymentAddr))
-      .next()
-      .with_value(Loader.Cardano.Value.zero())
-      .build();
+    const checkOutput = Loader.Cardano.TransactionOutput.new(
+      Loader.Cardano.Address.from_bech32(currentAccount.paymentAddr),
+      Loader.Cardano.Value.zero()
+    );
     const minUtxo = await minAdaRequired(
       checkOutput,
       BigInt(protocolParameters.coinsPerUtxoWord)

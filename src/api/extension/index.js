@@ -701,16 +701,15 @@ export const getCollateral = async () => {
         ),
         Loader.Cardano.BigNum.from_str(collateral.txId.toString())
       ),
-      Loader.Cardano.TransactionOutputBuilder.new()
-        .with_address(Loader.Cardano.Address.from_bech32(
+      Loader.Cardano.TransactionOutput.new(
+        Loader.Cardano.Address.from_bech32(
           currentAccount[network.id].paymentAddr
-        ))
-        .next()
-        .with_value(Loader.Cardano.Value.new(
+        ),
+        Loader.Cardano.Value.new(
           Loader.Cardano.BigNum.from_str(collateral.lovelace.toString()), 
           Loader.Cardano.MultiAsset.new()
-        ))
-        .build()
+        )
+      )
     );
     return [collateralUtxo];
   }
@@ -935,9 +934,13 @@ export const bytesAddressToBinary = (bytes) =>
 export const isValidAddress = async (address) => {
   await Loader.load();
   const network = await getNetwork();
+  console.log('isValidAddress called with:', address);
+  console.log('network.id:', network.id);
+  
   try {
     // Try to parse as bech32 address first
     const addr = Loader.Cardano.Address.from_bech32(address);
+    console.log('Address parsed successfully, network_id:', addr.network_id());
     if (
       (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
       (addr.network_id() === 0 &&
@@ -945,12 +948,14 @@ export const isValidAddress = async (address) => {
           network.id === NETWORK_ID.preview ||
           network.id === NETWORK_ID.preprod))
     ) {
-      return Buffer.from(addr.to_raw_bytes());
+      return Buffer.from(addr.to_bytes());
     }
-  } catch (e) {
-    // If bech32 fails, try raw bytes
-    try {
-      const addr = Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'));
+      } catch (e) {
+      console.log('Bech32 parsing failed:', e);
+      // If bech32 fails, try raw bytes
+      try {
+        const addr = Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'));
+        console.log('Hex parsing successful, network_id:', addr.network_id());
       if (
         (addr.network_id() === 1 && network.id === NETWORK_ID.mainnet) ||
         (addr.network_id() === 0 &&
@@ -958,13 +963,15 @@ export const isValidAddress = async (address) => {
             network.id === NETWORK_ID.preview ||
             network.id === NETWORK_ID.preprod))
       ) {
-        return Buffer.from(addr.to_raw_bytes());
+        return Buffer.from(addr.to_bytes());
       }
-    } catch (e2) {
-      // Both parsing methods failed
-      return false;
+          } catch (e2) {
+        console.log('Hex parsing failed:', e2);
+        // Both parsing methods failed
+        return false;
+      }
     }
-  }
+  console.log('Address validation failed - returning false');
   return false;
 };
 
@@ -2224,13 +2231,12 @@ export const updateBalance = async (currentAccount, network) => {
     );
     if (currentAccount[network.id].assets.length > 0) {
       const protocolParameters = await initTx();
-      const checkOutput = Loader.Cardano.TransactionOutputBuilder.new()
-        .with_address(Loader.Cardano.Address.from_bech32(
+      const checkOutput = Loader.Cardano.TransactionOutput.new(
+        Loader.Cardano.Address.from_bech32(
           currentAccount[network.id].paymentAddr
-        ))
-        .next()
-        .with_value(amount)
-        .build();
+        ),
+        amount
+      );
       const dataCost = Loader.Cardano.DataCost.new_coins_per_byte(
         Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord.toString())
       );

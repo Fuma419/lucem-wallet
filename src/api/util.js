@@ -312,11 +312,10 @@ export const utxoFromJson = async (output, address) => {
       ),
       Loader.Cardano.BigNum.from_str(outputIndex.toString())
     ),
-    Loader.Cardano.TransactionOutputBuilder.new()
-      .with_address(parsedAddress)
-      .next()
-      .with_value(await assetsToValue(output.amount))
-      .build()
+    Loader.Cardano.TransactionOutput.new(
+      parsedAddress,
+      await assetsToValue(output.amount)
+    )
   );
 };
 
@@ -354,8 +353,12 @@ export const utxoToJson = async (utxo) => {
 
 export const assetsToValue = async (assets) => {
   await Loader.load();
+  console.log('assetsToValue called with:', assets);
+  
   const multiAsset = Loader.Cardano.MultiAsset.new();
   const lovelace = assets.find((asset) => asset.unit === 'lovelace');
+  console.log('lovelace asset:', lovelace);
+  
   const policies = [
     ...new Set(
       assets
@@ -363,6 +366,7 @@ export const assetsToValue = async (assets) => {
         .map((asset) => asset.unit.slice(0, 56))
     ),
   ];
+  console.log('policies:', policies);
   policies.forEach((policy) => {
     const policyAssets = assets.filter(
       (asset) => asset.unit.slice(0, 56) === policy
@@ -370,17 +374,22 @@ export const assetsToValue = async (assets) => {
     const assetsValue = Loader.Cardano.MapAssetNameToCoin.new();
     policyAssets.forEach((asset) => {
       assetsValue.insert(
-        Loader.Cardano.AssetName.from_bytes(Buffer.from(asset.unit.slice(56), 'hex')),
+        Loader.Cardano.AssetName.from_bytes(new Uint8Array(Buffer.from(asset.unit.slice(56), 'hex'))),
         Loader.Cardano.BigNum.from_str(String(asset.quantity))
       );
     });
     multiAsset.insert_assets(
-      Loader.Cardano.ScriptHash.from_bytes(Buffer.from(policy, 'hex')),
+      Loader.Cardano.ScriptHash.from_bytes(new Uint8Array(Buffer.from(policy, 'hex'))),
       assetsValue
     );
   });
   const coin = Loader.Cardano.BigNum.from_str(lovelace ? String(lovelace.quantity) : '0');
-  return Loader.Cardano.Value.new(coin, multiAsset);
+  console.log('coin created:', coin);
+  console.log('multiAsset created:', multiAsset);
+  
+  const value = Loader.Cardano.Value.new(coin, multiAsset);
+  console.log('Value created successfully');
+  return value;
 };
 
 /**

@@ -78,8 +78,8 @@ export const initTx = async () => {
  * @return {Transaction} the new canonical transaction
  */
 const toCanonicalTx = (tx) => {
-      const canonicalCbor = encodeTx(transformTx(decodeTx(tx.to_bytes())));
-  return Loader.Cardano.Transaction.from_cbor_bytes(canonicalCbor);
+  const canonicalCbor = encodeTx(transformTx(decodeTx(tx.to_bytes())));
+  return Loader.Cardano.Transaction.from_bytes(canonicalCbor);
 }
 
 /**
@@ -185,6 +185,10 @@ export const buildTx = async (
     console.log('LinearFee static methods:', Object.getOwnPropertyNames(Loader.Cardano.LinearFee));
     console.log('LinearFee prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(Loader.Cardano.LinearFee)));
     
+    // Check TransactionBuilder methods
+    console.log('TransactionBuilder constructor:', Loader.Cardano.TransactionBuilder);
+    console.log('TransactionBuilder static methods:', Object.getOwnPropertyNames(Loader.Cardano.TransactionBuilder));
+    
     // Check if BigInteger is available
     console.log('BigInteger available:', Loader.Cardano.BigInteger);
     console.log('BigInteger.from_str available:', Loader.Cardano.BigInteger?.from_str);
@@ -223,22 +227,43 @@ export const buildTx = async (
     );
 
     // Add inputs from UTXOs
-    for (const utxo of utxos) {
-      const txInput = Loader.Cardano.TransactionInput.new(
-        Loader.Cardano.TransactionHash.from_bytes(Buffer.from(utxo.tx_hash, 'hex')),
-        utxo.tx_index
-      );
-      txBuilder.add_input(account.paymentAddr, txInput, utxo.amount);
+    console.log('UTXOs type:', typeof utxos, 'length:', utxos.length);
+    console.log('First UTXO:', utxos[0]);
+    console.log('First UTXO type:', typeof utxos[0]);
+    
+    // Debug: Show total balance from UTXOs
+    let totalLovelace = BigInt(0);
+    for (let i = 0; i < utxos.length; i++) {
+      const utxo = utxos[i];
+      const output = utxo.output();
+      const amount = output.amount();
+      const coin = amount.coin();
+      totalLovelace += BigInt(coin.to_str());
+      console.log(`UTXO ${i}: ${coin.to_str()} lovelace`);
     }
-
-    // Add outputs
-    for (const output of outputs) {
-      const txOutput = Loader.Cardano.TransactionOutputBuilder.new()
-        .with_address(Loader.Cardano.Address.from_bech32(output.address))
-        .next()
-        .with_value(output.amount)
-        .build();
-      txBuilder.add_output(txOutput);
+    console.log('Total available lovelace:', totalLovelace.toString());
+    
+    // Create a TransactionUnspentOutputs collection
+    const utxoCollection = Loader.Cardano.TransactionUnspentOutputs.new();
+    for (const utxo of utxos) {
+      utxoCollection.add(utxo);
+    }
+    console.log('UTXO collection created:', utxoCollection);
+    
+    // Try using add_inputs_from with the collection
+    txBuilder.add_inputs_from(utxoCollection);
+    
+    // Debug: check outputs
+    console.log('Outputs type:', typeof outputs);
+    console.log('Outputs:', outputs);
+    console.log('Outputs length:', outputs?.length);
+    console.log('Is outputs iterable:', outputs && typeof outputs[Symbol.iterator] === 'function');
+    
+    // Add outputs using Emurgo library methods
+    for (let i = 0; i < outputs.len(); i++) {
+      const output = outputs.get(i);
+      console.log('Processing output:', output);
+      txBuilder.add_output(output);
     }
 
     // Set change address
@@ -544,11 +569,10 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
 
       // We need to add one output for input selection to work.
       txBuilder.add_output(
-        Loader.Cardano.TransactionOutputBuilder.new()
-          .with_address(changeAddress)
-          .next()
-          .with_value(Loader.Cardano.Value.new(BigInt(protocolParameters.minUtxo), Loader.Cardano.MultiAsset.new()))
-          .build()
+        Loader.Cardano.TransactionOutput.new(
+          changeAddress,
+          Loader.Cardano.Value.new(BigInt(protocolParameters.minUtxo), Loader.Cardano.MultiAsset.new())
+        )
       );
 
       utxos.forEach((utxo) => {

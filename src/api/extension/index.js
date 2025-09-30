@@ -21,8 +21,7 @@ import { createAvatar } from '@dicebear/avatars';
 import { shapes } from '@dicebear/collection';
 import { initTx } from './wallet';
 import {
-  koiosRequest,
-  koiosRequestEnhanced,
+  blockfrostRequest,
   networkNameToId,
   utxoFromJson,
   assetsToValue,
@@ -40,8 +39,9 @@ import AssetFingerprint from '@emurgo/cip14-js';
 import { isAddress } from 'web3-validator';
 import { milkomedaNetworks } from '@dcspark/milkomeda-constants';
 import { Cardano, Serialization } from '@cardano-sdk/core';
+import { Blaze, Blockfrost } from '@blaze-cardano/sdk';
 import provider from '../../config/provider';
-import { KOIOS_REQUESTS } from '../koios-endpoints';
+import { WebWallet } from '@blaze-cardano/wallet';
 
 const hasTaggedSets = (cbor) => {
   const tx = Serialization.Transaction.fromCbor(cbor);
@@ -148,22 +148,19 @@ export const setCurrency = (currency) =>
 
 export const getDelegation = async () => {
   const currentAccount = await getCurrentAccount();
-  const stakeAddress = await getRewardAddress(); // Get the stake address
-  
-  const request = KOIOS_REQUESTS.getAccountInfo(stakeAddress);
-  const stake = await koiosRequest(request.endpoint, {}, request.body);
-  
-  if (!stake || stake.error || !stake[0] || !stake[0].pool_id) return {};
-  
-  const poolRequest = KOIOS_REQUESTS.getPoolMetadata(stake[0].pool_id);
-  const delegation = await koiosRequest(poolRequest.endpoint);
-  
+  const stake = await blockfrostRequest(
+    `/accounts/${currentAccount.rewardAddr}`
+  );
+  if (!stake || stake.error || !stake.pool_id) return {};
+  const delegation = await blockfrostRequest(
+    `/pools/${stake.pool_id}/metadata`
+  );
   if (!delegation || delegation.error) return {};
   return {
-    active: stake[0].active,
-    rewards: stake[0].withdrawable_amount,
+    active: stake.active,
+    rewards: stake.withdrawable_amount,
     homepage: delegation.homepage,
-    poolId: stake[0].pool_id,
+    poolId: stake.pool_id,
     ticker: delegation.ticker,
     description: delegation.description,
     name: delegation.name,
@@ -175,8 +172,7 @@ export const getPoolMetadata = async (poolId) => {
     throw new Error('poolId argument not provided');
   }
 
-  const request = KOIOS_REQUESTS.getPoolMetadata(poolId);
-  const delegation = await koiosRequest(request.endpoint);
+  const delegation = await blockfrostRequest(`/pools/${poolId}/metadata`);
 
   if (delegation.error) {
     throw new Error(delegation.message);
@@ -193,314 +189,77 @@ export const getPoolMetadata = async (poolId) => {
 export const getBalance = async () => {
   await Loader.load();
   const currentAccount = await getCurrentAccount();
-  const address = await getAddress(); // Get the full address
-  
-  // Use address_utxos to get detailed UTXO information
-  const request = KOIOS_REQUESTS.getAddressUtxos(address, false);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
+  const result = await blockfrostRequest(
+    `/addresses/${currentAccount.paymentKeyHashBech32}`
+  );
   if (result.error) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
     else return Loader.Cardano.Value.new(BigInt('0'), Loader.Cardano.MultiAsset.new());
   }
-  
-  // If no UTXOs, return zero balance
-  if (!result || result.length === 0) {
-    return Loader.Cardano.Value.new(BigInt('0'), Loader.Cardano.MultiAsset.new());
-  }
-  
-  // Aggregate all UTXOs to get total balance
-  const aggregatedAssets = {};
-  let totalLovelace = BigInt(0);
-  
-  for (const utxo of result) {
-    // Add lovelace
-    totalLovelace += BigInt(utxo.value || '0');
-    
-    // Add other assets
-    if (utxo.asset_list && Array.isArray(utxo.asset_list)) {
-      for (const asset of utxo.asset_list) {
-        const unit = asset.policy_id + asset.asset_name;
-        if (!aggregatedAssets[unit]) {
-          aggregatedAssets[unit] = BigInt(0);
-        }
-        aggregatedAssets[unit] += BigInt(asset.quantity || '0');
-      }
-    }
-  }
-  
-  // Convert to the format expected by assetsToValue
-  const assets = [
-    { unit: 'lovelace', quantity: totalLovelace.toString() },
-    ...Object.entries(aggregatedAssets).map(([unit, quantity]) => ({
-      unit,
-      quantity: quantity.toString()
-    }))
-  ];
-  
-  const value = await assetsToValue(assets);
+  const value = await assetsToValue(result.amount);
   return value;
 };
 
 export const getBalanceExtended = async () => {
   const currentAccount = await getCurrentAccount();
-  const address = await getAddress(); // Get the full address
-  
-  const request = KOIOS_REQUESTS.getAddressUtxos(address, true);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
+  const result = await blockfrostRequest(
+    `/addresses/${currentAccount.paymentKeyHashBech32}/extended`
+  );
   if (result.error) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
     else return [];
   }
-  
-  // If no UTXOs, return empty array
-  if (!result || result.length === 0) {
-    return [];
-  }
-  
-  // Aggregate all UTXOs to get total balance
-  const aggregatedAssets = {};
-  let totalLovelace = BigInt(0);
-  
-  for (const utxo of result) {
-    // Add lovelace
-    totalLovelace += BigInt(utxo.value || '0');
-    
-    // Add other assets
-    if (utxo.asset_list && Array.isArray(utxo.asset_list)) {
-      for (const asset of utxo.asset_list) {
-        const unit = asset.policy_id + asset.asset_name;
-        if (!aggregatedAssets[unit]) {
-          aggregatedAssets[unit] = BigInt(0);
-        }
-        aggregatedAssets[unit] += BigInt(asset.quantity || '0');
-      }
-    }
-  }
-  
-  // Convert to the format expected by assetsToValue
-  const assets = [
-    { unit: 'lovelace', quantity: totalLovelace.toString() },
-    ...Object.entries(aggregatedAssets).map(([unit, quantity]) => ({
-      unit,
-      quantity: quantity.toString()
-    }))
-  ];
-  
-  return assets;
+  return result.amount;
 };
 
 export const getFullBalance = async () => {
   const currentAccount = await getCurrentAccount();
-  const stakeAddress = await getRewardAddress(); // Get the stake address
-  
-  const request = KOIOS_REQUESTS.getAccountInfo(stakeAddress);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
-  if (result.error || !result[0]) return '0';
+  const result = await blockfrostRequest(
+    `/accounts/${currentAccount.rewardAddr}`
+  );
+  if (result.error) return '0';
   return (
-    BigInt(result[0].controlled_amount || 0) - BigInt(result[0].withdrawable_amount || 0)
+    BigInt(result.controlled_amount) - BigInt(result.withdrawable_amount)
   ).toString();
 };
 
 export const getTransactions = async (paginate = 1, count = 10) => {
   const currentAccount = await getCurrentAccount();
-  const stakeAddress = await getRewardAddress();
-  
-  const request = KOIOS_REQUESTS.getAccountTxs(stakeAddress, 0);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
+  const result = await blockfrostRequest(
+    `/addresses/${currentAccount.paymentKeyHashBech32}/transactions?page=${paginate}&order=desc&count=${count}`
+  );
   if (!result || result.error) return [];
-  
-  let processedTransactions = result.map(tx => ({
+  return result.map((tx) => ({
     txHash: tx.tx_hash,
+    txIndex: tx.tx_index,
     blockHeight: tx.block_height,
-    epochNo: tx.epoch_no,
-    epochSlot: tx.epoch_slot,
-    absoluteSlot: tx.absolute_slot,
-    txTimestamp: tx.tx_timestamp,
-    txBlockIndex: tx.tx_block_index,
-    txSize: tx.tx_size,
-    totalOutput: tx.total_output,
-    fee: tx.fee,
-    deposit: tx.deposit,
-    invalidBefore: tx.invalid_before,
-    invalidAfter: tx.invalid_after,
-    collateralInputs: tx.collateral_inputs,
-    collateralOutput: tx.collateral_output,
-    referenceInputs: tx.reference_inputs,
-    inputs: tx.inputs || [],
-    outputs: tx.outputs || [],
-    withdrawals: tx.withdrawals || [],
-    assetsMinted: tx.assets_minted || [],
-    metadata: tx.metadata,
-    certificates: tx.certificates || [],
-    nativeScripts: tx.native_scripts || [],
-    plutusContracts: tx.plutus_contracts || [],
-    votingProcedures: tx.voting_procedures || [],
-    proposalProcedures: tx.proposal_procedures || []
   }));
-  
-  return processedTransactions;
 };
 
 export const getTxInfo = async (txHash) => {
-  const request = KOIOS_REQUESTS.getTxInfo(txHash);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  if (!result || result.error || result.length === 0) return null;
-  return result[0];
+  const result = await blockfrostRequest(`/txs/${txHash}`);
+  if (!result || result.error) return null;
+  return result;
 };
 
 export const getBlock = async (blockHashOrNumb) => {
-  let request;
-  let result;
-  
-  // Check if it's a block height (number) or block hash (string)
-  if (typeof blockHashOrNumb === 'number' || !isNaN(blockHashOrNumb)) {
-    request = KOIOS_REQUESTS.getBlockByHeight(blockHashOrNumb);
-    result = await koiosRequest(request.endpoint, {}, request.body);
-  } else {
-    request = KOIOS_REQUESTS.getBlockByHash(blockHashOrNumb);
-    result = await koiosRequest(request.endpoint, {}, request.body);
-  }
-  
-  if (!result || result.error || result.length === 0) return null;
-  return result[0];
-};
-
-// Helper function to convert Koios UTXO format to expected format
-const convertKoiosUtxosToExpectedFormat = (koiosUtxos) => {
-  if (!koiosUtxos) return null;
-  
-  return {
-    inputs: (koiosUtxos.inputs || []).map(input => ({
-      address: input.payment_addr?.bech32 || input.address || input.payment_addr,
-      stake_address: input.stake_addr || input.stake_address || input.stake_addr?.bech32,
-      tx_hash: input.tx_hash,
-      tx_index: input.tx_index,
-      value: input.value,
-      asset_list: input.asset_list || [],
-      datum_hash: input.datum_hash,
-      inline_datum: input.inline_datum,
-      reference_script: input.reference_script
-    })),
-    outputs: (koiosUtxos.outputs || []).map(output => ({
-      address: output.payment_addr?.bech32 || output.address || output.payment_addr,
-      stake_address: output.stake_addr || output.stake_address || output.stake_addr?.bech32,
-      tx_hash: output.tx_hash,
-      tx_index: output.tx_index,
-      value: output.value,
-      asset_list: output.asset_list || [],
-      datum_hash: output.datum_hash,
-      inline_datum: output.inline_datum,
-      reference_script: output.reference_script
-    }))
-  };
+  const result = await blockfrostRequest(`/blocks/${blockHashOrNumb}`);
+  if (!result || result.error) return null;
+  return result;
 };
 
 export const getTxUTxOs = async (txHash) => {
-  const request = KOIOS_REQUESTS.getTxUtxos(txHash);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  if (!result || result.error || result.length === 0) return null;
-  
-  // Convert Koios format to expected format
-  const converted = convertKoiosUtxosToExpectedFormat(result[0]);
-  return converted;
+  const result = await blockfrostRequest(`/txs/${txHash}/utxos`);
+  if (!result || result.error) return null;
+  return result;
 };
 
 export const getTxMetadata = async (txHash) => {
-  const request = KOIOS_REQUESTS.getTxMetadata(txHash);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  if (!result || result.error || result.length === 0) return null;
-  return result[0];
-};
-
-// Helper function to convert Koios transaction format to expected format
-const convertKoiosTxToExpectedFormat = (koiosTx) => {
-  if (!koiosTx) return null;
-  
-  // Calculate transaction type indicators from certificates and other data
-  const certificates = koiosTx.certificates || [];
-  const withdrawals = koiosTx.withdrawals || [];
-  const assetsMinted = koiosTx.assets_minted || [];
-  const plutusContracts = koiosTx.plutus_contracts || [];
-  
-  // Count different types of certificates
-  const delegationCount = certificates.filter(cert => 
-    cert.cert_type === 'delegation' || cert.cert_type === 'deleg_reg'
-  ).length;
-  
-  const stakeCertCount = certificates.filter(cert => 
-    cert.cert_type === 'stake_registration' || cert.cert_type === 'stake_deregistration'
-  ).length;
-  
-  const poolRetireCount = certificates.filter(cert => 
-    cert.cert_type === 'pool_retirement'
-  ).length;
-  
-  const poolUpdateCount = certificates.filter(cert => 
-    cert.cert_type === 'pool_registration' || cert.cert_type === 'pool_update'
-  ).length;
-  
-  // Count other transaction types
-  const withdrawalCount = withdrawals.length;
-  const assetMintOrBurnCount = assetsMinted.length;
-  const redeemerCount = plutusContracts.reduce((count, contract) => 
-    count + (contract.redeemers ? contract.redeemers.length : 0), 0
-  );
-  
-  return {
-    // Basic transaction info
-    tx_hash: koiosTx.tx_hash,
-    block_height: koiosTx.block_height,
-    block_hash: koiosTx.block_hash,
-    epoch_no: koiosTx.epoch_no,
-    epoch_slot: koiosTx.epoch_slot,
-    absolute_slot: koiosTx.absolute_slot,
-    tx_timestamp: koiosTx.tx_timestamp,
-    tx_block_index: koiosTx.tx_block_index,
-    tx_size: koiosTx.tx_size,
-    
-    // Financial info
-    total_output: koiosTx.total_output,
-    fee: koiosTx.fee,
-    treasury_donation: koiosTx.treasury_donation,
-    deposit: koiosTx.deposit,
-    
-    // Validity
-    invalid_before: koiosTx.invalid_before,
-    invalid_after: koiosTx.invalid_after,
-    
-    // UTXOs
-    inputs: koiosTx.inputs || [],
-    outputs: koiosTx.outputs || [],
-    
-    // Additional data
-    collateral_inputs: koiosTx.collateral_inputs,
-    collateral_output: koiosTx.collateral_output,
-    reference_inputs: koiosTx.reference_inputs,
-    withdrawals: koiosTx.withdrawals,
-    assets_minted: koiosTx.assets_minted,
-    certificates: koiosTx.certificates,
-    native_scripts: koiosTx.native_scripts,
-    plutus_contracts: koiosTx.plutus_contracts,
-    
-    // Legacy field names for compatibility
-    fees: koiosTx.fee,
-    valid_contract: true, // Default to true for now
-    
-    // Transaction type detection fields
-    redeemer_count: redeemerCount,
-    withdrawal_count: withdrawalCount,
-    delegation_count: delegationCount,
-    asset_mint_or_burn_count: assetMintOrBurnCount,
-    stake_cert_count: stakeCertCount,
-    pool_retire_count: poolRetireCount,
-    pool_update_count: poolUpdateCount
-  };
+  const result = await blockfrostRequest(`/txs/${txHash}/metadata`);
+  if (!result || result.error) return null;
+  return result;
 };
 
 export const updateTxInfo = async (txHash) => {
@@ -511,32 +270,14 @@ export const updateTxInfo = async (txHash) => {
 
   if (typeof detail !== 'object' || !detail.info || !detail.block || !detail.utxos || !detail.metadata) {
     detail = {};
-    
-    // Get transaction info
-    const info = await getTxInfo(txHash);
-    
-    if (info) {
-      // Convert Koios format to expected format
-      detail.info = convertKoiosTxToExpectedFormat(info);
-      
-      // Get block info if we have block height
-      if (info.block_height) {
-        detail.block = await getBlock(info.block_height);
-      }
-    }
-    
-    // Get transaction UTXOs
-    const uTxOs = await getTxUTxOs(txHash);
-    
-    if (uTxOs) {
-      detail.utxos = uTxOs;
-    }
-    
-    // Get transaction metadata
-    const metadata = await getTxMetadata(txHash);
-    if (metadata) {
-      detail.metadata = metadata;
-    }
+    const info = getTxInfo(txHash);
+    const uTxOs = getTxUTxOs(txHash);
+    const metadata = getTxMetadata(txHash);
+
+    detail.info = await info;
+    if (info) detail.block = await getBlock(detail.info.block_height);
+    detail.utxos = await uTxOs;
+    detail.metadata = await metadata;
   }
 
   return detail;
@@ -560,10 +301,9 @@ export const setTxDetail = async (txObject) => {
 };
 
 export const getSpecificUtxo = async (txHash, txId) => {
-  const request = KOIOS_REQUESTS.getTxUtxos(txHash);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  if (!result || result.error || result.length === 0) return null;
-  return result[0].outputs[txId];
+  const result = await blockfrostRequest(`/txs/${txHash}/utxos`);
+  if (!result || result.error) return null;
+  return result.outputs[txId];
 };
 
 /**
@@ -576,22 +316,28 @@ export const getSpecificUtxo = async (txHash, txId) => {
  */
 export const getUtxos = async (amount = undefined, paginate = undefined) => {
   const currentAccount = await getCurrentAccount();
-  const address = await getAddress(); // Get the full address
-  
-  const request = KOIOS_REQUESTS.getAddressInfo(address);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
-  if (result.error || !result[0]) {
-    if (result.status_code === 400) throw APIError.InvalidRequest;
-    else if (result.status_code === 500) throw APIError.InternalError;
-    else return [];
+  let result = [];
+  let page = paginate && paginate.page ? paginate.page + 1 : 1;
+  const limit = paginate && paginate.limit ? `&count=${paginate.limit}` : '';
+  while (true) {
+    let pageResult = await blockfrostRequest(
+      `/addresses/${currentAccount.paymentKeyHashBech32}/utxos?page=${page}${limit}`
+    );
+    if (pageResult.error) {
+      if (result.status_code === 400) throw APIError.InvalidRequest;
+      else if (result.status_code === 500) throw APIError.InternalError;
+      else {
+        pageResult = [];
+      }
+    }
+    result = result.concat(pageResult);
+    if (pageResult.length <= 0 || paginate) break;
+    page++;
   }
-  
-  let utxos = result[0].utxo_set || [];
 
   // exclude collateral input from overall utxo set
   if (currentAccount.collateral) {
-    utxos = utxos.filter(
+    result = result.filter(
       (utxo) =>
         !(
           utxo.tx_hash === currentAccount.collateral.txHash &&
@@ -600,26 +346,10 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
     );
   }
 
-  // Convert Koios UTXO format to expected format
-  let convertedUtxos = await Promise.all(
-    utxos.map(async (utxo) => {
-      // Ensure the UTXO has the required fields
-      const formattedUtxo = {
-        tx_hash: utxo.tx_hash,
-        output_index: utxo.output_index,
-        amount: [
-          { unit: 'lovelace', quantity: utxo.value || '0' },
-          ...(utxo.asset_list || []).map(asset => ({
-            unit: asset.policy_id + asset.asset_name,
-            quantity: asset.quantity || '0'
-          }))
-        ]
-      };
-      
-      return await utxoFromJson(formattedUtxo, address);
-    })
+  const address = await getAddress();
+  let converted = await Promise.all(
+    result.map(async (utxo) => await utxoFromJson(utxo, address))
   );
-  
   // filter utxos
   if (amount) {
     await Loader.load();
@@ -630,17 +360,16 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
       throw APIError.InvalidRequest;
     }
 
-    convertedUtxos = convertedUtxos.filter(
+    converted = converted.filter(
       (unspent) =>
         !compareValues(unspent.output().amount(), filterValue) ||
         compareValues(unspent.output().amount(), filterValue) !== -1
     );
   }
-  
-  if ((amount || paginate) && convertedUtxos.length <= 0) {
+  if ((amount || paginate) && converted.length <= 0) {
     return null;
   }
-  return convertedUtxos;
+  return converted;
 };
 
 const checkCollateral = async (currentAccount, network, checkTx) => {
@@ -654,31 +383,38 @@ const checkCollateral = async (currentAccount, network, checkTx) => {
     )
       return;
   }
-  const address = await getAddress(); // Get the full address
-  
-  const request = KOIOS_REQUESTS.getAddressInfo(address);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
-  if (result.error || !result[0]) {
-    if (result.status_code === 400) throw APIError.InvalidRequest;
-    else if (result.status_code === 500) throw APIError.InternalError;
-    else return [];
+  let result = [];
+  let page = 1;
+  while (true) {
+    let pageResult = await blockfrostRequest(
+      `/addresses/${currentAccount.paymentKeyHashBech32}/utxos?page=${page}`
+    );
+    if (pageResult.error) {
+      if (result.status_code === 400) throw APIError.InvalidRequest;
+      else if (result.status_code === 500) throw APIError.InternalError;
+      else {
+        pageResult = [];
+      }
+    }
+    result = result.concat(pageResult);
+    if (pageResult.length <= 0) break;
+    page++;
   }
-  
-  let utxos = result[0].utxo_set || [];
 
   // exclude collateral input from overall utxo set
   if (currentAccount[network.id].collateral) {
-    const initialSize = utxos.length;
-    utxos = utxos.filter(
+    const initialSize = result.length;
+    result = result.filter(
       (utxo) =>
         !(
           utxo.tx_hash === currentAccount[network.id].collateral.txHash &&
           utxo.output_index === currentAccount[network.id].collateral.txId
         )
     );
-    if (utxos.length === initialSize) {
+
+    if (initialSize == result.length) {
       delete currentAccount[network.id].collateral;
+      return true;
     }
   }
 };
@@ -728,15 +464,21 @@ export const getCollateral = async () => {
 export const getAddress = async () => {
   await Loader.load();
   const currentAccount = await getCurrentAccount();
-  // Return the full Bech32 address instead of converting to key hash
-  return currentAccount.paymentAddr;
+  const paymentAddr = Buffer.from(
+    Loader.Cardano.Address.from_bech32(currentAccount.paymentAddr).to_raw_bytes(),
+    'hex'
+  ).toString('hex');
+  return paymentAddr;
 };
 
 export const getRewardAddress = async () => {
   await Loader.load();
   const currentAccount = await getCurrentAccount();
-  // Return the full Bech32 stake address instead of converting to key hash
-  return currentAccount.rewardAddr;
+  const rewardAddr = Buffer.from(
+    Loader.Cardano.Address.from_bech32(currentAccount.rewardAddr).to_raw_bytes(),
+    'hex'
+  ).toString('hex');
+  return rewardAddr;
 };
 
 export const getCurrentAccountIndex = () => getStorage(STORAGE.currentAccount);
@@ -1409,7 +1151,7 @@ export const submitTx = async (tx) => {
     }
     throw APIError.InvalidRequest;
   }
-  const result = await koiosRequest(
+  const result = await blockfrostRequest(
     `/tx/submit`,
     { 'Content-Type': 'application/cbor' },
     Buffer.from(tx, 'hex')
@@ -1434,11 +1176,6 @@ const emitNetworkChange = async (networkId) => {
         target: TARGET,
         sender: SENDER.extension,
         event: EVENT.networkChange,
-      }, (response) => {
-        // Ignore errors - some tabs might not have content scripts loaded
-        if (chrome.runtime.lastError) {
-          // This is expected for tabs without content scripts
-        }
       })
     );
   });
@@ -1462,11 +1199,6 @@ const emitAccountChange = async (addresses) => {
         target: TARGET,
         sender: SENDER.extension,
         event: EVENT.accountChange,
-      }, (response) => {
-        // Ignore errors - some tabs might not have content scripts loaded
-        if (chrome.runtime.lastError) {
-          // This is expected for tabs without content scripts
-        }
       })
     );
   });
@@ -1936,10 +1668,8 @@ export const createWallet = async (name, seedPhrase, password) => {
   rootKey.free();
   rootKey = null;
 
-  // Check if wallet already exists
   const checkStore = await getStorage(STORAGE.encryptedKey);
   if (checkStore) throw new Error(ERROR.storeNotEmpty);
-  
   await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
   await setStorage({
     [STORAGE.network]: { id: NETWORK_ID.mainnet, node: NODE.mainnet },
@@ -1951,9 +1681,6 @@ export const createWallet = async (name, seedPhrase, password) => {
 
   const index = await createAccount(name, password);
 
-  // TEMPORARILY SKIP SUB-ACCOUNT CHECK DUE TO KOIOS API ISSUES
-  // TODO: Fix Koios API endpoint for transaction queries
-  /*
   // Check for sub-accounts
   let searchIndex = 1;
   while (true) {
@@ -1961,44 +1688,22 @@ export const createWallet = async (name, seedPhrase, password) => {
       password,
       searchIndex
     );
-    
-    // Generate the full address instead of just the key hash
-    const network = await getNetwork();
-    const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
-    
-    const baseAddress = Loader.Cardano.BaseAddress.new(
-      networkId,
-      Loader.Cardano.Credential.new_pub_key(paymentKey.to_public().hash()),
-      Loader.Cardano.Credential.new_pub_key(stakeKey.to_public().hash())
-    );
-    
-    const fullAddress = baseAddress.to_address().to_bech32();
+    const paymentKeyHashBech32 = paymentKey
+      .to_public()
+      .hash()
+      .to_bech32('addr_vkh');
 
     paymentKey.free();
-    stakeKey.free();
     paymentKey = null;
-    stakeKey = null;
 
-    try {
-      const transactions = await koiosRequest(
-        `/addresses/${fullAddress}/txs`
-      );
-      if (transactions && !transactions.error && transactions.length >= 1)
-        await createAccount(`Account ${searchIndex}`, password, searchIndex);
-      else break;
-    } catch (error) {
-      // If we get a 404, it means no transactions exist for this address (new wallet)
-      // This is expected behavior for new wallets, so we break the loop
-      if (error.message && error.message.includes('404')) {
-        break;
-      }
-      // For other errors, re-throw them
-      throw error;
-    }
-    
+    const transactions = await blockfrostRequest(
+      `/addresses/${paymentKeyHashBech32}/transactions`
+    );
+    if (transactions && !transactions.error && transactions.length >= 1)
+      await createAccount(`Account ${searchIndex}`, password, searchIndex);
+    else break;
     searchIndex++;
   }
-  */
 
   password = null;
   await switchAccount(index);
@@ -2090,16 +1795,16 @@ export const getAsset = async (unit) => {
     if (label === 222) {
       const refUnit = toAssetUnit(policyId, name, 100);
       try {
-        const owners = await koiosRequestEnhanced(`/assets/${refUnit}/addresses`);
-        if (!owners || owners.error || !owners[0] || !owners[0].address) {
+        const owners = await blockfrostRequest(`/assets/${refUnit}/addresses`);
+        if (!owners || owners.error) {
           throw new Error('No owner found.');
         }
-        const [refUtxo] = await koiosRequest(
+        const [refUtxo] = await blockfrostRequest(
           `/addresses/${owners[0].address}/utxos/${refUnit}`
         );
         const datum =
           refUtxo?.inline_datum ||
-          (await koiosRequest(`/scripts/datum/${refUtxo?.data_hash}/cbor`))
+          (await blockfrostRequest(`/scripts/datum/${refUtxo?.data_hash}/cbor`))
             ?.cbor;
         const metadataDatum = datum && (await Data.from(datum));
 
@@ -2117,16 +1822,16 @@ export const getAsset = async (unit) => {
     } else if (label === 333) {
       const refUnit = toAssetUnit(policyId, name, 100);
       try {
-        const owners = await koiosRequestEnhanced(`/assets/${refUnit}/addresses`);
-        if (!owners || owners.error || !owners[0] || !owners[0].address) {
+        const owners = await blockfrostRequest(`/assets/${refUnit}/addresses`);
+        if (!owners || owners.error) {
           throw new Error('No owner found.');
         }
-        const [refUtxo] = await koiosRequest(
+        const [refUtxo] = await blockfrostRequest(
           `/addresses/${owners[0].address}/utxos/${refUnit}`
         );
         const datum =
           refUtxo?.inline_datum ||
-          (await koiosRequest(`/scripts/datum/${refUtxo?.data_hash}/cbor`))
+          (await blockfrostRequest(`/scripts/datum/${refUtxo?.data_hash}/cbor`))
             ?.cbor;
         const metadataDatum = datum && (await Data.from(datum));
 
@@ -2142,7 +1847,7 @@ export const getAsset = async (unit) => {
         asset.mint = true;
       }
     } else {
-      let result = await koiosRequestEnhanced(`/assets/${unit}`);
+      let result = await blockfrostRequest(`/assets/${unit}`);
       if (!result || result.error) {
         result = {};
         asset.mint = true;
@@ -2339,3 +2044,19 @@ export const toUnit = (amount, decimals = 6) => {
   else if (result == 'NaN') return '0';
   return result;
 };
+
+export const getBlazeProvider = async () => {
+  const network = await getNetwork();
+  const blockfrost = new Blockfrost({
+    network: `cardano-${network.name || network.id}`,
+    projectId: provider.api.key(network.name || network.id).project_id,
+  });
+
+  const wallet = new WebWallet({
+    getUtxos: async (amount, paginate) => (await getUtxos(amount, paginate)).map((utxo) => Buffer.from(utxo.to_cbor_bytes()).toString('hex')),
+    getChangeAddress: () => getAddress(),
+    getNetworkId: async () => NETWORKD_ID_NUMBER[network.name || network.id]
+  });
+
+  return Blaze.from(blockfrost, wallet);
+}

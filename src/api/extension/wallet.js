@@ -1,7 +1,7 @@
-import { getUtxos, signTx, signTxHW, submitTx } from '.';
+import { getBlazeProvider, getUtxos, signTx, signTxHW, submitTx } from '.';
 import { ERROR, TX } from '../../config/config';
 import Loader from '../loader';
-import { koiosRequestEnhanced } from '../util';
+import { blockfrostRequest } from '../util';
 import { decodeTx, encodeTx, transformTx } from 'cardano-hw-interop-lib';
 import {
   TransactionOutput,
@@ -16,18 +16,15 @@ import {
 const RETRIES = 5;
 
 export const initTx = async () => {
-  // Get latest block from Koios
-  const latest_block = await koiosRequestEnhanced('/blocks/latest');
-  
-  // Get protocol parameters from Koios
-  const p = await koiosRequestEnhanced('/epoch_params/latest');
+  const latest_block = await blockfrostRequest('/blocks/latest');
+  const p = await blockfrostRequest(`/epochs/latest/parameters`);
 
   return {
     linearFee: {
       minFeeA: p.min_fee_a.toString(),
       minFeeB: p.min_fee_b.toString(),
     },
-    minUtxo: '1000000', // minUTxOValue protocol parameter has been removed since Alonzo HF
+    minUtxo: '1000000', //p.min_utxo, minUTxOValue protocol parameter has been removed since Alonzo HF. Calculation of minADA works differently now, but 1 minADA still sufficient for now
     poolDeposit: p.pool_deposit,
     keyDeposit: p.key_deposit,
     coinsPerUtxoWord: p.coins_per_utxo_size.toString(),
@@ -37,7 +34,7 @@ export const initTx = async () => {
     // might not be available for pre-conway networks; set to 0 in that case
     minFeeRefScriptCostPerByte: p.min_fee_ref_script_cost_per_byte || 0,
     maxTxSize: parseInt(p.max_tx_size),
-    slot: parseInt(latest_block.slot), // Now using converted slot
+    slot: parseInt(latest_block.slot),
     collateralPercentage: parseInt(p.collateral_percent),
     maxCollateralInputs: parseInt(p.max_collateral_inputs),
   };
@@ -55,9 +52,6 @@ const toCanonicalTx = (tx) => {
   return Loader.Cardano.Transaction.from_cbor_bytes(canonicalCbor);
 }
 
-/**
- * Build transaction using direct Cardano serialization library and Koios
- */
 export const buildTx = async (
   account,
   utxos,
@@ -68,69 +62,25 @@ export const buildTx = async (
   try {
     await Loader.load();
 
-    // Create transaction using Cardano serialization library
-    const txBuilder = Loader.Cardano.TransactionBuilder.new(
-      Loader.Cardano.TransactionBuilderConfigBuilder.new()
-        .fee_algo(
-          Loader.Cardano.LinearFee.new(
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
-          )
-        )
-        .pool_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-        .key_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-        .coins_per_utxo_byte(Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-        .max_value_size(parseInt(protocolParameters.maxValSize))
-        .max_tx_size(parseInt(protocolParameters.maxTxSize))
-        .prefer_pure_change(true)
-        .build()
-    );
+    const blaze = await getBlazeProvider();
 
-    // Add inputs from UTXOs
-    for (const utxo of utxos) {
-      const txInput = Loader.Cardano.TransactionInput.new(
-        Loader.Cardano.TransactionHash.from_bytes(Buffer.from(utxo.tx_hash, 'hex')),
-        utxo.tx_index
-      );
-      txBuilder.add_input(account.paymentAddr, txInput, utxo.amount);
-    }
+    const tx = blaze
+      .newTransaction()
+      .addOutput(TransactionOutput.fromCbor(outputs.get(0).to_cbor_hex()));
 
-    // Add outputs
-    for (const output of outputs) {
-      const txOutput = Loader.Cardano.TransactionOutput.new(
-        Loader.Cardano.Address.from_bech32(output.address),
-        output.amount
-      );
-      txBuilder.add_output(txOutput);
-    }
+    if (auxiliaryData) tx.setAuxiliaryData(AuxiliaryData.fromCbor(auxiliaryData.to_cbor_hex()));
 
-    // Set change address
-    txBuilder.add_change_if_needed(Loader.Cardano.Address.from_bech32(account.paymentAddr));
-
-    // Set validity interval
-    const slot = Loader.Cardano.BigNum.from_str(protocolParameters.slot.toString());
-    const invalidHereafter = Loader.Cardano.BigNum.from_str(
+    tx.setValidUntil(BigInt(
       (protocolParameters.slot + TX.invalid_hereafter).toString()
-    );
-    txBuilder.set_validity_start_interval(slot);
-    txBuilder.set_ttl(invalidHereafter);
+    ));
 
-    // Add auxiliary data if provided
-    if (auxiliaryData) {
-      txBuilder.set_auxiliary_data(auxiliaryData);
-    }
+    tx.setChangeAddress(Address.fromBech32(account.paymentAddr));
 
-    // Build the transaction
-    const txBody = txBuilder.build();
-    const tx = Loader.Cardano.Transaction.new(
-      txBody,
-      Loader.Cardano.TransactionWitnessSet.new(),
-      auxiliaryData
-    );
+    const result = await tx.complete();
 
-    return toCanonicalTx(tx);
+    return toCanonicalTx(Loader.Cardano.Transaction.from_cbor_hex(result.toCbor()));
   } catch (e) {
-    console.error('Error building transaction:', e);
+    console.error(e);
     throw e;
   }
 };
@@ -200,71 +150,33 @@ export const delegationTx = async (
   try {
     await Loader.load();
 
-    // Create transaction builder
-    const txBuilder = Loader.Cardano.TransactionBuilder.new(
-      Loader.Cardano.TransactionBuilderConfigBuilder.new()
-        .fee_algo(
-          Loader.Cardano.LinearFee.new(
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
-          )
-        )
-        .pool_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-        .key_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-        .coins_per_utxo_byte(Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-        .max_value_size(parseInt(protocolParameters.maxValSize))
-        .max_tx_size(parseInt(protocolParameters.maxTxSize))
-        .prefer_pure_change(true)
-        .build()
+    const blaze = await getBlazeProvider();
+    const tx = blaze.newTransaction();
+
+    if (!delegation.active)
+      tx.addRegisterStake(Credential.fromCore({
+        type: 0,
+        hash: account.stakeKeyHash
+      }));
+
+    tx.addDelegation(Credential.fromCore({
+        type: 0,
+        hash: account.stakeKeyHash
+      }),
+      PoolId.fromKeyHash(poolKeyHash)
     );
 
-    // Add stake registration if not active
-    if (!delegation.active) {
-      const stakeCredential = Loader.Cardano.Credential.new_pub_key(
-        Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
-      );
-      txBuilder.add_certificate(
-        Loader.Cardano.Address.from_bech32(account.paymentAddr),
-        Loader.Cardano.Certificate.new_stake_registration(
-          Loader.Cardano.StakeRegistration.new(stakeCredential)
-        )
-      );
-    }
-
-    // Add delegation certificate
-    const stakeCredential = Loader.Cardano.Credential.new_pub_key(
-      Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
-    );
-    const poolId = Loader.Cardano.PoolId.from_bytes(Buffer.from(poolKeyHash, 'hex'));
-    
-    txBuilder.add_certificate(
-      Loader.Cardano.Address.from_bech32(account.paymentAddr),
-      Loader.Cardano.Certificate.new_stake_delegation(
-        Loader.Cardano.StakeDelegation.new(stakeCredential, poolId)
-      )
-    );
-
-    // Set validity interval
-    const slot = Loader.Cardano.BigNum.from_str(protocolParameters.slot.toString());
-    const invalidHereafter = Loader.Cardano.BigNum.from_str(
+    tx.setValidUntil(BigInt(
       (protocolParameters.slot + TX.invalid_hereafter).toString()
-    );
-    txBuilder.set_validity_start_interval(slot);
-    txBuilder.set_ttl(invalidHereafter);
+    ));
 
-    // Set change address
-    txBuilder.add_change_if_needed(Loader.Cardano.Address.from_bech32(account.paymentAddr));
+    tx.setChangeAddress(Address.fromBech32(account.paymentAddr));
 
-    // Build the transaction
-    const txBody = txBuilder.build();
-    const tx = Loader.Cardano.Transaction.new(
-      txBody,
-      Loader.Cardano.TransactionWitnessSet.new()
-    );
+    const result = await tx.complete();
 
-    return toCanonicalTx(tx);
+    return toCanonicalTx(Loader.Cardano.Transaction.from_cbor_hex(result.toCbor()));
   } catch (e) {
-    console.error('Error building delegation transaction:', e);
+    console.error(e);
     throw e;
   }
 };
@@ -273,69 +185,33 @@ export const withdrawalTx = async (account, delegation, protocolParameters, utxo
   try {
     await Loader.load();
 
-    // Create transaction builder
-    const txBuilder = Loader.Cardano.TransactionBuilder.new(
-      Loader.Cardano.TransactionBuilderConfigBuilder.new()
-        .fee_algo(
-          Loader.Cardano.LinearFee.new(
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
-          )
-        )
-        .pool_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-        .key_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-        .coins_per_utxo_byte(Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-        .max_value_size(parseInt(protocolParameters.maxValSize))
-        .max_tx_size(parseInt(protocolParameters.maxTxSize))
-        .prefer_pure_change(true)
-        .build()
-    );
+    const blaze = await getBlazeProvider();
+    const tx = blaze.newTransaction();
 
-    // Add withdrawal if there are rewards
     if (delegation.rewards > 0) {
-      const rewardAccount = Loader.Cardano.RewardAddress.from_address(
-        Loader.Cardano.Address.from_bech32(account.rewardAddr)
-      );
-      txBuilder.add_withdrawal(
-        rewardAccount,
-        Loader.Cardano.BigNum.from_str(delegation.rewards.toString())
-      );
+      tx.addWithdrawal(RewardAccount(account.rewardAddr), delegation.rewards);
     }
 
-    // Set validity interval
-    const slot = Loader.Cardano.BigNum.from_str(protocolParameters.slot.toString());
-    const invalidHereafter = Loader.Cardano.BigNum.from_str(
+    tx.setValidUntil(BigInt(
       (protocolParameters.slot + TX.invalid_hereafter).toString()
-    );
-    txBuilder.set_validity_start_interval(slot);
-    txBuilder.set_ttl(invalidHereafter);
+    ));
 
-    // Add at least one input (required for valid transaction)
+    const changeAddress = Address.fromBech32(account.paymentAddr);
+
     if (!utxos || utxos.length === 0) {
       throw new Error('No inputs found on wallet. Withdrawal transaction needs to have at least one input.');
     }
 
-    // Add the first UTXO as input
-    const firstUtxo = utxos[0];
-    const txInput = Loader.Cardano.TransactionInput.new(
-      Loader.Cardano.TransactionHash.from_bytes(Buffer.from(firstUtxo.tx_hash, 'hex')),
-      firstUtxo.tx_index
-    );
-    txBuilder.add_input(account.paymentAddr, txInput, firstUtxo.amount);
+    // Transactions need to have at least one input to be valid. If the rewards amount is enough to cover the fees
+    // blaze tx builder won't select any inputs.
+    tx.addInput(TransactionUnspentOutput.fromCbor(utxos[0].to_cbor_hex()));
+    tx.setChangeAddress(changeAddress);
 
-    // Set change address
-    txBuilder.add_change_if_needed(Loader.Cardano.Address.from_bech32(account.paymentAddr));
+    const result = await tx.complete();
 
-    // Build the transaction
-    const txBody = txBuilder.build();
-    const tx = Loader.Cardano.Transaction.new(
-      txBody,
-      Loader.Cardano.TransactionWitnessSet.new()
-    );
-
-    return toCanonicalTx(tx);
+    return toCanonicalTx(Loader.Cardano.Transaction.from_cbor_hex(result.toCbor()));
   } catch (e) {
-    console.error('Error building withdrawal transaction:', e);
+    console.error(e);
     throw e;
   }
 };

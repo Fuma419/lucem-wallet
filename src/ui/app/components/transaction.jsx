@@ -80,10 +80,12 @@ const Transaction = ({
   network,
   onLoad,
 }) => {
-  const [displayInfo, setDisplayInfo] = React.useState(null);
-  const isMounted = useIsMounted();
-
   const settings = useStoreState((state) => state.settings.settings);
+  const isMounted = useIsMounted();
+  const [displayInfo, setDisplayInfo] = React.useState(
+    genDisplayInfo(txHash, detail, currentAddr, addresses)
+  );
+
   const colorMode = {
     iconBg: useColorModeValue('blue.100', 'gray.900'),
     txBg: useColorModeValue('blue.100', 'gray.900'),
@@ -96,8 +98,7 @@ const Transaction = ({
       let txDetail = await updateTxInfo(txHash);
       onLoad(txHash, txDetail);
       if (!isMounted.current) return;
-      const newDisplayInfo = genDisplayInfo(txHash, txDetail, currentAddr, addresses);
-      setDisplayInfo(newDisplayInfo);
+      setDisplayInfo(genDisplayInfo(txHash, txDetail, currentAddr, addresses));
     }
   };
 
@@ -396,26 +397,22 @@ const TxDetail = ({ displayInfo, network }) => {
 };
 
 const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
-  
   if (!detail || !detail.info || !detail.utxos || !detail.block) {
     return null;
   }
 
   const type = getTxType(currentAddr, addresses, detail.utxos);
-  
-  const date = dateFromUnix(detail.block.block_time || detail.block.time);
-  
+  const date = dateFromUnix(detail.block.time);
   const amounts = calculateAmount(
     currentAddr,
     detail.utxos,
     detail.info.valid_contract
   );
-  
   const assets = amounts.filter((amount) => amount.unit !== 'lovelace');
   const lovelaceAmount = amounts.find((amount) => amount.unit === 'lovelace');
   const lovelace = lovelaceAmount ? BigInt(lovelaceAmount.quantity) : 0n;
 
-  const result = {
+  return {
     txHash: txHash,
     detail: detail,
     date: date,
@@ -447,8 +444,6 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
       };
     }),
   };
-  
-  return result;
 };
 
 const getTxType = (currentAddr, addresses, uTxOList) => {
@@ -475,10 +470,6 @@ const getTxType = (currentAddr, addresses, uTxOList) => {
 };
 
 const dateFromUnix = (unixTimestamp) => {
-  // Handle invalid timestamps
-  if (!unixTimestamp || isNaN(unixTimestamp) || unixTimestamp <= 0) {
-    return new Date(); // Return current date as fallback
-  }
   return new Date(unixTimestamp * 1000);
 };
 
@@ -493,84 +484,47 @@ const getTimestamp = (date) => {
 };
 
 const getAddressCredentials = (address) => {
-  
-  if (!address) {
-    return [null, null];
-  }
-  
   try {
     const cmlAddress = Loader.Cardano.Address.from_bech32(address);
-    const paymentCred = cmlAddress.payment_cred()?.to_cbor_hex() || null;
-    const stakingCred = cmlAddress.staking_cred()?.to_cbor_hex() || null;
-    return [paymentCred, stakingCred];
+    return [
+      cmlAddress.payment_cred()?.to_cbor_hex() || null,
+      cmlAddress.staking_cred()?.to_cbor_hex() || null,
+    ];
   } catch (error) {
     try {
       // try casting as byron address
       const cmlAddress = Loader.Cardano.ByronAddress.from_base58(address);
-      const paymentCred = cmlAddress.to_address()?.payment_cred()?.to_cbor_hex() || null;
-      const stakingCred = cmlAddress.to_address()?.staking_cred()?.to_cbor_hex() || null;
-      return [paymentCred, stakingCred];
-    } catch (byronError) {
-      console.error('Failed to parse address:', address, error);
-      return [null, null];
-    }
+      return [
+        cmlAddress.to_address()?.payment_cred()?.to_cbor_hex() || null,
+        cmlAddress.to_address()?.staking_cred()?.to_cbor_hex() || null,
+      ];
+    } catch {}
+    console.error(error);
+    return [null, null];
   }
 };
 
 const matchesAnyCredential = (address, [ownPaymentCred, ownStakingCred]) => {
   const [otherPaymentCred, otherStakingCred] = getAddressCredentials(address);
-  const matches = otherPaymentCred === ownPaymentCred || otherStakingCred === ownStakingCred;
-  return matches;
+  return otherPaymentCred === ownPaymentCred || otherStakingCred === ownStakingCred;
 }
 
 const calculateAmount = (currentAddr, uTxOList, validContract = true) => {
-  
-  if (!validContract) return [];
-  if (!uTxOList || !uTxOList.inputs || !uTxOList.outputs) {
-    return [];
-  }
-
-  const [ownPaymentCred, ownStakingCred] = getAddressCredentials(currentAddr);
-
-  // Convert Koios UTXO format to expected format
-  const convertKoiosUtxo = (utxo) => ({
-    address: utxo.payment_addr?.bech32 || utxo.address,
-    stake_address: utxo.stake_addr || utxo.stake_address,
-    tx_hash: utxo.tx_hash,
-    tx_index: utxo.tx_index,
-    value: utxo.value,
-    asset_list: utxo.asset_list || [],
-    datum_hash: utxo.datum_hash,
-    inline_datum: utxo.inline_datum,
-    reference_script: utxo.reference_script,
-    // Convert Koios amount format to expected format
-    amount: [
-      { unit: 'lovelace', quantity: utxo.value || '0' },
-      ...(utxo.asset_list || []).map(asset => ({
-        unit: asset.policy_id + asset.asset_name,
-        quantity: asset.quantity || '0'
-      }))
-    ]
-  });
+  const ownCredentials = getAddressCredentials(currentAddr);
 
   let inputs = compileOutputs(
-    uTxOList.inputs.map(convertKoiosUtxo).filter(
-      (input) => {
-        const matches = matchesAnyCredential(input.address, [ownPaymentCred, ownStakingCred]) && !(input.collateral && validContract);
-        return matches;
-      }
+    uTxOList.inputs.filter(
+      (input) =>
+        matchesAnyCredential(input.address, ownCredentials) && !(input.collateral && validContract)
     )
   );
-
   let outputs = compileOutputs(
-    uTxOList.outputs.map(convertKoiosUtxo).filter(
-      (output) => {
-        const matches = matchesAnyCredential(output.address, [ownPaymentCred, ownStakingCred]) && !(output.collateral && validContract);
-        return matches;
-      }
+    uTxOList.outputs.filter(
+      (output) =>
+        matchesAnyCredential(output.address, ownCredentials) &&
+        !(output.collateral && validContract)
     )
   );
-  
   let amounts = [];
 
   while (inputs.length) {

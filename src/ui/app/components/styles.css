@@ -137,17 +137,6 @@ body::-webkit-scrollbar {
 }
 
 /* Glowing Modal Styles */
-.chakra-modal__content.modal-glow-purple, .modal-glow-purple {
-  font-size: 16px;
-  font-family: 'Barlow', sans-serif;
-  padding: 5px 15px;
-  color: #ffffff;
-  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75)!important;
-  cursor: pointer;
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-  will-change: transform, box-shadow;
-}
-
 .chakra-modal__content.modal-glow-yellow-green, .modal-glow-yellow-green {
   font-size: 16px;
   font-family: 'Barlow', sans-serif;

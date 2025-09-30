@@ -15,7 +15,6 @@ import {
   isHW,
   switchAccount,
   updateAccount,
-  getStorage,
 } from '../../../api/extension';
 import {
   BsArrowDownRight,
@@ -89,7 +88,7 @@ import { useStoreState } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
 import { currencyToSymbol, fromAssetUnit } from '../../../api/util';
 import TransactionBuilder from '../components/transactionBuilder';
-import { NETWORK_ID, TAB, STORAGE } from '../../../config/config';
+import { NETWORK_ID, TAB } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
@@ -821,11 +820,9 @@ const NewAccountModal = React.forwardRef((props, ref) => {
       await switchAccount(index);
       onClose();
     } catch (e) {
-      console.error('Error creating account:', e);
       setState((s) => ({ ...s, wrongPassword: true }));
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
   React.useImperativeHandle(ref, () => ({
@@ -835,14 +832,11 @@ const NewAccountModal = React.forwardRef((props, ref) => {
   }));
 
   React.useEffect(() => {
-    if (isOpen) {
-      setState({
-        password: '',
-        show: false,
-        name: '',
-        wrongPassword: false,
-      });
-    }
+    setState({
+      password: '',
+      show: false,
+      name: '',
+    });
   }, [isOpen]);
 
   return (
@@ -855,7 +849,7 @@ const NewAccountModal = React.forwardRef((props, ref) => {
       isCentered
     >
       <ModalOverlay />
-      <ModalContent className='modal-glow-purple'>
+      <ModalContent className='modal-glow-yellow-green'>
         <ModalHeader fontSize="md">
           {' '}
           <Box display="flex" alignItems="center">
@@ -866,13 +860,8 @@ const NewAccountModal = React.forwardRef((props, ref) => {
         <ModalBody px="10">
           <Input
             autoFocus={true}
-            value={state.name}
-            onChange={(e) => setState((s) => ({ ...s, name: e.target.value, wrongPassword: false }))}
+            onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
             placeholder="Enter account name"
-            _focus={{
-              borderColor: 'rgba(220, 27, 250, 0.75)',
-              boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)'
-            }}
           />
           <Spacer height="4" />
           <InputGroup size="md">
@@ -881,17 +870,12 @@ const NewAccountModal = React.forwardRef((props, ref) => {
               isInvalid={state.wrongPassword === true}
               pr="4.5rem"
               type={state.show ? 'text' : 'password'}
-              value={state.password}
               onChange={(e) =>
-                setState((s) => ({ ...s, password: e.target.value, wrongPassword: false }))
+                setState((s) => ({ ...s, password: e.target.value }))
               }
               placeholder="Enter password"
               onKeyDown={(e) => {
                 if (e.key == 'Enter') confirmHandler();
-              }}
-              _focus={{
-                borderColor: 'rgba(220, 27, 250, 0.75)',
-                boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)'
               }}
             />
             <InputRightElement width="4.5rem">
@@ -922,11 +906,7 @@ const NewAccountModal = React.forwardRef((props, ref) => {
           <Button
             isDisabled={!state.password || !state.name || isLoading}
             isLoading={isLoading}
-            className="button new-account"
-            size="sm"
-            background="purple.500"
-            rounded="lg"
-            shadow="md"
+            colorScheme="yellow.500"
             onClick={confirmHandler}
           >
             Create

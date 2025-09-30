@@ -4,46 +4,18 @@
 
 Lucem is a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project forked from Nami, which is maintained by [**IOG**](https://iohk.io/en/blog/posts/2023/11/01/nami-has-a-new-home/).
 
-## Features
-
-- **Direct Koios Integration**: Uses Koios API directly without Blaze SDK
-- **Hardware Wallet Support**: Ledger and Trezor integration
-- **CIP-30 Compliant**: Full dApp connector support
-- **Multi-Account Support**: Manage multiple accounts
-- **Token Management**: Native token support
-- **Staking**: Delegate to stake pools
-- **Cross-Platform**: Chrome, Firefox, Edge support
-- **Lightweight**: No heavy SDK dependencies
-
-## Testnet
+### Testnet
 
 Download and extract the zip attached to the latest [Release](https://github.com/Fuma419/lucem-wallet/releases). Then go to `chrome://extensions`, click Load unpacked at the top left and select the build folder.
 
-## API Integration
-
-### Koios API
-
-Lucem uses Koios API for blockchain data. Koios provides:
-- Real-time Cardano blockchain data
-- Comprehensive API coverage
-- High performance and reliability
-- No API key required for basic usage
-
-### Supported Networks
-
-- **Mainnet**: `https://api.koios.rest/api/v1`
-- **Testnet**: `https://testnet.koios.rest/api/v1`
-- **Preview**: `https://preview.koios.rest/api/v1`
-- **Preprod**: `https://preprod.koios.rest/api/v1`
-
-## Injected API
+### Injected API
 
 Since Lucem is a browser extension, it can inject content inside the web context, which means you can connect the wallet to any website.
 The exposed API follows [CIP-0030](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0030). The returned types are in `cbor`/`bytes` format. A helpful library for serializing and de-serializing these low-level data structures is the [serialization-lib](https://github.com/Emurgo/cardano-serialization-lib). To verify a signature returned from `cardano.dataSign(address, payload)` the [message-signing](https://github.com/Emurgo/message-signing) library helps.
 
 #### Basic Usage
 
-- Detect the Cardano provider (`window.cardano`) and detect Lucem (`window.cardano.lucem`)
+- Detect the Cardano provider (`window.cardano`) and detect Nami (`window.cardano.nami`)
 - Request the `api` from `window.cardano.lucem.enable()`
 - Detect which Cardano network the user is connected to (ID 1 = Mainnet, ID 0 = Testnet)
 - Get the user's Cardano account
@@ -53,7 +25,7 @@ The exposed API follows [CIP-0030](https://github.com/cardano-foundation/CIPs/tr
 The full list of methods can be found in [CIP-0030](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0030).
 For the wallet namespace Lucem uses `lucem`.
 
-**Note:** Lucem follows the ongoing [PR](https://github.com/cardano-foundation/CIPs/pull/148) for the `dataSign` endpoint. (Very similar to the previous `dataSign` endpoint from Nami).
+**Note:** Nami follows the ongoing [PR](https://github.com/cardano-foundation/CIPs/pull/148) for the `dataSign` endpoint. (Very similar to the previous `dataSign` endpoint from Nami).
 
 Lucem also uses a few custom endpoints, which are available under `api.experimental`:
 
@@ -78,65 +50,203 @@ Deregister the events (works also with anonymous functions).
 
 ---
 
-## Development
+### Injected API (Deprecated)
 
-### Prerequisites
+Since Nami is a browser extension, it can inject content inside the web context, which means you can connect the wallet to any website.
+The exposed API follows for most parts this proposed [CIP](https://github.com/cardano-foundation/CIPs/pull/88). The returned types are in `cbor`/`bytes` format. A helpful library for serializing and de-serializing these low-level data structures is the [serialization-lib](https://github.com/Emurgo/cardano-serialization-lib). To verify a signature returned from `cardano.dataSign(address, payload)` the [message-signing](https://github.com/Emurgo/message-signing) library helps.
 
-- Node.js 18+
-- npm or yarn
+#### Basic Usage
 
-### Setup
+- Detect the Cardano provider (`window.cardano`)
+- Detect which Cardano network the user is connected to (ID 1 = Mainnet, ID 0 = Testnet)
+- Get the user's Cardano account
 
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. **Set up environment variables:**
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env
-   
-   # Edit .env and add your Koios API keys (optional)
-   # KOIOS_API_KEY_MAINNET=your-actual-api-key
-   # KOIOS_API_KEY_TESTNET=your-actual-api-key
-   # KOIOS_API_KEY_PREVIEW=your-actual-api-key
-   # KOIOS_API_KEY_PREPROD=your-actual-api-key
-   ```
-4. Build the extension: `npm run build`
+#### Methods
 
-### Environment Variables
+**All methods will return their values as `Promise`. For simplicity and easier understanding the API is explained without the Promises.**
 
-The wallet uses environment variables for configuration. Create a `.env` file in the root directory:
+##### cardano.enable()
 
-```bash
-# Koios API Keys (optional - wallet works without them)
-KOIOS_API_KEY_MAINNET=your-koios-api-key-here
-KOIOS_API_KEY_TESTNET=your-koios-api-key-here
-KOIOS_API_KEY_PREVIEW=your-koios-api-key-here
-KOIOS_API_KEY_PREPROD=your-koios-api-key-here
+Will ask the user to give access to requested website. If access is given, this function will return `true`, otherwise throws an `error`.
+If the user calls this function again with already having permission to the requested website, it will simply return `true`.
 
-# Other environment variables
-NAMI_HEADER=dummy
+##### cardano.isEnabled()
+
+```
+cardano.isEnabled() : boolean
 ```
 
-**Note:** Koios API keys are optional. The wallet will work perfectly without them, but you'll get enhanced rate limits and features if you provide them.
+Returns `true` if wallet has access to requested website, `false` otherwise.
 
-### Koios Migration
+##### cardano.getBalance()
 
-Lucem has been migrated from Blockfrost to Koios API. Key changes:
+```
+cardano.getBalance() : Value
+```
 
-- **API Endpoints**: Updated to use Koios endpoints
-- **Response Format**: Added compatibility layer for response formats
-- **No API Keys Required**: Koios doesn't require API keys for basic usage
-- **Enhanced Performance**: Better caching and response handling
-- **Environment Variables**: Support for .env file configuration
+`Value` is a hex encoded cbor string.
 
-### Build
+##### cardano.getUtxos(amount, paginate)
 
-```bash
+```
+cardano.getUtxos(amount?: Value, paginate?: {page: number, limit: number}) : [TransactionUnspentOutput]
+```
+
+`TransactionUnspentOutput` is a hex encoded bytes string.
+
+`amount` and `paginate` are optional parameters. They are meant to filter the overall utxo set of a user's wallet.
+
+##### cardano.getCollateral()
+
+```
+cardano.getCollateral() : [TransactionUnspentOutput]
+```
+
+##### cardano.getUsedAddresses()
+
+```
+cardano.getUsedAddresses() : [BaseAddress]
+```
+
+`BaseAddress` is a hex encoded bytes string.
+
+**Note** Lcuem doesn't utilize the concept of multipe addresses per wallet. This function will return an array of length `1` and will always return the same single address. Just to follow the standards of the proposed [CIP](https://github.com/cardano-foundation/CIPs/pull/88), it will return the address in an array.
+
+##### cardano.getUnusedAddresses()
+
+```
+cardano.getUnusedAddresses() : [BaseAddress]
+```
+
+**Note** This endpoint will return an empty array []. Same reason as above, simply to follow the standards.
+
+##### cardano.getChangeAddress()
+
+```
+cardano.getChangeAddress() : BaseAddress
+```
+
+Will return the same address as the one in `cardano.getUsedAddresses()`.
+
+##### cardano.getRewardAddress()
+
+```
+cardano.getRewardAddress() : [RewardAddress]
+```
+
+`RewardAddress` is a hex encoded bytes string.
+
+**Note** This function will return an array of length `1` and will always return the same single address.
+
+##### cardano.getNetworkId()
+
+```
+cardano.getNetworkId() : number
+```
+
+Returns `0` if on `testnet`, otherwise `1` if on `mainnet`.
+
+##### cardano.signData(address, payload)
+
+```
+cardano.signData(address: BaseAddress|RewardAddress, payload: string) : CoseSign1
+```
+
+`payload` is a hex encoded utf8 string.
+`CoseSign1` is a hex encoded bytes string.
+
+If address is the `BaseAddress` the signature is returned with the `Payment Credential`, otherwise if the address is the `RewardAddress` the signature is returned with the `Stake Credential`.
+
+The returned `CoseSign1` object contains the `payload`, `signature` and the following protected headers:
+
+- `key_id` => `PublicKey`,
+- `address` => `BaseAddress | RewardAddress`
+- `algorithm_id` => EdDSA(0) (the algorithm used for Cardano addresses).
+
+Read more about message signing in [CIP-0008](https://github.com/cardano-foundation/CIPs/blob/master/CIP-0008/CIP-0008.md).
+
+##### cardano.signTx(tx, partialSign)
+
+```
+cardano.signTx(tx: Transaction, partialSign?: boolean) : TransactionWitnessSet
+```
+
+`Transaction` is a hex encoded cbor string.
+`TransactionWitnessSet` is a hex encoded cbor string.
+
+`partialSign` is by default `false` and optional. The wallet needs to provide all required signatures. If it can't an `error` is thrown, otherwise the `TransactionWitnessSet` is returned.
+
+If `partialSign` is `true`, the wallet doesn't need to provide all required signatures.
+
+##### cardano.submitTx(tx)
+
+```
+cardano.submitTx(tx : Transaction) : hash32
+```
+
+Returns the transaction hash, if transaction was submitted successfully, otherwise throws an `error`.
+
+#### Events
+
+##### cardano.onAccountChange(addresses)
+
+```
+cardano.onAccountChange((addresses : [BaseAddress]) => void)
+```
+
+**Note** To follow the standards of multiple addresses the callback will return an array, although Lucem will just return an array with a single address, which is the same as the one in `cardano.getUsedAddresses()`.
+
+##### cardano.onNetworkChange(network)
+
+```
+cardano.onNetworkChange((network : number) => void)
+```
+
+---
+
+### Develop
+
+The `project_id` for API requests can be created under [blockfrost.io](https://blockfrost.io/).
+
+**Recommended:** Follow this [approach](https://github.com/lxieyang/chrome-extension-boilerplate-react#secrets) in order to keep the keys seperate from the repository.
+
+```
+# Update secrets file with your own keys
+cp secrets.testing.js secrets.development.js
+```
+
+The quick solution is to go under `./src/config/provider.js` and replace `secrets.PROJECT_ID_MAINNET`, `secrets.PROJECT_ID_TESTNET`, `secrets.PROJECT_ID_PREVIEW` and `secrets.PROJECT_ID_PREPROD` with the project ids from blockfrost.
+
+##### Requirements
+
+- Node.js 20
+
+##### Start development server
+
+```
+# Update secrets file with your own keys
+cp secrets.testing.js secrets.development.js
+npm start
+```
+
+##### Create production build
+
+```
+# Update secrets file with your own keys
+cp secrets.testing.js secrets.production.js
 npm run build
 ```
 
-The built extension will be in the `build/` directory.
+##### Run tests
 
-## License
+```
+npm test
+```
 
-[Apache-2.0](LICENSE)
+### Additional
+
+[Wasm packages](./src/wasm/) commit hash: [a0e182fe77d553f6480d2b3ff5d1f38eee22e4e9](https://github.com/spacebudz/lucid)
+
+### Website
+
+Visit [namiwallet.io](https://namiwallet.io)<br/>

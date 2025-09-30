@@ -353,12 +353,30 @@ export const utxoToJson = async (utxo) => {
 
 export const assetsToValue = async (assets) => {
   await Loader.load();
+  console.log('=== assetsToValue START ===');
   console.log('assetsToValue called with:', assets);
-  
-  const multiAsset = Loader.Cardano.MultiAsset.new();
+  console.log('Call stack:', new Error().stack);
+
+  // Debug: Check what MultiAsset-related classes are available
+  console.log('Loader.Cardano.MultiAsset:', Loader.Cardano.MultiAsset);
+  console.log('Available MultiAsset-related keys:', Object.keys(Loader.Cardano).filter(key => key.toLowerCase().includes('multi')));
+
+  // Try different possible class names for MultiAsset
+  let multiAsset;
+  if (Loader.Cardano.MultiAsset) {
+    multiAsset = Loader.Cardano.MultiAsset.new();
+  } else if (Loader.Cardano.MultiAssets) {
+    multiAsset = Loader.Cardano.MultiAssets.new();
+  } else if (Loader.Cardano.Multiasset) {
+    multiAsset = Loader.Cardano.Multiasset.new();
+  } else {
+    console.error('No MultiAsset class found. Available classes:', Object.keys(Loader.Cardano));
+    throw new Error('MultiAsset class not found in Cardano library');
+  }
+
   const lovelace = assets.find((asset) => asset.unit === 'lovelace');
   console.log('lovelace asset:', lovelace);
-  
+
   const policies = [
     ...new Set(
       assets
@@ -367,28 +385,46 @@ export const assetsToValue = async (assets) => {
     ),
   ];
   console.log('policies:', policies);
-  policies.forEach((policy) => {
-    const policyAssets = assets.filter(
-      (asset) => asset.unit.slice(0, 56) === policy
-    );
-    const assetsValue = Loader.Cardano.MapAssetNameToCoin.new();
-    policyAssets.forEach((asset) => {
-      assetsValue.insert(
-        Loader.Cardano.AssetName.from_bytes(new Uint8Array(Buffer.from(asset.unit.slice(56), 'hex'))),
-        Loader.Cardano.BigNum.from_str(String(asset.quantity))
+  console.log('policies.length:', policies.length);
+  console.log('policies.length > 0:', policies.length > 0);
+  
+  // Only process policies if there are any (and if we have multi-assets)
+  if (policies.length > 0) {
+    console.log('Entering policies.forEach block with', policies.length, 'policies');
+    
+    policies.forEach((policy) => {
+      console.log('Processing policy:', policy);
+      const policyAssets = assets.filter(
+        (asset) => asset.unit.slice(0, 56) === policy
+      );
+      
+      // Create a new Assets object for each policy
+      const assetsValue = Loader.Cardano.Assets.new();
+      
+      policyAssets.forEach((asset) => {
+        console.log('Adding asset to policy:', asset.unit.slice(56), 'quantity:', asset.quantity);
+        assetsValue.insert(
+          Loader.Cardano.AssetName.from_bytes(new Uint8Array(Buffer.from(asset.unit.slice(56), 'hex'))),
+          Loader.Cardano.BigNum.from_str(String(asset.quantity))
+        );
+      });
+      
+      console.log('Inserting assets into multiAsset for policy:', policy);
+      multiAsset.insert_assets(
+        Loader.Cardano.ScriptHash.from_bytes(new Uint8Array(Buffer.from(policy, 'hex'))),
+        assetsValue
       );
     });
-    multiAsset.insert_assets(
-      Loader.Cardano.ScriptHash.from_bytes(new Uint8Array(Buffer.from(policy, 'hex'))),
-      assetsValue
-    );
-  });
+  } else {
+    console.log('Skipping policies.forEach block - policies array is empty');
+  }
   const coin = Loader.Cardano.BigNum.from_str(lovelace ? String(lovelace.quantity) : '0');
   console.log('coin created:', coin);
   console.log('multiAsset created:', multiAsset);
   
   const value = Loader.Cardano.Value.new(coin, multiAsset);
   console.log('Value created successfully');
+  console.log('=== assetsToValue END ===');
   return value;
 };
 

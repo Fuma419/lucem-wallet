@@ -362,9 +362,7 @@ const Send = () => {
     account.current = currentAccount;
     if (txInfo.protocolParameters) {
       const _utxos = txInfo.utxos.map((utxo) =>
-        Loader.Cardano.TransactionUnspentOutput.from_bytes(
-          Buffer.from(utxo, 'hex')
-        )
+        Loader.Cardano.TransactionUnspentOutput.from_hex(utxo)
       );
       utxos.current = _utxos;
       setIsLoading(false);
@@ -390,7 +388,7 @@ const Send = () => {
       assets: balance.filter((v) => v.unit !== 'lovelace'),
     };
     utxos.current = _utxos;
-    _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'));
+    _utxos = _utxos.map((utxo) => utxo.to_hex());
     if (!isMounted.current) return;
     setIsLoading(false);
     setTxInfo({ protocolParameters, utxos: _utxos, balance });
@@ -761,27 +759,36 @@ const Send = () => {
         ref={ref}
         sign={async (password, hw) => {
           await Loader.load();
-          const txDes = Loader.Cardano.Transaction.from_cbor_bytes(
-            Buffer.from(tx, 'hex')
-          );
+          
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(TAB.trezorTx, `?tx=${tx}`);
             }
+            const txDes = Loader.Cardano.Transaction.from_bytes(
+              Buffer.from(tx, 'hex')
+            );
             return await signAndSubmitHW(txDes, {
               keyHashes: [account.current.paymentKeyHash],
               account: account.current,
               hw,
             });
-          } else
-            return await signAndSubmit(
-              txDes,
-              {
-                accountIndex: account.current.index,
-                keyHashes: [account.current.paymentKeyHash],
-              },
-              password
+          } else {
+            // Use the already built transaction from tx state instead of rebuilding
+            const txDes = Loader.Cardano.Transaction.from_bytes(
+              Buffer.from(tx, 'hex')
             );
+            console.log('Using already built transaction from state');
+            console.log('Transaction hex:', tx);
+            console.log('Key hashes:', [account.current.paymentKeyHash]);
+            console.log('Account index:', account.current.index);
+
+            const txHash = await signAndSubmit(txDes, { 
+              keyHashes: [account.current.paymentKeyHash], 
+              accountIndex: account.current.index 
+            }, password);
+            console.log('Transaction submitted successfully! Hash:', txHash);
+            return txHash;
+          }
         }}
         onConfirm={async (status, signedTx) => {
           if (status === true) {

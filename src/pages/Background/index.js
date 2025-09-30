@@ -33,7 +33,7 @@ app.add(METHOD.getBalance, (request, sendResponse) => {
     .then((value) => {
       sendResponse({
         id: request.id,
-        data: Buffer.from(value.to_cbor_bytes(), 'hex').toString('hex'),
+        data: Buffer.from(value.to_bytes(), 'hex').toString('hex'),
         target: TARGET,
         sender: SENDER.extension,
       });
@@ -159,7 +159,7 @@ app.add(METHOD.getUtxos, (request, sendResponse) => {
     .then((utxos) => {
       utxos = utxos
         ? utxos.map(
-            (utxo) => Buffer.from(utxo.to_cbor_bytes(), 'hex').toString('hex') // LEGACY support => TODO change in the future
+            (utxo) => utxo.to_hex() // Updated to use to_hex() for consistency
           )
         : null;
       sendResponse({
@@ -183,7 +183,7 @@ app.add(METHOD.getCollateral, (request, sendResponse) => {
   getCollateral()
     .then((utxos) => {
       utxos = utxos.map((utxo) =>
-        Buffer.from(utxo.to_cbor_bytes(), 'hex').toString('hex')
+        utxo.to_hex()
       );
       sendResponse({
         id: request.id,

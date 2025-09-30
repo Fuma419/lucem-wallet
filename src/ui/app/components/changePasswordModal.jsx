@@ -81,7 +81,7 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
       );
       const newlyEncryptedRootKey = await encryptWithPassword(
         state.newPassword,
-        rootKey.to_raw_bytes()
+        rootKey.to_raw_key().to_raw_bytes()
       );
 
       rootKey.free();

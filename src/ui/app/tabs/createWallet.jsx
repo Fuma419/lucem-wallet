@@ -666,11 +666,24 @@ const MakeAccount = ({ colorTheme }) => {
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
             setLoading(true);
-            // Pass the original mnemonic string to createWallet.
-            await createWallet(state.name, mnemonic, state.password);
-            setRoute('/wallet');
-            setLoading(false);
-            setIsDone(true);
+            try {
+              // Pass the original mnemonic string to createWallet.
+              await createWallet(state.name, mnemonic, state.password);
+              setRoute('/wallet');
+              setIsDone(true);
+            } catch (error) {
+              console.error('Error creating wallet:', error);
+              // Show more specific error messages
+              if (error.message && error.message.includes('to_raw_bytes')) {
+                alert('Wallet creation failed due to a compatibility issue. Please try refreshing the page and creating the wallet again.');
+              } else if (error.message && error.message.includes('storeNotEmpty')) {
+                alert('A wallet already exists. Please clear your browser storage or use a different browser profile.');
+              } else {
+                alert(`Failed to create wallet: ${error.message || 'Unknown error'}. Please try again.`);
+              }
+            } finally {
+              setLoading(false);
+            }
           }}
         >
           Create

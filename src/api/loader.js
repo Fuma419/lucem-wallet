@@ -7,13 +7,26 @@ import * as wasm2 from '../wasm/cardano_message_signing/cardano_message_signing.
 
 class Loader {
   _wasm = wasm;
+  _loadingPromise = null;
 
   /**
    * Instantiate message signing library.
    * Loader.Cardano is loaded synchronously and does not require async instantiation.
+   * Added caching to prevent multiple simultaneous loads.
    */
   async load() {
     if (this._wasm2) return;
+    
+    // If already loading, return the existing promise
+    if (this._loadingPromise) {
+      return this._loadingPromise;
+    }
+    
+    this._loadingPromise = this._doLoad();
+    return this._loadingPromise;
+  }
+  
+  async _doLoad() {
     try {
       await wasm2.instantiate();
     } catch (_e) {
@@ -24,6 +37,7 @@ class Loader {
      * @private
      */
     this._wasm2 = wasm2;
+    this._loadingPromise = null; // Reset the promise cache
   }
 
   get Cardano() {

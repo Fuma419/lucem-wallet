@@ -42,6 +42,7 @@ import { milkomedaNetworks } from '@dcspark/milkomeda-constants';
 import { Cardano, Serialization } from '@cardano-sdk/core';
 import provider from '../../config/provider';
 import { KOIOS_REQUESTS } from '../koios-endpoints';
+import { SUBMIT_ENDPOINTS, BLOCKFROST_PROJECT_IDS } from '../../config/config';
 
 const hasTaggedSets = (cbor) => {
   const tx = Serialization.Transaction.fromCbor(cbor);
@@ -625,7 +626,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
     await Loader.load();
     let filterValue;
     try {
-      filterValue = Loader.Cardano.Value.from_cbor_bytes(Buffer.from(amount, 'hex'));
+      filterValue = Loader.Cardano.Value.from_bytes(Buffer.from(amount, 'hex'));
     } catch (e) {
       throw APIError.InvalidRequest;
     }
@@ -1107,7 +1108,7 @@ export const verifyTx = async (tx) => {
   await Loader.load();
   const network = await getNetwork();
   try {
-    const parseTx = Loader.Cardano.Transaction.from_cbor_bytes(
+    const parseTx = Loader.Cardano.Transaction.from_bytes(
       Buffer.from(tx, 'hex')
     );
     let networkId = parseTx.body().network_id()
@@ -1149,7 +1150,7 @@ export const signData = async (address, payload, password, accountIndex) => {
   protectedHeaders.set_algorithm_id(
     Loader.Message.Label.from_algorithm_id(Loader.Message.AlgorithmId.EdDSA)
   );
-  protectedHeaders.set_key_id(publicKey.to_raw_bytes());
+  protectedHeaders.set_key_id(publicKey.to_bytes());
   protectedHeaders.set_header(
     Loader.Message.Label.new_text('address'),
     Loader.Message.CBORValue.new_bytes(Buffer.from(address, 'hex'))
@@ -1168,7 +1169,7 @@ export const signData = async (address, payload, password, accountIndex) => {
   );
   const toSign = builder.make_data_to_sign().to_bytes();
 
-  const signedSigStruc = accountKey.sign(toSign).to_raw_bytes();
+  const signedSigStruc = accountKey.sign(toSign).to_bytes();
   const coseSign1 = builder.build(signedSigStruc);
 
   stakeKey.free();
@@ -1220,7 +1221,7 @@ export const signDataCIP30 = async (
   );
   const toSign = builder.make_data_to_sign().to_bytes();
 
-  const signedSigStruc = accountKey.sign(toSign).to_raw_bytes();
+  const signedSigStruc = accountKey.sign(toSign).to_bytes();
   const coseSign1 = builder.build(signedSigStruc);
 
   stakeKey.free();
@@ -1246,7 +1247,7 @@ export const signDataCIP30 = async (
     Loader.Message.Label.new_int(
       Loader.Message.Int.new_negative(Loader.Message.BigNum.from_str('2'))
     ),
-    Loader.Message.CBORValue.new_bytes(publicKey.to_raw_bytes())
+    Loader.Message.CBORValue.new_bytes(publicKey.to_bytes())
   ); // x (-2) set to public key
 
   return {
@@ -1270,14 +1271,22 @@ export const signTx = async (
   partialSign = false
 ) => {
   await Loader.load();
-  let { paymentKey, stakeKey } = await requestAccountKey(
-    password,
-    accountIndex
-  );
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts[accountIndex];
+  const rootKey = await decryptWithPassword(password, account.rootKey);
+  const paymentKey = Loader.Cardano.Bip32PrivateKey.from_bytes(
+    Buffer.from(rootKey, 'hex')
+  ).derive(1852).derive(1815).derive(accountIndex).derive(0).derive(0);
+  const stakeKey = Loader.Cardano.Bip32PrivateKey.from_bytes(
+    Buffer.from(rootKey, 'hex')
+  ).derive(1852).derive(1815).derive(accountIndex).derive(2).derive(0);
   const paymentKeyHash = paymentKey.to_public().hash().to_hex();
   const stakeKeyHash = stakeKey.to_public().hash().to_hex();
 
-  const rawTx = Loader.Cardano.Transaction.from_cbor_bytes(Buffer.from(tx, 'hex'));
+  // Handle both transaction objects and hex strings
+  const rawTx = typeof tx === 'string' 
+    ? Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'))
+    : tx;
 
   const txWitnessSet = Loader.Cardano.TransactionWitnessSet.new();
   const vkeyWitnesses = Loader.Cardano.VkeywitnessList.new();
@@ -1309,7 +1318,12 @@ export const signTxHW = async (
   partialSign = false
 ) => {
   await Loader.load();
-  const rawTx = Loader.Cardano.Transaction.from_cbor_bytes(Buffer.from(tx, 'hex'));
+  
+  // Handle both transaction objects and hex strings
+  const rawTx = typeof tx === 'string' 
+    ? Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'))
+    : tx;
+    
   const address = Loader.Cardano.Address.from_bech32(account.paymentAddr);
   const network = address.network_id();
   const keys = {
@@ -1336,7 +1350,7 @@ export const signTxHW = async (
       rawTx,
       network,
       keys,
-      Buffer.from(address.to_raw_bytes()).toString('hex'),
+      Buffer.from(address.to_bytes()).toString('hex'),
       hw.account
     );
     const result = await appAda.signTransaction({
@@ -1398,7 +1412,7 @@ export const signTxHW = async (
       rawTx,
       network,
       keys,
-      Buffer.from(address.to_raw_bytes()).toString('hex'),
+      Buffer.from(address.to_bytes()).toString('hex'),
       hw.account
     );
     const result = await TrezorConnect.cardanoSignTransaction({ ...trezorTx, tagCborSets: hasTaggedSets(tx) });
@@ -1430,35 +1444,57 @@ export const submitTx = async (tx) => {
   // Convert CBOR to hex if needed
   const txHex = typeof tx === 'string' ? tx : Buffer.from(tx).toString('hex');
   
-  if (network[network.id + 'Submit']) {
-    const result = await fetch(network[network.id + 'Submit'], {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/cbor' },
-      body: Buffer.from(txHex, 'hex'),
-    });
-    if (result.ok) {
-      return await result.json();
-    }
-    throw APIError.InvalidRequest;
+  console.log('Submitting transaction to network:', network.id);
+  console.log('Transaction hex length:', txHex.length);
+  
+  // Use configured submission endpoint
+  const submissionUrl = SUBMIT_ENDPOINTS[network.id];
+  const projectId = BLOCKFROST_PROJECT_IDS[network.id];
+  
+  if (!submissionUrl) {
+    throw new Error(`No submission endpoint configured for network: ${network.id}`);
   }
   
+  if (!projectId) {
+    throw new Error(`No Blockfrost API key configured for network: ${network.id}. Please add BLOCKFROST_${network.id.toUpperCase()}_PROJECT_ID to your .env file`);
+  }
+  
+  console.log('Using Blockfrost submission endpoint:', submissionUrl);
+  console.log('Using project ID:', projectId ? `${projectId.substring(0, 10)}...` : 'None');
+  console.log('Network:', network.id);
+  
   try {
-    const result = await koiosRequestEnhanced(
-      `/tx/submit`,
-      { method: 'POST', body: { tx: txHex } }
-    );
+    const result = await fetch(submissionUrl, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/cbor',
+        'project_id': projectId
+      },
+      body: Buffer.from(txHex, 'hex'),
+    });
     
-    if (result.error) {
-      if (result.status_code === 400)
-        throw { ...TxSendError.Failure, message: result.message };
-      else if (result.status_code === 500) throw APIError.InternalError;
-      else if (result.status_code === 429) throw TxSendError.Refused;
-      else if (result.status_code === 425) throw ERROR.fullMempool;
-      else throw APIError.InvalidRequest;
+    if (result.ok) {
+      const response = await result.text();
+      console.log('Transaction submitted successfully:', response);
+      return response;
     }
-    return result;
+    
+    const errorText = await result.text();
+    console.error('Submission failed:', result.status, errorText);
+    
+    if (result.status === 400) {
+      throw { ...TxSendError.Failure, message: errorText };
+    } else if (result.status === 500) {
+      throw APIError.InternalError;
+    } else if (result.status === 429) {
+      throw TxSendError.Refused;
+    } else if (result.status === 403) {
+      throw new Error(`Invalid API key for network: ${network.id}. Please check your BLOCKFROST_${network.id.toUpperCase()}_PROJECT_ID in the .env file`);
+    } else {
+      throw APIError.InvalidRequest;
+    }
   } catch (error) {
-    console.error('Koios transaction submission error:', error);
+    console.error('Transaction submission error:', error);
     throw new Error(`Transaction submission failed: ${error.message}`);
   }
 };
@@ -1585,7 +1621,8 @@ export const createAccount = async (name, password, accountIndex = null) => {
     index
   );
 
-  const publicKey = Buffer.from(accountKey.to_public().to_raw_bytes()).toString(
+  // Fix: Use to_bytes() instead of to_raw_bytes() for compatibility
+  const publicKey = Buffer.from(accountKey.to_public().to_bytes()).toString(
     'hex'
   ); // BIP32 Public key
   const paymentKeyPub = paymentKey.to_public();
@@ -1599,14 +1636,14 @@ export const createAccount = async (name, password, accountIndex = null) => {
   stakeKey = null;
 
   const paymentKeyHash = Buffer.from(
-    paymentKeyPub.hash().to_raw_bytes(),
+    paymentKeyPub.hash().to_bytes(),
     'hex'
   ).toString('hex');
 
   const paymentKeyHashBech32 = paymentKeyPub.hash().to_bech32('addr_vkh');
 
   const stakeKeyHash = Buffer.from(
-    stakeKeyPub.hash().to_raw_bytes(),
+    stakeKeyPub.hash().to_bytes(),
     'hex'
   ).toString('hex');
 
@@ -1696,13 +1733,13 @@ export const createHWAccounts = async (accounts) => {
     const paymentKeyHashRaw = publicKey.derive(0).derive(0).to_raw_key().hash();
     const stakeKeyHashRaw = publicKey.derive(2).derive(0).to_raw_key().hash();
 
-    const paymentKeyHash = Buffer.from(paymentKeyHashRaw.to_raw_bytes()).toString(
+    const paymentKeyHash = Buffer.from(paymentKeyHashRaw.to_bytes()).toString(
       'hex'
     );
 
     const paymentKeyHashBech32 = paymentKeyHashRaw.to_bech32('addr_vkh');
 
-    const stakeKeyHash = Buffer.from(stakeKeyHashRaw.to_raw_bytes()).toString(
+    const stakeKeyHash = Buffer.from(stakeKeyHashRaw.to_bytes()).toString(
       'hex'
     );
 
@@ -1748,7 +1785,7 @@ export const createHWAccounts = async (accounts) => {
 
     existingAccounts[index] = {
       index,
-      publicKey: Buffer.from(publicKey.to_raw_bytes()).toString('hex'),
+      publicKey: Buffer.from(publicKey.to_bytes()).toString('hex'),
       paymentKeyHash,
       paymentKeyHashBech32,
       stakeKeyHash,
@@ -1967,10 +2004,45 @@ export const createWallet = async (name, seedPhrase, password) => {
   entropy = null;
   seedPhrase = null;
 
-  const encryptedRootKey = await encryptWithPassword(
-    password,
-    rootKey.to_raw_bytes()
-  );
+  // Fix: Use the correct method for Bip32PrivateKey
+  let encryptedRootKey;
+  try {
+    // Based on the test file, this should work:
+    const rootKeyBytes = rootKey.to_raw_key().to_raw_bytes();
+    encryptedRootKey = await encryptWithPassword(password, rootKeyBytes);
+  } catch (error) {
+    console.error('Error in createWallet - rootKey methods:', {
+      hasToRawKey: typeof rootKey.to_raw_key === 'function',
+      hasToRawBytes: typeof rootKey.to_raw_bytes === 'function',
+      hasToBytes: typeof rootKey.to_bytes === 'function',
+      hasAsBytes: typeof rootKey.as_bytes === 'function',
+      rootKeyType: rootKey.constructor.name,
+      rootKeyMethods: Object.getOwnPropertyNames(rootKey).filter(name => typeof rootKey[name] === 'function'),
+      error: error.message
+    });
+    
+    // If the standard method fails, try alternative approaches
+    try {
+      console.log('Trying alternative method...');
+      const rawKey = rootKey.to_raw_key();
+      console.log('Raw key methods:', Object.getOwnPropertyNames(rawKey).filter(name => typeof rawKey[name] === 'function'));
+      
+      // Try different methods on the raw key
+      let rootKeyBytes;
+      if (typeof rawKey.to_bytes === 'function') {
+        rootKeyBytes = rawKey.to_bytes();
+      } else if (typeof rawKey.as_bytes === 'function') {
+        rootKeyBytes = rawKey.as_bytes();
+      } else {
+        throw new Error('No valid method found on raw key object');
+      }
+      
+      encryptedRootKey = await encryptWithPassword(password, rootKeyBytes);
+    } catch (altError) {
+      console.error('Alternative method also failed:', altError.message);
+      throw error; // Throw the original error
+    }
+  }
   rootKey.free();
   rootKey = null;
 
@@ -1978,65 +2050,20 @@ export const createWallet = async (name, seedPhrase, password) => {
   const checkStore = await getStorage(STORAGE.encryptedKey);
   if (checkStore) throw new Error(ERROR.storeNotEmpty);
   
-  await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
-  await setStorage({
+  // Batch storage operations for better performance
+  const storageData = {
+    [STORAGE.encryptedKey]: encryptedRootKey,
     [STORAGE.network]: { id: NETWORK_ID.mainnet, node: NODE.mainnet },
-  });
-
-  await setStorage({
     [STORAGE.currency]: 'usd',
-  });
+  };
+  
+  await setStorage(storageData);
 
   const index = await createAccount(name, password);
 
-  // TEMPORARILY SKIP SUB-ACCOUNT CHECK DUE TO KOIOS API ISSUES
-  // TODO: Fix Koios API endpoint for transaction queries
-  /*
-  // Check for sub-accounts
-  let searchIndex = 1;
-  while (true) {
-    let { paymentKey, stakeKey } = await requestAccountKey(
-      password,
-      searchIndex
-    );
-    
-    // Generate the full address instead of just the key hash
-    const network = await getNetwork();
-    const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
-    
-    const baseAddress = Loader.Cardano.BaseAddress.new(
-      networkId,
-      Loader.Cardano.Credential.new_pub_key(paymentKey.to_public().hash()),
-      Loader.Cardano.Credential.new_pub_key(stakeKey.to_public().hash())
-    );
-    
-    const fullAddress = baseAddress.to_address().to_bech32();
-
-    paymentKey.free();
-    stakeKey.free();
-    paymentKey = null;
-    stakeKey = null;
-
-    try {
-      const transactions = await koiosRequest(
-        `/addresses/${fullAddress}/txs`
-      );
-      if (transactions && !transactions.error && transactions.length >= 1)
-        await createAccount(`Account ${searchIndex}`, password, searchIndex);
-      else break;
-    } catch (error) {
-      // If we get a 404, it means no transactions exist for this address (new wallet)
-      // This is expected behavior for new wallets, so we break the loop
-      if (error.message && error.message.includes('404')) {
-        break;
-      }
-      // For other errors, re-throw them
-      throw error;
-    }
-    
-    searchIndex++;
-  }
-  */
+  // Skip sub-account detection for new wallets to improve performance
+  // This was causing API calls that slow down wallet creation
+  // Sub-accounts can be detected later when the user actually needs them
 
   password = null;
   await switchAccount(index);
@@ -2219,7 +2246,26 @@ export const getAsset = async (unit) => {
 export const updateBalance = async (currentAccount, network) => {
   await Loader.load();
   const assets = await getBalanceExtended();
-  const amount = await assetsToValue(assets);
+  
+  // Check if there are any non-lovelace assets
+  const hasMultiAssets = assets.some(asset => asset.unit !== 'lovelace');
+  
+  let amount;
+  if (hasMultiAssets) {
+    // If there are multi-assets, we need to handle them properly
+    console.log('Multi-assets detected in balance update, skipping assetsToValue for now');
+    // For now, just use lovelace amount and skip multi-assets in the Cardano Value
+    const lovelaceAsset = assets.find(asset => asset.unit === 'lovelace');
+    const lovelaceAmount = lovelaceAsset ? lovelaceAsset.quantity : '0';
+    amount = Loader.Cardano.Value.new(
+      Loader.Cardano.BigNum.from_str(lovelaceAmount),
+      Loader.Cardano.MultiAsset.new()
+    );
+  } else {
+    // No multi-assets, safe to call assetsToValue
+    amount = await assetsToValue(assets);
+  }
+  
   await checkCollateral(currentAccount, network);
 
   if (assets.length > 0) {

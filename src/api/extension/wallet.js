@@ -185,21 +185,17 @@ export const buildTx = async (
     console.log('LinearFee static methods:', Object.getOwnPropertyNames(Loader.Cardano.LinearFee));
     console.log('LinearFee prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(Loader.Cardano.LinearFee)));
     
-    // Check TransactionBuilder methods
-    console.log('TransactionBuilder constructor:', Loader.Cardano.TransactionBuilder);
-    console.log('TransactionBuilder static methods:', Object.getOwnPropertyNames(Loader.Cardano.TransactionBuilder));
+    // Check if BigNum is actually available
+    console.log('BigNum available:', Loader.Cardano.BigNum);
+    console.log('BigNum.from_str available:', Loader.Cardano.BigNum?.from_str);
     
-    // Check if BigInteger is available
-    console.log('BigInteger available:', Loader.Cardano.BigInteger);
-    console.log('BigInteger.from_str available:', Loader.Cardano.BigInteger?.from_str);
-    
-    // Test BigInteger.from_str if available
-    if (Loader.Cardano.BigInteger?.from_str) {
-      const testBigInt = Loader.Cardano.BigInteger.from_str('44');
-      console.log('Test BigInteger.from_str result:', testBigInt, 'type:', typeof testBigInt);
-      console.log('Test BigInteger constructor:', testBigInt.constructor.name);
+    // Test BigNum.from_str if available
+    if (Loader.Cardano.BigNum?.from_str) {
+      const testBigNum = Loader.Cardano.BigNum.from_str('44');
+      console.log('Test BigNum.from_str result:', testBigNum, 'type:', typeof testBigNum);
+      console.log('Test BigNum constructor:', testBigNum.constructor.name);
     }
-
+    
     // Show the number-related keys to see what other options we have
     console.log('Number-related keys:', Object.keys(Loader.Cardano).filter(key => 
       key.toLowerCase().includes('num') || 
@@ -208,23 +204,78 @@ export const buildTx = async (
       key.toLowerCase().includes('value')
     ));
 
-    // Create transaction using Cardano serialization library
-    const txBuilder = Loader.Cardano.TransactionBuilder.new(
-      Loader.Cardano.TransactionBuilderConfigBuilder.new()
-        .fee_algo(
-          Loader.Cardano.LinearFee.new(
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
-          )
-        )
-        .pool_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-        .key_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-        .coins_per_utxo_byte(Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-        .max_value_size(parseInt(protocolParameters.maxValSize))
-        .max_tx_size(parseInt(protocolParameters.maxTxSize))
-        .prefer_pure_change(true)
-        .build()
-    );
+    // Check what BigNum actually is
+    console.log('BigNum constructor:', Loader.Cardano.BigNum);
+    console.log('BigNum static methods:', Loader.Cardano.BigNum ? Object.getOwnPropertyNames(Loader.Cardano.BigNum) : 'undefined');
+    
+    // Try to create LinearFee with different approaches
+    console.log('Trying different LinearFee creation approaches...');
+    let linearFee;
+    
+    // Try with BigNum if available
+    if (Loader.Cardano.BigNum?.from_str) {
+      try {
+        linearFee = Loader.Cardano.LinearFee.new(
+          Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
+          Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
+        );
+        console.log('LinearFee created successfully with BigNum');
+      } catch (error) {
+        console.log('LinearFee creation failed with BigNum:', error.message);
+      }
+    }
+    
+    // Try with direct values if BigNum approach failed
+    if (!linearFee) {
+      try {
+        linearFee = Loader.Cardano.LinearFee.new(
+          parseInt(protocolParameters.linearFee.minFeeA),
+          parseInt(protocolParameters.linearFee.minFeeB)
+        );
+        console.log('LinearFee created successfully with direct integers');
+      } catch (error) {
+        console.log('LinearFee creation failed with direct integers:', error.message);
+      }
+    }
+    
+    // Try with BigInt if other approaches failed
+    if (!linearFee) {
+      try {
+        linearFee = Loader.Cardano.LinearFee.new(
+          BigInt(protocolParameters.linearFee.minFeeA),
+          BigInt(protocolParameters.linearFee.minFeeB)
+        );
+        console.log('LinearFee created successfully with BigInt');
+      } catch (error) {
+        console.log('LinearFee creation failed with BigInt:', error.message);
+      }
+    }
+    
+    if (!linearFee) {
+      throw new Error('Could not create LinearFee with any approach');
+    }
+
+    // Try a simpler approach - create transaction builder without complex config
+    console.log('Trying to create TransactionBuilder...');
+    let txBuilder;
+    try {
+      // Create with all required fields using BigNum
+      txBuilder = Loader.Cardano.TransactionBuilder.new(
+        Loader.Cardano.TransactionBuilderConfigBuilder.new()
+          .fee_algo(linearFee)
+          .pool_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.poolDeposit))
+          .key_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.keyDeposit))
+          .coins_per_utxo_byte(Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
+          .max_value_size(parseInt(protocolParameters.maxValSize))
+          .max_tx_size(parseInt(protocolParameters.maxTxSize))
+          .prefer_pure_change(true)
+          .build()
+      );
+      console.log('TransactionBuilder created successfully with full config');
+    } catch (error) {
+      console.log('TransactionBuilder creation failed with full config:', error.message);
+      throw error;
+    }
 
     // Add inputs from UTXOs
     console.log('UTXOs type:', typeof utxos, 'length:', utxos.length);
@@ -283,14 +334,22 @@ export const buildTx = async (
     }
 
     // Build the transaction
+    console.log('About to build transaction...');
+    console.log('Protocol parameters slot:', protocolParameters.slot);
+    console.log('Invalid hereafter calculation:', parseInt(protocolParameters.slot) + TX.invalid_hereafter);
+    
     const txBody = txBuilder.build();
+    console.log('Transaction body built successfully');
+    
     const tx = Loader.Cardano.Transaction.new(
       txBody,
       Loader.Cardano.TransactionWitnessSet.new(),
       auxiliaryData
     );
+    console.log('Transaction created successfully');
 
-    return toCanonicalTx(tx);
+    // Return the transaction object directly instead of canonicalizing
+    return tx;
   } catch (e) {
     console.error('Error building transaction:', e);
     throw e;
@@ -302,24 +361,38 @@ export const signAndSubmit = async (
   { keyHashes, accountIndex },
   password
 ) => {
-  await Loader.load();
-  const witnessSet = await signTx(
-    Buffer.from(tx.to_bytes(), 'hex').toString('hex'),
-    keyHashes,
-    password,
-    accountIndex
-  );
-  const transaction = Loader.Cardano.Transaction.new(
-    tx.body(),
-    witnessSet,
-    true,
-    tx.auxiliary_data()
-  );
+  try {
+    await Loader.load();
+    console.log('Starting transaction signing and submission...');
+    console.log('Transaction object:', tx);
+    console.log('Key hashes:', keyHashes);
+    console.log('Account index:', accountIndex);
+    
+    const witnessSet = await signTx(
+      tx,
+      keyHashes,
+      password,
+      accountIndex
+    );
+    console.log('Transaction signed successfully');
+    
+    const transaction = Loader.Cardano.Transaction.new(
+      tx.body(),
+      witnessSet,
+      true,
+      tx.auxiliary_data()
+    );
+    console.log('Signed transaction created successfully');
 
-  const txHash = await submitTx(
-    Buffer.from(transaction.to_bytes(), 'hex').toString('hex')
-  );
-  return txHash;
+    const txHash = await submitTx(
+      Buffer.from(transaction.to_bytes(), 'hex').toString('hex')
+    );
+    console.log('Transaction submitted successfully, hash:', txHash);
+    return txHash;
+  } catch (error) {
+    console.error('Error in signAndSubmit:', error);
+    throw error;
+  }
 };
 
 export const signAndSubmitHW = async (
@@ -329,7 +402,7 @@ export const signAndSubmitHW = async (
   await Loader.load();
 
   const witnessSet = await signTxHW(
-    Buffer.from(tx.to_bytes(), 'hex').toString('hex'),
+    tx,
     keyHashes,
     account,
     hw,

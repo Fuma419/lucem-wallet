@@ -356,6 +356,9 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
               hw,
             });
           }
+          console.log('About to call signAndSubmit in transactionBuilder...');
+          console.log('Transaction data:', data.tx);
+          console.log('Account data:', data.account);
           return await signAndSubmit(
             data.tx,
             {

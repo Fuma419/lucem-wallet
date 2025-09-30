@@ -494,21 +494,34 @@ const getTimestamp = (date) => {
 
 const getAddressCredentials = (address) => {
   
-  if (!address) {
-    return [null, null];
-  }
-  
   try {
     const cmlAddress = Loader.Cardano.Address.from_bech32(address);
     const paymentCred = cmlAddress.payment_cred()?.to_hex() || null;
-    const stakingCred = cmlAddress.staking_cred()?.to_hex() || null;
+    // For Emurgo library, we need to check if the address has staking credential
+    let stakingCred = null;
+    try {
+      // Try to get staking credential if it exists
+      if (cmlAddress.staking_cred) {
+        stakingCred = cmlAddress.staking_cred()?.to_hex() || null;
+      }
+    } catch (stakingError) {
+      // Address doesn't have staking credential, which is fine
+      stakingCred = null;
+    }
     return [paymentCred, stakingCred];
   } catch (error) {
     try {
       // try casting as byron address
       const cmlAddress = Loader.Cardano.ByronAddress.from_base58(address);
       const paymentCred = cmlAddress.to_address()?.payment_cred()?.to_hex() || null;
-      const stakingCred = cmlAddress.to_address()?.staking_cred()?.to_hex() || null;
+      let stakingCred = null;
+      try {
+        if (cmlAddress.to_address()?.staking_cred) {
+          stakingCred = cmlAddress.to_address()?.staking_cred()?.to_hex() || null;
+        }
+      } catch (stakingError) {
+        stakingCred = null;
+      }
       return [paymentCred, stakingCred];
     } catch (byronError) {
       console.error('Failed to parse address:', address, error);

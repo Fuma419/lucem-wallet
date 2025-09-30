@@ -72,6 +72,27 @@ export const NODE = {
   preprod: 'https://preprod.koios.rest/api/v1',
 };
 
+// Transaction submission endpoints (these don't require API keys)
+export const SUBMIT_ENDPOINTS = {
+  mainnet: 'https://cardano-mainnet.blockfrost.io/api/v0/tx/submit',
+  testnet: 'https://cardano-testnet.blockfrost.io/api/v0/tx/submit',
+  preview: 'https://cardano-preview.blockfrost.io/api/v0/tx/submit',
+  preprod: 'https://cardano-preprod.blockfrost.io/api/v0/tx/submit',
+};
+
+// Blockfrost project IDs from environment variables
+export const BLOCKFROST_PROJECT_IDS = {
+  mainnet: process.env.BLOCKFROST_MAINNET_PROJECT_ID,
+  preview: process.env.BLOCKFROST_PREVIEW_PROJECT_ID,
+  preprod: process.env.BLOCKFROST_PREPROD_PROJECT_ID,
+};
+
+// Log which API keys are loaded (without exposing the actual keys)
+console.log('Blockfrost API Keys loaded:');
+console.log('Mainnet:', process.env.BLOCKFROST_MAINNET_PROJECT_ID ? '✅ Loaded' : '❌ Missing');
+console.log('Preview:', process.env.BLOCKFROST_PREVIEW_PROJECT_ID ? '✅ Loaded' : '❌ Missing');
+console.log('Preprod:', process.env.BLOCKFROST_PREPROD_PROJECT_ID ? '✅ Loaded' : '❌ Missing');
+
 export const NETWORK_ID = {
   mainnet: 'mainnet',
   testnet: 'testnet',

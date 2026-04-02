@@ -54,3 +54,24 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). Wit
 ### ESLint baseline
 
 ESLint reports pre-existing errors (mostly `FinalizationRegistry` undefined in generated WASM code and an unused `TerserPlugin` import in `webpack.config.js`). These are not caused by agent changes.
+
+## Model & Token Budget Policy
+
+### Model tier selection
+- Use the fastest/cheapest model for routine edits, searches, lint fixes, and docs.
+- Escalate to a capable model **only** for: complex debugging, architecture decisions, or security-sensitive wallet/crypto logic.
+- Downgrade immediately after the complex step.
+
+### Token efficiency
+- Concise outputs by default; bullet lists over paragraphs.
+- Targeted file reads with `Grep`/`Glob` filters — avoid broad `**/*` scans.
+- Read large files with `offset`/`limit`; don't read entire files when only a section is needed.
+
+### Validation cadence
+- **During iteration:** validate only changed files (single-file lint, single test suite).
+- **Before commit:** run repo-wide gates once: `NODE_ENV=test npx jest`, `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx`, `npm run build`.
+
+### Edit discipline
+- One logical change per commit. No unrelated refactors.
+- Never modify generated WASM files in `src/wasm/`.
+- See `.cursor/rules/cost-optimizer.mdc` and `.cursor/skills/` for detailed guidance.

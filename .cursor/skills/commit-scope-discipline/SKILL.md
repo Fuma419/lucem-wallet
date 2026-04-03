@@ -1,14 +1,10 @@
 # Commit Scope Discipline
 
-**Trigger:** Agent is about to stage and commit changes.
+**Trigger:** Agent is about to stage and commit.
 
 ## Rules
-1. Each commit addresses exactly one logical change (feature, fix, refactor, or docs).
-2. Do not bundle unrelated formatting, import reordering, or typo fixes into a feature commit.
-3. Review `git diff --stat` before committing — if more than ~5 files changed, verify each is necessary.
-4. Commit message format: imperative mood, ≤72 chars first line, optional body for "why."
-5. Never commit generated build output (`build/`), secrets files, or `node_modules/`.
-
-## Anti-patterns
-- "Fix everything" commits touching 20+ files across unrelated areas.
-- Committing debug logs, `console.log` statements, or temporary test scaffolding.
+1. One logical change per commit. No unrelated formatting or refactors.
+2. Review `git diff --stat` — if >5 files, verify each is necessary.
+3. Imperative mood, ≤72 chars first line, optional body.
+4. Never commit: `build/`, `secrets.*.js` (except `secrets.testing.js`), `node_modules/`, `.vercel/`.
+5. Before commit: `NODE_ENV=test npx jest` (53 pass), ESLint (237 baseline), `npm run build`.

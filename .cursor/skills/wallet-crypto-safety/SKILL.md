@@ -1,19 +1,22 @@
-# Wallet & Crypto Safety Checklist
+# Wallet & Crypto Safety
 
-**Trigger:** Agent modifies files in `src/api/extension/`, `src/migrations/`, `src/wasm/`, or any code handling keys, mnemonics, passwords, signing, or encrypted storage.
+**Trigger:** Agent modifies `src/api/extension/`, `src/migrations/`, `src/platform/` (storage), or any code handling keys, mnemonics, passwords, signing.
 
-## Pre-edit checklist
-- [ ] Understand the existing encrypt/decrypt flow before changing it (see `src/api/extension/wallet.js`).
-- [ ] Identify all callers of the function being modified (`Grep` for the function name).
-- [ ] Check if a migration version file is needed (`src/migrations/versions/`).
+## Key paths
+| Operation | Function | File |
+|-----------|----------|------|
+| Encrypt/decrypt root key | `encryptWithPassword` / `decryptWithPassword` | `index.js` |
+| Derive account keys | `requestAccountKey` | `index.js` |
+| Sign tx/data | `signTx`, `signDataCIP30` | `index.js` |
+| Build tx | `buildTx`, `delegationTx` | `wallet.js` |
+| Create wallet | `createWallet` | `index.js` |
 
-## Post-edit checklist
-- [ ] No private key, mnemonic, or password is logged, exposed to DOM, or sent to external APIs.
-- [ ] `encryptWithPassword` / `decryptWithPassword` usage unchanged unless intentional.
-- [ ] BIP39 mnemonic generation/validation logic unmodified unless explicitly requested.
-- [ ] Hardware wallet signing paths (Ledger/Trezor) still receive the same data structures.
-- [ ] Run `NODE_ENV=test npx jest` — confirm the 2 passing suites still pass (53 tests).
+## CSL v15 API (critical)
+- `Credential.from_keyhash()` not `new_pub_key()`. `Value.new_with_assets()` not `Value.new(coin, ma)`.
+- `encrypt_with_password` / `decrypt_with_password` (no `emip3_` prefix). `as_bytes()` not `to_raw_bytes()`.
+- `Bip32PublicKey.from_hex()` not `from_bytes()`. `NetworkInfo.testnet_preprod()` not `testnet()`.
 
-## Escalation
-- If unsure about a crypto change, escalate to a more capable model tier and explain the security context.
-- Never silently swallow errors in signing or decryption paths.
+## Checklist
+- [ ] No private key/mnemonic logged, exposed to DOM, or sent to external APIs.
+- [ ] Both platform adapters handle storage changes (IndexedDB web + chrome.storage extension).
+- [ ] `NODE_ENV=test npx jest` — 53 tests still pass.

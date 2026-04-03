@@ -1,30 +1,21 @@
 ---
-description: Token-efficiency defaults for Cursor Cloud agents working on Lucem Wallet
+description: Token-efficiency and core project rules for Lucem Wallet
 alwaysApply: true
 ---
 
 # Cost & Token Efficiency
 
-## Model Selection
-- Default to the fastest/cheapest model tier for straightforward tasks (file edits, simple searches, lint fixes, docs updates).
-- Escalate to a more capable model **only** for: complex debugging, architecture decisions, security-sensitive crypto/wallet logic, or multi-step reasoning across many files.
-- Downgrade back to fast tier immediately after the hard step completes.
+- Default fastest model tier. Escalate only for: complex debug, architecture, crypto/security. Downgrade immediately after.
+- Concise outputs. Bullet lists over paragraphs. Omit unrequested boilerplate.
+- Targeted reads: `Grep`/`Glob` with filters, `offset`/`limit` for large files. Never `**/*`.
+- **Iteration**: validate only changed files. **Finalization**: run `NODE_ENV=test npx jest`, `npm run build`, ESLint once.
+- One logical change per commit. Never modify `src/wasm/`.
+- All `chrome.*` calls must go through `src/platform/` adapter — never add direct chrome API in shared code.
 
-## Output Discipline
-- Prefer concise responses. Omit boilerplate explanations the developer didn't ask for.
-- When summarizing changes, use bullet lists not paragraphs.
+# Lucem Core
 
-## File Access
-- Read only the files you need. Use targeted `Grep`/`Glob` with specific patterns instead of broad directory scans.
-- Prefer `Grep` with `glob` or `type` filters over unscoped searches.
-- When reading large files, use `offset`/`limit` to read only the relevant section.
-
-## Validation Strategy
-- **During iteration**: run only the checks relevant to changed files (e.g., lint a single file, run one test suite).
-- **At finalization**: run the repo-wide gates (`NODE_ENV=test npx jest`, `npm run build`, ESLint) once before committing.
-- Never run `npm run build` speculatively mid-iteration unless testing build-config changes.
-
-## Edit Scope
-- Make small, scoped edits. Do not refactor unrelated code.
-- One logical change per commit.
-- Avoid touching generated files (`src/wasm/`) or vendored code.
+- MV3 extension + PWA web app (same build). Runtime adapter in `src/platform/index.js`.
+- CIP-30 provider id: `lucem`. Preserve dApp connector compatibility.
+- Keys stay in extension storage or secure hardware paths. Never expose mnemonics/private keys to server or DOM.
+- Prefer existing Cardano deps in `package.json` over new overlapping libraries.
+- CSL v15 API: `Credential.from_keyhash`, `encrypt/decrypt_with_password`, `Value.new_with_assets`, `as_bytes`/`from_bytes` (not `to_raw_bytes`).

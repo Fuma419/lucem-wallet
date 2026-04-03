@@ -1,15 +1,24 @@
 # Minimal Codebase Exploration
 
-**Trigger:** Agent needs to understand code structure or locate a symbol/file.
+**Trigger:** Agent needs to locate a symbol, understand structure, or find a file.
+
+## Key files (don't re-search)
+
+| Need | File |
+|------|------|
+| Storage keys, errors, network IDs | `src/config/config.js` |
+| API URLs, secrets | `src/config/provider.js` |
+| Webpack entries, aliases | `webpack.config.js` |
+| Wallet API functions | `src/api/extension/index.js` |
+| Tx building | `src/api/extension/wallet.js` |
+| Koios endpoints | `src/api/koios-endpoints.js` |
+| WASM loader | `src/api/loader.js` |
+| Platform adapter | `src/platform/index.js` |
+| Jest config | `jest.config.js` |
+| Vercel config | `vercel.json` |
 
 ## Rules
-1. Start with `Grep` using a specific pattern and `glob`/`type` filter before reading any file.
-2. Use `Glob` with a targeted pattern (e.g., `src/api/**/*.js`) — never `**/*`.
-3. Read only the matched files, using `offset`/`limit` for files > 200 lines.
-4. If an `explore` subagent is needed, set thoroughness to `"quick"` unless the question is architectural.
-5. Cache key paths mentally — avoid re-searching for the same symbol twice in one session.
-
-## Anti-patterns
-- Reading every file in a directory "just in case."
-- Using `find` or `ls -R` in Shell instead of `Glob`/`Grep`.
-- Spawning an `explore` subagent for a single-symbol lookup.
+1. `Grep` with `glob`/`type` filter first. `Glob` with targeted pattern — never `**/*`.
+2. `offset`/`limit` for files > 200 lines. `src/api/extension/index.js` is ~2250 lines — never read it fully.
+3. `explore` subagent at `"quick"` unless architectural question.
+4. Don't re-search the same symbol twice per session.

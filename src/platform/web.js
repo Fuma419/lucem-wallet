@@ -94,7 +94,7 @@ const webAdapter = {
     },
 
     createTab: (tab, query = '') => {
-      window.open(tab + '.html' + query, '_blank');
+      window.location.href = tab + '.html' + query;
       return Promise.resolve({ id: Date.now() });
     },
 

@@ -71,7 +71,9 @@ export const removeStorage = (item) => platform.storage.remove(item);
 
 export const encryptWithPassword = async (password, rootKeyBytes) => {
   await Loader.load();
-  const rootKeyHex = Buffer.from(rootKeyBytes, 'hex').toString('hex');
+  const rootKeyHex = rootKeyBytes instanceof Uint8Array
+    ? Buffer.from(rootKeyBytes).toString('hex')
+    : Buffer.from(rootKeyBytes, 'hex').toString('hex');
   const passwordHex = Buffer.from(password).toString('hex');
   const salt = cryptoRandomString({ length: 2 * 32 });
   const nonce = cryptoRandomString({ length: 2 * 12 });
@@ -1417,14 +1419,21 @@ export const requestAccountKey = async (password, accountIndex) => {
   await Loader.load();
   const encryptedRootKey = await getStorage(STORAGE.encryptedKey);
   let accountKey;
+  let decryptedHex;
+  try {
+    decryptedHex = await decryptWithPassword(password, encryptedRootKey);
+  } catch (e) {
+    throw ERROR.wrongPassword;
+  }
   try {
     accountKey = Loader.Cardano.Bip32PrivateKey.from_bytes(
-      Buffer.from(await decryptWithPassword(password, encryptedRootKey), 'hex')
+      Buffer.from(decryptedHex, 'hex')
     )
       .derive(harden(1852)) // purpose
-      .derive(harden(1815)) // coin type;
+      .derive(harden(1815)) // coin type
       .derive(harden(parseInt(accountIndex)));
   } catch (e) {
+    console.error('Key derivation failed after successful decryption:', e);
     throw ERROR.wrongPassword;
   }
 
@@ -2187,21 +2196,14 @@ export const updateAccount = async (forceUpdate = false) => {
 
   await updateTransactions(currentAccount, network);
 
+  const isFirstLoad = currentAccount[network.id].lovelace == null;
   if (
     currentAccount[network.id].history.confirmed[0] ==
       currentAccount[network.id].lastUpdate &&
     !forceUpdate &&
+    !isFirstLoad &&
     !currentAccount[network.id].forceUpdate
   ) {
-    if (currentAccount[network.id].lovelace == null) {
-      // first initilization of account
-      currentAccount[network.id].lovelace = '0';
-      await setStorage({
-        [STORAGE.accounts]: {
-          ...accounts,
-        },
-      });
-    }
     return;
   }
 

@@ -541,6 +541,7 @@ const ImportSeed = ({ colorTheme }) => {
 const MakeAccount = ({ colorTheme }) => {
   const [state, setState] = React.useState({});
   const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
   const { state: navigationState = {} } = useLocation();
   const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
   colorTheme = colorTheme || stateColorTheme || 'purple';
@@ -558,7 +559,7 @@ const MakeAccount = ({ colorTheme }) => {
         <Spacer height="10" />
         <Input
           focusBorderColor={`${colorTheme}.700`}
-          onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
+          onChange={(e) => { setState((s) => ({ ...s, name: e.target.value })); setError(null); }}
           placeholder="Enter account name"
         />
         <Spacer height="10" />
@@ -630,28 +631,12 @@ const MakeAccount = ({ colorTheme }) => {
             Password doesn't match
           </Text>
         )}
-        <Spacer height="10" />
-        
-        {/* TEMPORARY: Development Reset Button */}
-        {process.env.NODE_ENV === 'development' && (
-          <>
-            <Button
-              colorScheme="red"
-              variant="outline"
-              size="sm"
-              mb={4}
-              onClick={async () => {
-                if (confirm('This will clear all wallet data. Are you sure?')) {
-                  await platform.storage.clear();
-                  alert('Storage cleared! You can now create a new wallet.');
-                  window.location.reload();
-                }
-              }}
-            >
-              🧹 Clear Storage (Dev Only)
-            </Button>
-            <Spacer height="2" />
-          </>
+        <Spacer height="4" />
+
+        {error && (
+          <Text fontSize="sm" color="red.300" mb={4}>
+            {error}
+          </Text>
         )}
         
         <Button
@@ -667,11 +652,17 @@ const MakeAccount = ({ colorTheme }) => {
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
             setLoading(true);
-            // Pass the original mnemonic string to createWallet.
-            await createWallet(state.name, mnemonic, state.password);
-            setRoute('/wallet');
-            setLoading(false);
-            setIsDone(true);
+            setError(null);
+            try {
+              await createWallet(state.name, mnemonic, state.password);
+              setRoute('/wallet');
+              setIsDone(true);
+            } catch (e) {
+              console.error('Wallet creation failed:', e);
+              setError(e.message || 'Failed to create wallet. Please try again.');
+            } finally {
+              setLoading(false);
+            }
           }}
         >
           Create
@@ -681,6 +672,11 @@ const MakeAccount = ({ colorTheme }) => {
   );
 };
 
+const isExtension =
+  typeof chrome !== 'undefined' &&
+  typeof chrome.runtime !== 'undefined' &&
+  typeof chrome.runtime.id !== 'undefined';
+
 const SuccessAndClose = ({ flow }) => {
   return (
     <>
@@ -688,14 +684,24 @@ const SuccessAndClose = ({ flow }) => {
         Successfully created wallet!
       </Text>
       <Box h={10} />
-      <Text>You can now close this tab and continue with the extension.</Text>
+      <Text>
+        {isExtension
+          ? 'You can now close this tab and continue with the extension.'
+          : 'Redirecting to your wallet...'}
+      </Text>
       <Box h={10} />
       <Button
         className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
         mt="auto"
-        onClick={async () => window.close()}
+        onClick={async () => {
+          if (isExtension) {
+            window.close();
+          } else {
+            window.location.href = '/mainPopup.html';
+          }
+        }}
       >
-        Close
+        {isExtension ? 'Close' : 'Open Wallet'}
       </Button>
     </>
   );

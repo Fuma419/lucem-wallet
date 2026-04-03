@@ -60,6 +60,8 @@ const preloadImages = `
   <link rel="preload" as="image" href="/assets/img/logoWhite.png">
 `;
 
+
+
 const options = {
   cache: {
     type: 'filesystem',
@@ -153,6 +155,14 @@ const options = {
       {
         test: /\.html$/,
         loader: 'html-loader',
+        options: {
+          sources: {
+            urlFilter: (attribute, value) => {
+              if (value.startsWith('/assets/') || value.startsWith('/manifest')) return false;
+              return true;
+            },
+          },
+        },
         exclude: /node_modules/,
       },
     ],
@@ -189,6 +199,11 @@ const options = {
         {
           from: 'src/assets/img',
           to: path.join(__dirname, 'build', 'assets', 'img'),
+          force: true,
+        },
+        {
+          from: 'src/manifest.webmanifest',
+          to: path.join(__dirname, 'build'),
           force: true,
         },
         {

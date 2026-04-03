@@ -1,4 +1,5 @@
 import React from 'react';
+import platform from '../../../platform';
 import {
   bytesAddressToBinary,
   extractKeyOrScriptHash,
@@ -571,7 +572,7 @@ const SignTx = ({ request, controller }) => {
                 draggable={false}
                 width={4}
                 height={4}
-                src={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${request.origin}&size=32`}
+                src={platform.icons.getFaviconUrl(request.origin)}
               />
             </Box>
             <Box w="3" />

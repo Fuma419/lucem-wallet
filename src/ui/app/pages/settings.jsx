@@ -27,6 +27,7 @@ import {
   CheckIcon,
 } from '@chakra-ui/icons';
 import React, { useCallback } from 'react';
+import platform from '../../../platform';
 import {
   getCurrentAccount,
   getCurrentAccountIndex,
@@ -356,7 +357,7 @@ const Whitelisted = () => {
             >
               <Image
                 width="24px"
-                src={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${origin}&size=32`}
+                src={platform.icons.getFaviconUrl(origin)}
                 fallback={<SkeletonCircle width="24px" height="24px" />}
               />
               <Text>{origin.split('//')[1]}</Text>

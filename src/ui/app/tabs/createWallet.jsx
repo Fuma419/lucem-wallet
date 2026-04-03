@@ -1,4 +1,5 @@
 import React from 'react';
+import platform from '../../../platform';
 import '../../app/components/styles.css';
 import {
   Box,
@@ -641,7 +642,7 @@ const MakeAccount = ({ colorTheme }) => {
               mb={4}
               onClick={async () => {
                 if (confirm('This will clear all wallet data. Are you sure?')) {
-                  await chrome.storage.local.clear();
+                  await platform.storage.clear();
                   alert('Storage cleared! You can now create a new wallet.');
                   window.location.reload();
                 }

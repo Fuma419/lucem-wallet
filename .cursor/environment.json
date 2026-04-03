@@ -1,0 +1,7 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "install": "NODE_ENV=development npm install && (test -f secrets.development.js || cp secrets.testing.js secrets.development.js) && (test -f secrets.production.js || cp secrets.testing.js secrets.production.js)"
+}

@@ -14,6 +14,7 @@ import {
   TxSignError,
 } from '../../config/config';
 import { POPUP_WINDOW } from '../../config/config';
+import platform from '../../platform';
 import { mnemonicToEntropy } from 'bip39';
 import cryptoRandomString from 'crypto-random-string';
 import Loader from '../loader';
@@ -64,28 +65,9 @@ const compareValues = (value1, value2) => {
   }
 }
 
-export const getStorage = (key) =>
-  new Promise((res, rej) =>
-    chrome.storage.local.get(key, (result) => {
-      if (chrome.runtime.lastError) rej(undefined);
-      res(key ? result[key] : result);
-    })
-  );
-export const setStorage = (item) =>
-  new Promise((res, rej) =>
-    chrome.storage.local.set(item, () => {
-      if (chrome.runtime.lastError) rej(chrome.runtime.lastError);
-      res(true);
-    })
-  );
-
-export const removeStorage = (item) =>
-  new Promise((res, rej) =>
-    chrome.storage.local.remove(item, () => {
-      if (chrome.runtime.lastError) rej(chrome.runtime.lastError);
-      res(true);
-    })
-  );
+export const getStorage = (key) => platform.storage.get(key);
+export const setStorage = (item) => platform.storage.set(item);
+export const removeStorage = (item) => platform.storage.remove(item);
 
 export const encryptWithPassword = async (password, rootKeyBytes) => {
   await Loader.load();
@@ -828,101 +810,13 @@ export const setAccountAvatar = async (avatar) => {
   return await setStorage({ [STORAGE.accounts]: accounts });
 };
 
-export const createPopup = async (popup) => {
-  let left = 0;
-  let top = 0;
-  try {
-    const lastFocused = await new Promise((res, rej) => {
-      chrome.windows.getLastFocused((windowObject) => {
-        return res(windowObject);
-      });
-    });
-    top = lastFocused.top;
-    left =
-      lastFocused.left +
-      Math.round((lastFocused.width - POPUP_WINDOW.width) / 2);
-  } catch (_) {
-    // The following properties are more than likely 0, due to being
-    // opened from the background chrome process for the extension that
-    // has no physical dimensions
-    const { screenX, screenY, outerWidth } = window;
-    top = Math.max(screenY, 0);
-    left = Math.max(screenX + (outerWidth - POPUP_WINDOW.width), 0);
-  }
-
-  const { popupWindow, tab } = await new Promise((res, rej) =>
-    chrome.tabs.create(
-      {
-        url: chrome.runtime.getURL(popup + '.html'),
-        active: false,
-      },
-      function (tab) {
-        chrome.windows.create(
-          {
-            tabId: tab.id,
-            type: 'popup',
-            focused: true,
-            ...POPUP_WINDOW,
-            left,
-            top,
-          },
-          function (newWindow) {
-            return res({ popupWindow: newWindow, tab });
-          }
-        );
-      }
-    )
-  );
-
-  if (popupWindow.left !== left && popupWindow.state !== 'fullscreen') {
-    await new Promise((res, rej) => {
-      chrome.windows.update(popupWindow.id, { left, top }, () => {
-        return res();
-      });
-    });
-  }
-  return tab;
-};
+export const createPopup = (popup) => platform.navigation.createPopup(popup);
 
 export const createTab = (tab, query = '') =>
-  new Promise((res, rej) =>
-    chrome.tabs.create(
-      {
-        url: chrome.runtime.getURL(tab + '.html' + query),
-        active: true,
-      },
-      function (tab) {
-        chrome.windows.create(
-          {
-            tabId: tab.id,
-            focused: true,
-          },
-          function () {
-            res(tab);
-          }
-        );
-      }
-    )
-  );
+  platform.navigation.createTab(tab, query);
 
 export const getCurrentWebpage = () =>
-  new Promise((res, rej) => {
-    chrome.tabs.query(
-      {
-        active: true,
-        lastFocusedWindow: true,
-        status: 'complete',
-        windowType: 'normal',
-      },
-      function (tabs) {
-        res({
-          url: new URL(tabs[0].url).origin,
-          favicon: tabs[0].favIconUrl,
-          tabId: tabs[0].id,
-        });
-      }
-    );
-  });
+  platform.navigation.getCurrentWebpage();
 
 const harden = (num) => {
   return 0x80000000 + num;
@@ -1464,26 +1358,15 @@ export const submitTx = async (tx) => {
 };
 
 const emitNetworkChange = async (networkId) => {
-  //to webpage
-  chrome.tabs.query({}, (tabs) => {
-    tabs.forEach((tab) =>
-      chrome.tabs.sendMessage(tab.id, {
-        data: networkId,
-        target: TARGET,
-        sender: SENDER.extension,
-        event: EVENT.networkChange,
-      }, (response) => {
-        // Ignore errors - some tabs might not have content scripts loaded
-        if (chrome.runtime.lastError) {
-          // This is expected for tabs without content scripts
-        }
-      })
-    );
+  platform.events.broadcastToTabs({
+    data: networkId,
+    target: TARGET,
+    sender: SENDER.extension,
+    event: EVENT.networkChange,
   });
 };
 
 const emitAccountChange = async (addresses) => {
-  //to extenstion itself
   if (typeof window !== 'undefined') {
     window.postMessage({
       data: addresses,
@@ -1492,21 +1375,11 @@ const emitAccountChange = async (addresses) => {
       event: EVENT.accountChange,
     });
   }
-  //to webpage
-  chrome.tabs.query({}, (tabs) => {
-    tabs.forEach((tab) =>
-      chrome.tabs.sendMessage(tab.id, {
-        data: addresses,
-        target: TARGET,
-        sender: SENDER.extension,
-        event: EVENT.accountChange,
-      }, (response) => {
-        // Ignore errors - some tabs might not have content scripts loaded
-        if (chrome.runtime.lastError) {
-          // This is expected for tabs without content scripts
-        }
-      })
-    );
+  platform.events.broadcastToTabs({
+    data: addresses,
+    target: TARGET,
+    sender: SENDER.extension,
+    event: EVENT.accountChange,
   });
 };
 
@@ -1565,7 +1438,7 @@ export const requestAccountKey = async (password, accountIndex) => {
 
 export const resetStorage = async (password) => {
   await requestAccountKey(password, 0);
-  await new Promise((res, rej) => chrome.storage.local.clear(() => res()));
+  await platform.storage.clear();
   return true;
 };
 

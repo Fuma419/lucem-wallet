@@ -9,6 +9,11 @@ import { ChevronUpIcon } from '@chakra-ui/icons';
 
 const isMain = window.document.querySelector(`#${POPUP.main}`);
 const isTab = window.document.querySelector(`#${TAB.hw}`);
+const isExtensionPopup =
+  isMain &&
+  typeof chrome !== 'undefined' &&
+  typeof chrome.runtime !== 'undefined' &&
+  typeof chrome.runtime.id !== 'undefined';
 
 const Main = ({ children }) => {
   const [scroll, setScroll] = React.useState({ el: null, y: 0 });
@@ -18,7 +23,6 @@ const Main = ({ children }) => {
       'keydown',
       (e) => e.key === 'Escape' && e.preventDefault()
     );
-    // Windows is somehow not opening the popup with the right size. Dynamically changing it, fixes it for now:
     if (navigator.userAgent.indexOf('Win') != -1 && !isMain && !isTab) {
       const width =
         POPUP_WINDOW.width + (window.outerWidth - window.innerWidth);
@@ -29,8 +33,10 @@ const Main = ({ children }) => {
   }, []);
   return (
     <Box
-      width={isMain ? POPUP_WINDOW.width + 'px' : '100%'}
-      height={isMain ? POPUP_WINDOW.height + 'px' : '100vh'}
+      width={isExtensionPopup ? POPUP_WINDOW.width + 'px' : '100%'}
+      height={isExtensionPopup ? POPUP_WINDOW.height + 'px' : '100vh'}
+      maxWidth={isExtensionPopup ? undefined : '480px'}
+      mx={isExtensionPopup ? undefined : 'auto'}
     >
       <Theme>
         <StoreProvider>

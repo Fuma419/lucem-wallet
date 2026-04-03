@@ -5,6 +5,7 @@ import {
   signData,
   signDataCIP30,
 } from '../../../api/extension';
+import platform from '../../../platform';
 import Account from '../components/account';
 import { Scrollbars } from '../components/scrollbar';
 import {
@@ -127,7 +128,7 @@ const SignData = ({ request, controller }) => {
                 draggable={false}
                 width={4}
                 height={4}
-                src={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${request.origin}&size=32`}
+                src={platform.icons.getFaviconUrl(request.origin)}
               />
             </Box>
             <Box w="3" />

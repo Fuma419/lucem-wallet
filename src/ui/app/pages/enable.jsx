@@ -3,6 +3,7 @@ import { Box, Button, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import React from 'react';
 import { setWhitelisted } from '../../../api/extension';
 import { APIError } from '../../../config/config';
+import platform from '../../../platform';
 
 import Account from '../components/account';
 
@@ -37,7 +38,7 @@ const Enable = ({ request, controller }) => {
             draggable={false}
             width={6}
             height={6}
-            src={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${request.origin}&size=32`}
+            src={platform.icons.getFaviconUrl(request.origin)}
           />
         </Box>
         <Box height="3" />

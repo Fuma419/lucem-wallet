@@ -3,9 +3,22 @@ process.env.BABEL_ENV = 'production';
 process.env.NODE_ENV = 'production';
 process.env.ASSET_PATH = '/';
 
+var fs = require('fs'),
+  path = require('path');
+
+// Auto-generate secrets.production.js before webpack config is loaded,
+// since webpack.config.js checks for this file at require-time.
+var secretsProdPath = path.join(__dirname, '..', 'secrets.production.js');
+if (!fs.existsSync(secretsProdPath)) {
+  var secretsTemplatePath = path.join(__dirname, '..', 'secrets.testing.js');
+  if (fs.existsSync(secretsTemplatePath)) {
+    fs.copyFileSync(secretsTemplatePath, secretsProdPath);
+    console.log('Generated secrets.production.js from secrets.testing.js template');
+  }
+}
+
 var webpack = require('webpack'),
-  config = require('../webpack.config'),
-  fs = require('fs');
+  config = require('../webpack.config');
 
 delete config.chromeExtensionBoilerplate;
 
@@ -26,6 +39,7 @@ webpack(config, function (err, stats) {
         colors: true,
       })
     );
+    process.exit(1);
   } else {
     const buildEndTime = new Date();
     const buildDuration = (buildEndTime - buildStartTime) / 1000; // in seconds

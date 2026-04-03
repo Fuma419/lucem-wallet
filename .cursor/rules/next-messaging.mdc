@@ -1,0 +1,12 @@
+---
+description: Next.js companion messaging app — API boundaries with the Lucem extension
+globs: messaging/**/*.{ts,tsx,js,jsx,mjs},apps/messaging/**/*.{ts,tsx,js,jsx,mjs}
+alwaysApply: false
+---
+
+# Next.js messaging companion
+
+- **Not a wallet**: no key custody; authenticate sessions with tokens or OAuth patterns appropriate to messaging; any Cardano actions go through **CIP-30** in the user’s browser (extension), not via server-side signing with user keys.
+- **Calling the extension**: use documented flows (e.g. deep links, optional native messaging, or in-page `window.cardano.lucem` from pages the user opens) — align with whatever integration the team adds; do not assume arbitrary cross-origin access to extension internals.
+- **Env**: server secrets only in server runtime (Route Handlers, Server Actions env), never `NEXT_PUBLIC_*` for private keys or provider secrets.
+- When this glob does not match yet, create the app under `messaging/` or `apps/messaging/` so this rule activates automatically.

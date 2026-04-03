@@ -1,0 +1,12 @@
+---
+description: MV3 extension patterns for src/ — messaging, bundles, minimal privileged surface
+globs: src/**/*.{ts,tsx,js,jsx}
+alwaysApply: false
+---
+
+# Chrome extension (Lucem)
+
+- **Structure**: popup/options pages, `background` service worker, `content_scripts`, injected script — keep responsibilities split; use `webextension-polyfill` patterns consistent with the codebase.
+- **Messaging**: validate sender/origin where applicable; avoid exposing internal methods to content scripts without checks.
+- **Build output**: webpack entries and `manifest.json` must stay aligned (bundle file names, `web_accessible_resources`).
+- **UI**: match existing React + Chakra (and styled-components where already used) conventions in neighboring files.

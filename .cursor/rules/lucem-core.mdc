@@ -1,0 +1,12 @@
+---
+description: Lucem stack, CIP-30 namespace, security boundaries for Cardano wallet work
+alwaysApply: true
+---
+
+# Lucem core
+
+- Chromium **MV3** extension: background is a **service worker** (no persistent background page). Respect CSP in `src/manifest.json`.
+- DApp bridge: **CIP-30**; provider id **`lucem`**. Preserve compatibility when changing the injected API.
+- **Keys stay in the extension** (or secure hardware paths already in the project). Never suggest moving mnemonics or private keys to a Next.js server or public client storage.
+- Prefer existing Cardano dependencies already in `package.json` over new overlapping libraries.
+- Large reference trees (`yoroi-frontend/`, `koios-artifacts/`) are not the default edit target unless the user names them.

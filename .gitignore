@@ -26,3 +26,7 @@ secrets.development.js
 .idea
 
 *storybook.log
+Lucem_Wallet_*
+build.pem
+lucem-wallet.code-workspace
+.env.production

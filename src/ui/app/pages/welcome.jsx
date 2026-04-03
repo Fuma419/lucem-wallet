@@ -1,6 +1,7 @@
+// Welcome.js
 import React from 'react';
 import { Backpack } from 'react-kawaii';
-import { Checkbox, Image, useColorModeValue } from '@chakra-ui/react';
+import { Checkbox, Image } from '@chakra-ui/react';
 import {
   Box,
   Button,
@@ -17,20 +18,15 @@ import {
   ModalHeader,
   ModalOverlay,
 } from '@chakra-ui/react';
-import BannerWhite from '../../../assets/img/bannerWhite.svg';
-import BannerBlack from '../../../assets/img/bannerBlack.svg';
+import BannerDark from '../../../assets/img/bannerBlack.png'; // Directly using the dark banner
 import TermsOfUse from '../components/termsOfUse';
 import PrivacyPolicy from '../components/privacyPolicy';
 import { ViewIcon, WarningTwoIcon } from '@chakra-ui/icons';
 import { createTab } from '../../../api/extension';
 import { TAB } from '../../../config/config';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
 
 const Welcome = () => {
-  const capture = useCaptureEvent();
-  const Banner = useColorModeValue(BannerBlack, BannerWhite);
   const refWallet = React.useRef();
   const refImport = React.useRef();
 
@@ -43,57 +39,44 @@ const Welcome = () => {
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'column',
+          backgroundColor: '#121212', // Ensure dark background
+          color: '#ffffff', // Ensure white text
         }}
         position="relative"
       >
         {/* Header */}
         <Box position="absolute" top="9">
-          <Image draggable={false} width="85px" src={Banner} />
+          <Image draggable={false} width="150px" src={BannerDark} />
         </Box>
         {/* Footer */}
-        <Box position="absolute" bottom="3" fontSize="xs">
+        <Box position="absolute" bottom="3" fontSize="xs" color="gray.500">
           <Link
-            onClick={() => window.open('https://namiwallet.io')}
-            color="GrayText"
+            onClick={() => window.open('https://www.hodlerstaking.com/lucem-wallet')}
           >
-            namiwallet.io
+            Lucem Wallet
           </Link>
         </Box>
-        <Box h="12" />
-        <Text fontWeight="medium" fontSize="3xl">
-          Welcome
+        <Box height="10"/>
+        <Text className="welcome">
+          Greetings
         </Text>
-        <Text
-          color="grey"
-          fontWeight="light"
-          fontSize="sm"
-          textAlign="center"
-          lineHeight="1.2"
-        >
-          Let's get started with creating a wallet.
+        <Box height="6"/>
+        <Text className="message">
+          Let's setup a wallet
         </Text>
-        <Box h="8" />
-        <Backpack size={120} mood="blissful" color="#61DDBC" />
-        <Box height="8" />
-        <Button
-          display="inline-flex"
+        <Box height="6"/>
+        <Button className="button new-wallet"
           onClick={() => {
-            capture(Events.OnboardingCreateClick);
             refWallet.current.openModal();
           }}
-          colorScheme="teal"
-          size="md"
         >
           New Wallet
-        </Button>
-        <Box height="4" />
-        <Button
+        </Button >
+        <Box height="6"/>
+        <Button className="button import-wallet"
           onClick={() => {
-            capture(Events.OnboardingRestoreClick);
             refImport.current.openModal();
           }}
-          colorScheme="orange"
-          size="sm"
         >
           Import
         </Button>
@@ -118,15 +101,19 @@ const WalletModal = React.forwardRef((props, ref) => {
   }));
   return (
     <>
-      <Modal
+      <Modal className="modal-glow-purple"
         size="xs"
         isOpen={isOpen}
         onClose={onClose}
         isCentered
         blockScrollOnMount={false}
       >
-        <ModalOverlay />
-        <ModalContent>
+          <ModalOverlay
+            style={{
+              backgroundColor: 'rgba(220, 27, 250, 0.15)',
+              backdropFilter: 'blur(5px)',
+            }}/>
+        <ModalContent className="modal-glow-purple" backgroundColor="#1a1a1a" >
           <ModalHeader fontSize="md">Create a wallet</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -136,13 +123,16 @@ const WalletModal = React.forwardRef((props, ref) => {
             </Text>
             <Box h="4" />
             <Box display="flex" alignItems="center" justifyContent="center">
-              <Checkbox onChange={(e) => setAccepted(e.target.checked)} />
+              <Checkbox colorScheme="purple" onChange={(e) => setAccepted(e.target.checked)}               
+              _focus={false}
+              />
               <Box w="2" />
               <Text fontWeight={600}>
                 I read and accepted the{' '}
                 <Link
                   onClick={() => termsRef.current.openModal()}
                   textDecoration="underline"
+                  color="purple.700"
                 >
                   Terms of use
                 </Link>
@@ -150,6 +140,7 @@ const WalletModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => privacyPolicyRef.current.openModal()}
                   textDecoration="underline"
+                  color="purple.700"
                 >
                   Privacy Policy
                 </Link>
@@ -163,8 +154,8 @@ const WalletModal = React.forwardRef((props, ref) => {
               Close
             </Button>
             <Button
+              className="button new-wallet"
               isDisabled={!accepted}
-              colorScheme="teal"
               onClick={() => createTab(TAB.createWallet, `?type=generate`)}
             >
               Continue
@@ -182,6 +173,7 @@ const ImportModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { accepted, setAccepted } = useAcceptDocs();
   const [selected, setSelected] = React.useState(null);
+  const [hasProceeded, setHasProceeded] = React.useState(false);
 
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
@@ -191,6 +183,22 @@ const ImportModal = React.forwardRef((props, ref) => {
       onOpen();
     },
   }));
+
+  const handleContinue = () => {
+    const validLengths = [12, 15, 24];
+    const seedLength = parseInt(selected, 10);
+
+    if (!validLengths.includes(seedLength)) {
+      // Handle invalid seed length
+      return;
+    }
+
+    setHasProceeded(true);
+
+    // Include seed length in the URL parameters
+    createTab(TAB.createWallet, `?type=import&length=${seedLength}`);
+  };
+
   return (
     <>
       <Modal
@@ -200,8 +208,13 @@ const ImportModal = React.forwardRef((props, ref) => {
         isCentered
         blockScrollOnMount={false}
       >
-        <ModalOverlay />
-        <ModalContent>
+        <ModalOverlay
+          style={{
+            backgroundColor: 'rgba(0, 245, 255, 0.2)',
+            backdropFilter: 'blur(5px)',
+          }}
+        />
+        <ModalContent className="modal-glow-cyan" backgroundColor="#1a1a1a">
           <ModalHeader fontSize="md">Import a wallet</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
@@ -211,15 +224,16 @@ const ImportModal = React.forwardRef((props, ref) => {
             </Text>
             <Spacer height="1" />
             <Text fontSize="13px">
-              We always recommend creating a new wallet, as Nami is best
-              experienced when not simultaneously used with Yoroi/Daedalus. Nami
-              will not track all addresses associated with your imported wallet,
-              and might result in partial reflection of assets. To accurately
+              Lucem is best experienced when not simultaneously used with Multi-Address wallets 
+              like Yoroi/Daedalus. Lucem allows the user to have multiple accounts but
+              will only track the first wallet from your imported wallet.
+              This might result in partial reflection of assets. To accurately
               reflect your balance, please transfer all assets into your new
-              Nami wallet.{' '}
+              Lucem wallet address using a Multi-Address wallet.{' '}
               <Link
                 textDecoration="underline"
-                onClick={() => window.open('https://namiwallet.io')}
+                color="cyan.700"
+                onClick={() => window.open('https://www.hodlerstaking.com/lucem-wallet')}
               >
                 More info
               </Link>
@@ -233,21 +247,34 @@ const ImportModal = React.forwardRef((props, ref) => {
             <Select
               size="sm"
               rounded="md"
+              value={selected}
               onChange={(e) => setSelected(e.target.value)}
               placeholder="Choose seed phrase length"
+              backgroundColor="#2a2a2a"
+              color="white"
+              focusBorderColor={`cyan.700`}
+              borderColor={`cyan.700`}
+              isDisabled={hasProceeded} // Disable after proceeding
             >
+              <option value="12">12-word seed phrase</option>
               <option value="15">15-word seed phrase</option>
               <option value="24">24-word seed phrase</option>
             </Select>
+
             <Box h="5" />
             <Box display="flex" alignItems="center" justifyContent="center">
-              <Checkbox onChange={(e) => setAccepted(e.target.checked)} />
+              <Checkbox onChange={(e) => setAccepted(e.target.checked)}               
+              isFocusable={false}
+              _focusVisible={false}
+              colorScheme="cyan"
+              />
               <Box w="2" />
               <Text fontWeight={600}>
                 I read and accepted the{' '}
                 <Link
                   onClick={() => termsRef.current.openModal()}
                   textDecoration="underline"
+                  color="cyan.700"
                 >
                   Terms of use
                 </Link>
@@ -255,6 +282,7 @@ const ImportModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => privacyPolicyRef.current.openModal()}
                   textDecoration="underline"
+                  color="cyan.700"
                 >
                   Privacy Policy
                 </Link>
@@ -262,20 +290,14 @@ const ImportModal = React.forwardRef((props, ref) => {
               <Box h="2" />
             </Box>
           </ModalBody>
-
           <ModalFooter>
             <Button mr={3} variant="ghost" onClick={onClose}>
               Close
             </Button>
             <Button
               isDisabled={!selected || !accepted}
-              colorScheme="teal"
-              onClick={() =>
-                createTab(
-                  TAB.createWallet,
-                  `?type=import&length=${parseInt(selected)}`
-                )
-              }
+              className="button import-wallet"
+              onClick={handleContinue}
             >
               Continue
             </Button>

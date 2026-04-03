@@ -15,6 +15,7 @@ import {
   isHW,
   switchAccount,
   updateAccount,
+  getStorage,
 } from '../../../api/extension';
 import {
   BsArrowDownRight,
@@ -58,13 +59,13 @@ import {
   PopoverBody,
   PopoverArrow,
   PopoverCloseButton,
+  Portal,
   Tabs,
   TabList,
   Tab,
   TabPanels,
   TabPanel,
   Tooltip,
-  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   SettingsIcon,
@@ -88,17 +89,18 @@ import { useStoreState } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
 import { currencyToSymbol, fromAssetUnit } from '../../../api/util';
 import TransactionBuilder from '../components/transactionBuilder';
-import { NETWORK_ID, TAB } from '../../../config/config';
+import { NETWORK_ID, TAB, STORAGE } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
+import { RxTokens } from "react-icons/rx";
+import { GoHistory } from "react-icons/go";
 import { BiWallet } from 'react-icons/bi';
-import { GiTwoCoins, GiUsbKey } from 'react-icons/gi';
+import { GiToken, GiUsbKey } from 'react-icons/gi';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
+import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
-import Logo from '../../../assets/img/logoWhite.svg';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
+import Logo from '../../../assets/img/logo.png';
 
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
@@ -110,12 +112,13 @@ const useIsMounted = () => {
 };
 
 const Wallet = () => {
-  const capture = useCaptureEvent();
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = useColorModeValue('white', 'gray.700');
-  const panelBg = useColorModeValue('#349EA3', 'gray.800');
+  const avatarBg = useColorModeValue('yellow.100', 'gray.900');
+  const panelBg = useColorModeValue('yellow.100', 'black');
+  const receiveButton = useColorModeValue('yellow.100', 'cyan.700');
+  const sendButton = useColorModeValue('yellow.500', 'yellow.600');
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -241,7 +244,6 @@ const Wallet = () => {
       >
         <Box
           height="52"
-          roundedBottom="3xl"
           background={panelBg}
           shadow="md"
           width="full"
@@ -250,18 +252,27 @@ const Wallet = () => {
           <Box
             zIndex="2"
             position="absolute"
-            top="6"
-            left="6"
-            width="14"
-            height="14"
+            top="5"
+            left="5"
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
-            <Image draggable={false} width="30px" src={Logo} />
+            <Image draggable={false} width="85px" src={Logo} />
           </Box>
           {/* Delegation */}
-          <Box zIndex="1" position="absolute" width="full" bottom="5" left="6">
+          <Box 
+            zIndex="1"
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            position="absolute"
+            top="85%"  /* Adjust the vertical position as needed */
+            left="50%"
+            transform="translate(-50%, -50%)"
+            flexDirection="row"  /* Ensure the direction is row (horizontal) */
+            flexWrap="nowrap"  /* Prevent wrapping */
+            >
             {state.delegation && (
               <>
                 {state.delegation.active ? (
@@ -275,7 +286,6 @@ const Wallet = () => {
                 ) : (
                   <Button
                     onClick={() => {
-                      capture(Events.StakingClick);
                       builderRef.current.initDelegation(
                         state.account,
                         state.delegation
@@ -283,7 +293,6 @@ const Wallet = () => {
                     }}
                     variant="solid"
                     size="xs"
-                    color="whiteAlpha"
                     rounded="lg"
                   >
                     Delegate
@@ -292,36 +301,55 @@ const Wallet = () => {
               </>
             )}
           </Box>
-          <Box zIndex="2" position="absolute" top="6" right="6">
+          {/* Upper right wallet icon - non-interactive */}
+          <Box zIndex="2" position="absolute" top="7" right="7">
+            <Box
+              position="relative"
+              rounded="full"
+              background={avatarBg}
+              width="14"
+              height="14"
+            >
+              <Box
+                position="absolute"
+                top="0"
+                right="0"
+                width={'full'}
+                height={'full'}
+                display={'flex'}
+                alignItems={'center'}
+                justifyContent={'center'}
+              >
+                <AvatarLoader avatar={info.avatar} width="14" />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Lower right settings button */}
+          <Box zIndex="2" position="fixed" bottom="7" right="7">
             <Menu
               isOpen={menu}
               autoSelect={false}
               onClose={() => setMenu(false)}
             >
               <MenuButton
+                as={Button}
                 onClick={() => setMenu(true)}
-                position="relative"
-                rounded="full"
-                background={avatarBg}
-                width="14"
-                height="14"
-                _hover={{ filter: 'brightness(0.92)' }}
-                _active={{ filter: 'brightness(0.84)' }}
+                className="button settings"
+                size="sm"
+                background="purple.500"
+                rounded="lg"
+                shadow="md"
+                w="35px"
+                h="35px"
+                p={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
               >
-                <Box
-                  position="absolute"
-                  top="0"
-                  right="0"
-                  width={'full'}
-                  height={'full'}
-                  display={'flex'}
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                >
-                  <AvatarLoader avatar={info.avatar} width="14" smallRobot />
-                </Box>
+                <SettingsIcon boxSize={4}/>
               </MenuButton>
-              <MenuList fontSize="xs">
+              <MenuList fontSize="md">
                 <MenuGroup title="Accounts">
                   <Scrollbars
                     style={{ width: '100%' }}
@@ -397,7 +425,8 @@ const Wallet = () => {
                                             account[state.network.id].minAda
                                           ) -
                                           BigInt(
-                                            account[state.network.id].collateral
+                                            account[state.network.id]
+                                              .collateral
                                               ? account[state.network.id]
                                                   .collateral.lovelace
                                               : 0
@@ -440,7 +469,6 @@ const Wallet = () => {
                 <MenuItem
                   icon={<AddIcon />}
                   onClick={() => {
-                    capture(Events.SettingsNewAccountClick);
                     newAccountRef.current.openModal();
                   }}
                 >
@@ -457,7 +485,6 @@ const Wallet = () => {
                       color="red.300"
                       icon={<DeleteIcon />}
                       onClick={() => {
-                        capture(Events.AccountDeleteClick);
                         deletAccountRef.current.openModal();
                       }}
                     >
@@ -467,7 +494,6 @@ const Wallet = () => {
                 <MenuItem
                   icon={<Icon as={GiUsbKey} w={3} h={3} />}
                   onClick={() => {
-                    capture(Events.HWConnectClick);
                     createTab(TAB.hw);
                   }}
                 >
@@ -477,7 +503,6 @@ const Wallet = () => {
                 <MenuItem
                   icon={<Icon as={FaRegFileCode} w={3} h={3} />}
                   onClick={() => {
-                    capture(Events.SettingsCollateralClick);
                     builderRef.current.initCollateral(state.account);
                   }}
                 >
@@ -497,6 +522,7 @@ const Wallet = () => {
               </MenuList>
             </Menu>
           </Box>
+
           <Box
             zIndex="1"
             position="absolute"
@@ -507,8 +533,8 @@ const Wallet = () => {
             justifyContent="center"
           >
             <Text
-              color="white"
-              fontSize="lg"
+              className="lineClamp"
+              fontSize="xl"
               isTruncated={true}
               maxWidth="210px"
             >
@@ -524,7 +550,7 @@ const Wallet = () => {
             justifyContent="center"
           >
             <UnitDisplay
-              color="white"
+              className="lineClamp"
               fontSize="2xl"
               fontWeight="bold"
               quantity={
@@ -602,7 +628,7 @@ const Wallet = () => {
             justifyContent="center"
           >
             <UnitDisplay
-              color="white"
+              className="lineClamp"
               fontSize="md"
               quantity={
                 state.account &&
@@ -628,28 +654,34 @@ const Wallet = () => {
             />
           </Box>
 
+          {/* Single Flex Container for Both Buttons */}
           <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
             position="absolute"
-            style={{ top: 186, right: 134 }}
-            width="20"
-            height="8"
+            top="90%" /* Adjust the vertical position as needed */
+            left="50%"
+            transform="translate(-50%, -50%)"
+            gap="250px" /* Adjust this value to control space between buttons */
           >
-            <Popover>
-              <PopoverTrigger>
-                <Button
-                  rightIcon={<Icon as={BsArrowDownRight} />}
-                  colorScheme="teal"
-                  size="sm"
-                  rounded="xl"
-                  shadow="md"
-                  onClick={() => {
-                    capture(Events.ReceiveClick);
-                  }}
-                >
-                  Receive
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent width="60">
+          <Popover>
+            <PopoverTrigger>
+              <Button
+                className="button hw-wallet"
+                background={receiveButton}
+                rightIcon={<Icon as={BsArrowDownRight} />}
+                size="sm"
+                rounded="lg"
+                shadow="md"
+                onClick={() => {
+                }}
+              >
+                Receive
+              </Button>
+            </PopoverTrigger>
+            <Portal>
+              <PopoverContent width="70">
                 <PopoverArrow />
                 <PopoverBody
                   mt="5"
@@ -668,11 +700,10 @@ const Wallet = () => {
                       label="Copied address"
                       copy={info.paymentAddr}
                       onClick={() => {
-                        capture(Events.ReceiveCopyAddressIconClick);
                       }}
                     >
                       <Text
-                        maxWidth="200px"
+                        maxWidth="250px"
                         fontSize="xs"
                         lineHeight="1.2"
                         cursor="pointer"
@@ -685,24 +716,18 @@ const Wallet = () => {
                   </>
                 </PopoverBody>
               </PopoverContent>
-            </Popover>
-          </Box>
-
-          <Box
-            position="absolute"
-            style={{ top: 186, right: 24 }}
-            width="20"
-            height="8"
-          >
+            </Portal>
+          </Popover>
+          
             <Button
               onClick={() => {
-                capture(Events.SendClick);
                 navigate('/send');
               }}
+              className="button import-wallet"
               size="sm"
-              rounded="xl"
+              background={sendButton}
+              rounded="lg"
               rightIcon={<Icon as={BsArrowUpRight} />}
-              colorScheme="orange"
               shadow="md"
             >
               Send
@@ -718,26 +743,24 @@ const Wallet = () => {
           display="flex"
           flexDirection="column"
           variant="soft-rounded"
-          colorScheme="teal"
+          colorScheme="customGray"
         >
           <TabList>
             <Tab mr={2}>
-              <Icon as={GiTwoCoins} boxSize={5} />
+              <Icon as={GiToken} boxSize={5} />
             </Tab>
             <Tab
               mr={2}
               onClick={() => {
-                capture(Events.NFTsClick);
               }}
             >
-              <Icon as={FaGamepad} boxSize={5} />
+              <Icon as={RxTokens} boxSize={5} />
             </Tab>
             <Tab>
               <Icon
-                as={BsClockHistory}
+                as={GoHistory}
                 boxSize={5}
                 onClick={() => {
-                  capture(Events.ActivityActivityClick);
                 }}
               />
             </Tab>
@@ -783,7 +806,6 @@ const Wallet = () => {
 };
 
 const NewAccountModal = React.forwardRef((props, ref) => {
-  const capture = useCaptureEvent();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = React.useState(false);
   const [state, setState] = React.useState({
@@ -797,12 +819,13 @@ const NewAccountModal = React.forwardRef((props, ref) => {
     try {
       const index = await createAccount(state.name, state.password);
       await switchAccount(index);
-      capture(Events.SettingsNewAccountConfirmClick);
       onClose();
     } catch (e) {
+      console.error('Error creating account:', e);
       setState((s) => ({ ...s, wrongPassword: true }));
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   React.useImperativeHandle(ref, () => ({
@@ -812,11 +835,14 @@ const NewAccountModal = React.forwardRef((props, ref) => {
   }));
 
   React.useEffect(() => {
-    setState({
-      password: '',
-      show: false,
-      name: '',
-    });
+    if (isOpen) {
+      setState({
+        password: '',
+        show: false,
+        name: '',
+        wrongPassword: false,
+      });
+    }
   }, [isOpen]);
 
   return (
@@ -824,13 +850,12 @@ const NewAccountModal = React.forwardRef((props, ref) => {
       size="xs"
       isOpen={isOpen}
       onClose={() => {
-        capture(Events.SettingsNewAccountXClick);
         onClose();
       }}
       isCentered
     >
       <ModalOverlay />
-      <ModalContent>
+      <ModalContent className='modal-glow-purple'>
         <ModalHeader fontSize="md">
           {' '}
           <Box display="flex" alignItems="center">
@@ -841,8 +866,13 @@ const NewAccountModal = React.forwardRef((props, ref) => {
         <ModalBody px="10">
           <Input
             autoFocus={true}
-            onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
+            value={state.name}
+            onChange={(e) => setState((s) => ({ ...s, name: e.target.value, wrongPassword: false }))}
             placeholder="Enter account name"
+            _focus={{
+              borderColor: 'rgba(220, 27, 250, 0.75)',
+              boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)'
+            }}
           />
           <Spacer height="4" />
           <InputGroup size="md">
@@ -851,12 +881,17 @@ const NewAccountModal = React.forwardRef((props, ref) => {
               isInvalid={state.wrongPassword === true}
               pr="4.5rem"
               type={state.show ? 'text' : 'password'}
+              value={state.password}
               onChange={(e) =>
-                setState((s) => ({ ...s, password: e.target.value }))
+                setState((s) => ({ ...s, password: e.target.value, wrongPassword: false }))
               }
               placeholder="Enter password"
               onKeyDown={(e) => {
                 if (e.key == 'Enter') confirmHandler();
+              }}
+              _focus={{
+                borderColor: 'rgba(220, 27, 250, 0.75)',
+                boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)'
               }}
             />
             <InputRightElement width="4.5rem">
@@ -879,7 +914,6 @@ const NewAccountModal = React.forwardRef((props, ref) => {
             mr={3}
             variant="ghost"
             onClick={() => {
-              capture(Events.SettingsNewAccountXClick);
               onClose();
             }}
           >
@@ -888,7 +922,11 @@ const NewAccountModal = React.forwardRef((props, ref) => {
           <Button
             isDisabled={!state.password || !state.name || isLoading}
             isLoading={isLoading}
-            colorScheme="teal"
+            className="button new-account"
+            size="sm"
+            background="purple.500"
+            rounded="lg"
+            shadow="md"
             onClick={confirmHandler}
           >
             Create
@@ -903,7 +941,6 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = React.useState(false);
   const cancelRef = React.useRef();
-  const capture = useCaptureEvent();
 
   React.useImperativeHandle(ref, () => ({
     openModal() {
@@ -943,7 +980,6 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
                 setIsLoading(true);
                 await deleteAccount();
                 await switchAccount(0);
-                capture(Events.AccountDeleteConfirmClick);
                 onClose();
                 setIsLoading(false);
               }}
@@ -958,28 +994,24 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
 });
 
 const DelegationPopover = ({ account, delegation, children }) => {
-  const capture = useCaptureEvent();
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
   return (
     <>
       <Popover offset={[80, 8]}>
         <PopoverTrigger>
-          <Button
+          <Button className="lineClamp"
             style={{
               all: 'revert',
               background: 'none',
               border: 'none',
               outline: 'none',
               cursor: 'pointer',
-              color: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 'bold',
             }}
             onClick={() => {
-              capture(Events.StakingClick);
             }}
             rightIcon={<ChevronDownIcon />}
           >
@@ -996,6 +1028,8 @@ const DelegationPopover = ({ account, delegation, children }) => {
             display="flex"
             flexDirection="column"
             textAlign="center"
+            background="black"
+            border="black"
           >
             <Text
               fontWeight="bold"
@@ -1032,7 +1066,6 @@ const DelegationPopover = ({ account, delegation, children }) => {
                     withdrawRef.current.initWithdrawal(account, delegation)
                   }
                   isDisabled={BigInt(delegation.rewards) < BigInt('2000000')}
-                  colorScheme="teal"
                   size="sm"
                 >
                   Withdraw
@@ -1041,7 +1074,6 @@ const DelegationPopover = ({ account, delegation, children }) => {
             </Tooltip>
             <Button
               onClick={() => {
-                capture(Events.StakingUnstakeClick);
                 withdrawRef.current.initUndelegate(account, delegation);
               }}
               mt="10px"

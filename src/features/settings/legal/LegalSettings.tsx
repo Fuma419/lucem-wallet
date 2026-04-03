@@ -17,10 +17,8 @@ import React, { useRef } from 'react';
 import { ChevronRightIcon, InfoOutlineIcon } from '@chakra-ui/icons';
 import PrivacyPolicy from '../../../ui/app/components/privacyPolicy';
 import TermsOfUse from '../../../ui/app/components/termsOfUse';
-import { useAnalyticsContext } from '../../analytics/provider';
 
 export const LegalSettings = () => {
-  const [analytics, setAnalyticsConsent] = useAnalyticsContext();
   const termsRef = useRef<{ openModal: () => void }>();
   const privacyPolicyRef = useRef<{ openModal: () => void }>();
   return (
@@ -30,7 +28,7 @@ export const LegalSettings = () => {
         Legal
       </Text>
       <Box height="6" />
-      <Flex minWidth="65%" padding="0 16px" alignItems="center" gap="2">
+      {/* <Flex minWidth="65%" padding="0 16px" alignItems="center" gap="2">
         <Text fontSize="16" fontWeight="bold">
           Analytics
           <Popover autoFocus={false}>
@@ -58,7 +56,7 @@ export const LegalSettings = () => {
                   may include data about how you use our service, your
                   preferences and information about your system. Read more&nbsp;
                   <Link
-                    onClick={() => window.open('https://namiwallet.io')}
+                    onClick={() => window.open('https://www.hodlerstaking.com/')}
                     textDecoration="underline"
                   >
                     here
@@ -74,7 +72,7 @@ export const LegalSettings = () => {
           isChecked={analytics.consent}
           onChange={() => setAnalyticsConsent(!analytics.consent)}
         />
-      </Flex>
+      </Flex> */}
       <Box height="3" />
       <Button
         justifyContent="space-between"

@@ -1,3 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400&display=swap');
+
 .lineClamp {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -13,3 +16,184 @@
 body::-webkit-scrollbar {
   display: none;
 }
+
+.welcome {
+  opacity: 1;
+  color: rgba(255, 255, 255, 1);
+  font-family: 'Barlow', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-align: center;
+  line-height: 28px;
+}
+
+.walletTitle {
+  opacity: 1;
+  color: rgba(255, 255, 255, 1);
+  font-family: 'Barlow', sans-serif;
+}
+
+.message {
+  opacity: 1;
+  color: rgba(138, 138, 138, 1);
+  font-family: 'Barlow', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: center;
+  line-height: 20px;
+  padding: 10px;
+}
+
+.glow {
+  border-radius: 8px;
+  border: 1px solid rgba(206, 250, 0, 1);
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 1);
+  background-color: rgba(27, 28, 30, 1);
+  transition: box-shadow 0.3s ease-in-out;
+  will-change: box-shadow;
+}
+
+/* Base button styles */
+.button {
+  display: inline-block;
+  padding: 10px 30px;
+  max-height: 70px;
+  font-size: 14px;
+  text-transform: uppercase;
+  text-align: center;
+  color: #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
+}
+
+/* Specific button styles */
+.button.new-wallet {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(220, 27, 250, 1);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+}
+
+.button.import-wallet {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(0, 245, 255, 1);
+  box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75);
+}
+
+.button.new-account {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(220, 27, 250, 1);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+}
+
+.button.settings {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(183, 183, 183, 0.5), rgba(0, 0, 0, .5));
+  border: thin solid rgb(253, 253, 253);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+}
+
+.button.hw-wallet {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(204, 250, 0, 0.5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(206, 250, 0, 1);
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75);
+}
+
+/* Hover States */
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px 0px 25px rgba(255, 255, 255, 0.9); /* Standard glow on hover */
+}
+
+.button.new-wallet:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9);
+}
+
+.button.import-wallet:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.9);
+}
+
+.button.hw-wallet:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
+}
+
+/* Glowing Modal Styles */
+.chakra-modal__content.modal-glow-purple, .modal-glow-purple {
+  font-size: 16px;
+  font-family: 'Barlow', sans-serif;
+  padding: 5px 15px;
+  color: #ffffff;
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75)!important;
+  cursor: pointer;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
+}
+
+.chakra-modal__content.modal-glow-yellow-green, .modal-glow-yellow-green {
+  font-size: 16px;
+  font-family: 'Barlow', sans-serif;
+  padding: 5px 15px;
+  color: #ffffff;
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75)!important;
+  cursor: pointer;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
+}
+
+/* .modal-glow-yellow-green:hover {
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 1);
+  transform: translateY(-2px);
+} */
+
+
+
+.chakra-modal__content.modal-glow-purple, .modal-glow-purple  {
+  font-size: 16px;
+  font-family: 'Barlow', sans-serif;
+  padding: 5px 15px;
+  color: #ffffff;
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.75)!important;
+  cursor: pointer;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
+}
+
+/* .modal-glow-purple:hover {
+  box-shadow: 0px 0px 35px rgba(220, 27, 250, 1);
+  transform: translateY(-2px);
+} */
+
+.chakra-modal__content.modal-glow-cyan, .modal-glow-cyan {
+  font-size: 16px;
+  font-family: 'Barlow', sans-serif;
+  padding: 5px 15px;
+  color: #ffffff;
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.75)!important;
+  cursor: pointer;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  will-change: transform, box-shadow;
+}
+
+/* .modal-glow-cyan:hover {
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 1);
+  transform: translateY(-2px);
+} */

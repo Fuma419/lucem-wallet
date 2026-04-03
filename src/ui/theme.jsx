@@ -1,10 +1,10 @@
 import React from 'react';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
+import { POPUP_WINDOW } from '../config/config';
 import './app/components/styles.css';
-import '@fontsource/ubuntu/latin.css';
+import 'focus-visible/dist/focus-visible';
 
-const colorMode = localStorage['chakra-ui-color-mode'];
-
+// Define custom sizes for Input components
 const inputSizes = {
   sm: {
     borderRadius: 'lg',
@@ -14,6 +14,7 @@ const inputSizes = {
   },
 };
 
+// Extend Input, Checkbox, Select, Button, and Switch components
 const Input = {
   sizes: {
     sm: {
@@ -26,19 +27,19 @@ const Input = {
     },
   },
   defaultProps: {
-    focusBorderColor: 'teal.500',
+    focusBorderColor: 'yellow.700',
   },
 };
 
 const Checkbox = {
   defaultProps: {
-    colorScheme: 'teal',
+    colorScheme: 'gray',
   },
 };
 
 const Select = {
   defaultProps: {
-    focusBorderColor: 'teal.500',
+    focusBorderColor: 'yellow.700',
   },
 };
 
@@ -49,43 +50,212 @@ const Button = {
 };
 
 const Switch = {
-  baseStyle: {
-    track: {
-      _focus: {
-        boxShadow: 'none',
-      },
-    },
+  baseStyle: {  
   },
   defaultProps: {
-    colorScheme: 'teal',
+    colorScheme: '#C5FF0A',
   },
 };
 
+// Define the theme
 const theme = extendTheme({
+  colors: {
+    yellow: {
+      100: '#F8FFC7',
+      200: '#EDFF8E',
+      300: '#E2FF55',
+      400: '#D7FF1C',
+      500: '#CEFA00',
+      600: '#B2D300',
+      700: '#97AC00',
+      800: '#7C8600',
+      900: '#5E6300',
+    },
+    cyan: {
+      100: '#C7FEFF',
+      200: '#8EF9FF',
+      300: '#55F4FF',
+      400: '#1CEFFF',
+      500: '#00F5FF',
+      600: '#00CED3',
+      700: '#00A7AC',
+      800: '#008085',
+      900: '#005A5E',
+    },
+    purple: {
+      100: '#F8C7FF',
+      200: '#F18EFF',
+      300: '#EA55FF',
+      400: '#E31CFF',
+      500: '#DC1BFA',
+      600: '#B217D3',
+      700: '#8811AC',
+      800: '#5E0B85',
+      900: '#35055E',
+    },
+    gray: {
+      100: '#CFCFCF',
+      200: '#BEBEBE',
+      300: '#A9A9A9',
+      400: '#8C8C8C',
+      500: '#707070',
+      600: '#5A5A5A',
+      700: '#464646',
+      800: '#2F2F2F',
+      900: '#2A2A2A',
+    },
+    customGray: {
+      50: "#2F2F2F",
+      100: "#2F2F2F",
+      200: "#2F2F2F",
+      300: "#2F2F2F",
+      400: "#2F2F2F",
+      500: "#ffffff",
+      600: "#ffffff",
+      700: "#ffffff",
+      800: "#ffffff",
+      900: "#ffffff",
+    },
+    blue: {
+      100: '#b4c5d5',
+      200: '#a3b7cc',
+      300: '#92aac3',
+      400: '#819cbc',
+      500: '#708fb4',
+      600: '#5f81a1',
+      700: '#4e738e',
+      800: '#3d657a',
+      900: '#2c5767',
+    },
+    orange: {
+      100: '#E8AA00',
+      200: '#DBA100',
+      300: '#D19900',
+      400: '#C49000',
+      500: '#B08102',
+      600: '#997000',
+      700: '#856100',
+      800: '#6B4F00',
+      900: '#6B4F00',
+    },
+    red: {
+      100: '#F2B3B3',
+      200: '#E68080',
+      300: '#D94D4D',
+      400: '#CC1A1A',
+      500: '#B80000',
+      600: '#A10000',
+      700: '#8A0000',
+      800: '#730000',
+      900: '#5C0000',
+    },
+    components: {
+      components: {
+        Tabs: {
+          baseStyle: {
+            tab: {
+              fontWeight: 'bold',
+              _selected: {
+                bgGradient: 'linear(to-r, cyan.500, purple.500)', // Define the gradient here
+                color: 'white', // Set text color when selected
+              },
+              _hover: {
+                bgGradient: 'linear(to-r, yellow.400, orange.400)', // Gradient on hover
+                color: 'white',
+              },
+              _focus: {
+                boxShadow: 'none', // No focus outline
+              },
+              padding: '12px', // Padding inside the tabs
+              borderRadius: '8px', // To give a rounded effect
+            },
+          },
+        },
+      },
+    },
+  },
+
   components: {
     Checkbox,
     Input,
     Select,
     Button,
     Switch,
+    Popover: {
+      baseStyle: {
+        content: {
+          bg: '#1a1a1a', // Popover content background color
+          color: 'white', // Text color for popover content
+          borderColor: 'black', // Border color to match the background
+          zIndex: '1', // Set zIndex to 1
+        },
+        arrow: {
+          bg: 'black', // Arrow color to match the popover content background
+        },
+      },
+    },
+    PopoverContent: {
+  baseStyle: {
+    bg: 'black',
+    borderColor: 'rgba(255, 255, 0, 0.75)',
+    borderWidth: '2px',
+    zIndex: '1',  // Set a high z-index to ensure it is on top
   },
-  config: {
-    useSystemColorMode: colorMode ? false : true,
-  },
-  styles: {
-    global: {
-      body: {
-        // width: POPUP_WINDOW.width + 'px',
-        // height: POPUP_WINDOW.height + 'px',
-        overflow: 'hidden',
+},
+    Modal: {
+      baseStyle: {
+        overlay: {
+          bg: 'black', // This sets the background of the overlay to a near black color
+        },
+        dialog: {
+          bg: '#1a1a1a',  // This sets the background of the modal content to black
+          color: 'white', // This sets the text color to white for readability on the black background
+        },
+      },
+    },
+    Menu: {
+      baseStyle: {
+        list: {
+          bg: '#1a1a1a', // Set the background for the MenuList container
+        },
+        item: {
+          bg: '#1a1a1a', // Default background for each MenuItem
+          color: 'white', // Text color
+          _hover: {
+            bg: 'black', // Hover state background for each MenuItem
+          },
+          _focus: {
+            bg: 'black', // Focus state background for each MenuItem
+          },
+          _active: {
+            bg: 'black', // Active state background for each MenuItem
+          },
+        },
       },
     },
   },
+
+  config: {
+    initialColorMode: 'dark', // Force dark mode
+    useSystemColorMode: false, // Disable system color mode preference
+  },
+
+  styles: {
+    global: {
+      body: {
+        overflow: 'hidden',
+        bg: '#080808', // Ensure the background is dark
+        color: 'gray.100', // Ensure text is light-colored
+      },
+    },
+  },
+
   fonts: {
-    body: 'Ubuntu, sans-serif',
+    body: 'sans-serif',
   },
 });
 
+// Wrap the ChakraProvider with the custom theme
 const Theme = ({ children }) => {
   return <ChakraProvider theme={theme}>{children}</ChakraProvider>;
 };

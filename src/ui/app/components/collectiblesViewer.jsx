@@ -80,7 +80,7 @@ const CollectiblesViewer = ({ assets, onUpdateAvatar }) => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="#C5FF0A" speed="0.5s" />
           </Box>
         ) : assetsArray.length <= 0 ? (
           <Box
@@ -91,7 +91,6 @@ const CollectiblesViewer = ({ assets, onUpdateAvatar }) => {
             flexDirection="column"
             opacity="0.5"
           >
-            <Planet size={80} mood="ko" color="#61DDBC" />
             <Box height="2" />
             <Text fontWeight="bold" color="GrayText">
               No Collectibles
@@ -119,8 +118,8 @@ export const CollectibleModal = React.forwardRef(({ onUpdateAvatar }, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [asset, setAsset] = React.useState(null);
   const [fallback, setFallback] = React.useState(false); // remove short flickering where image is not instantly loaded
-  const background = useColorModeValue('white', 'gray.800');
-  const dividerColor = useColorModeValue('gray.200', 'gray.700');
+  const background = useColorModeValue('blue.100', 'gray.900');
+  const dividerColor = useColorModeValue('gray.200', 'gray.900');
   const [value, setValue] = [
     useStoreState((state) => state.globalModel.sendStore.value),
     useStoreActions((actions) => actions.globalModel.sendStore.setValue),
@@ -268,7 +267,7 @@ const AssetsGrid = React.forwardRef(({ assets }, ref) => {
       alignItems="center"
       justifyContent="center"
     >
-      <SimpleGrid columns={2} spacing={4}>
+      <SimpleGrid columns={3} spacing={7}>
         {assets.map((asset, index) => (
           <Box key={index}>
             <LazyLoadComponent>
@@ -315,7 +314,7 @@ const Search = ({ setSearch, assets }) => {
         >
           <InputGroup size="sm">
             <Input
-              focusBorderColor="teal.400"
+              focusBorderColor="yellow.600"
               ref={ref}
               value={input}
               width={290}
@@ -342,7 +341,7 @@ const Search = ({ setSearch, assets }) => {
             aria-label="Search assets"
             size="sm"
             rounded="md"
-            color="teal.400"
+            color="yellow.400"
             onClick={() => input && setSearch(input)}
             icon={<SearchIcon />}
           />

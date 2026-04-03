@@ -1,14 +1,17 @@
-import { Button } from '@chakra-ui/button';
+
 import {
+  Button,
+  Checkbox,
+  Link,
+  Text,
+  Box,
   Modal,
   ModalBody,
   ModalContent,
   ModalFooter,
   ModalHeader,
   ModalOverlay,
-} from '@chakra-ui/modal';
-import { Checkbox } from '@chakra-ui/checkbox';
-import { Link, Text, Box } from '@chakra-ui/layout';
+} from '@chakra-ui/react';
 import React, { useRef } from 'react';
 import PrivacyPolicy from '../../../ui/app/components/privacyPolicy';
 import TermsOfUse from '../../../ui/app/components/termsOfUse';
@@ -33,7 +36,7 @@ export const TermsAndPrivacyModal = ({ onContinue }: Props) => {
         blockScrollOnMount={false}
       >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent className="modal-glow-purple">
           <ModalHeader fontSize="md">
             Terms of use and Privacy Policy
           </ModalHeader>
@@ -43,7 +46,7 @@ export const TermsAndPrivacyModal = ({ onContinue }: Props) => {
                 The terms of use and privacy policy have been updated.
               </Text>
               <Box display="flex" mb="2">
-                <Checkbox onChange={(e) => setAccepted(e.target.checked)} />
+                <Checkbox colorScheme="cyan" onChange={(e) => setAccepted(e.target.checked)} />
                 <Box display="inline" ml="2">
                   <Text fontWeight={600}>
                     I read and accepted the{' '}
@@ -68,7 +71,7 @@ export const TermsAndPrivacyModal = ({ onContinue }: Props) => {
           <ModalFooter>
             <Button
               isDisabled={!accepted}
-              colorScheme="teal"
+              colorScheme="gray"
               onClick={onContinue}
             >
               Continue

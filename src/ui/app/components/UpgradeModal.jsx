@@ -38,8 +38,8 @@ export const UpgradeModal = React.forwardRef((props, ref) => {
       <ModalOverlay />
       <ModalContent>
         <ModalHeader fontSize="md">
-          <Icon as={IoRocketSharp} w={6} h={6} color="cyan.300" mr="10px" />
-          What's new in Nami ?
+          <Icon as={IoRocketSharp} w={6} h={6} color="red.300" mr="10px" />
+          What's new in Lucem ?
         </ModalHeader>
         <ModalCloseButton />
         <ModalBody fontSize="xs">
@@ -66,7 +66,7 @@ export const UpgradeModal = React.forwardRef((props, ref) => {
           ))}
 
           <Box textAlign="center" mb="15px">
-            <Button colorScheme="teal" onClick={onClose}>
+            <Button colorScheme="yellow" onClick={onClose}>
               Got it!
             </Button>
           </Box>

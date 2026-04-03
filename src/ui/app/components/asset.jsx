@@ -27,7 +27,7 @@ const useIsMounted = () => {
 const Asset = ({ asset, enableSend, ...props }) => {
   const isMounted = useIsMounted();
   const [token, setToken] = React.useState(null);
-  const background = useColorModeValue('gray.100', 'gray.700');
+  const background = useColorModeValue('blue.100', 'gray.900');
   const [show, setShow] = React.useState(false);
   const [value, setValue] = [
     useStoreState((state) => state.globalModel.sendStore.value),
@@ -71,7 +71,8 @@ const Asset = ({ asset, enableSend, ...props }) => {
       display="flex"
       alignItems="center"
       width="90%"
-      rounded="xl"
+      height="70px"
+      borderRadius={20}
       background={background}
       onClick={() => token.unit !== 'lovelace' && setShow(!show)}
       cursor="pointer"
@@ -169,7 +170,7 @@ const Asset = ({ asset, enableSend, ...props }) => {
             <Box width="full" display="flex" justifyContent="right">
               <Button
                 mr="4"
-                background={background == 'gray.100' ? 'gray.200' : 'gray.600'}
+                background={'cyan.700'}
                 size="xs"
                 rightIcon={<BsArrowUpRight />}
                 onClick={(e) => {

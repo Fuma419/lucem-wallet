@@ -19,16 +19,13 @@ import {
 } from '@chakra-ui/react';
 import { Scrollbars } from '../components/scrollbar';
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
-import TrezorConnect from '@trezor/connect-web';
-import { AnalyticsProvider } from '../../../features/analytics/provider';
-import { EventTracker } from '../../../features/analytics/event-tracker';
-import { ExtensionViews } from '../../../features/analytics/types';
+
 
 // assets
 import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import LogoWhite from '../../../assets/img/bannerBlack.png';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
-import TrezorLogo from '../../../assets/img/trezorLogo.svg';
+import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import TrezorWidget from '../components/trezorWidget';
 import {
@@ -40,19 +37,17 @@ import {
 } from '../../../api/extension';
 import { MdUsb } from 'react-icons/md';
 import { Planet } from 'react-kawaii';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 import { ledgerUSBVendorId } from '@ledgerhq/devices';
 
 const VENDOR_IDS = {
   ledger: [ledgerUSBVendorId],
   trezor: [0x534c, 0x1209], // Model T HID 0x534c and others 0x1209 - taken from https://github.com/vacuumlabs/trezor-suite/blob/develop/packages/transport/src/constants.ts#L13-L21
+  keystone: 'keystone',
 };
 
 const App = () => {
-  const capture = useCaptureEvent();
   const Logo = useColorModeValue(LogoOriginal, LogoWhite);
-  const cardColor = useColorModeValue('white', 'gray.900');
+  const cardColor = useColorModeValue('blue.100', 'gray.900');
   const backgroundColor = useColorModeValue('gray.200', 'inherit');
   const [tab, setTab] = React.useState(0);
   const data = React.useRef({ device: '', id: '' });
@@ -68,8 +63,8 @@ const App = () => {
       background={backgroundColor}
     >
       {/* Logo */}
-      <Box position="absolute" left="40px" top="40px">
-        <Image draggable={false} src={Logo} width="36px" />
+      <Box position="absolute" left="70px" top="70px">
+        <Image draggable={false} src={Logo} width="190px" />
       </Box>
 
       <Box
@@ -104,7 +99,6 @@ const App = () => {
 };
 
 const ConnectHW = ({ onConfirm }) => {
-  const capture = useCaptureEvent();
   const { colorMode } = useColorMode();
   const [selected, setSelected] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
@@ -116,7 +110,7 @@ const ConnectHW = ({ onConfirm }) => {
       </Text>
       <Box h={6} />
       <Text width="300px">
-        Choose the hardware wallet you would like to use with Nami.
+        Lucem currently supports Ledger HW devices. Keystone Wallet support coming soon!
       </Text>
       <Box h={8} />
       <Box display="flex" alignItems="center" justifyContent="center">
@@ -129,15 +123,16 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.trezor && 'teal.400'}
-          borderWidth={selected === HW.trezor && '3px'}
+          borderColor={selected === HW.keystone && 'cyan.400'}
+          borderWidth={selected === HW.keystone && '3px'}
+          opacity={0.5} // Reduce opacity to indicate it's disabled
           p={4}
-          _hover={{ opacity: 0.8 }}
-          onClick={() => setSelected(HW.trezor)}
+          //_hover={{ opacity: 0.8 }}
+          // onClick={() => setSelected(HW.keystone)}
         >
           <Image
             draggable={false}
-            src={TrezorLogo}
+            src={KeystoneLogo}
             filter={colorMode == 'dark' && 'invert(1)'}
           />
         </Box>
@@ -151,7 +146,7 @@ const ConnectHW = ({ onConfirm }) => {
           height="55px"
           border="solid 1px"
           rounded="xl"
-          borderColor={selected === HW.ledger && 'teal.400'}
+          borderColor={selected === HW.ledger && 'purple.400'}
           borderWidth={selected === HW.ledger && '3px'}
           p={1}
           _hover={{ opacity: 0.8 }}
@@ -165,10 +160,9 @@ const ConnectHW = ({ onConfirm }) => {
         </Box>
       </Box>
       <Box h={10} />
-      {selected === HW.trezor && (
+      {selected === HW.keystone && (
         <Text width="300px">
-          Connect your <b>Trezor</b> device directly to your computer. Unlock
-          the device and then click Continue.
+          <b>Keysone</b> are not currently supported. Please check back soon.
         </Text>
       )}
       {selected === HW.ledger && (
@@ -192,7 +186,7 @@ const ConnectHW = ({ onConfirm }) => {
             });
             if (!VENDOR_IDS[selected].some((vendorId) => vendorId === device.vendorId)) {
               setError(
-                `Device is not a ${selected == HW.ledger ? 'Ledger' : 'Trezor'}`
+                `Device is not a ${selected == HW.ledger ? 'Ledger' : 'Keystone'}`
               );
               setIsLoading(false);
               return;
@@ -207,7 +201,6 @@ const ConnectHW = ({ onConfirm }) => {
               }
             }
 
-            capture(Events.HWConnectNextClick);
             return onConfirm({ device: selected, id: device.productId });
           } catch (e) {
             setError('Device not found');
@@ -229,7 +222,6 @@ const ConnectHW = ({ onConfirm }) => {
 };
 
 const SelectAccounts = ({ data, onConfirm }) => {
-  const capture = useCaptureEvent();
   const [selected, setSelected] = React.useState({ 0: true });
   const [error, setError] = React.useState('');
   const trezorRef = React.useRef();
@@ -338,28 +330,26 @@ const SelectAccounts = ({ data, onConfirm }) => {
                     name: `Ledger ${parseInt(accountIndexes[index]) + 1}`,
                   })
                 );
-              } else if (device == HW.trezor) {
-                await initHW({ device });
-                const trezorKeys = await TrezorConnect.cardanoGetPublicKey({
-                  bundle: accountIndexes.map((index) => ({
-                    path: `m/1852'/1815'/${parseInt(index)}'`,
-                    showOnTrezor: false,
-                  })),
-                });
-                if (trezorKeys.success == false) {
-                  trezorRef.current.closeModal();
-                }
-                accounts = trezorKeys.payload.map(({ publicKey }, index) => ({
-                  accountIndex: `${HW.trezor}-${id}-${accountIndexes[index]}`,
-                  publicKey,
-                  name: `Trezor ${parseInt(accountIndexes[index]) + 1}`,
-                }));
-                trezorRef.current.closeModal();
+              } else if (device == HW.keystone) {
+                // await initHW({ device });
+                // const trezorKeys = await TrezorConnect.cardanoGetPublicKey({
+                //   bundle: accountIndexes.map((index) => ({
+                //     path: `m/1852'/1815'/${parseInt(index)}'`,
+                //     showOnTrezor: false,
+                //   })),
+                // });
+                // if (trezorKeys.success == false) {
+                //   trezorRef.current.closeModal();
+                // }
+                // accounts = trezorKeys.payload.map(({ publicKey }, index) => ({
+                //   accountIndex: `${HW.keystone}-${id}-${accountIndexes[index]}`,
+                //   publicKey,
+                //   name: `Keystone ${parseInt(accountIndexes[index]) + 1}`,
+                // }));
+                // trezorRef.current.closeModal();
               }
               await createHWAccounts(accounts);
-              capture(Events.HWSelectAccountNextClick, {
-                numAccounts: accountIndexes.length,
-              });
+              ;
               return onConfirm();
             } catch (e) {
               console.log(e);
@@ -383,7 +373,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
 };
 
 const SuccessAndClose = () => {
-  const capture = useCaptureEvent();
   return (
     <>
       <Text
@@ -395,8 +384,6 @@ const SuccessAndClose = () => {
       >
         Successfully added accounts!
       </Text>
-      <Box h={6} />
-      <Planet mood="blissful" size={150} color="#61DDBC" />
       <Box h={10} />
       <Text width="300px">
         You can now close this tab and continue with the extension.
@@ -404,7 +391,6 @@ const SuccessAndClose = () => {
       <Button
         mt="auto"
         onClick={async () => {
-          capture(Events.HWDoneGoToWallet);
           window.close();
         }}
       >
@@ -416,14 +402,11 @@ const SuccessAndClose = () => {
 
 const root = createRoot(window.document.querySelector(`#${TAB.hw}`));
 root.render(
-  <AnalyticsProvider view={ExtensionViews.Extended}>
-    <EventTracker />
     <Main>
       <Router>
         <App />
       </Router>
     </Main>
-  </AnalyticsProvider>
 );
 
 if (module.hot) module.hot.accept();

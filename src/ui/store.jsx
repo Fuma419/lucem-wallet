@@ -126,7 +126,7 @@ const StoreInit = ({ children }) => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
 
           <ConfirmModal
@@ -154,15 +154,16 @@ const StoreInit = ({ children }) => {
           {/* Settings Overlay */}
           {settings.network.id !== NETWORK_ID.mainnet && (
             <Box
-              position="absolute"
-              left="3"
-              bottom="3"
+              position="fixed"              // 'fixed' positions it relative to the viewport
+              bottom="3"                    // Position it 3 units from the bottom of the viewport
+              left="3"                      // Keep it 3 units from the left
               display="flex"
               alignItems="center"
-              justifyContent="center"
+              justifyContent="center"        // Changed from "bottom" to "center" for proper alignment
               fontWeight="semibold"
-              color="orange.400"
+              color="purple.500"
             >
+
               <InfoOutlineIcon />
               <Box width="1" />
               <Text>

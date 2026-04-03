@@ -5,6 +5,7 @@ import {
   signData,
   signDataCIP30,
 } from '../../../api/extension';
+import platform from '../../../platform';
 import Account from '../components/account';
 import { Scrollbars } from '../components/scrollbar';
 import {
@@ -18,18 +19,15 @@ import {
 import ConfirmModal from '../components/confirmModal';
 import Loader from '../../../api/loader';
 import { DataSignError } from '../../../config/config';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const SignData = ({ request, controller }) => {
-  const capture = useCaptureEvent();
   const ref = React.useRef();
   const [account, setAccount] = React.useState(null);
   const [payload, setPayload] = React.useState('');
   const [address, setAddress] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
-  const background = useColorModeValue('gray.100', 'gray.700');
+  const background = useColorModeValue('blue.100', 'gray.900');
   const getAccount = async () => {
     const currentAccount = await getCurrentAccount();
     if (isHW(currentAccount.index)) setError('HW not supported');
@@ -98,7 +96,7 @@ const SignData = ({ request, controller }) => {
           alignItems="center"
           justifyContent="center"
         >
-          <Spinner color="teal" speed="0.5s" />
+          <Spinner color="yellow" speed="0.5s" />
         </Box>
       ) : (
         <Box
@@ -130,7 +128,7 @@ const SignData = ({ request, controller }) => {
                 draggable={false}
                 width={4}
                 height={4}
-                src={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${request.origin}&size=32`}
+                src={platform.icons.getFaviconUrl(request.origin)}
               />
             </Box>
             <Box w="3" />
@@ -173,7 +171,7 @@ const SignData = ({ request, controller }) => {
                     as={'b'}
                     color={
                       address == 'payment'
-                        ? 'teal.400'
+                        ? 'yellow.400'
                         : address == 'stake'
                           ? 'orange'
                           : 'inherit'
@@ -196,7 +194,6 @@ const SignData = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 onClick={async () => {
-                  capture(Events.DappConnectorDappDataCancelClick);
                   await controller.returnData({
                     error: DataSignError.UserDeclined,
                   });
@@ -210,9 +207,8 @@ const SignData = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 isDisabled={error}
-                colorScheme="teal"
+                colorScheme="yellow"
                 onClick={() => {
-                  capture(Events.DappConnectorDappDataSignClick);
                   ref.current.openModal(account.index);
                 }}
               >
@@ -241,7 +237,6 @@ const SignData = ({ request, controller }) => {
               )
         }
         onCloseBtn={() => {
-          capture(Events.DappConnectorDappDataCancelClick);
         }}
         onConfirm={async (status, signedMessage) => {
           if (status === true) {

@@ -14,7 +14,6 @@ import {
   Box,
   Link,
   Text,
-  Image,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -48,8 +47,7 @@ import {
   getPoolMetadata,
 } from '../../../api/extension';
 import { FaRegFileCode } from 'react-icons/fa';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
+import { getNetwork } from '../../../api/extension';
 
 const PoolStates = {
   LOADING: 'LOADING',
@@ -100,7 +98,6 @@ const poolTooltipMessage = (pool) => {
 };
 
 const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
-  const capture = useCaptureEvent();
   const settings = useStoreState((state) => state.settings.settings);
   const toast = useToast();
   const {
@@ -108,6 +105,32 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     onOpen: onOpenCol,
     onClose: onCloseCol,
   } = useDisclosure();
+
+    // PoolIDs
+    const networkUrls = {
+      mainnet: 'pool1eaeynp2hs06v4x8q65jfm2xqcd3dc80rv220gmxvwg8m5sd6e7a',
+      preprod: 'pool1z05xqzuxnpl8kg8u2wwg8ftng0fwtdluv3h20ruryfqc5gc3efl',
+      preview: 'pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7',
+    };
+  
+    const [networkUrl, setNetworkUrl] = React.useState(networkUrls.mainnet); // Default to mainnet
+  
+    // Fetch the network and set the URL accordingly
+    React.useEffect(() => {
+      async function fetchNetwork() {
+        const network = await getNetwork();
+        if (network.id === 'mainnet') {
+          setNetworkUrl(networkUrls.mainnet);
+        } else if (network.id === 'preprod') {
+          setNetworkUrl(networkUrls.preprod);
+        } else if (network.id === 'preview') {
+          setNetworkUrl(networkUrls.preview);
+        }
+      }
+  
+      fetchNetwork();
+    }, []);
+
   const [isLoading, setIsLoading] = React.useState(false);
   const [data, setData] = React.useState({
     fee: '',
@@ -347,7 +370,6 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
         }}
         onConfirm={(status, signedTx) => {
           if (status === true) {
-            capture(Events.StakingConfirmClick);
             toast({
               title: 'Delegation submitted',
               status: 'success',
@@ -371,24 +393,16 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           delegationRef.current.closeModal();
         }}
         info={
-          <Box
+          <Box 
             width="100%"
             display="flex"
             alignItems="center"
             justifyContent="center"
             flexDirection="column"
+
           >
             <Text fontSize="sm">
-              Enter the Stake Pool ID to delegate your funds and start receiving
-              rewards. Alternatively, head to{' '}
-              <Link
-                fontWeight="semibold"
-                onClick={() => window.open('https://pool.pm')}
-              >
-                https://pool.pm
-              </Link>
-              , connect your Nami wallet and delegate to a stake pool of your
-              choice
+              Support Lucem wallet's continued development by delegating with HODLR and enjoy the lowest fees on Cardano [Press 'Verify' twice]. Otherwise paste the ID of your prefered Pool{' '}
             </Text>
             <Box h="6" />
             <Tooltip
@@ -418,9 +432,20 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                       },
                     }));
                   }}
-                  placeholder="Enter Pool ID"
+                  placeholder={networkUrl}
                   onKeyDown={(e) => {
-                    if (e.key == 'Enter') prepareDelegationTx();
+                    if (e.key === 'Enter') {
+                      if (data.pool.id === '') {
+                        setData((s) => ({
+                          ...s,
+                          pool: {
+                            ...s.pool,
+                            id: networkUrl,
+                          },
+                        }));
+                      }
+                      prepareDelegationTx();
+                    }
                   }}
                   onMouseEnter={() => {
                     setData((s) => ({
@@ -446,16 +471,28 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                     <Button
                       h={6}
                       size="sm"
-                      colorScheme="teal"
-                      disabled={data.pool.id === '' || data.pool.isLoading}
+                      color="black"
+                      background="yellow.700"
+                      disabled={data.pool.isLoading}
                       isLoading={data.pool.isLoading}
-                      onClick={() => prepareDelegationTx()}
+                      onClick={() => {
+                        if (data.pool.id === '') {
+                          setData((s) => ({
+                            ...s,
+                            pool: {
+                              ...s.pool,
+                              id: networkUrl,
+                            },
+                          }));
+                        }
+                        prepareDelegationTx();
+                      }}
                     >
                       Verify
                     </Button>
                   )}
                   {data.pool.state === PoolStates.DONE && (
-                    <CheckIcon color="teal.500" />
+                    <CheckIcon color="yellow.700" />
                   )}
                   {data.pool.state === PoolStates.ERROR && (
                     <WarningIcon color="red.300" />
@@ -579,7 +616,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                   <UnitDisplay
                     fontSize="xl"
                     fontWeight="bold"
-                    color="teal.500"
+                    color="yellow.700"
                     hide
                     quantity={data.rewards}
                     decimals={6}
@@ -637,7 +674,6 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
         }}
         onConfirm={(status, signedTx) => {
           if (status === true) {
-            capture(Events.StakingUnstakeConfirmClick);
             toast({
               title: 'Deregistration submitted',
               status: 'success',
@@ -745,11 +781,9 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           );
         }}
         onCloseBtn={() => {
-          capture(Events.SettingsCollateralConfirmClick);
         }}
         onConfirm={async (status, signedTx) => {
           if (status === true) {
-            capture(Events.SettingsCollateralConfirmClick);
             await setCollateral({
               txHash: signedTx,
               txId: 0,
@@ -796,7 +830,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
               <br />
               <Link
                 fontWeight="semibold"
-                onClick={() => window.open('https://namiwallet.io')}
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
               >
                 Read more
               </Link>
@@ -827,7 +861,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
 
       <Modal size="xs" isCentered isOpen={isOpenCol} onClose={onCloseCol}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent >
           <ModalHeader fontSize="md">
             {' '}
             <Box display="flex" alignItems="center">
@@ -857,7 +891,6 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                 onClick={async () => {
                   setIsLoading(true);
                   await removeCollateral();
-                  capture(Events.SettingsCollateralReclaimCollateralClick);
                   toast({
                     title: 'Collateral removed',
                     status: 'success',

@@ -12,7 +12,7 @@ describe('webpage/eventRegistring', () => {
   describe('on', () => {
     beforeEach(() => {
       window.cardano = {
-        nami: {
+        lucem: {
           _events: {},
         },
       };
@@ -55,7 +55,7 @@ describe('webpage/eventRegistring', () => {
       jest.resetAllMocks();
 
       window.cardano = {
-        nami: {
+        lucem: {
           _events: {
             [mockEventType]: [[mockCallback, mockHandler]],
           },
@@ -66,7 +66,7 @@ describe('webpage/eventRegistring', () => {
     test('clean out matching callbacks fom the given event', () => {
       off(mockEventType, mockCallback);
 
-      expect(window.cardano.nami._events).toEqual({
+      expect(window.cardano.lucem._events).toEqual({
         [mockEventType]: [],
       });
     });

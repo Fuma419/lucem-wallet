@@ -1,0 +1,8 @@
+node_modules/
+build/
+*.test.js
+*.spec.js
+src/api/extension/wallet.js
+src/api/extension/index.js
+src/api/loader.js
+src/ui/app/pages/send.jsx 

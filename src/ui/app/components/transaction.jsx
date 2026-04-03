@@ -26,42 +26,29 @@ import AssetFingerprint from '@emurgo/cip14-js';
 import { hexToAscii } from '../../../api/util';
 import { NETWORK_ID } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
-import {
-  FaCoins,
-  FaPiggyBank,
-  FaTrashAlt,
-  FaRegEdit,
-  FaUserCheck,
-  FaUsers,
-  FaRegFileCode,
-  IoRemoveCircleSharp,
-  TiArrowForward,
-  TiArrowBack,
-  TiArrowShuffle,
-  TiArrowLoop,
-  GiAnvilImpact,
-} from 'react-icons/all';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
+import { FaCoins, FaPiggyBank, FaTrashAlt, FaRegEdit, FaUserCheck, FaUsers, FaRegFileCode } from 'react-icons/fa';
+import { IoRemoveCircleSharp } from 'react-icons/io5';
+import { TiArrowForward, TiArrowBack, TiArrowShuffle, TiArrowLoop } from 'react-icons/ti';
+import { GiAnvilImpact } from 'react-icons/gi';
 import Loader from '../../../api/loader';
 
 TimeAgo.addDefaultLocale(en);
 
 const txTypeColor = {
   self: 'gray.500',
-  internalIn: 'teal.500',
-  externalIn: 'teal.500',
+  internalIn: 'gray.500',
+  externalIn: 'gray.500',
   internalOut: 'orange.500',
-  externalOut: 'orange.500',
-  withdrawal: 'yellow.400',
-  delegation: 'purple.500',
-  stake: 'cyan.700',
-  unstake: 'red.400',
-  poolUpdate: 'green.400',
+  externalOut: 'orange.600',
+  withdrawal: 'gray.500',
+  delegation: 'blue.500',
+  stake: 'blue.700',
+  unstake: 'blue.400',
+  poolUpdate: 'blue.400',
   poolRetire: 'red.400',
-  mint: 'cyan.500',
-  multisig: 'pink.400',
-  contract: 'teal.400',
+  mint: 'blue.500',
+  multisig: 'orange.400',
+  contract: 'yellow.400',
 };
 
 const txTypeLabel = {
@@ -93,17 +80,15 @@ const Transaction = ({
   network,
   onLoad,
 }) => {
-  const settings = useStoreState((state) => state.settings.settings);
+  const [displayInfo, setDisplayInfo] = React.useState(null);
   const isMounted = useIsMounted();
-  const [displayInfo, setDisplayInfo] = React.useState(
-    genDisplayInfo(txHash, detail, currentAddr, addresses)
-  );
 
+  const settings = useStoreState((state) => state.settings.settings);
   const colorMode = {
-    iconBg: useColorModeValue('white', 'gray.800'),
-    txBg: useColorModeValue('teal.50', 'gray.700'),
-    txBgHover: useColorModeValue('teal.100', 'gray.600'),
-    assetsBtnHover: useColorModeValue('teal.200', 'gray.700'),
+    iconBg: useColorModeValue('blue.100', 'gray.900'),
+    txBg: useColorModeValue('blue.100', 'gray.900'),
+    txBgHover: useColorModeValue('blue.300', 'gray.900'),
+    assetsBtnHover: useColorModeValue('yellow.300', 'gray.900'),
   };
 
   const getTxDetail = async () => {
@@ -111,7 +96,8 @@ const Transaction = ({
       let txDetail = await updateTxInfo(txHash);
       onLoad(txHash, txDetail);
       if (!isMounted.current) return;
-      setDisplayInfo(genDisplayInfo(txHash, txDetail, currentAddr, addresses));
+      const newDisplayInfo = genDisplayInfo(txHash, txDetail, currentAddr, addresses);
+      setDisplayInfo(newDisplayInfo);
     }
   };
 
@@ -137,14 +123,18 @@ const Transaction = ({
         {displayInfo ? (
           <AccordionButton
             display="flex"
-            wordBreak="break-word"
             justifyContent="space-between"
             bg={colorMode.txBg}
-            borderRadius={10}
+            borderRadius={20}
             borderLeftRadius={30}
             p={0}
+            width="70%"  // Adjust the width here
+            maxWidth="70%" // Set a maximum width, optional
             _hover={{ backgroundColor: colorMode.txBgHover }}
             _focus={{ border: 'none' }}
+            whiteSpace="nowrap"
+            overflowWrap="normal"
+            wordBreak="normal"
           >
             <Box
               display="flex"
@@ -177,7 +167,7 @@ const Transaction = ({
                   symbol={settings.adaSymbol}
                 />
               ) : displayInfo.extra.length ? (
-                <Text fontSize={12} fontWeight="semibold" color="teal.500">
+                <Text fontSize={12} fontWeight="semibold" color="orange.600">
                   {getTxExtra(displayInfo.extra)}
                 </Text>
               ) : (
@@ -231,7 +221,7 @@ const Transaction = ({
                 ''
               )}
             </Box>
-            <AccordionIcon color="teal.400" mr={5} fontSize={20} />
+            <AccordionIcon color="yellow.500" mr={5} fontSize={20} />
           </AccordionButton>
         ) : (
           <Skeleton width="100%" height="72px" rounded="md" />
@@ -247,7 +237,7 @@ const Transaction = ({
             w={5}
             h={5}
             mb={1}
-            borderColor="teal.400"
+            borderColor="yellow.600"
             borderWidth={5}
             borderRadius={50}
           ></Box>
@@ -308,7 +298,6 @@ const TxIcon = ({ txType, extra }) => {
 };
 
 const TxDetail = ({ displayInfo, network }) => {
-  const capture = useCaptureEvent();
   const colorMode = {
     extraDetail: useColorModeValue('black', 'white'),
   };
@@ -320,7 +309,7 @@ const TxDetail = ({ displayInfo, network }) => {
           <Box
             display="flex"
             flexDirection="vertical"
-            color="gray.600"
+            color="gray.900"
             fontSize="sm"
             fontWeight="bold"
           >
@@ -328,7 +317,7 @@ const TxDetail = ({ displayInfo, network }) => {
           </Box>
           <Box>
             <Link
-              color="teal"
+              color="gray.500"
               href={
                 (() => {
                   switch (network.id) {
@@ -345,7 +334,6 @@ const TxDetail = ({ displayInfo, network }) => {
               }
               isExternal
               onClick={() => {
-                capture(Events.ActivityActivityDetailTransactionHashClick);
               }}
             >
               {displayInfo.txHash} <ExternalLinkIcon mx="2px" />
@@ -353,7 +341,7 @@ const TxDetail = ({ displayInfo, network }) => {
             {displayInfo.detail.metadata.length > 0 ? (
               <Button
                 display="inline-block"
-                colorScheme="orange"
+                colorScheme="gray"
                 size="xs"
                 fontSize="10px"
                 p="2px 4px"
@@ -386,7 +374,7 @@ const TxDetail = ({ displayInfo, network }) => {
       {displayInfo.extra.length > 0 ? (
         <Box display="flex" flexDirection="vertical" mt="10px">
           <Box>
-            <Box color="gray.600" fontSize="sm" fontWeight="bold">
+            <Box color="gray.700" fontSize="sm" fontWeight="bold">
               Transaction Extra
             </Box>
             <Box>
@@ -408,22 +396,26 @@ const TxDetail = ({ displayInfo, network }) => {
 };
 
 const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
+  
   if (!detail || !detail.info || !detail.utxos || !detail.block) {
     return null;
   }
 
   const type = getTxType(currentAddr, addresses, detail.utxos);
-  const date = dateFromUnix(detail.block.time);
+  
+  const date = dateFromUnix(detail.block.block_time || detail.block.time);
+  
   const amounts = calculateAmount(
     currentAddr,
     detail.utxos,
     detail.info.valid_contract
   );
+  
   const assets = amounts.filter((amount) => amount.unit !== 'lovelace');
   const lovelaceAmount = amounts.find((amount) => amount.unit === 'lovelace');
   const lovelace = lovelaceAmount ? BigInt(lovelaceAmount.quantity) : 0n;
 
-  return {
+  const result = {
     txHash: txHash,
     detail: detail,
     date: date,
@@ -455,6 +447,8 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
       };
     }),
   };
+  
+  return result;
 };
 
 const getTxType = (currentAddr, addresses, uTxOList) => {
@@ -481,6 +475,10 @@ const getTxType = (currentAddr, addresses, uTxOList) => {
 };
 
 const dateFromUnix = (unixTimestamp) => {
+  // Handle invalid timestamps
+  if (!unixTimestamp || isNaN(unixTimestamp) || unixTimestamp <= 0) {
+    return new Date(); // Return current date as fallback
+  }
   return new Date(unixTimestamp * 1000);
 };
 
@@ -495,47 +493,84 @@ const getTimestamp = (date) => {
 };
 
 const getAddressCredentials = (address) => {
+  
+  if (!address) {
+    return [null, null];
+  }
+  
   try {
     const cmlAddress = Loader.Cardano.Address.from_bech32(address);
-    return [
-      cmlAddress.payment_cred()?.to_cbor_hex() || null,
-      cmlAddress.staking_cred()?.to_cbor_hex() || null,
-    ];
+    const paymentCred = cmlAddress.payment_cred()?.to_hex() || null;
+    const stakingCred = cmlAddress.staking_cred()?.to_hex() || null;
+    return [paymentCred, stakingCred];
   } catch (error) {
     try {
       // try casting as byron address
       const cmlAddress = Loader.Cardano.ByronAddress.from_base58(address);
-      return [
-        cmlAddress.to_address()?.payment_cred()?.to_cbor_hex() || null,
-        cmlAddress.to_address()?.staking_cred()?.to_cbor_hex() || null,
-      ];
-    } catch {}
-    console.error(error);
-    return [null, null];
+      const paymentCred = cmlAddress.to_address()?.payment_cred()?.to_hex() || null;
+      const stakingCred = cmlAddress.to_address()?.staking_cred()?.to_hex() || null;
+      return [paymentCred, stakingCred];
+    } catch (byronError) {
+      console.error('Failed to parse address:', address, error);
+      return [null, null];
+    }
   }
 };
 
 const matchesAnyCredential = (address, [ownPaymentCred, ownStakingCred]) => {
   const [otherPaymentCred, otherStakingCred] = getAddressCredentials(address);
-  return otherPaymentCred === ownPaymentCred || otherStakingCred === ownStakingCred;
+  const matches = otherPaymentCred === ownPaymentCred || otherStakingCred === ownStakingCred;
+  return matches;
 }
 
 const calculateAmount = (currentAddr, uTxOList, validContract = true) => {
-  const ownCredentials = getAddressCredentials(currentAddr);
+  
+  if (!validContract) return [];
+  if (!uTxOList || !uTxOList.inputs || !uTxOList.outputs) {
+    return [];
+  }
+
+  const [ownPaymentCred, ownStakingCred] = getAddressCredentials(currentAddr);
+
+  // Convert Koios UTXO format to expected format
+  const convertKoiosUtxo = (utxo) => ({
+    address: utxo.payment_addr?.bech32 || utxo.address,
+    stake_address: utxo.stake_addr || utxo.stake_address,
+    tx_hash: utxo.tx_hash,
+    tx_index: utxo.tx_index,
+    value: utxo.value,
+    asset_list: utxo.asset_list || [],
+    datum_hash: utxo.datum_hash,
+    inline_datum: utxo.inline_datum,
+    reference_script: utxo.reference_script,
+    // Convert Koios amount format to expected format
+    amount: [
+      { unit: 'lovelace', quantity: utxo.value || '0' },
+      ...(utxo.asset_list || []).map(asset => ({
+        unit: asset.policy_id + asset.asset_name,
+        quantity: asset.quantity || '0'
+      }))
+    ]
+  });
 
   let inputs = compileOutputs(
-    uTxOList.inputs.filter(
-      (input) =>
-        matchesAnyCredential(input.address, ownCredentials) && !(input.collateral && validContract)
+    uTxOList.inputs.map(convertKoiosUtxo).filter(
+      (input) => {
+        const matches = matchesAnyCredential(input.address, [ownPaymentCred, ownStakingCred]) && !(input.collateral && validContract);
+        return matches;
+      }
     )
   );
+
   let outputs = compileOutputs(
-    uTxOList.outputs.filter(
-      (output) =>
-        matchesAnyCredential(output.address, ownCredentials) &&
-        !(output.collateral && validContract)
+    uTxOList.outputs.map(convertKoiosUtxo).filter(
+      (output) => {
+        const matches = matchesAnyCredential(output.address, [ownPaymentCred, ownStakingCred]) && !(output.collateral && validContract);
+        return matches;
+      }
     )
   );
+  
   let amounts = [];
 
   while (inputs.length) {

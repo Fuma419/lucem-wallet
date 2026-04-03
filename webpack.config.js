@@ -1,3 +1,4 @@
+// webpack.config.js
 var webpack = require('webpack'),
   path = require('path'),
   fileSystem = require('fs-extra'),
@@ -6,15 +7,17 @@ var webpack = require('webpack'),
   CopyWebpackPlugin = require('copy-webpack-plugin'),
   HtmlWebpackPlugin = require('html-webpack-plugin'),
   TerserPlugin = require('terser-webpack-plugin'),
-  NodePolyfillPlugin = require('node-polyfill-webpack-plugin'),
-  ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const { sentryWebpackPlugin } = require('@sentry/webpack-plugin');
+  NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+
+// Use only this import for EsbuildPlugin.
+const { EsbuildPlugin } = require('esbuild-loader');
+console.log("EsbuildPlugin:", EsbuildPlugin);
 
 require('dotenv').config();
 
 const ASSET_PATH = process.env.ASSET_PATH || '/';
 
-var alias = {};
+let alias = {};
 
 // load the secrets
 var secretsPath = path.join(__dirname, 'secrets.' + env.NODE_ENV + '.js');
@@ -24,8 +27,9 @@ require('dotenv-defaults').config({
   encoding: 'utf8',
 });
 
-var fileExtensions = [
+let fileExtensions = [
   'jpg',
+  'webp',
   'jpeg',
   'png',
   'gif',
@@ -43,42 +47,39 @@ if (fileSystem.existsSync(secretsPath)) {
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-const hasSentryConfig =
-  !!process.env.SENTRY_AUTH_TOKEN &&
-  !!process.env.SENTRY_ORG &&
-  !!process.env.SENTRY_PROJECT &&
-  !!process.env.SENTRY_DSN;
-
-const withMaybeSentry = (p) =>
-  hasSentryConfig
-    ? [path.join(__dirname, 'src', 'features', 'sentry.js'), p]
-    : p;
-
 const envsToExpose = ['NODE_ENV'];
-if (hasSentryConfig) envsToExpose.push('SENTRY_DSN');
 
-var options = {
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+
+
+// Preloadable assets
+const preloadImages = `
+  <link rel="preload" as="image" href="/assets/img/background-cyan.webp">
+  <link rel="preload" as="image" href="/assets/img/background-purple.webp">
+  <link rel="preload" as="image" href="/assets/img/background-green.webp">
+  <link rel="preload" as="image" href="/assets/img/logoWhite.png">
+`;
+
+
+
+const options = {
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename]
+    }
+  },
   devtool: 'source-map',
   experiments: {
     asyncWebAssembly: true,
   },
   mode: process.env.NODE_ENV || 'development',
   entry: {
-    mainPopup: withMaybeSentry(
-      path.join(__dirname, 'src', 'ui', 'indexMain.jsx')
-    ),
-    internalPopup: withMaybeSentry(
-      path.join(__dirname, 'src', 'ui', 'indexInternal.jsx')
-    ),
-    hwTab: withMaybeSentry(
-      path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'hw.jsx')
-    ),
-    createWalletTab: withMaybeSentry(
-      path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'createWallet.jsx')
-    ),
-    trezorTx: withMaybeSentry(
-      path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'trezorTx.jsx')
-    ),
+    mainPopup: path.join(__dirname, 'src', 'ui', 'indexMain.jsx'),
+    internalPopup: path.join(__dirname, 'src', 'ui', 'indexInternal.jsx'),
+    hwTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'hw.jsx'),
+    createWalletTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'createWallet.jsx'),
+    trezorTx: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'trezorTx.jsx'),
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
     contentScript: path.join(__dirname, 'src', 'pages', 'Content', 'index.js'),
     injected: path.join(__dirname, 'src', 'pages', 'Content', 'injected.js'),
@@ -122,9 +123,7 @@ var options = {
         },
       },
       {
-        // look for .css or .scss files
         test: /\.(css|scss)$/,
-        // in the `src` directory
         use: [
           {
             loader: 'style-loader',
@@ -151,37 +150,20 @@ var options = {
         options: {
           name: '[name].[ext]',
         },
-        exclude: [
-          /node_modules/,
-          path.resolve(__dirname, 'src', 'ui', 'lace-migration'),
-        ],
+        exclude: /node_modules/,
       },
       {
         test: /\.html$/,
         loader: 'html-loader',
-        exclude: /node_modules/,
-      },
-      {
-        test: /\.svg$/i,
-        issuer: /\.jsx?$/,
-        include: path.resolve(__dirname, 'src', 'ui', 'lace-migration'),
-        use: [
-          {
-            loader: '@svgr/webpack',
-            options: {
-              icon: true,
-              exportType: 'named',
+        options: {
+          sources: {
+            urlFilter: (attribute, value) => {
+              if (value.startsWith('/assets/') || value.startsWith('/manifest')) return false;
+              return true;
             },
           },
-        ],
-      },
-      {
-        test: /\.png$/i,
-        loader: 'file-loader',
-        options: {
-          name: '[name].[ext]',
         },
-        include: path.resolve(__dirname, 'src', 'ui', 'lace-migration'),
+        exclude: /node_modules/,
       },
     ],
   },
@@ -190,22 +172,14 @@ var options = {
     extensions: fileExtensions
       .map((extension) => '.' + extension)
       .concat(['.js', '.jsx', '.css', '.ts', '.tsx']),
+      fallback: {
+        fs: false, // disable fs module for browser builds
+        net: false,
+        tls: false,
+      },
   },
   plugins: [
-    ...(isDevelopment ? [new ReactRefreshWebpackPlugin()] : []),
-    ...(hasSentryConfig
-      ? [
-          sentryWebpackPlugin({
-            authToken: process.env.SENTRY_AUTH_TOKEN,
-            org: process.env.SENTRY_ORG,
-            project: process.env.SENTRY_PROJECT,
-            telemetry: false,
-            include: './build',
-            url: 'https://sentry.io/',
-            ignore: ['node_modules', 'webpack.config.js'],
-          }),
-        ]
-      : []),
+    ...(isDevelopment ? [new ReactRefreshWebpackPlugin(), new webpack.HotModuleReplacementPlugin()] : []),
     new webpack.BannerPlugin({
       banner: () => {
         return 'globalThis.document={getElementsByTagName:()=>[],createElement:()=>({ setAttribute:()=>{}}),head:{appendChild:()=>{}}};';
@@ -215,21 +189,28 @@ var options = {
     }),
     new NodePolyfillPlugin(),
     new webpack.ProgressPlugin(),
-    // clean the build folder
     new CleanWebpackPlugin({
       verbose: true,
       cleanStaleWebpackAssets: true,
     }),
-    // expose and write the allowed env vars on the compiled bundle
     new webpack.EnvironmentPlugin(envsToExpose),
     new CopyWebpackPlugin({
       patterns: [
         {
+          from: 'src/assets/img',
+          to: path.join(__dirname, 'build', 'assets', 'img'),
+          force: true,
+        },
+        {
+          from: 'src/manifest.webmanifest',
+          to: path.join(__dirname, 'build'),
+          force: true,
+        },
+        {
           from: 'src/manifest.json',
           to: path.join(__dirname, 'build'),
           force: true,
-          transform: function (content, path) {
-            // generates the manifest file using the package.json informations
+          transform: function (content) {
             return Buffer.from(
               JSON.stringify({
                 description: process.env.npm_package_description,
@@ -241,78 +222,74 @@ var options = {
         },
       ],
     }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/assets/img/icon-128.png',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'src/assets/img/icon-34.png',
-          to: path.join(__dirname, 'build'),
-          force: true,
-        },
-      ],
-    }),
     new HtmlWebpackPlugin({
-      template: path.join(
-        __dirname,
-        'src',
-        'pages',
-        'Popup',
-        'internalPopup.html'
-      ),
+      template: path.join(__dirname, 'src', 'pages', 'Popup', 'internalPopup.html'),
       filename: 'internalPopup.html',
       chunks: ['internalPopup'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'src', 'pages', 'Popup', 'mainPopup.html'),
       filename: 'mainPopup.html',
       chunks: ['mainPopup'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'src', 'pages', 'Tab', 'hwTab.html'),
       filename: 'hwTab.html',
       chunks: ['hwTab'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
-      template: path.join(
-        __dirname,
-        'src',
-        'pages',
-        'Tab',
-        'createWalletTab.html'
-      ),
+      template: path.join(__dirname, 'src', 'pages', 'Tab', 'createWalletTab.html'),
       filename: 'createWalletTab.html',
       chunks: ['createWalletTab'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
     new HtmlWebpackPlugin({
       template: path.join(__dirname, 'src', 'pages', 'Tab', 'trezorTx.html'),
       filename: 'trezorTx.html',
       chunks: ['trezorTx'],
       cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
     }),
   ],
   infrastructureLogging: {
     level: 'info',
   },
+  ignoreWarnings: [
+    {
+      message: /Failed to parse source map/,
+    },
+  ],
 };
 
 if (!isDevelopment) {
   options.optimization = {
     minimize: true,
     minimizer: [
-      new TerserPlugin({
-        extractComments: false,
+      new EsbuildPlugin({
+        target: 'esnext',
+        legalComments: 'none'
       }),
     ],
   };

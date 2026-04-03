@@ -11,8 +11,13 @@ const injectScript = () => {
 };
 
 async function shouldInject() {
-  // do not inject since the migration is not dismissible anymore
-  return false
+  const documentElement = document.documentElement.nodeName;
+  const docElemCheck = documentElement
+    ? documentElement.toLowerCase() === 'html'
+    : true;
+  const { docType } = window.document;
+  const docTypeCheck = docType ? docType.name === 'html' : true;
+  return docElemCheck && docTypeCheck;
 }
 
 if (await shouldInject()) {

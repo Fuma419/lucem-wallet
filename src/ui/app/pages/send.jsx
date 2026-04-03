@@ -7,11 +7,9 @@ import {
   getAdaHandle,
   getAsset,
   getCurrentAccount,
-  getMilkomedaData,
   getNetwork,
   getUtxos,
   isValidAddress,
-  isValidEthAddress,
   toUnit,
   updateRecentSentToAddress,
 } from '../../../api/extension';
@@ -75,8 +73,6 @@ import Copy from '../components/copy';
 import AssetsModal from '../components/assetsModal';
 import { MdModeEdit } from 'react-icons/md';
 import useConstant from 'use-constant';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 import debouncePromise from 'debounce-promise';
 import latest from 'promise-latest';
 
@@ -101,7 +97,6 @@ const initialState = {
     protocolParameters: null,
     utxos: [],
     balance: { lovelace: '0', assets: null },
-    milkomedaAddress: '',
   },
 };
 
@@ -136,7 +131,6 @@ export const sendStore = {
 };
 
 const Send = () => {
-  const capture = useCaptureEvent();
   const isMounted = useIsMounted();
   const settings = useStoreState((state) => state.settings.settings);
   const [address, setAddress] = [
@@ -181,7 +175,7 @@ const Send = () => {
   const ref = React.useRef();
   const [isLoading, setIsLoading] = React.useState(true);
   const focus = React.useRef(false);
-  const background = useColorModeValue('gray.100', 'gray.600');
+  const background = useColorModeValue('yellow.500', 'yellow.500');
 
   const network = React.useRef();
   const assetsModalRef = React.useRef();
@@ -249,18 +243,28 @@ const Send = () => {
         });
       }
 
-      const checkOutput = Loader.Cardano.TransactionOutput.new(
-        _address.isM1
-          ? Loader.Cardano.Address.from_bech32(_address.result)
-          : Loader.Cardano.Address.from_raw_bytes(
-              await isValidAddress(_address.result)
-            ),
-        await assetsToValue(output.amount)
-      );
+      console.log('_address.result:', _address.result);
+      const addressBytes = await isValidAddress(_address.result);
+      console.log('addressBytes:', addressBytes, 'type:', typeof addressBytes);
+      
+      let checkOutput, address, value;
+      try {
+        address = Loader.Cardano.Address.from_bytes(new Uint8Array(addressBytes));
+        console.log('Address created successfully');
+        
+        value = await assetsToValue(output.amount);
+        console.log('Value created successfully');
+        
+        checkOutput = Loader.Cardano.TransactionOutput.new(address, value);
+        console.log('TransactionOutput created successfully');
+      } catch (error) {
+        console.error('Error in TransactionOutput creation:', error);
+        throw error;
+      }
 
       const minAda = await minAdaRequired(
         checkOutput,
-        BigInt(protocolParameters.coinsPerUtxoWord)
+        protocolParameters.coinsPerUtxoWord
       );
 
       if (BigInt(minAda) <= BigInt(toUnit(_value.personalAda || '0'))) {
@@ -285,41 +289,26 @@ const Send = () => {
         return;
       }
 
-      const outputs = Loader.Cardano.TransactionOutputList.new();
-      outputs.add(
-        Loader.Cardano.TransactionOutput.new(
-          _address.isM1
-            ? Loader.Cardano.Address.from_bech32(_address.result)
-            : Loader.Cardano.Address.from_raw_bytes(
-                await isValidAddress(_address.result)
-              ),
-          await assetsToValue(output.amount)
-        )
-      );
+      // Let's see what's actually available in the Emurgo library
+      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('Output')));
+      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('List')));
+      
+      // Try to find the correct way to create a list of outputs
+      const outputKeys = Object.keys(Loader.Cardano).filter(key => key.includes('Output'));
+      console.log('Output-related keys:', outputKeys);
+      
+      // Create outputs using the correct Emurgo library class
+      const outputs = Loader.Cardano.TransactionOutputs.new();
+      outputs.add(Loader.Cardano.TransactionOutput.new(address, value));
+      console.log('Outputs created:', outputs);
 
+      // Check what's available for auxiliary data
+      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('Auxiliary') || key.includes('Metadata')));
+      
       const auxiliaryData = Loader.Cardano.AuxiliaryData.new();
-      const generalMetadata = Loader.Cardano.Metadata.new();
+      const generalMetadata = Loader.Cardano.GeneralTransactionMetadata.new();
 
-      // setting metadata for MilkomedaM1
-      if (_address.isM1) {
-        const ethAddress = _address.display;
-        if (!isValidEthAddress(ethAddress))
-          throw new Error('Not a valid ETH address');
-        generalMetadata.set(
-          BigInt('87'),
-          Loader.Cardano.encode_json_str_to_metadatum(
-            JSON.stringify(_address.protocolMagic),
-            0
-          )
-        );
-        generalMetadata.set(
-          BigInt('88'),
-          Loader.Cardano.encode_json_str_to_metadatum(
-            JSON.stringify(ethAddress),
-            0
-          )
-        );
-      }
+
 
       // setting metadata for optional message (CIP-0020)
       if (_message) {
@@ -352,7 +341,7 @@ const Send = () => {
         auxiliaryData.metadata() ? auxiliaryData : null
       );
       setFee({ fee: tx.body().fee().toString() });
-      setTx(Buffer.from(tx.to_cbor_bytes()).toString('hex'));
+              setTx(Buffer.from(tx.to_bytes()).toString('hex'));
     } catch (e) {
       console.warn(e);
       setFee({ error: 'Transaction not possible' });
@@ -373,7 +362,7 @@ const Send = () => {
     account.current = currentAccount;
     if (txInfo.protocolParameters) {
       const _utxos = txInfo.utxos.map((utxo) =>
-        Loader.Cardano.TransactionUnspentOutput.from_cbor_bytes(
+        Loader.Cardano.TransactionUnspentOutput.from_bytes(
           Buffer.from(utxo, 'hex')
         )
       );
@@ -401,17 +390,10 @@ const Send = () => {
       assets: balance.filter((v) => v.unit !== 'lovelace'),
     };
     utxos.current = _utxos;
-    _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_cbor_bytes()).toString('hex'));
-    let milkomedaAddress = '';
-    try {
-      const { current_address: milkomedaAddressFromReq } = await getMilkomedaData('');
-      milkomedaAddress = milkomedaAddressFromReq
-    } catch (e) {
-      console.log("ERROR: Couldn't get Milkomeda address.")
-    }
+    _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'));
     if (!isMounted.current) return;
     setIsLoading(false);
-    setTxInfo({ protocolParameters, utxos: _utxos, balance, milkomedaAddress });
+    setTxInfo({ protocolParameters, utxos: _utxos, balance });
   };
 
   const objectToArray = (obj) => Object.keys(obj).map((key) => obj[key]);
@@ -471,7 +453,7 @@ const Send = () => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
         ) : (
           <>
@@ -517,24 +499,7 @@ const Send = () => {
                   {address.error}
                 </Text>
               )}
-              {!address.error && address.isM1 && (
-                <Box
-                  mb={-2}
-                  mt={1}
-                  width="full"
-                  display="flex"
-                  alignItems="center"
-                >
-                  <Box>Milkomeda Mode</Box>{' '}
-                  <Tooltip
-                    offset={[40, 8]}
-                    hasArrow
-                    label="Transfer ADA from your Cardano wallet to an address on the Milkomeda Sidechain."
-                  >
-                    <InfoOutlineIcon ml="1" cursor="help" />
-                  </Tooltip>
-                </Box>
-              )}
+
               <Box height="5" />
               <Stack
                 direction="row"
@@ -549,7 +514,7 @@ const Send = () => {
                           <Box>{settings.adaSymbol}</Box>
                         ) : (
                           <Spinner
-                            color="teal"
+                            color="yellow"
                             speed="0.5s"
                             boxSize="9px"
                             size="xs"
@@ -584,14 +549,10 @@ const Send = () => {
                     isDisabled={isLoading}
                     isInvalid={
                       value.ada &&
-                      (address.isM1
-                        ? BigInt(toUnit(value.ada)) <
-                          BigInt(address.ada.minLovelace) +
-                            BigInt(address.ada.fromADAFeeLovelace) // milkomeda requires a minimium ada amount which is higher than the Cardano protocol min ada
-                        : BigInt(toUnit(value.ada)) <
-                            BigInt(txInfo.protocolParameters.minUtxo) ||
-                          BigInt(toUnit(value.ada)) >
-                            BigInt(txInfo.balance.lovelace || '0'))
+                      (BigInt(toUnit(value.ada)) <
+                        BigInt(txInfo.protocolParameters.minUtxo) ||
+                      BigInt(toUnit(value.ada)) >
+                        BigInt(txInfo.balance.lovelace || '0'))
                     }
                     onFocus={() => (focus.current = true)}
                     placeholder="0.000000"
@@ -604,7 +565,6 @@ const Send = () => {
                   assets={txInfo.balance.assets}
                   setValue={setValue}
                   value={value}
-                  isM1={address.isM1}
                 />
               </Stack>
               <Box height="4" />
@@ -688,9 +648,8 @@ const Send = () => {
                 width={'366px'}
                 height={'50px'}
                 isDisabled={!tx || !address.result || fee.error}
-                colorScheme="orange"
+                colorScheme="gray"
                 onClick={() => {
-                  capture(Events.SendTransactionDataReviewTransactionClick);
                   ref.current.openModal(account.current.index);
                 }}
               >
@@ -801,7 +760,6 @@ const Send = () => {
         }
         ref={ref}
         sign={async (password, hw) => {
-          capture(Events.SendTransactionConfirmationConfirmClick);
           await Loader.load();
           const txDes = Loader.Cardano.Transaction.from_cbor_bytes(
             Buffer.from(tx, 'hex')
@@ -827,11 +785,18 @@ const Send = () => {
         }}
         onConfirm={async (status, signedTx) => {
           if (status === true) {
-            capture(Events.SendTransactionConfirmed);
             toast({
               title: 'Transaction submitted',
               status: 'success',
-              duration: 5000,
+              duration: 2000,
+              variant: 'success',
+              isClosable: true,
+              containerStyle: {
+                background: 'cyan.300', // Custom background color
+                color: 'black', // Text color
+                borderRadius: 'lg',
+                padding: '.5rem',
+              },
             });
             if (await isValidAddress(address.result))
               await updateRecentSentToAddress(address.result);
@@ -840,8 +805,15 @@ const Send = () => {
               title: 'Transaction failed',
               description: 'Mempool full. Try again.',
               status: 'error',
-              duration: 3000,
+              duration: 4000,
+              variant: 'success',
               isClosable: true,
+              containerStyle: {
+                background: 'yellow.300', // Custom background color
+                color: 'black', // Text color
+                borderRadius: 'md',
+                padding: '2rem',
+              },
             });
             ref.current.closeModal();
             return; // don't go back to home screen. let user try to submit same tx again
@@ -849,7 +821,15 @@ const Send = () => {
             toast({
               title: 'Transaction failed',
               status: 'error',
-              duration: 3000,
+              duration: 4000,
+              variant: 'success',
+              isClosable: true,
+              containerStyle: {
+                background: 'purple.300', // Custom background color
+                color: 'black', // Text color
+                borderRadius: 'md',
+                padding: '2rem',
+              },
             });
           ref.current.closeModal();
           setTimeout(() => {
@@ -871,7 +851,7 @@ const AddressPopup = ({
   isLoading,
 }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const checkColor = useColorModeValue('teal.500', 'teal.200');
+  const checkColor = useColorModeValue('yellow.500', 'yellow.200');
   const ref = React.useRef(false);
   const [state, setState] = React.useState({
     currentAccount: null,
@@ -888,49 +868,19 @@ const AddressPopup = ({
     setState({ currentAccount, accounts, recentAddress });
   };
 
-  const milkomedaAddress = React.useRef(txInfo.milkomedaAddress);
 
-  React.useEffect(() => {
-    milkomedaAddress.current = txInfo.milkomedaAddress;
-  }, [txInfo]);
 
   const handleInput = async (e) => {
     const value = e.target.value;
     let addr;
     let isHandle = false;
-    let isM1 = false;
+    
     if (!e.target.value) {
       addr = { result: '', display: '' };
     } else if (value.startsWith('$')) {
       isHandle = true;
       addr = { display: value };
-    } else if (value.startsWith('0x')) {
-      if (isValidEthAddress(value)) {
-        isM1 = true;
-        addr = {
-          display: value,
-          isM1: true,
-          ada: {
-            minLovelace: '2000000',
-            fromADAFeeLovelace: '500000',
-          },
-        };
-      } else {
-        addr = {
-          result: value,
-          display: value,
-          isM1: true,
-          ada: {
-            minLovelace: '2000000',
-            fromADAFeeLovelace: '500000',
-          },
-          error: 'Address is invalid (Milkomeda)',
-        };
-      }
-    } else if (
-      (await isValidAddress(value)) &&
-      value !== milkomedaAddress.current
-    ) {
+    } else if (await isValidAddress(value)) {
       addr = { result: value, display: value };
     } else {
       addr = {
@@ -954,34 +904,6 @@ const AddressPopup = ({
           result: '',
           display: handle,
           error: '$handle not found',
-        };
-      }
-    } else if (isM1) {
-      // We allow failure here because we fail to get the user's Milkomeda
-      //   address when they are creating an M1 transaction.
-      const { isAllowed, ada, current_address, protocolMagic, assets, ttl } =
-        await getMilkomedaData(value);
-
-      if (!isAllowed || !isValidEthAddress(value)) {
-        addr = {
-          result: '',
-          display: value,
-          isM1: true,
-          ada,
-          ttl,
-          protocolMagic,
-          assets,
-          error: 'Address is invalid (Milkomeda)',
-        };
-      } else {
-        addr = {
-          result: current_address,
-          display: value,
-          isM1: true,
-          ada,
-          ttl,
-          protocolMagic,
-          assets,
         };
       }
     }
@@ -1036,7 +958,7 @@ const AddressPopup = ({
               setTimeout(() => e.target.blur());
             }}
             fontSize="xs"
-            placeholder="Address, $handle or Milkomeda"
+            placeholder="Address or $handle"
             onInput={async (e) => {
               const handleInputToken = latestHandleInputToken.current + 1;
               latestHandleInputToken.current = handleInputToken;
@@ -1047,7 +969,7 @@ const AddressPopup = ({
                 return;
               }
 
-              if (addr.isM1) removeAllAssets();
+
               triggerTxUpdate(() => setAddress(addr));
               onClose();
             }}
@@ -1090,19 +1012,6 @@ const AddressPopup = ({
                   width="full"
                   onClick={() => {
                     const address = state.recentAddress;
-                    if (address == milkomedaAddress.current) {
-                      triggerTxUpdate(() =>
-                        setAddress({
-                          result: '',
-                          display: address,
-                          error:
-                            'Disallowed sending directly to Milkomeda stargate',
-                        })
-                      );
-                      onClose();
-                      return;
-                    }
-
                     triggerTxUpdate(() =>
                       setAddress({
                         result: address,
@@ -1236,7 +1145,7 @@ const CustomScrollbarsVirtualList = React.forwardRef((props, ref) => (
   <CustomScrollbars {...props} forwardedRef={ref} />
 ));
 
-const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
+const AssetsSelector = ({ assets, addAssets, value }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [search, setSearch] = React.useState('');
   const select = React.useRef(false);
@@ -1255,21 +1164,21 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
   };
 
   React.useEffect(() => {
-    if (isM1) onClose();
-  }, [isM1]);
+    // Empty effect
+  }, []);
 
   return (
     <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose}>
       <PopoverTrigger>
         <Button
-          isDisabled={isM1 || !assets || assets.length < 1}
+                          isDisabled={!assets || assets.length < 1}
           flex={1}
           size="sm"
         >
           + Assets
         </Button>
       </PopoverTrigger>
-      <PopoverContent w="98%">
+      <PopoverContent w="98%" sx={{ backgroundColor: '#2D3748 !important' }}>
         <PopoverArrow ml="4px" />
         <PopoverHeader
           display="flex"
@@ -1319,7 +1228,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
 
                 <Box w="3" />
                 <IconButton
-                  colorScheme="teal"
+                  colorScheme="yellow"
                   size="xs"
                   rounded="md"
                   onClick={() => {
@@ -1384,7 +1293,6 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
                   flexDirection="column"
                   opacity="0.5"
                 >
-                  <Planet size={80} mood="ko" color="#61DDBC" />
                   <Box height="2" />
                   <Text fontWeight="bold" color="GrayText">
                     No Assets
@@ -1399,7 +1307,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
                 alignItems="center"
                 justifyContent="center"
               >
-                <Spinner color="teal" speed="0.5s" />
+                <Spinner color="yellow" speed="0.5s" />
               </Box>
             )}
           </Box>
@@ -1412,7 +1320,7 @@ const AssetsSelector = ({ assets, addAssets, value, isM1 }) => {
 const Asset = ({ asset, choice, select, setChoice, onClose, addAssets }) => {
   const [token, setToken] = React.useState(null);
   const isMounted = useIsMounted();
-  const hoverColor = useColorModeValue('gray.100', 'gray.600');
+  const hoverColor = useColorModeValue('blue.100', 'gray.900');
 
   const fetchData = async () => {
     const detailedAsset = {

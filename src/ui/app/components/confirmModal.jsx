@@ -124,7 +124,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
           <InputGroup size="md">
             <Input
               ref={inputRef}
-              focusBorderColor="teal.400"
+              focusBorderColor="yellow.600"
               variant="filled"
               isInvalid={state.wrongPassword === true}
               pr="4.5rem"
@@ -168,7 +168,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
           <Button
             isDisabled={!state.password || props.ready === false || !waitReady}
             isLoading={!waitReady}
-            colorScheme="teal"
+            colorScheme="yellow"
             onClick={confirmHandler}
           >
             Confirm
@@ -231,7 +231,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
-                background={hw.device == HW.ledger ? 'blue.400' : 'green.400'}
+                background={hw.device == HW.ledger ? 'blue.400' : 'gray'}
                 rounded="xl"
                 py={2}
                 width="70%"
@@ -270,7 +270,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
             <Button
               isDisabled={props.ready === false || !waitReady}
               isLoading={!waitReady}
-              colorScheme="teal"
+              colorScheme="blue"
               onClick={confirmHandler}
             >
               Confirm

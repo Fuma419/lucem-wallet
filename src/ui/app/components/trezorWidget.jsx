@@ -2,6 +2,14 @@ import { CloseIcon } from '@chakra-ui/icons';
 import { Box, Modal, ModalContent, ModalOverlay, useDisclosure } from '@chakra-ui/react';
 import React from 'react';
 
+const getTrezorUrl = () => {
+  try {
+    return chrome.runtime.getURL('Trezor/popup.html');
+  } catch (_) {
+    return 'Trezor/popup.html';
+  }
+};
+
 const TrezorWidget = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   React.useImperativeHandle(ref, () => ({
@@ -48,8 +56,8 @@ const TrezorWidget = React.forwardRef((props, ref) => {
           />
           <Box rounded="3xl" overflow="hidden" background="white">
             <iframe
-              src={chrome.runtime.getURL('Trezor/popup.html')}
-              id="trezorPopupNami"
+              src={getTrezorUrl()}
+              id="trezorPopupLucem"
               width="360px"
               height="560px"
             />

@@ -8,8 +8,6 @@ import {
   setTxDetail,
 } from '../../../api/extension';
 import Transaction from './transaction';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const BATCH = 5;
 
@@ -18,11 +16,11 @@ let slice = [];
 let txObject = {};
 
 const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
-  const capture = useCaptureEvent();
   const [historySlice, setHistorySlice] = React.useState(null);
   const [page, setPage] = React.useState(1);
   const [final, setFinal] = React.useState(false);
   const [loadNext, setLoadNext] = React.useState(false);
+
   const getTxs = async () => {
     if (!history) {
       slice = [];
@@ -86,7 +84,6 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
           flexDirection="column"
           opacity="0.5"
         >
-          <File size={80} mood="ko" color="#61DDBC" />
           <Box height="2" />
           <Text fontWeight="bold" color="GrayText">
             No History
@@ -98,7 +95,6 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
             allowToggle
             borderBottom="none"
             onClick={() => {
-              capture(Events.ActivityActivityActivityRowClick);
             }}
           >
             {historySlice.map((txHash, index) => {
@@ -137,7 +133,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
                   setLoadNext(true);
                   setTimeout(() => setPage(page + 1));
                 }}
-                colorScheme="orange"
+                colorScheme="gray"
                 aria-label="More"
                 fontSize={20}
                 w="50%"
@@ -156,7 +152,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
 
 const HistorySpinner = () => (
   <Box mt="28" display="flex" alignItems="center" justifyContent="center">
-    <Spinner color="teal" speed="0.5s" />
+    <Spinner color="yellow" speed="0.5s" />
   </Box>
 );
 

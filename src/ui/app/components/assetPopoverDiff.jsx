@@ -61,6 +61,8 @@ const AssetsPopover = ({ assets, isDifference }) => {
             fontWeight: 'bold',
             display: 'inline-block',
             padding: '2px 4px',
+            width: "50%",  // Adjust the width here
+            maxWidth: "50%" // Set a maximum width, optional
           }}
           _hover={{ all: 'revert' }}
         >
@@ -175,7 +177,7 @@ const Asset = ({ asset, isDifference }) => {
                 isDifference
                   ? token.quantity <= 0
                     ? 'red.300'
-                    : 'teal.500'
+                    : 'yellow.500'
                   : 'inherit'
               }
             >

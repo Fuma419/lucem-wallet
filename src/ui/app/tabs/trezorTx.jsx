@@ -4,13 +4,10 @@ import Main from '../../index';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
 import { Box, useColorModeValue, Image, useToast } from '@chakra-ui/react';
-import { AnalyticsProvider } from '../../../features/analytics/provider';
-import { EventTracker } from '../../../features/analytics/event-tracker';
-import { ExtensionViews } from '../../../features/analytics/types';
 
 // assets
 import LogoOriginal from '../../../assets/img/logo.svg';
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import LogoWhite from '../../../assets/img/bannerBlack.png';
 import { getCurrentAccount, indexToHw, initHW } from '../../../api/extension';
 import { signAndSubmitHW } from '../../../api/extension/wallet';
 import Loader from '../../../api/loader';
@@ -92,14 +89,11 @@ const App = () => {
 
 const root = createRoot(window.document.querySelector(`#${TAB.trezorTx}`));
 root.render(
-  <AnalyticsProvider view={ExtensionViews.Extended}>
-    <EventTracker />
     <Main>
       <Router>
         <App />
       </Router>
     </Main>
-  </AnalyticsProvider>
 );
 
 if (module.hot) module.hot.accept();

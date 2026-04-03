@@ -1,0 +1,119 @@
+{
+  "metadata": {
+    "type": "7808d2ba-d511-40af-84e8-c0d1625fdfdc",
+    "selfRef": {
+      "id": "0198a12f-8bf7-7517-93d4-25447aab36c1",
+      "version": "0198a12f-8bf7-7517-93d4-25447aab36c1",
+      "type": "draft"
+    },
+    "ref": null,
+    "refHash": null,
+    "template": {
+      "id": "0194d492-1daa-716f-a04e-f422f08a99dc",
+      "version": "0194d492-1daa-716f-a04e-f422f08a99dc",
+      "type": "signed"
+    },
+    "reply": null,
+    "section": null,
+    "brandId": null,
+    "campaignId": null,
+    "electionId": null,
+    "categoryId": {
+      "id": "0194d490-30bf-7703-a1c0-83a916b001e7",
+      "version": "0194d490-30bf-7703-a1c0-83a916b001e7",
+      "type": "signed"
+    },
+    "authors": null
+  },
+  "content": {
+    "$schema": "./0ce8ab38-9258-4fbc-a62e-7faa6e58318f.schema.json",
+    "setup": {
+      "title": {
+        "title": "Shine up the Ecosystem",
+        "guideline": "Please provide your proposal title. This is the first detail about your proposal that voters see so it should clearly express what the proposal is about. A clear, unambiguous, and concise title is very important."
+      },
+      "proposer": {
+        "applicant": "",
+        "type": "",
+        "guideline": "Applicant name and surname. The applicant is the individual or entity responsible for the proposed project. Are you submitting this proposal as an individual or as an entity (whether formally incorporated or not)? Please select from one of the following: 1. Individual 2. Entity (Incorporated) 3. Entity (Not Incorporated)."
+      }
+    },
+    "summary": {
+      "budget": {
+        "requestedFunds": null,
+        "guideline": "Enter the amount of funding you are requesting in ADA. Each funding category has a minimum and maximum amount of funding a single proposal can request. Cardano Open: Developers: - Minimum Funding Amount per proposal: ₳15K - Maximum Funding Amount per proposal: ₳100K."
+      },
+      "time": {
+        "duration": null,
+        "guideline": "Please specify how many months you expect your project to last. You are expected to produce the deliverables specified in the proposal within the timeframe selected, with a minimum of 2 months and a maximum of 12 months. Projects can be completed earlier if milestone Proof-of-Achievements and Project Completion steps are submitted and approved ahead of the expected delivery due dates in compliance with the Fund Rules."
+      },
+      "translation": {
+        "isTranslated": false,
+        "originalLanguage": "en",
+        "guideline": "Please indicate if your proposal has been auto-translated. Tick \"YES\" to remind readers that your proposal has been automatically translated and that there may be translation inaccuracies. If you wish, you can link a document with the proposal in your native language. Tick \"NO\" if your proposal has not been automatically translated into English from another language."
+      },
+      "problem": {
+        "statement": "",
+        "guideline": "What is the problem you want to solve? Ensure you present a well-defined problem. What is the core issue that you hope to fix? Remember: the reader might not recognize the problem unless you state it clearly. This answer will be displayed on the Catalyst voting app, so voters will see it even if they do not open your proposal to read it in detail."
+      },
+      "solution": {
+        "summary": "",
+        "guideline": "Summarize your solution to the problem. Focus on what you will do to solve it. Avoid vague phrasing like 'There should be a way to...' and clearly state 'We will build...'. Explain how the solution addresses the problem, connecting the 'why' and the 'how'. This summary appears in the Catalyst voting app even if voters do not open the full proposal."
+      },
+      "supportingLinks": {
+        "links": [],
+        "guideline": "Provide links to your or your organization’s website, repository, marketing materials, or publications relevant to your proposal. This is optional context that voters and reviewers might not read; attaching links does not replace answering questions in this form."
+      },
+      "dependencies": {
+        "hasDependency": false,
+        "dependencyDetail": "",
+        "guideline": "Project Dependencies: List dependencies and prerequisites for success (e.g., third‑party suppliers, services, software). These can create risk due to reduced control. For third‑party software, indicate licenses/permissions to use it. If there are dependencies, describe them and why they are essential. If there are none, write 'No dependencies'."
+      },
+      "open_source": {
+        "isOpenSource": false,
+        "licenseInformation": "",
+        "guideline": "Will your project’s outputs be fully open source? If 'YES', they must remain open source for the project’s lifecycle with a public repository. Indicate the open source license you intend to use and any details relevant to what will be open source (and which parts). If 'NO', explain why outputs will not be open source. License and Additional Information: Open source licenses keep IP publicly accessible and allow reuse under OSI‑approved licenses. Proprietary IP is not publicly available and is restricted by the owner. See https://opensource.org/licenses."
+      }
+    },
+    "theme": { "theme": { "grouped_tag": { "group": "", "tag": "" } } },
+    "details": {
+      "solution": {
+        "solution": "",
+        "guideline": "Please describe your proposed solution and how it addresses the problem. Depending on your proposal type, include: how you perceive the problem, why you approach it this way, who will your project engage, and how you will demonstrate or prove your impact. Explain what is unique about your solution, who will benefit, and why this is important to Cardano."
+      },
+      "impact": {
+        "impact": "",
+        "guideline": "Please define the positive impact your project will have on the wider Cardano community. Include how you intend to measure impact (quantitative or qualitative) and how/with whom you will share outputs: How will the success of your project bring value to the community? How will you measure this impact? How will you share the outputs and opportunities that result from your project?"
+      },
+      "feasibility": {
+        "feasibility": "",
+        "guideline": "What is your capability to deliver your project with high levels of trust and accountability? How do you intend to validate if your approach is feasible? Describe existing capabilities that demonstrate why you’re best suited to deliver this project, and include steps or processes that show you can be trusted to manage funds properly."
+      }
+    },
+    "milestones": {
+      "milestones": { "milestone_list": [] },
+      "guideline": "Milestone-based proposals guidance: Milestones outline the critical path to deliver your proposal, including key milestones, outputs, acceptance criteria, costs, and evidence of achievements. After community approval, you must formalize a Statement of Milestones (SoM) during onboarding, which must include: (1) all milestones, (2) achievement dates, (3) funding amount per milestone, (4) outputs for each milestone, (5) acceptance criteria, and (6) evidence to prove completion. Minimum number of milestones (plus a Final Milestone) depends on grant size: up to 75k ada = at least 2; 75k–150k ada = at least 3; >150k–300k ada = at least 4; >300k ada = at least 5. Each non-final milestone must last 1–3 months and request between 5% and 30% of the grant; Milestone 1 must be ≤ ₳75,000 or ≤30% of the grant (if ₳75,000 is <5% of the grant, the 5% minimum does not apply to Milestone 1). The Final Milestone must be 1 month and at least 15% of the grant. SoM is reviewed by at least two Milestone Reviewers; consensus and Catalyst Team approval are required before the project is LIVE and disbursements can start. 80% of each milestone amount is generally paid in equal monthly installments during the milestone period and 20% upon completion; the Final Milestone is paid in arrears upon completion. Proof of Achievement must show outputs and fulfillment of acceptance criteria and is required to unlock next payments. Change Requests are required to alter approved SoMs or deliver out of sequence."
+    },
+    "pitch": {
+      "team": {
+        "guideline": "Who is participating in the project team and what are their roles? List your team and collaborators, include links to their LinkedIn profiles (or similar) and state what aspect of the project each participant will undertake. If additional team members need to be recruited, state what skills gaps you are looking to fill. You are expected to have already engaged the relevant members of the organizations referenced so you have their commitment and capacity to support the project. Obtain consent before including confidential or third‑party information. All applicants must disclose their project team’s roles and scope of services across all submitted proposals; failure to do so may lead to disqualification from the current fund round."
+      },
+      "guideline": "",
+      "budget": {
+        "costs": "",
+        "guideline": "Please provide a cost breakdown of the proposed work and resources. Ensure every item of work is budgeted. Refer to your plan and timeline and list the resources needed at each stage and their costs. Describe any third‑party products or services (hardware, software licenses, professional services such as legal, accounting, code auditing). If the total project cost exceeds the funding request, explain how you will cover the shortfall. Common omissions include publicity, marketing, promotion, community engagement, project management, documentation, and reporting back to the community. You are responsible for properly managing the funds provided; refer to Fund Rules for cost eligibility."
+      },
+      "value": {
+        "guideline": "How does the cost of the project represent value for the Cardano ecosystem? Provide a compelling reason why your project is a good use of funds and how it creates value. Justify the listed costs and why you need them. Where possible, support with evidence such as typical wages in your country or freelance rates in your industry, or other context that supports value for money."
+      }
+    },
+    "agreements": {
+      "ongoing_projects": {
+        "has_ongoing_projects": false,
+        "projects": [],
+        "guideline": "Ongoing Projects – Important Notice: Review Fund Rules carefully, as eligibility may be affected by the status of your ongoing projects. Providing accurate information is mandatory; failure to do so may result in your proposal being deemed ineligible in the current fund. Project ID's: You can find a seven‑digit project ID on each original proposal page listed on the Catalyst website; search for yours there."
+      },
+      "consent_confirmation": { "terms_and_conditions": false }
+    }
+  }
+}

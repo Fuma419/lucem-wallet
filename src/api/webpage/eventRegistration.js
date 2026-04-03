@@ -7,9 +7,9 @@ import { TARGET } from '../../config/config';
 export const on = (eventName, callback) => {
   const handler = (event) => callback(event.detail);
 
-  const events = window.cardano.nami._events[eventName] || [];
+  const events = window.cardano.lucem._events[eventName] || [];
 
-  window.cardano.nami._events[eventName] = [...events, [callback, handler]];
+  window.cardano.lucem._events[eventName] = [...events, [callback, handler]];
 
   window.addEventListener(`${TARGET}${eventName}`, handler);
 };
@@ -25,7 +25,7 @@ export const off = (eventName, callback) => {
   const filterByMatchingHandlers = filterHandlersBy((cb) => cb === callback);
   const filterByNonMatchingHandlers = filterHandlersBy((cb) => cb !== callback);
 
-  const eventHandlers = window.cardano.nami._events[eventName];
+  const eventHandlers = window.cardano.lucem._events[eventName];
 
   if (typeof eventHandlers !== 'undefined') {
     const matchingHandlers = filterByMatchingHandlers(eventHandlers);
@@ -34,7 +34,7 @@ export const off = (eventName, callback) => {
       window.removeEventListener(`${TARGET}${eventName}`, handler);
     }
 
-    window.cardano.nami._events[eventName] =
+    window.cardano.lucem._events[eventName] =
       filterByNonMatchingHandlers(eventHandlers);
   }
 };

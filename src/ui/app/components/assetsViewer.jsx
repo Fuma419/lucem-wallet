@@ -64,7 +64,7 @@ const AssetsViewer = ({ assets }) => {
             alignItems="center"
             justifyContent="center"
           >
-            <Spinner color="teal" speed="0.5s" />
+            <Spinner color="yellow" speed="0.5s" />
           </Box>
         ) : assetsArray.length <= 0 ? (
           <Box
@@ -75,7 +75,6 @@ const AssetsViewer = ({ assets }) => {
             flexDirection="column"
             opacity="0.5"
           >
-            <Planet size={80} mood="ko" color="#61DDBC" />
             <Box height="2" />
             <Text fontWeight="bold" color="GrayText">
               No Assets
@@ -108,7 +107,13 @@ const AssetsGrid = ({ assets }) => {
       flexDirection="column"
     >
       {assets.map((asset, index) => (
-        <Box key={index} width="full">
+        <Box key={index}
+        borderRadius={20}
+        width="75%"  // Adjust the width here
+        maxWidth="75%"
+        height="80px"
+        >
+          
           <LazyLoadComponent>
             <Box
               width="full"
@@ -160,7 +165,7 @@ const Search = ({ setSearch, assets }) => {
         >
           <InputGroup size="sm">
             <Input
-              focusBorderColor="teal.400"
+              focusBorderColor="yellow.600"
               ref={ref}
               value={input}
               width={290}
@@ -187,7 +192,7 @@ const Search = ({ setSearch, assets }) => {
             aria-label="Search assets"
             size="sm"
             rounded="md"
-            color="teal.400"
+            color="yellow.400"
             onClick={() => input && setSearch(input)}
             icon={<SearchIcon />}
           />

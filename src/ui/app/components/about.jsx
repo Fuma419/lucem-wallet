@@ -14,19 +14,18 @@ import {
   Link,
 } from '@chakra-ui/react';
 
-import LogoWhite from '../../../assets/img/logoWhite.svg';
+import LogoWhite from '../../../assets/img/logoWhite.png';
 import LogoBlack from '../../../assets/img/logo.svg';
 import IOHKWhite from '../../../assets/img/iohkWhite.svg';
 import IOHKBlack from '../../../assets/img/iohk.svg';
+import HodlerLogo from '../../../assets/img/Hodler_Green_Icon_round.png';
 import TermsOfUse from './termsOfUse';
 import PrivacyPolicy from './privacyPolicy';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const { version } = require('../../../../package.json');
 
 const About = React.forwardRef((props, ref) => {
-  const capture = useCaptureEvent();
+
   const { isOpen, onOpen, onClose } = useDisclosure();
   const Logo = useColorModeValue(LogoBlack, LogoWhite);
   const IOHK = useColorModeValue(IOHKWhite, IOHKBlack);
@@ -63,7 +62,7 @@ const About = React.forwardRef((props, ref) => {
           >
             <Image
               cursor="pointer"
-              onClick={() => window.open('https://namiwallet.io')}
+              onClick={() => window.open('https://www.hodlerstaking.com/')}
               width="90px"
               src={Logo}
             />
@@ -77,9 +76,16 @@ const About = React.forwardRef((props, ref) => {
               flexDirection="column"
             >
               <Text fontSize="xs">
-                Maintained by{' '}
+                Created by{' '}
                 <span
-                  onClick={() => window.open('https://iohk.io/')}
+                  onClick={() => window.open('https://www.hodlerstaking.com/')}
+                  style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Hodler Staking
+                </span>
+                {' '}and{' '}
+                <span
+                  onClick={() => window.open('https://www.namiwallet.io/')}
                   style={{ textDecoration: 'underline', cursor: 'pointer' }}
                 >
                   IOG
@@ -88,9 +94,9 @@ const About = React.forwardRef((props, ref) => {
               <Box height="4" />
               <Image
                 cursor="pointer"
-                onClick={() => window.open('https://iohk.io/')}
-                src={IOHK}
                 width="66px"
+                onClick={() => window.open('https://www.hodlerstaking.com/')}
+                src={IOHKWhite}
               />
             </Box>
             <Box height="4" />
@@ -98,7 +104,6 @@ const About = React.forwardRef((props, ref) => {
             <Box>
               <Link
                 onClick={() => {
-                  capture(Events.SettingsTermsAndConditionsClick);
                   termsRef.current.openModal();
                 }}
                 color="GrayText"

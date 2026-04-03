@@ -1,4 +1,5 @@
 import React from 'react';
+import platform from '../../../platform';
 import {
   bytesAddressToBinary,
   extractKeyOrScriptHash,
@@ -34,15 +35,12 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import AssetsModal from '../components/assetsModal';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const abs = (big) => {
   return big < 0 ? big * BigInt(-1) : big;
 };
 
 const SignTx = ({ request, controller }) => {
-  const capture = useCaptureEvent();
   const settings = useStoreState((state) => state.settings.settings);
   const ref = React.useRef();
   const [account, setAccount] = React.useState(null);
@@ -527,7 +525,7 @@ const SignTx = ({ request, controller }) => {
     getProperties(tx);
     setIsLoading((l) => ({ ...l, loading: false }));
   };
-  const background = useColorModeValue('gray.100', 'gray.700');
+  const background = useColorModeValue('blue.100', 'gray.900');
 
   React.useEffect(() => {
     getInfo();
@@ -542,7 +540,7 @@ const SignTx = ({ request, controller }) => {
           alignItems="center"
           justifyContent="center"
         >
-          <Spinner color="teal" speed="0.5s" />
+          <Spinner color="yellow" speed="0.5s" />
         </Box>
       ) : (
         <Box
@@ -574,7 +572,7 @@ const SignTx = ({ request, controller }) => {
                 draggable={false}
                 width={4}
                 height={4}
-                src={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${request.origin}&size=32`}
+                src={platform.icons.getFaviconUrl(request.origin)}
               />
             </Box>
             <Box w="3" />
@@ -612,7 +610,7 @@ const SignTx = ({ request, controller }) => {
                       justifyContent="center"
                       fontSize={lovelace.toString().length < 14 ? '3xl' : '2xl'}
                       fontWeight="bold"
-                      color={lovelace <= 0 ? 'teal.400' : 'red.400'}
+                      color={lovelace <= 0 ? 'yellow.400' : 'red.400'}
                     >
                       <Text>{lovelace <= 0 ? '+' : '-'}</Text>
                       <UnitDisplay
@@ -678,17 +676,17 @@ const SignTx = ({ request, controller }) => {
                                 positiveAssets.length > 0 && <Box w={2} />}
                               {positiveAssets.length > 0 && (
                                 <Button
-                                  colorScheme={'teal'}
+                                  colorScheme={'yellow'}
                                   size={'xs'}
                                   onClick={() =>
                                     assetsModalRef.current.openModal({
-                                      background: 'teal.400',
+                                      background: 'yellow.400',
                                       color: 'white',
                                       assets: positiveAssets,
                                       title: (
                                         <Box>
                                           Receiving{' '}
-                                          <Box as={'span'} color={'teal.400'}>
+                                          <Box as={'span'} color={'yellow.400'}>
                                             {positiveAssets.length}
                                           </Box>{' '}
                                           {positiveAssets.length == 1
@@ -782,7 +780,6 @@ const SignTx = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 onClick={async () => {
-                  capture(Events.DappConnectorDappTxCancelClick);
                   await controller.returnData({
                     error: TxSignError.UserDeclined,
                   });
@@ -796,9 +793,8 @@ const SignTx = ({ request, controller }) => {
                 height={'50px'}
                 width={'180px'}
                 isDisabled={isLoading.loading || isLoading.error}
-                colorScheme="teal"
+                colorScheme="yellow"
                 onClick={() => {
-                  capture(Events.DappConnectorDappTxSignClick);
                   ref.current.openModal(account.index);
                 }}
               >
@@ -821,7 +817,6 @@ const SignTx = ({ request, controller }) => {
       <ConfirmModal
         ref={ref}
         onCloseBtn={() => {
-          capture(Events.DappConnectorDappTxCancelClick);
         }}
         sign={async (password, hw) => {
           if (hw) {
@@ -843,7 +838,6 @@ const SignTx = ({ request, controller }) => {
         }}
         onConfirm={async (status, signedTx) => {
           if (status === true) {
-            capture(Events.DappConnectorDappTxConfirmClick);
             await controller.returnData({
               data: Buffer.from(signedTx.to_cbor_bytes(), 'hex').toString('hex'),
             });
@@ -863,8 +857,8 @@ const DetailsModal = React.forwardRef(
     ref
   ) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const background = useColorModeValue('white', 'gray.800');
-    const innerBackground = useColorModeValue('gray.100', 'gray.700');
+    const background = useColorModeValue('blue.100', 'gray.900');
+    const innerBackground = useColorModeValue('blue.100', 'gray.900');
 
     React.useImperativeHandle(ref, () => ({
       openModal() {
@@ -1062,7 +1056,7 @@ const DetailsModal = React.forwardRef(
                       >
                         <Box
                           as={'b'}
-                          color={keyHash == 'payment' ? 'teal.400' : 'orange'}
+                          color={keyHash == 'payment' ? 'yellow.400' : 'orange'}
                         >
                           {keyHash}
                         </Box>

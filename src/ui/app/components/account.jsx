@@ -1,13 +1,13 @@
 import React from 'react';
 import { getCurrentAccount } from '../../../api/extension';
 
-import Logo from '../../../assets/img/logoWhite.svg';
+import Logo from '../../../assets/img/icon-128.svg';
 import { Box, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import AvatarLoader from './avatarLoader';
 
 const Account = React.forwardRef((props, ref) => {
-  const avatarBg = useColorModeValue('white', 'gray.700');
-  const panelBg = useColorModeValue('#349EA3', 'gray.800');
+  const avatarBg = useColorModeValue('blue.100', 'gray.900');
+  const panelBg = useColorModeValue('blue.100', 'gray.900');
   const [account, setAccount] = React.useState(null);
 
   const initAccount = () =>
@@ -43,7 +43,7 @@ const Account = React.forwardRef((props, ref) => {
         alignItems="center"
         justifyContent="center"
       >
-        <Image draggable={false} src={Logo} width="24px" />
+        <Image draggable={false} src={Logo} width="45px" />
       </Box>
       <Box
         zIndex="2"
@@ -61,7 +61,6 @@ const Account = React.forwardRef((props, ref) => {
         <AvatarLoader
           avatar={account && account.avatar}
           width="10"
-          smallRobot
         />
       </Box>
       <Box

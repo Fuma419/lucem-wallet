@@ -3,14 +3,12 @@ import { Box, Button, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import React from 'react';
 import { setWhitelisted } from '../../../api/extension';
 import { APIError } from '../../../config/config';
+import platform from '../../../platform';
 
 import Account from '../components/account';
-import { useCaptureEvent } from '../../../features/analytics/hooks';
-import { Events } from '../../../features/analytics/events';
 
 const Enable = ({ request, controller }) => {
-  const capture = useCaptureEvent();
-  const background = useColorModeValue('gray.100', 'gray.700');
+  const background = useColorModeValue('blue.100', 'gray.900');
   return (
     <Box
       minHeight="100vh"
@@ -40,7 +38,7 @@ const Enable = ({ request, controller }) => {
             draggable={false}
             width={6}
             height={6}
-            src={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${request.origin}&size=32`}
+            src={platform.icons.getFaviconUrl(request.origin)}
           />
         </Box>
         <Box height="3" />
@@ -57,12 +55,12 @@ const Enable = ({ request, controller }) => {
           flexDirection={'column'}
         >
           <Box display={'flex'} alignItems={'center'}>
-            <CheckIcon mr="3" color={'teal'} boxSize={4} />{' '}
+            <CheckIcon mr="3" color={'yellow'} boxSize={4} />{' '}
             <Box fontWeight={'bold'}>View your balance and addresses</Box>
           </Box>
           <Box h={4} />
           <Box display={'flex'} alignItems={'center'}>
-            <CheckIcon mr="3" color={'teal'} boxSize={4} />{' '}
+            <CheckIcon mr="3" color={'yellow'} boxSize={4} />{' '}
             <Box fontWeight={'bold'}>Request approval for transactions</Box>
           </Box>
         </Box>
@@ -81,7 +79,6 @@ const Enable = ({ request, controller }) => {
           height={'50px'}
           width={'180px'}
           onClick={async () => {
-            capture(Events.DappConnectorAuthorizeDappCancelClick);
             await controller.returnData({ error: APIError.Refused });
             window.close();
           }}
@@ -92,9 +89,8 @@ const Enable = ({ request, controller }) => {
         <Button
           height={'50px'}
           width={'180px'}
-          colorScheme="teal"
+          colorScheme="yellow"
           onClick={async () => {
-            capture(Events.DappConnectorAuthorizeDappAuthorizeClick);
             await setWhitelisted(request.origin);
             await controller.returnData({ data: true });
             window.close();

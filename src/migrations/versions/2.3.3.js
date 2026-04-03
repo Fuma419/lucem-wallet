@@ -25,9 +25,9 @@ const migration = {
           const paymentAddr = Loader.Cardano.BaseAddress.new(
             network === NETWORK_ID.mainnet
               ? Loader.Cardano.NetworkInfo.mainnet().network_id()
-              : Loader.Cardano.NetworkInfo.testnet().network_id(),
-            Loader.Cardano.Credential.new_pub_key(paymentKeyHash),
-            Loader.Cardano.Credential.new_pub_key(stakeKeyHash)
+              : Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+            Loader.Cardano.Credential.from_keyhash(paymentKeyHash),
+            Loader.Cardano.Credential.from_keyhash(stakeKeyHash)
           )
             .to_address()
             .to_bech32();
@@ -35,8 +35,8 @@ const migration = {
           const rewardAddr = Loader.Cardano.RewardAddress.new(
             network === NETWORK_ID.mainnet
               ? Loader.Cardano.NetworkInfo.mainnet().network_id()
-              : Loader.Cardano.NetworkInfo.testnet().network_id(),
-            Loader.Cardano.Credential.new_pub_key(stakeKeyHash)
+              : Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+            Loader.Cardano.Credential.from_keyhash(stakeKeyHash)
           )
             .to_address()
             .to_bech32();

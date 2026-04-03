@@ -35,14 +35,14 @@ const Main = ({ children }) => {
     <Box
       width={isExtensionPopup ? POPUP_WINDOW.width + 'px' : '100%'}
       height={isExtensionPopup ? POPUP_WINDOW.height + 'px' : '100vh'}
-      maxWidth={isExtensionPopup ? undefined : '480px'}
+      maxWidth={isExtensionPopup ? undefined : '500px'}
       mx={isExtensionPopup ? undefined : 'auto'}
     >
       <Theme>
         <StoreProvider>
           <Scrollbars
             id="scroll"
-            style={{ width: '100vw', height: '100vh' }}
+            style={{ width: '100%', height: '100vh' }}
             autoHide
             onScroll={(e) => {
               setScroll({ el: e.target, y: e.target.scrollTop });

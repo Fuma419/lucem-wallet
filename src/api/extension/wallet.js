@@ -571,7 +571,7 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
       txBuilder.add_output(
         Loader.Cardano.TransactionOutput.new(
           changeAddress,
-          Loader.Cardano.Value.new(BigInt(protocolParameters.minUtxo), Loader.Cardano.MultiAsset.new())
+          Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str(String(protocolParameters.minUtxo)))
         )
       );
 

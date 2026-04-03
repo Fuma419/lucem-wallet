@@ -688,8 +688,7 @@ export const getCollateral = async () => {
           currentAccount[network.id].paymentAddr
         ),
         Loader.Cardano.Value.new(
-          Loader.Cardano.BigNum.from_str(collateral.lovelace.toString()), 
-          Loader.Cardano.MultiAsset.new()
+          Loader.Cardano.BigNum.from_str(collateral.lovelace.toString())
         )
       )
     );

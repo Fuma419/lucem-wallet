@@ -184,12 +184,12 @@ export const getBalance = async () => {
   if (result.error) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
-    else return Loader.Cardano.Value.new(BigInt('0'), Loader.Cardano.MultiAsset.new());
+    else return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
   }
   
   // If no UTXOs, return zero balance
   if (!result || result.length === 0) {
-    return Loader.Cardano.Value.new(BigInt('0'), Loader.Cardano.MultiAsset.new());
+    return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
   }
   
   // Aggregate all UTXOs to get total balance
@@ -1481,30 +1481,30 @@ export const createAccount = async (name, password, accountIndex = null) => {
 
   const paymentAddrMainnet = Loader.Cardano.BaseAddress.new(
     Loader.Cardano.NetworkInfo.mainnet().network_id(),
-    Loader.Cardano.Credential.new_pub_key(paymentKeyPub.hash()),
-    Loader.Cardano.Credential.new_pub_key(stakeKeyPub.hash())
+    Loader.Cardano.Credential.from_keyhash(paymentKeyPub.hash()),
+    Loader.Cardano.Credential.from_keyhash(stakeKeyPub.hash())
   )
     .to_address()
     .to_bech32();
 
   const rewardAddrMainnet = Loader.Cardano.RewardAddress.new(
     Loader.Cardano.NetworkInfo.mainnet().network_id(),
-    Loader.Cardano.Credential.new_pub_key(stakeKeyPub.hash())
+    Loader.Cardano.Credential.from_keyhash(stakeKeyPub.hash())
   )
     .to_address()
     .to_bech32();
 
   const paymentAddrTestnet = Loader.Cardano.BaseAddress.new(
-    Loader.Cardano.NetworkInfo.testnet().network_id(),
-    Loader.Cardano.Credential.new_pub_key(paymentKeyPub.hash()),
-    Loader.Cardano.Credential.new_pub_key(stakeKeyPub.hash())
+    Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+    Loader.Cardano.Credential.from_keyhash(paymentKeyPub.hash()),
+    Loader.Cardano.Credential.from_keyhash(stakeKeyPub.hash())
   )
     .to_address()
     .to_bech32();
 
   const rewardAddrTestnet = Loader.Cardano.RewardAddress.new(
-    Loader.Cardano.NetworkInfo.testnet().network_id(),
-    Loader.Cardano.Credential.new_pub_key(stakeKeyPub.hash())
+    Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+    Loader.Cardano.Credential.from_keyhash(stakeKeyPub.hash())
   )
     .to_address()
     .to_bech32();
@@ -1577,30 +1577,30 @@ export const createHWAccounts = async (accounts) => {
 
     const paymentAddrMainnet = Loader.Cardano.BaseAddress.new(
       Loader.Cardano.NetworkInfo.mainnet().network_id(),
-      Loader.Cardano.Credential.new_pub_key(paymentKeyHashRaw),
-      Loader.Cardano.Credential.new_pub_key(stakeKeyHashRaw)
+      Loader.Cardano.Credential.from_keyhash(paymentKeyHashRaw),
+      Loader.Cardano.Credential.from_keyhash(stakeKeyHashRaw)
     )
       .to_address()
       .to_bech32();
 
     const rewardAddrMainnet = Loader.Cardano.RewardAddress.new(
       Loader.Cardano.NetworkInfo.mainnet().network_id(),
-      Loader.Cardano.Credential.new_pub_key(stakeKeyHashRaw)
+      Loader.Cardano.Credential.from_keyhash(stakeKeyHashRaw)
     )
       .to_address()
       .to_bech32();
 
     const paymentAddrTestnet = Loader.Cardano.BaseAddress.new(
-      Loader.Cardano.NetworkInfo.testnet().network_id(),
-      Loader.Cardano.Credential.new_pub_key(paymentKeyHashRaw),
-      Loader.Cardano.Credential.new_pub_key(stakeKeyHashRaw)
+      Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+      Loader.Cardano.Credential.from_keyhash(paymentKeyHashRaw),
+      Loader.Cardano.Credential.from_keyhash(stakeKeyHashRaw)
     )
       .to_address()
       .to_bech32();
 
     const rewardAddrTestnet = Loader.Cardano.RewardAddress.new(
-      Loader.Cardano.NetworkInfo.testnet().network_id(),
-      Loader.Cardano.Credential.new_pub_key(stakeKeyHashRaw)
+      Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+      Loader.Cardano.Credential.from_keyhash(stakeKeyHashRaw)
     )
       .to_address()
       .to_bech32();
@@ -1875,8 +1875,8 @@ export const createWallet = async (name, seedPhrase, password) => {
     
     const baseAddress = Loader.Cardano.BaseAddress.new(
       networkId,
-      Loader.Cardano.Credential.new_pub_key(paymentKey.to_public().hash()),
-      Loader.Cardano.Credential.new_pub_key(stakeKey.to_public().hash())
+      Loader.Cardano.Credential.from_keyhash(paymentKey.to_public().hash()),
+      Loader.Cardano.Credential.from_keyhash(stakeKey.to_public().hash())
     );
     
     const fullAddress = baseAddress.to_address().to_bech32();

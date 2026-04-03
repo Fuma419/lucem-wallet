@@ -1246,8 +1246,8 @@ export const signTxHW = async (
       if (
         witness.path[3] == 0 // payment key
       ) {
-        const vkey = Loader.Cardano.Bip32PublicKey.from_bytes(
-          Buffer.from(account.publicKey, 'hex')
+        const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
+          account.publicKey
         )
           .derive(0)
           .derive(0)
@@ -1259,8 +1259,8 @@ export const signTxHW = async (
       } else if (
         witness.path[3] == 2 // stake key
       ) {
-        const vkey = Loader.Cardano.Bip32PublicKey.from_bytes(
-          Buffer.from(account.publicKey, 'hex')
+        const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
+          account.publicKey
         )
           .derive(2)
           .derive(0)
@@ -1458,9 +1458,7 @@ export const createAccount = async (name, password, accountIndex = null) => {
     index
   );
 
-  const publicKey = Buffer.from(accountKey.to_public().to_raw_bytes()).toString(
-    'hex'
-  ); // BIP32 Public key
+  const publicKey = accountKey.to_public().to_hex(); // BIP32 Public key
   const paymentKeyPub = paymentKey.to_public();
   const stakeKeyPub = stakeKey.to_public();
 
@@ -1472,15 +1470,13 @@ export const createAccount = async (name, password, accountIndex = null) => {
   stakeKey = null;
 
   const paymentKeyHash = Buffer.from(
-    paymentKeyPub.hash().to_raw_bytes(),
-    'hex'
+    paymentKeyPub.hash().to_bytes()
   ).toString('hex');
 
   const paymentKeyHashBech32 = paymentKeyPub.hash().to_bech32('addr_vkh');
 
   const stakeKeyHash = Buffer.from(
-    stakeKeyPub.hash().to_raw_bytes(),
-    'hex'
+    stakeKeyPub.hash().to_bytes()
   ).toString('hex');
 
   const paymentAddrMainnet = Loader.Cardano.BaseAddress.new(
@@ -1562,20 +1558,20 @@ export const createHWAccounts = async (accounts) => {
   await Loader.load();
   const existingAccounts = await getStorage(STORAGE.accounts);
   accounts.forEach((account) => {
-    const publicKey = Loader.Cardano.Bip32PublicKey.from_bytes(
-      Buffer.from(account.publicKey, 'hex')
+    const publicKey = Loader.Cardano.Bip32PublicKey.from_hex(
+      account.publicKey
     );
 
     const paymentKeyHashRaw = publicKey.derive(0).derive(0).to_raw_key().hash();
     const stakeKeyHashRaw = publicKey.derive(2).derive(0).to_raw_key().hash();
 
-    const paymentKeyHash = Buffer.from(paymentKeyHashRaw.to_raw_bytes()).toString(
+    const paymentKeyHash = Buffer.from(paymentKeyHashRaw.to_bytes()).toString(
       'hex'
     );
 
     const paymentKeyHashBech32 = paymentKeyHashRaw.to_bech32('addr_vkh');
 
-    const stakeKeyHash = Buffer.from(stakeKeyHashRaw.to_raw_bytes()).toString(
+    const stakeKeyHash = Buffer.from(stakeKeyHashRaw.to_bytes()).toString(
       'hex'
     );
 
@@ -1621,7 +1617,7 @@ export const createHWAccounts = async (accounts) => {
 
     existingAccounts[index] = {
       index,
-      publicKey: Buffer.from(publicKey.to_raw_bytes()).toString('hex'),
+      publicKey: publicKey.to_hex(),
       paymentKeyHash,
       paymentKeyHashBech32,
       stakeKeyHash,
@@ -1842,7 +1838,7 @@ export const createWallet = async (name, seedPhrase, password) => {
 
   const encryptedRootKey = await encryptWithPassword(
     password,
-    rootKey.to_raw_bytes()
+    rootKey.as_bytes()
   );
   rootKey.free();
   rootKey = null;

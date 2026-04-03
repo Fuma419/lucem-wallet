@@ -1828,6 +1828,12 @@ export const getMilkomedaData = async (ethAddress) => {
 export const createWallet = async (name, seedPhrase, password) => {
   await Loader.load();
 
+  // Check and clear any leftover state from a previous failed attempt
+  const checkStore = await getStorage(STORAGE.encryptedKey);
+  if (checkStore) {
+    await platform.storage.clear();
+  }
+
   let entropy = mnemonicToEntropy(seedPhrase);
   let rootKey = Loader.Cardano.Bip32PrivateKey.from_bip39_entropy(
     Buffer.from(entropy, 'hex'),
@@ -1843,10 +1849,6 @@ export const createWallet = async (name, seedPhrase, password) => {
   rootKey.free();
   rootKey = null;
 
-  // Check if wallet already exists
-  const checkStore = await getStorage(STORAGE.encryptedKey);
-  if (checkStore) throw new Error(ERROR.storeNotEmpty);
-  
   await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
   await setStorage({
     [STORAGE.network]: { id: NETWORK_ID.mainnet, node: NODE.mainnet },

@@ -17,6 +17,11 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+body {
+  background-color: #1a1a2e;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .welcome {
   opacity: 1;
   color: rgba(255, 255, 255, 1);

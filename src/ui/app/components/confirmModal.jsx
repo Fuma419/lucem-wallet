@@ -129,6 +129,9 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
               isInvalid={state.wrongPassword === true}
               pr="4.5rem"
               type={state.show ? 'text' : 'password'}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="current-password"
               onChange={(e) =>
                 setState((s) => ({ ...s, password: e.target.value }))
               }

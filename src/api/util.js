@@ -326,7 +326,7 @@ export const utxoFromJson = async (output, address) => {
  */
 export const sumUtxos = async (utxos) => {
   await Loader.load();
-  let value = Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str("0"), Loader.Cardano.MultiAsset.new());
+  let value = Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str("0"));
   utxos.forEach((utxo) => (value = value.checked_add(utxo.output().amount())));
   return value;
 };
@@ -387,7 +387,7 @@ export const assetsToValue = async (assets) => {
   console.log('coin created:', coin);
   console.log('multiAsset created:', multiAsset);
   
-  const value = Loader.Cardano.Value.new(coin, multiAsset);
+  const value = Loader.Cardano.Value.new_with_assets(coin, multiAsset);
   console.log('Value created successfully');
   return value;
 };

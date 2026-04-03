@@ -570,6 +570,9 @@ const MakeAccount = ({ colorTheme }) => {
             isInvalid={state.regularPassword === false}
             pr="4.5rem"
             type={state.show ? 'text' : 'password'}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="new-password"
             onChange={(e) => setState((s) => ({ ...s, password: e.target.value }))}
             onBlur={(e) =>
               e.target.value &&
@@ -604,6 +607,9 @@ const MakeAccount = ({ colorTheme }) => {
             focusBorderColor={`${colorTheme}.700`}
             isInvalid={state.matchingPassword === false}
             pr="4.5rem"
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="new-password"
             onChange={(e) => setState((s) => ({ ...s, passwordConfirm: e.target.value }))}
             onBlur={(e) =>
               e.target.value &&

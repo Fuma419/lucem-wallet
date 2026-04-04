@@ -25,6 +25,7 @@ import {
 } from '@chakra-ui/icons';
 import {
   Box,
+  Flex,
   Stack,
   Text,
   Button,
@@ -439,15 +440,20 @@ const Send = () => {
   return (
     <>
       <Box
-        height="100vh"
+        minH="100vh"
+        sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
         display="flex"
-        alignItems="center"
+        alignItems="stretch"
         flexDirection="column"
         position="relative"
+        w="full"
+        maxW="100%"
+        className="lucem-wallet-main-column"
       >
         {txInfo.protocolParameters && isLoading ? (
           <Box
-            height="100vh"
+            flex="1"
+            minH="40vh"
             width="full"
             display="flex"
             alignItems="center"
@@ -458,27 +464,48 @@ const Send = () => {
         ) : (
           <>
             <Account />
-            <Box position="absolute" top="24" left="6">
-              <IconButton
-                rounded="md"
-                onClick={() => {
-                  navigate(-1);
-                }}
-                variant="ghost"
-                icon={<ChevronLeftIcon boxSize="6" />}
-              />
-            </Box>
-            <Box height="10" />
-            <Text fontSize="lg" fontWeight="bold">
-              Send
-            </Text>
-            <Box height="8" />
+            <Flex
+              align="center"
+              w="full"
+              px={{ base: 2, md: 4 }}
+              pt={2}
+              pb={1}
+              flexShrink={0}
+            >
+              <Box w="40px" flexShrink={0}>
+                <IconButton
+                  rounded="md"
+                  onClick={() => {
+                    navigate(-1);
+                  }}
+                  variant="ghost"
+                  icon={<ChevronLeftIcon boxSize="6" />}
+                  aria-label="Go back"
+                />
+              </Box>
+              <Text flex="1" textAlign="center" fontSize="lg" fontWeight="bold">
+                Send
+              </Text>
+              <Box w="40px" flexShrink={0} />
+            </Flex>
+            <Box
+              flex="1"
+              minH={0}
+              overflowY="auto"
+              w="full"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+              px={{ base: 2, md: 4 }}
+              pb={4}
+            >
             <Box
               display="flex"
               alignItems="center"
               flexDirection="column"
-              justifyContent="center"
-              width="80%"
+              justifyContent="flex-start"
+              width={{ base: '94%', md: '80%' }}
+              maxW="560px"
             >
               <AddressPopup
                 setAddress={setAddress}
@@ -590,10 +617,19 @@ const Send = () => {
                 </InputGroup>
               </Box>
               <Box height="4" />
+              <Box
+                w="full"
+                sx={{
+                  height: 'min(200px, 35vh)',
+                  '@supports (height: 100dvh)': {
+                    height: 'min(200px, 32dvh)',
+                  },
+                }}
+              >
               <Scrollbars
                 style={{
                   width: '100%',
-                  height: '200px',
+                  height: '100%',
                 }}
               >
                 <Box
@@ -627,12 +663,18 @@ const Send = () => {
                   ))}
                 </Box>
               </Scrollbars>
+              </Box>
+            </Box>
             </Box>
 
             <Box
-              position="absolute"
-              width="full"
-              bottom="3"
+              flexShrink={0}
+              w="full"
+              py={3}
+              px={2}
+              pb="calc(0.75rem + env(safe-area-inset-bottom, 0px))"
+              borderTopWidth="1px"
+              borderTopColor="whiteAlpha.100"
               display="flex"
               alignItems="center"
               justifyContent="center"

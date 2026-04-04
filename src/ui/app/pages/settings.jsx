@@ -56,32 +56,46 @@ const Settings = () => {
   return (
     <>
       <Box
-        minHeight="100vh"
+        minH="100vh"
+        sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
         display="flex"
-        alignItems="center"
         flexDirection="column"
+        alignItems="stretch"
         position="relative"
+        w="full"
+        maxW="100%"
+        className="lucem-wallet-main-column"
       >
         <Account ref={accountRef} />
-        <Box position="absolute" top="24" left="6">
+        <Flex
+          align="center"
+          w="full"
+          px={{ base: 2, md: 4 }}
+          pt={2}
+          pb={1}
+          flexShrink={0}
+        >
           <IconButton
             rounded="md"
             onClick={() => navigate(-1)}
             variant="ghost"
             icon={<ChevronLeftIcon boxSize="7" />}
+            aria-label="Go back"
           />
-        </Box>
+        </Flex>
 
-        <Routes>
-          <Route path="*" element={<Overview />} />
-          <Route
-            path="general"
-            element={<GeneralSettings accountRef={accountRef} />}
-          />
-          <Route path="whitelisted" element={<Whitelisted />} />
-          <Route path="network" element={<Network />} />
-          <Route path="legal" element={<LegalSettings />} />
-        </Routes>
+        <Box flex="1" minH={0} overflowY="auto" w="full">
+          <Routes>
+            <Route path="*" element={<Overview />} />
+            <Route
+              path="general"
+              element={<GeneralSettings accountRef={accountRef} />}
+            />
+            <Route path="whitelisted" element={<Whitelisted />} />
+            <Route path="network" element={<Network />} />
+            <Route path="legal" element={<LegalSettings />} />
+          </Routes>
+        </Box>
       </Box>
     </>
   );

@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChakraProvider, extendTheme } from '@chakra-ui/react';
-import { POPUP_WINDOW } from '../config/config';
 import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
 
@@ -59,6 +58,14 @@ const Switch = {
 
 // Define the theme
 const theme = extendTheme({
+  /* Explicit tiers: mobile / large phone / tablet / desktop / wide (PWA + extension scaling). */
+  breakpoints: {
+    sm: '30em',
+    md: '48em',
+    lg: '62em',
+    xl: '80em',
+    '2xl': '96em',
+  },
   colors: {
     yellow: {
       100: '#F8FFC7',

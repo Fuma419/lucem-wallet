@@ -248,28 +248,30 @@ const Wallet = () => {
   return (
     <>
       <Box
-        minHeight="100vh"
+        minH="100vh"
+        sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
         display="flex"
-        alignItems="center"
+        alignItems="stretch"
         flexDirection="column"
+        w="full"
+        maxW="100%"
       >
+        <Box className="lucem-wallet-main-column" flex="1" display="flex" flexDirection="column">
         <Box
-          minHeight="52"
           background={panelBg}
           shadow="md"
           width="full"
           maxWidth="100%"
           position="relative"
-          overflow="hidden"
-          pb="14"
+          overflow="visible"
+          pb={{ base: 4, md: 6 }}
         >
-          {/* Upper row: identical circular frames, symmetric insets (flex beats absolute for mobile alignment) */}
+          {/* Icon row — flow layout (no absolute stacking over balance). */}
           <Flex
-            zIndex="2"
-            position="relative"
+            zIndex={2}
             w="full"
             maxW="100%"
-            pt="max(1.25rem, env(safe-area-inset-top, 0px))"
+            pt={{ base: 3, md: 4 }}
             pb={2}
             px={{ base: 4, md: 5 }}
             align="center"
@@ -277,9 +279,9 @@ const Wallet = () => {
             flexShrink={0}
           >
             <Box
-              boxSize="14"
-              minW="14"
-              minH="14"
+              boxSize={{ base: '12', sm: '13', md: '14' }}
+              minW={{ base: '12', sm: '13', md: '14' }}
+              minH={{ base: '12', sm: '13', md: '14' }}
               rounded="full"
               overflow="hidden"
               flexShrink={0}
@@ -297,9 +299,9 @@ const Wallet = () => {
               />
             </Box>
             <Box
-              boxSize="14"
-              minW="14"
-              minH="14"
+              boxSize={{ base: '12', sm: '13', md: '14' }}
+              minW={{ base: '12', sm: '13', md: '14' }}
+              minH={{ base: '12', sm: '13', md: '14' }}
               rounded="full"
               overflow="hidden"
               flexShrink={0}
@@ -312,8 +314,13 @@ const Wallet = () => {
             </Box>
           </Flex>
 
-          {/* Lower right settings button */}
-          <Box zIndex="2" position="fixed" bottom="7" right="7">
+          {/* Lower right settings — respect safe area on notched devices */}
+          <Box
+            zIndex={2}
+            position="fixed"
+            bottom="calc(env(safe-area-inset-bottom, 0px) + 1rem)"
+            right="calc(env(safe-area-inset-right, 0px) + 1rem)"
+          >
             <Menu
               isOpen={menu}
               autoSelect={false}
@@ -510,117 +517,99 @@ const Wallet = () => {
             </Menu>
           </Box>
 
-          <Box
-            zIndex="1"
-            position="absolute"
-            width="full"
-            top={{
-              base:
-                'calc(max(1.25rem, env(safe-area-inset-top, 0px)) + 3.5rem + 0.35rem)',
-              md: 8,
-            }}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
+          <Box px={{ base: 3, md: 4 }} pb={1} flexShrink={0} textAlign="center">
             <Text
               className="lineClamp"
-              fontSize="xl"
+              fontSize={{ base: 'lg', md: 'xl' }}
               isTruncated={true}
-              maxWidth="210px"
+              maxW="min(280px, 85vw)"
+              mx="auto"
             >
               {info.name}
             </Text>
           </Box>
-          <Box
-            position="absolute"
-            width="full"
-            height="full"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <UnitDisplay
-              className="lineClamp"
-              fontSize="2xl"
-              fontWeight="bold"
-              quantity={
-                state.account &&
-                (state.account.lovelace || state.account.lovelace === 0 || state.account.lovelace === '0')
-                  ? (
-                    BigInt(state.account.lovelace) -
-                    BigInt(state.account.minAda) -
-                    BigInt(
-                      state.account.collateral
-                        ? state.account.collateral.lovelace
-                        : 0
-                    )
-                  ).toString()
-                  : undefined
-              }
-              decimals={6}
-              symbol={settings.adaSymbol}
-            />
-            {state.account &&
-            (state.account.assets.length > 0 || state.account.collateral) ? (
-              <Tooltip
-                label={
-                  <Box display="flex" flexDirection="column">
-                    {state.account.assets.length > 0 && (
-                      <Box>
-                        <Box display="flex">
-                          <Text mr="0.5">+</Text>
-                          <UnitDisplay
-                            quantity={state.account.minAda}
-                            symbol={settings.adaSymbol}
-                            decimals={6}
-                          />
-                          <Text ml="1">locked with assets</Text>
-                        </Box>
-                      </Box>
-                    )}
-                    {state.account.collateral && (
-                      <Box>
-                        <Box display="flex">
-                          <Text mr="0.5">+</Text>
-                          <UnitDisplay
-                            quantity={state.account.collateral.lovelace}
-                            symbol={settings.adaSymbol}
-                            decimals={6}
-                          />
-                          <Text ml="1">Collateral</Text>
-                        </Box>
-                      </Box>
-                    )}
-                  </Box>
-                }
-                fontSize="sm"
-                hasArrow
-                placement="auto"
-              >
-                <InfoOutlineIcon
-                  cursor="help"
-                  color="white"
-                  ml="10px"
-                  width="14px"
-                  height="14px"
-                  display="inline-block"
-                />
-              </Tooltip>
-            ) : (
-              ''
-            )}
-          </Box>
-          <Box
-            bottom="46px"
-            position="absolute"
-            width="full"
-            maxWidth="100%"
+
+          <Flex
+            direction="column"
+            align="center"
+            justify="center"
+            py={{ base: 2, md: 4 }}
             px={2}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
+            flexShrink={0}
+            gap={1}
           >
+            <Flex align="center" justify="center" flexWrap="wrap" gap={1}>
+              <UnitDisplay
+                className="lineClamp"
+                fontSize={{ base: 'xl', md: '2xl' }}
+                fontWeight="bold"
+                quantity={
+                  state.account &&
+                  (state.account.lovelace || state.account.lovelace === 0 || state.account.lovelace === '0')
+                    ? (
+                      BigInt(state.account.lovelace) -
+                      BigInt(state.account.minAda) -
+                      BigInt(
+                        state.account.collateral
+                          ? state.account.collateral.lovelace
+                          : 0
+                      )
+                    ).toString()
+                    : undefined
+                }
+                decimals={6}
+                symbol={settings.adaSymbol}
+              />
+              {state.account &&
+              (state.account.assets.length > 0 || state.account.collateral) ? (
+                <Tooltip
+                  label={
+                    <Box display="flex" flexDirection="column">
+                      {state.account.assets.length > 0 && (
+                        <Box>
+                          <Box display="flex">
+                            <Text mr="0.5">+</Text>
+                            <UnitDisplay
+                              quantity={state.account.minAda}
+                              symbol={settings.adaSymbol}
+                              decimals={6}
+                            />
+                            <Text ml="1">locked with assets</Text>
+                          </Box>
+                        </Box>
+                      )}
+                      {state.account.collateral && (
+                        <Box>
+                          <Box display="flex">
+                            <Text mr="0.5">+</Text>
+                            <UnitDisplay
+                              quantity={state.account.collateral.lovelace}
+                              symbol={settings.adaSymbol}
+                              decimals={6}
+                            />
+                            <Text ml="1">Collateral</Text>
+                          </Box>
+                        </Box>
+                      )}
+                    </Box>
+                  }
+                  fontSize="sm"
+                  hasArrow
+                  placement="auto"
+                >
+                  <InfoOutlineIcon
+                    cursor="help"
+                    color="white"
+                    ml="10px"
+                    width="14px"
+                    height="14px"
+                    display="inline-block"
+                  />
+                </Tooltip>
+              ) : (
+                ''
+              )}
+            </Flex>
             <UnitDisplay
               className="lineClamp"
               fontSize="md"
@@ -646,24 +635,20 @@ const Wallet = () => {
               symbol={currencyToSymbol(settings.currency)}
               decimals={2}
             />
-          </Box>
+          </Flex>
 
-          {/* Receive, delegation, Send — one flex row (wraps on very narrow widths) */}
-          <Box
-            display="flex"
+          {/* Receive, delegation, Send — flows under balance (no overlap). */}
+          <Flex
             flexWrap="wrap"
             justifyContent="center"
             alignItems="center"
             alignContent="center"
-            position="absolute"
-            bottom="2"
-            left="50%"
-            transform="translateX(-50%)"
-            gap={{ base: 2, sm: 3, md: 6 }}
-            width="calc(100% - 16px)"
-            maxWidth="100%"
-            px={2}
-            zIndex={2}
+            gap={{ base: 2, sm: 3, md: 4 }}
+            w="full"
+            maxW="100%"
+            px={{ base: 2, md: 3 }}
+            py={{ base: 3, md: 4 }}
+            flexShrink={0}
           >
           <Popover>
             <PopoverTrigger>
@@ -773,7 +758,7 @@ const Wallet = () => {
             >
               Send
             </Button>
-          </Box>
+          </Flex>
         </Box>
         <Box height="8" />
         <Tabs
@@ -831,6 +816,7 @@ const Wallet = () => {
             </TabPanel>
           </TabPanels>
         </Tabs>
+        </Box>
       </Box>
       <NewAccountModal ref={newAccountRef} />
       <DeleteAccountModal

@@ -26,6 +26,19 @@ import Theme from '../../theme';
 import { TAB } from '../../../config/config';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
 
+/** Two-column seed UI: tighter on phones, standard on tablet/desktop. */
+const SEED_GRID_STACK_PROPS = {
+  spacing: { base: 3, sm: 6, md: 10 },
+  direction: 'row',
+  alignItems: 'flex-start',
+  justifyContent: 'center',
+  width: '100%',
+  flexWrap: 'wrap',
+};
+
+const SEED_COL_W = { base: '124px', sm: '132px', md: '140px' };
+const SEED_INPUT_W = { base: '92px', sm: '100px', md: '110px' };
+
 /**
  * Local copies of api/extension helpers — avoids importing the extension module
  * (and Cardano WASM) until the user submits "Create", so MV3 pages and strict CSP
@@ -53,6 +66,7 @@ const CreateWalletShell = ({ children }) => (
     minW="100%"
     maxW="100vw"
     minH="100vh"
+    sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     mx="auto"
     overflowX="hidden"
     overflowY="auto"
@@ -142,53 +156,68 @@ const App = () => {
         flexShrink={0}
         display="flex"
         justifyContent="flex-start"
-        pt={{ base: 5, md: 8 }}
+        pt={{
+          base: 'max(1rem, env(safe-area-inset-top, 0px))',
+          md: 8,
+        }}
         pb={2}
         px={{ base: 4, md: 8 }}
       >
         <Image
           draggable={false}
           src={LogoWhite}
-          width="100px"
-          maxW="min(100px, 40vw)"
+          width={{ base: '72px', sm: '88px', md: '100px' }}
+          maxW="min(100px, 36vw)"
           objectFit="contain"
           alt=""
         />
       </Box>
       <Box
-        flex="1"
+        flex="1 1 auto"
+        minH={0}
         display="flex"
         flexDirection="column"
         alignItems="center"
-        justifyContent="center"
+        justifyContent={{ base: 'flex-start', md: 'center' }}
         width="100%"
         px={{ base: 4, md: 8 }}
-        pb={{ base: 10, md: 12 }}
+        pb={{
+          base: 'max(1.5rem, env(safe-area-inset-bottom, 0px))',
+          md: 12,
+        }}
+        pt={{ base: 2, md: 0 }}
       >
         <Box
-          className={`modal-glow-${colorTheme}`}
+          className={`modal-glow-${colorTheme} create-wallet-modal lucem-modal-card`}
           rounded="2xl"
           shadow="md"
           display="flex"
-          alignItems="stretch"
           flexDirection="column"
-          justifyContent="center"
+          alignItems="stretch"
+          justifyContent="flex-start"
           width="100%"
           maxW="560px"
-          maxH="925px"
           mx="auto"
-          flexShrink={0}
-          p={{ base: 6, md: 10 }}
+          flex="1 1 auto"
+          minH={0}
+          overflow="hidden"
           background="rgba(0, 0, 0, .85)"
           color="whiteAlpha.900"
           fontSize="md"
         >
-          <Routes>
-            <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
-            <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
-            <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
-            <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
-          </Routes>
+          <Box
+            className="lucem-create-wallet-scroll"
+            p={{ base: 4, sm: 6, md: 10 }}
+            flex="1 1 auto"
+            minH={0}
+          >
+            <Routes>
+              <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
+              <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
+              <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
+              <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
+            </Routes>
+          </Box>
         </Box>
       </Box>
     </Box>
@@ -218,17 +247,10 @@ const GenerateSeed = ({ colorTheme }) => {
       <Text className="walletTitle" textAlign="center" fontWeight="bold" fontSize="xl">
         New Seed Phrase
       </Text>
-      <Spacer height="10" />
-      <Stack
-        spacing={10}
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="center"
-        width="100%"
-        flexWrap="wrap"
-      >
+      <Spacer height={{ base: 4, md: 10 }} />
+      <Stack {...SEED_GRID_STACK_PROPS}>
         {[0, 1].map((colIndex) => (
-          <Box key={colIndex} width={140} flexShrink={0}>
+          <Box key={colIndex} width={SEED_COL_W} flexShrink={0}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
@@ -256,7 +278,7 @@ const GenerateSeed = ({ colorTheme }) => {
                     name={`lucemSeedGenerateWord${index}`}
                     autoComplete="off"
                     focusBorderColor={`${colorTheme}.700`}
-                    width={110}
+                    width={SEED_INPUT_W}
                     size="sm"
                     isReadOnly={true}
                     value={mnemonicObj ? mnemonicObj[index] : '...'}
@@ -358,17 +380,10 @@ const VerifySeed = ({ colorTheme }) => {
       >
         Verify Seed Phrase
       </Text>
-      <Spacer height="10" />
-      <Stack
-        spacing={10}
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="center"
-        width="100%"
-        flexWrap="wrap"
-      >
+      <Spacer height={{ base: 4, md: 10 }} />
+      <Stack {...SEED_GRID_STACK_PROPS}>
         {[0, 1].map((colIndex) => (
-          <Box key={colIndex} width={140} flexShrink={0}>
+          <Box key={colIndex} width={SEED_COL_W} flexShrink={0}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
@@ -399,7 +414,7 @@ const VerifySeed = ({ colorTheme }) => {
                     defaultValue={index % 5 !== 0 ? displayMnemonic[index] : ''}
                     isReadOnly={index % 5 !== 0}
                     focusBorderColor={`${colorTheme}.700`}
-                    width={110}
+                    width={SEED_INPUT_W}
                     size="sm"
                     isInvalid={input[index] && input[index] !== displayMnemonic[index]}
                     ref={(el) => (refs.current[index] = el)}
@@ -535,16 +550,9 @@ const ImportSeed = ({ colorTheme }) => {
       </Text>
       <Spacer height="5" />
 
-      <Stack
-        spacing={10}
-        direction="row"
-        alignItems="flex-start"
-        justifyContent="center"
-        width="100%"
-        flexWrap="wrap"
-      >
+      <Stack {...SEED_GRID_STACK_PROPS}>
         {[0, 1].map((colIndex) => (
-          <Box key={colIndex} width={140} flexShrink={0}>
+          <Box key={colIndex} width={SEED_COL_W} flexShrink={0}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               if (index > seedLength) return null;
@@ -572,7 +580,7 @@ const ImportSeed = ({ colorTheme }) => {
                     name={`lucemSeedImportWord${index}`}
                     autoComplete="off"
                     variant="filled"
-                    width={110}
+                    width={SEED_INPUT_W}
                     focusBorderColor={`${colorTheme}.700`}
                     size="sm"
                     isInvalid={input[index] && !words.includes(input[index])}

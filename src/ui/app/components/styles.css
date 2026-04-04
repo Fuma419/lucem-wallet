@@ -22,6 +22,57 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/*
+ * Lucem responsive layout system (safe areas, scroll regions, modal caps).
+ * Used by wallet hero, create-wallet tab, and fixed controls.
+ */
+:root {
+  --lucem-safe-top: env(safe-area-inset-top, 0px);
+  --lucem-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --lucem-safe-left: env(safe-area-inset-left, 0px);
+  --lucem-safe-right: env(safe-area-inset-right, 0px);
+}
+
+.lucem-create-wallet-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Cap modal height to viewport so footers (Next, etc.) stay reachable; inner area scrolls. */
+.create-wallet-modal.lucem-modal-card {
+  max-height: min(58rem, calc(100dvh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom)));
+}
+
+@supports not (height: 100dvh) {
+  .create-wallet-modal.lucem-modal-card {
+    max-height: min(58rem, calc(100vh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom)));
+  }
+}
+
+/* Main wallet + tabs: readable line length on very wide PWA / desktop. */
+.lucem-wallet-main-column {
+  width: 100%;
+  max-width: min(72rem, 100vw);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Sign-data / similar: payload area scales on short internal popups. */
+.lucem-sign-payload-scroll {
+  width: 76%;
+  max-width: 420px;
+  height: min(278px, 42vh);
+}
+
+@supports (height: 100dvh) {
+  .lucem-sign-payload-scroll {
+    height: min(278px, 38dvh);
+  }
+}
+
 .welcome {
   opacity: 1;
   color: rgba(255, 255, 255, 1);

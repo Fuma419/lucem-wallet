@@ -52,6 +52,40 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(walletSrc).toMatch(/data-testid="wallet-delegation"/);
   });
 
+  test('wallet.jsx hero should not use minHeight token 52 (too short; caused absolute overlap)', () => {
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
+      'utf8'
+    );
+    expect(walletSrc).not.toMatch(/minHeight=\{?["']52["']\}?/);
+  });
+
+  test('wallet.jsx should use main column class for wide PWA / desktop readability', () => {
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
+      'utf8'
+    );
+    expect(walletSrc).toMatch(/lucem-wallet-main-column/);
+  });
+
+  test('createWallet.jsx should use scroll region + viewport-capped modal card', () => {
+    const tabSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/createWallet.jsx'),
+      'utf8'
+    );
+    expect(tabSrc).toMatch(/lucem-create-wallet-scroll/);
+    expect(tabSrc).toMatch(/lucem-modal-card/);
+  });
+
+  test('styles.css should define safe-area tokens and scroll utility', () => {
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/styles.css'),
+      'utf8'
+    );
+    expect(css).toMatch(/--lucem-safe-top/);
+    expect(css).toMatch(/\.lucem-create-wallet-scroll/);
+  });
+
   test('send.jsx primary Send button should not use fixed width="366px"', () => {
     const sendSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/send.jsx'),

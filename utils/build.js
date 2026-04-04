@@ -7,6 +7,39 @@ var fs = require('fs'),
   path = require('path'),
   spawn = require('child_process').spawn;
 
+/**
+ * `serve` reads serve.json from the directory being served (build/).
+ * Cardano Serialization Lib’s browser WASM uses wasm-bindgen helpers that call
+ * `new Function(...)`, which MV3 extension CSP blocks; a normal http://localhost
+ * tab needs an explicit policy that allows it (extension manifest CSP cannot).
+ */
+function writeLocalPreviewServeConfig(buildDir) {
+  var csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com blob:",
+    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: https: blob:",
+    "connect-src https: http: ws: wss: data: blob:",
+    "worker-src 'self' blob:",
+    "frame-src 'self' https://connect.trezor.io",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+  var cfg = {
+    headers: [
+      {
+        source: '**',
+        headers: [{ key: 'Content-Security-Policy', value: csp }],
+      },
+    ],
+  };
+  fs.writeFileSync(
+    path.join(buildDir, 'serve.json'),
+    JSON.stringify(cfg, null, 2)
+  );
+}
+
 function startLocalPwaPreview() {
   var env = require('./env');
   var root = path.join(__dirname, '..');
@@ -29,6 +62,12 @@ function startLocalPwaPreview() {
       ' — use /mainPopup.html for the app.)'
   );
   console.log('📦 Chrome extension: chrome://extensions → Load unpacked → select build/');
+  console.log(
+    '   MV3 extension pages cannot run CSL WASM helpers (new Function); if you see CSP/eval errors'
+  );
+  console.log(
+    '   on create-wallet tabs, open the same HTML from the URL above (e.g. …/createWalletTab.html?…).'
+  );
   console.log('   Stop the preview server with Ctrl+C.\n');
   console.log('   (Set CI=true or LUCEM_SKIP_SERVE=1 to skip serving.)\n');
   var child = spawn(process.execPath, [serveMain, 'build', '-l', port], {
@@ -95,7 +134,8 @@ webpack(config, function (err, stats) {
     // Save to a file in the build directory
     const buildInfoPath = './build/build-info.json';
     fs.writeFileSync(buildInfoPath, JSON.stringify(buildInfo, null, 2));
-    
+    writeLocalPreviewServeConfig(path.join(__dirname, '..', 'build'));
+
     // Clear console and show build completion message
     console.clear();
     console.log('\n');
@@ -105,6 +145,9 @@ webpack(config, function (err, stats) {
     console.log(`📂 Version: ${buildInfo.version}`);
     console.log('\n');
     console.log('✨ Build information saved to build/build-info.json');
+    console.log(
+      '🔒 Local preview CSP: build/serve.json (allows WASM bindgen new Function for http://localhost only)'
+    );
     console.log('\n');
 
     if (!process.env.CI && process.env.LUCEM_SKIP_SERVE !== '1') {

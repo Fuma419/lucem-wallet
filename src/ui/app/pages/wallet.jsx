@@ -227,6 +227,16 @@ const Wallet = () => {
       if (!isMounted.current) return;
       txInterval = checkTransactions();
       accountChangeHandler = onAccountChange(() => getData());
+    }).catch((e) => {
+      console.error('Failed to load account data:', e);
+      if (!isMounted.current) return;
+      getAccounts().then((accounts) => {
+        getCurrentAccountIndex().then((currentIndex) => {
+          if (!isMounted.current) return;
+          const currentAccount = accounts[currentIndex];
+          setState((s) => ({ ...s, account: currentAccount }));
+        });
+      }).catch(() => {});
     });
     return () => {
       clearInterval(txInterval);
@@ -555,16 +565,17 @@ const Wallet = () => {
               fontWeight="bold"
               quantity={
                 state.account &&
-                state.account.lovelace &&
-                (
-                  BigInt(state.account.lovelace) -
-                  BigInt(state.account.minAda) -
-                  BigInt(
-                    state.account.collateral
-                      ? state.account.collateral.lovelace
-                      : 0
-                  )
-                ).toString()
+                (state.account.lovelace || state.account.lovelace === 0 || state.account.lovelace === '0')
+                  ? (
+                    BigInt(state.account.lovelace) -
+                    BigInt(state.account.minAda) -
+                    BigInt(
+                      state.account.collateral
+                        ? state.account.collateral.lovelace
+                        : 0
+                    )
+                  ).toString()
+                  : undefined
               }
               decimals={6}
               symbol={settings.adaSymbol}
@@ -660,10 +671,12 @@ const Wallet = () => {
             justifyContent="center"
             alignItems="center"
             position="absolute"
-            top="90%" /* Adjust the vertical position as needed */
+            top="90%"
             left="50%"
             transform="translate(-50%, -50%)"
-            gap="250px" /* Adjust this value to control space between buttons */
+            gap={{ base: '24px', md: '80px' }}
+            width="90%"
+            maxWidth="400px"
           >
           <Popover>
             <PopoverTrigger>

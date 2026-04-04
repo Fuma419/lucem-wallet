@@ -33,8 +33,14 @@ export async function koiosRequest(endpoint, headers, body, signal) {
   const network = await getNetwork();
   let result;
 
+  const MAX_RETRIES = 5;
+  let retries = 0;
   while (!result || result.status_code === 500) {
     if (result) {
+      retries++;
+      if (retries >= MAX_RETRIES) {
+        throw new Error('Koios API error: max retries exceeded on status 500');
+      }
       await delay(100);
     }
     

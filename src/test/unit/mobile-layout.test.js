@@ -86,6 +86,46 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(css).toMatch(/\.lucem-create-wallet-scroll/);
   });
 
+  test('send.jsx should not pin the primary action bar with position absolute bottom', () => {
+    const sendSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/send.jsx'),
+      'utf8'
+    );
+    expect(sendSrc).not.toMatch(
+      /position=["']absolute["'][\s\S]{0,120}bottom=["']3["']/
+    );
+  });
+
+  test('settings.jsx should not overlay back control with absolute positioning', () => {
+    const settingsSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/settings.jsx'),
+      'utf8'
+    );
+    expect(settingsSrc).not.toMatch(
+      /position=["']absolute["'][\s\S]{0,80}top=["']24["']/
+    );
+  });
+
+  test('enable.jsx should use safe-area footer padding for action buttons', () => {
+    const enableSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/enable.jsx'),
+      'utf8'
+    );
+    expect(enableSrc).toMatch(/safe-area-inset-bottom/);
+    expect(enableSrc).not.toMatch(
+      /position=["']absolute["'][\s\S]{0,120}bottom=["']3["']/
+    );
+  });
+
+  test('signData.jsx should use lucem-sign-payload-scroll instead of fixed 278px height', () => {
+    const signDataSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/signData.jsx'),
+      'utf8'
+    );
+    expect(signDataSrc).toMatch(/lucem-sign-payload-scroll/);
+    expect(signDataSrc).not.toMatch(/height=["']278px["']/);
+  });
+
   test('send.jsx primary Send button should not use fixed width="366px"', () => {
     const sendSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/send.jsx'),

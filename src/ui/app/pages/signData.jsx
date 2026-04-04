@@ -10,6 +10,7 @@ import Account from '../components/account';
 import { Scrollbars } from '../components/scrollbar';
 import {
   Box,
+  Flex,
   Text,
   Button,
   Image,
@@ -90,7 +91,8 @@ const SignData = ({ request, controller }) => {
     <>
       {isLoading ? (
         <Box
-          height="100vh"
+          minH="100vh"
+          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
           width="full"
           display="flex"
           alignItems="center"
@@ -100,64 +102,70 @@ const SignData = ({ request, controller }) => {
         </Box>
       ) : (
         <Box
-          minHeight="100vh"
+          minH="100vh"
+          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
           display="flex"
-          alignItems="center"
           flexDirection="column"
+          alignItems="stretch"
           position="relative"
+          w="full"
+          maxW="100%"
+          className="lucem-wallet-main-column"
         >
           <Account />
-          <Box h="4" />
-          <Box
-            display={'flex'}
-            alignItems={'center'}
-            justifyContent={'left'}
-            width={'full'}
-          >
-            <Box w="6" />
+          <Box flex="1" minH={0} overflowY="auto" w="full" px={4} pb={4}>
+            <Box h="4" />
+            <Flex align="center" justify="flex-start" w="full">
+              <Box w="6" />
+              <Box
+                width={8}
+                height={8}
+                background={background}
+                rounded={'xl'}
+                display={'flex'}
+                alignItems={'center'}
+                justifyContent={'center'}
+              >
+                <Image
+                  draggable={false}
+                  width={4}
+                  height={4}
+                  src={platform.icons.getFaviconUrl(request.origin)}
+                />
+              </Box>
+              <Box w="3" />
+              <Text fontSize={'xs'} fontWeight="bold" isTruncated maxW="60%">
+                {request.origin.split('//')[1]}
+              </Text>
+            </Flex>
+            <Box h="8" />
+            <Box>This app requests a signature for:</Box>
+            <Box h="4" />
             <Box
-              width={8}
-              height={8}
+              className="lucem-sign-payload-scroll"
+              rounded="xl"
               background={background}
-              rounded={'xl'}
-              display={'flex'}
-              alignItems={'center'}
-              justifyContent={'center'}
+              padding="2.5"
+              wordBreak="break-all"
+              mx="auto"
             >
-              <Image
-                draggable={false}
-                width={4}
-                height={4}
-                src={platform.icons.getFaviconUrl(request.origin)}
-              />
+              <Scrollbars autoHide style={{ width: '100%', height: '100%' }}>
+                {signDataMsg}
+              </Scrollbars>
             </Box>
-            <Box w="3" />
-            <Text fontSize={'xs'} fontWeight="bold">
-              {request.origin.split('//')[1]}
-            </Text>
-          </Box>
-          <Box h="8" />
-          <Box>This app requests a signature for:</Box>
-          <Box h="4" />
-          <Box
-            width="76%"
-            height="278px"
-            rounded="xl"
-            background={background}
-            padding="2.5"
-            wordBreak="break-all"
-          >
-            <Scrollbars autoHide>{signDataMsg}</Scrollbars>
           </Box>
 
-          <Box
-            position="absolute"
-            width="full"
-            bottom="3"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexDirection={'column'}
+          <Flex
+            direction="column"
+            align="center"
+            justify="center"
+            flexShrink={0}
+            w="full"
+            px={2}
+            py={3}
+            pb="calc(0.75rem + env(safe-area-inset-bottom, 0px))"
+            borderTopWidth="1px"
+            borderTopColor="whiteAlpha.100"
           >
             <Box py={2} px={4} rounded={'full'} background={background}>
               {error ? (
@@ -183,16 +191,18 @@ const SignData = ({ request, controller }) => {
                 </Text>
               )}
             </Box>
-            <Box h={6} />
-            <Box
-              display={'flex'}
-              alignItems={'center'}
-              justifyContent={'center'}
-              width={'full'}
+            <Box h={4} />
+            <Flex
+              align="center"
+              justify="center"
+              w="full"
+              flexWrap="wrap"
+              gap={2}
             >
               <Button
                 height={'50px'}
-                width={'180px'}
+                width={{ base: '42%', sm: '180px' }}
+                minW="140px"
                 onClick={async () => {
                   await controller.returnData({
                     error: DataSignError.UserDeclined,
@@ -202,10 +212,10 @@ const SignData = ({ request, controller }) => {
               >
                 Cancel
               </Button>
-              <Box w={3} />
               <Button
                 height={'50px'}
-                width={'180px'}
+                width={{ base: '42%', sm: '180px' }}
+                minW="140px"
                 isDisabled={error}
                 colorScheme="yellow"
                 onClick={() => {
@@ -214,8 +224,8 @@ const SignData = ({ request, controller }) => {
               >
                 Sign
               </Button>
-            </Box>
-          </Box>
+            </Flex>
+          </Flex>
         </Box>
       )}
       <ConfirmModal

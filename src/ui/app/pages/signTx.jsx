@@ -23,6 +23,7 @@ import { TxSignError } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import {
   Box,
+  Flex,
   Stack,
   Text,
   Button,
@@ -540,7 +541,8 @@ const SignTx = ({ request, controller }) => {
     <>
       {isLoading.loading ? (
         <Box
-          height="100vh"
+          minH="100vh"
+          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
           width="full"
           display="flex"
           alignItems="center"
@@ -550,20 +552,20 @@ const SignTx = ({ request, controller }) => {
         </Box>
       ) : (
         <Box
-          minHeight="100vh"
+          minH="100vh"
+          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
           display="flex"
-          alignItems="center"
           flexDirection="column"
+          alignItems="stretch"
           position="relative"
+          w="full"
+          maxW="100%"
+          className="lucem-wallet-main-column"
         >
           <Account />
+          <Box flex="1" minH={0} overflowY="auto" w="full" px={4} pb={4}>
           <Box h="4" />
-          <Box
-            display={'flex'}
-            alignItems={'center'}
-            justifyContent={'left'}
-            width={'full'}
-          >
+          <Flex align="center" justify="flex-start" w="full">
             <Box w="6" />
             <Box
               width={8}
@@ -582,10 +584,10 @@ const SignTx = ({ request, controller }) => {
               />
             </Box>
             <Box w="3" />
-            <Text fontSize={'xs'} fontWeight="bold">
+            <Text fontSize={'xs'} fontWeight="bold" isTruncated maxW="60%">
               {request.origin.split('//')[1]}
             </Text>
-          </Box>
+          </Flex>
           <Box h="8" />
           <Box>This app requests a signature for:</Box>
           <Box h="4" />
@@ -596,7 +598,9 @@ const SignTx = ({ request, controller }) => {
             flexDirection="column"
             background={background}
             rounded="xl"
-            width="80%"
+            width={{ base: '92%', md: '80%' }}
+            maxW="480px"
+            mx="auto"
             padding="5"
           >
             {value.ownValue ? (
@@ -746,45 +750,47 @@ const SignTx = ({ request, controller }) => {
           >
             Details
           </Button>
-          <Box
-            position="absolute"
-            width="full"
-            bottom="3"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexDirection={'column'}
+          </Box>
+
+          <Flex
+            direction="column"
+            align="center"
+            justify="center"
+            flexShrink={0}
+            w="full"
+            px={2}
+            py={3}
+            pb="calc(0.75rem + env(safe-area-inset-bottom, 0px))"
+            borderTopWidth="1px"
+            borderTopColor="whiteAlpha.100"
+            gap={3}
           >
             {isLoading.warning && (
-                <>
-                  <Box py={2} px={4} rounded={'full'} background={background}>
-                    <Text fontSize="xs" color={'orange.500'}>
-                      Warning! {isLoading.warning}
-                    </Text>
-                  </Box>
-                  <Box h={6} />
-                </>
+              <Box py={2} px={4} rounded={'full'} background={background}>
+                <Text fontSize="xs" color={'orange.500'}>
+                  Warning! {isLoading.warning}
+                </Text>
+              </Box>
             )}
             {isLoading.error && (
-              <>
-                <Box py={2} px={4} rounded={'full'} background={background}>
-                  <Text fontSize="xs" color={'red.300'}>
-                    {isLoading.error}
-                  </Text>
-                </Box>
-                <Box h={6} />
-              </>
+              <Box py={2} px={4} rounded={'full'} background={background}>
+                <Text fontSize="xs" color={'red.300'}>
+                  {isLoading.error}
+                </Text>
+              </Box>
             )}
 
-            <Box
-              display={'flex'}
-              alignItems={'center'}
-              justifyContent={'center'}
-              width={'full'}
+            <Flex
+              align={'center'}
+              justify={'center'}
+              w={'full'}
+              flexWrap="wrap"
+              gap={2}
             >
               <Button
                 height={'50px'}
-                width={'180px'}
+                width={{ base: '42%', sm: '180px' }}
+                minW="140px"
                 onClick={async () => {
                   await controller.returnData({
                     error: TxSignError.UserDeclined,
@@ -794,10 +800,10 @@ const SignTx = ({ request, controller }) => {
               >
                 Cancel
               </Button>
-              <Box w={3} />
               <Button
                 height={'50px'}
-                width={'180px'}
+                width={{ base: '42%', sm: '180px' }}
+                minW="140px"
                 isDisabled={isLoading.loading || isLoading.error}
                 colorScheme="yellow"
                 onClick={() => {
@@ -806,8 +812,8 @@ const SignTx = ({ request, controller }) => {
               >
                 Sign
               </Button>
-            </Box>
-          </Box>
+            </Flex>
+          </Flex>
         </Box>
       )}
       <AssetsModal ref={assetsModalRef} />

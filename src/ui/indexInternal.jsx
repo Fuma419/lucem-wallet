@@ -47,7 +47,7 @@ const App = () => {
       <Spinner color="yellow" speed="0.5s" />
     </Box>
   ) : (
-    <div style={{ overflowX: 'hidden' }}>
+    <Box overflowX="hidden" w="full" minH="100vh" sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}>
       <Routes>
         <Route
           path="/signData"
@@ -63,7 +63,7 @@ const App = () => {
         />
         <Route path="/noWallet" element={<NoWallet />} />
       </Routes>
-    </div>
+    </Box>
   );
 };
 

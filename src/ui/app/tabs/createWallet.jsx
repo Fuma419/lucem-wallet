@@ -133,6 +133,10 @@ const App = () => {
   }, [location.pathname, location.state]);
 
   const backgroundImage = colorTheme === 'cyan' ? BackgroundImageCyan : BackgroundImagePurple;
+  /** Mobile: no top banner on seed flows — saves vertical space; desktop/tablet unchanged. */
+  const hideHeaderLogoOnMobile = ['/generate', '/verify', '/import'].includes(
+    location.pathname
+  );
 
   return (
     <Box
@@ -157,10 +161,12 @@ const App = () => {
         display="flex"
         justifyContent="flex-start"
         pt={{
-          base: 'max(1rem, env(safe-area-inset-top, 0px))',
+          base: hideHeaderLogoOnMobile
+            ? 'max(0.35rem, env(safe-area-inset-top, 0px))'
+            : 'max(1rem, env(safe-area-inset-top, 0px))',
           md: 8,
         }}
-        pb={2}
+        pb={{ base: hideHeaderLogoOnMobile ? 0 : 2, md: 2 }}
         px={{ base: 4, md: 8 }}
       >
         <Image
@@ -170,6 +176,10 @@ const App = () => {
           maxW="min(100px, 36vw)"
           objectFit="contain"
           alt=""
+          display={{
+            base: hideHeaderLogoOnMobile ? 'none' : 'block',
+            md: 'block',
+          }}
         />
       </Box>
       <Box

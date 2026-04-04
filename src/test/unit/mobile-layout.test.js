@@ -77,6 +77,17 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(tabSrc).toMatch(/lucem-modal-card/);
   });
 
+  test('createWallet.jsx hides top Lucem banner on mobile for generate/verify/import only', () => {
+    const tabSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/createWallet.jsx'),
+      'utf8'
+    );
+    expect(tabSrc).toContain('hideHeaderLogoOnMobile');
+    expect(tabSrc).toContain("'/generate'");
+    expect(tabSrc).toContain("'/verify'");
+    expect(tabSrc).toContain("'/import'");
+  });
+
   test('styles.css should define safe-area tokens and scroll utility', () => {
     const css = fs.readFileSync(
       path.join(__dirname, '../../ui/app/components/styles.css'),

@@ -55,7 +55,7 @@ const SignData = ({ request, controller }) => {
     await Loader.load();
     try {
       const baseAddr = Loader.Cardano.BaseAddress.from_address(
-        Loader.Cardano.Address.from_raw_bytes(
+        Loader.Cardano.Address.from_bytes(
           Buffer.from(request.data.address, 'hex')
         )
       );
@@ -65,7 +65,7 @@ const SignData = ({ request, controller }) => {
     } catch (e) {}
     try {
       const rewardAddr = Loader.Cardano.RewardAddress.from_address(
-        Loader.Cardano.Address.from_raw_bytes(
+        Loader.Cardano.Address.from_bytes(
           Buffer.from(request.data.address, 'hex')
         )
       );

@@ -346,8 +346,16 @@ const VerifySeed = ({ colorTheme }) => {
   }, [input]);
 
   return (
-    <Box>
-      <Text className="walletTitle" textAlign="center" fontWeight="bold" fontSize="xl">
+    <Box width="100%" maxW="100%">
+      <Text
+        className="walletTitle"
+        as="h2"
+        textAlign="center"
+        fontWeight="bold"
+        fontSize="xl"
+        width="100%"
+        px={0}
+      >
         Verify Seed Phrase
       </Text>
       <Spacer height="10" />

@@ -25,6 +25,7 @@ import {
 import {
   Button,
   Box,
+  Flex,
   Spacer,
   Stack,
   Text,
@@ -262,47 +263,54 @@ const Wallet = () => {
           overflow="hidden"
           pb="14"
         >
-          {/* Upper corners: same inset and box size (mirror left / right) */}
-          <Box
+          {/* Upper row: identical circular frames, symmetric insets (flex beats absolute for mobile alignment) */}
+          <Flex
             zIndex="2"
-            position="absolute"
-            top="5"
-            left="5"
-            boxSize="14"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Image
-              draggable={false}
-              src={Logo}
-              alt=""
-              width="100%"
-              height="100%"
-              objectFit="contain"
-            />
-          </Box>
-          <Box
-            zIndex="2"
-            position="absolute"
-            top="5"
-            right="5"
-            boxSize="14"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
+            position="relative"
+            w="full"
+            maxW="100%"
+            pt="max(1.25rem, env(safe-area-inset-top, 0px))"
+            pb={2}
+            px={{ base: 4, md: 5 }}
+            align="center"
+            justify="space-between"
+            flexShrink={0}
           >
             <Box
-              position="relative"
+              boxSize="14"
+              minW="14"
+              minH="14"
               rounded="full"
-              background={avatarBg}
-              width="full"
-              height="full"
               overflow="hidden"
+              flexShrink={0}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              bg="blackAlpha.500"
+            >
+              <Image
+                draggable={false}
+                src={Logo}
+                alt=""
+                boxSize="full"
+                objectFit="cover"
+              />
+            </Box>
+            <Box
+              boxSize="14"
+              minW="14"
+              minH="14"
+              rounded="full"
+              overflow="hidden"
+              flexShrink={0}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              bg={avatarBg}
             >
               <AvatarLoader avatar={info.avatar} width="100%" />
             </Box>
-          </Box>
+          </Flex>
 
           {/* Lower right settings button */}
           <Box zIndex="2" position="fixed" bottom="7" right="7">
@@ -506,7 +514,11 @@ const Wallet = () => {
             zIndex="1"
             position="absolute"
             width="full"
-            top="8"
+            top={{
+              base:
+                'calc(max(1.25rem, env(safe-area-inset-top, 0px)) + 3.5rem + 0.35rem)',
+              md: 8,
+            }}
             display="flex"
             alignItems="center"
             justifyContent="center"

@@ -2,13 +2,6 @@ import { getNetwork } from './extension';
 import provider from '../config/provider';
 import Loader from './loader';
 import { NETWORK_ID } from '../config/config';
-import {
-  BaseAddress,
-  TransactionUnspentOutput,
-  Value,
-  MultiAsset,
-  Transaction,
-} from '@dcspark/cardano-multiplatform-lib-browser';
 import AssetFingerprint from '@emurgo/cip14-js';
 import {
   AddressType,
@@ -173,7 +166,8 @@ export const multiAssetCount = async (multiAsset) => {
   const policies = multiAsset.keys();
   for (let j = 0; j < policies.len(); j++) {
     const policy = policies.get(j);
-    const policyAssets = multiAsset.get_assets(policy);
+    const policyAssets = multiAsset.get(policy);
+    if (!policyAssets) continue;
     const assetNames = policyAssets.keys();
     for (let k = 0; k < assetNames.len(); k++) {
       count++;
@@ -326,7 +320,7 @@ export const utxoFromJson = async (output, address) => {
  */
 export const sumUtxos = async (utxos) => {
   await Loader.load();
-  let value = Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str("0"));
+  let value = Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
   utxos.forEach((utxo) => (value = value.checked_add(utxo.output().amount())));
   return value;
 };
@@ -371,17 +365,16 @@ export const assetsToValue = async (assets) => {
     const policyAssets = assets.filter(
       (asset) => asset.unit.slice(0, 56) === policy
     );
-    const assetsValue = Loader.Cardano.MapAssetNameToCoin.new();
+    const assetsValue = Loader.Cardano.Assets.new();
     policyAssets.forEach((asset) => {
       assetsValue.insert(
-        Loader.Cardano.AssetName.from_bytes(new Uint8Array(Buffer.from(asset.unit.slice(56), 'hex'))),
+        Loader.Cardano.AssetName.new(
+          new Uint8Array(Buffer.from(asset.unit.slice(56), 'hex'))
+        ),
         Loader.Cardano.BigNum.from_str(String(asset.quantity))
       );
     });
-    multiAsset.insert_assets(
-      Loader.Cardano.ScriptHash.from_bytes(new Uint8Array(Buffer.from(policy, 'hex'))),
-      assetsValue
-    );
+    multiAsset.insert(Loader.Cardano.ScriptHash.from_hex(policy), assetsValue);
   });
   const coin = Loader.Cardano.BigNum.from_str(lovelace ? String(lovelace.quantity) : '0');
   console.log('coin created:', coin);
@@ -404,7 +397,8 @@ export const valueToAssets = async (value) => {
     const multiAssets = value.multiasset().keys();
     for (let j = 0; j < multiAssets.len(); j++) {
       const policy = multiAssets.get(j);
-      const policyAssets = value.multiasset().get_assets(policy);
+      const policyAssets = value.multiasset().get(policy);
+      if (!policyAssets) continue;
       const assetNames = policyAssets.keys();
       for (let k = 0; k < assetNames.len(); k++) {
         const policyAsset = assetNames.get(k);
@@ -450,11 +444,12 @@ const outputsToTrezor = (outputs, address, index) => {
     const output = outputs.get(i);
     const multiAsset = output.amount().multiasset();
     let tokenBundle = null;
-    if (multiAsset && multiAsset.policy_count() > 0) {
+    if (multiAsset && multiAsset.len() > 0) {
       tokenBundle = [];
       for (let j = 0; j < multiAsset.keys().len(); j++) {
         const policy = multiAsset.keys().get(j);
-        const assets = multiAsset.get_assets(policy);
+        const assets = multiAsset.get(policy);
+        if (!assets) continue;
         const tokens = [];
         for (let k = 0; k < assets.keys().len(); k++) {
           const assetName = assets.keys().get(k);
@@ -735,7 +730,8 @@ export const txToTrezor = async (tx, network, keys, address, index) => {
     mintBundle = [];
     for (let j = 0; j < mint.keys().len(); j++) {
       const policy = mint.keys().get(j);
-      const assets = mint.get_assets(policy);
+      const assets = mint.get(policy);
+      if (!assets) continue;
       const tokens = [];
       for (let k = 0; k < assets.keys().len(); k++) {
         const assetName = assets.keys().get(k);
@@ -878,7 +874,8 @@ const outputsToLedger = (outputs, address, index) => {
       tokenBundle = [];
       for (let j = 0; j < multiAsset.keys().len(); j++) {
         const policy = multiAsset.keys().get(j);
-        const assets = multiAsset.get_assets(policy);
+        const assets = multiAsset.get(policy);
+        if (!assets) continue;
         const tokens = [];
         for (let k = 0; k < assets.keys().len(); k++) {
           const assetName = assets.keys().get(k);
@@ -1234,7 +1231,8 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     mintBundle = [];
     for (let j = 0; j < mint.keys().len(); j++) {
       const policy = mint.keys().get(j);
-      const assets = mint.get_assets(policy);
+      const assets = mint.get(policy);
+      if (!assets) continue;
       const tokens = [];
       for (let k = 0; k < assets.keys().len(); k++) {
         const assetName = assets.keys().get(k);

@@ -129,8 +129,9 @@ const SignTx = ({ request, controller }) => {
   };
 
   const getValue = async (tx, utxos, account) => {
-    let inputValue = Loader.Cardano.Value.new(
-      BigInt('0'), Loader.Cardano.MultiAsset.new()
+    let inputValue = Loader.Cardano.Value.new_with_assets(
+      Loader.Cardano.BigNum.from_str('0'),
+      Loader.Cardano.MultiAsset.new()
     );
     const inputs = tx.body().inputs();
     for (let i = 0; i < inputs.len(); i++) {
@@ -151,8 +152,9 @@ const SignTx = ({ request, controller }) => {
       }
     }
     const outputs = tx.body().outputs();
-    let ownOutputValue = Loader.Cardano.Value.new(
-      BigInt('0'), Loader.Cardano.MultiAsset.new()
+    let ownOutputValue = Loader.Cardano.Value.new_with_assets(
+      Loader.Cardano.BigNum.from_str('0'),
+      Loader.Cardano.MultiAsset.new()
     );
     const externalOutputs = {};
     if (!outputs) return;
@@ -169,8 +171,12 @@ const SignTx = ({ request, controller }) => {
       } else {
         //external
         if (!externalOutputs[address]) {
-          const multiAsset = output.amount().multi_asset() || Loader.Cardano.MultiAsset.new();
-          const value = Loader.Cardano.Value.new(output.amount().coin(), multiAsset);
+          const multiAsset =
+            output.amount().multiasset() || Loader.Cardano.MultiAsset.new();
+          const value = Loader.Cardano.Value.new_with_assets(
+            output.amount().coin(),
+            multiAsset
+          );
           externalOutputs[address] = { value };
         } else
           externalOutputs[address].value = externalOutputs[

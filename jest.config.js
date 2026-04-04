@@ -1,7 +1,12 @@
 module.exports = {
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/yoroi-frontend/',
+    '/koios-artifacts/',
+  ],
   moduleNameMapper: {
-    '@dcspark/cardano-multiplatform-lib-browser':
-      '@dcspark/cardano-multiplatform-lib-nodejs',
+    '@emurgo/cardano-serialization-lib-browser':
+      '@emurgo/cardano-serialization-lib-nodejs',
     '^(.*)../wasm/cardano_message_signing/cardano_message_signing.generated(.*)$':
       '$1../wasm/cardano_message_signing/nodejs/cardano_message_signing.generated$2',
     secrets: '../../secrets.testing.js',
@@ -13,7 +18,7 @@ module.exports = {
   },
 
   transformIgnorePatterns: [
-    '/node_modules/(?!crypto-random-string|@dicebear/core|@dicebear/collection|@dicebear/adventurer|@dicebear/avatars|@babel/runtime)', // Include @babel/runtime
+    '/node_modules/(?!crypto-random-string|@dicebear|@babel/runtime)',
   ],
   setupFilesAfterEnv: ['./jest.setup.js'],
 };

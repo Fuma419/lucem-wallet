@@ -309,8 +309,9 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
       outputs.add(
         Loader.Cardano.TransactionOutput.new(
           Loader.Cardano.Address.from_bech32(account.paymentAddr),
-          Loader.Cardano.Value.new(
-            BigInt(toUnit(COLLATERAL)), Loader.Cardano.MultiAsset.new()
+          Loader.Cardano.Value.new_with_assets(
+            Loader.Cardano.BigNum.from_str(String(toUnit(COLLATERAL))),
+            Loader.Cardano.MultiAsset.new()
           )
         )
       );

@@ -3,15 +3,6 @@ import { ERROR, TX } from '../../config/config';
 import Loader from '../loader';
 import { koiosRequestEnhanced } from '../util';
 import { decodeTx, encodeTx, transformTx } from 'cardano-hw-interop-lib';
-import {
-  TransactionOutput,
-  AuxiliaryData,
-  Address,
-  Credential,
-  PoolId,
-  RewardAccount,
-  TransactionUnspentOutput,
-} from '@blaze-cardano/core';
 
 const RETRIES = 5;
 
@@ -571,7 +562,9 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
       txBuilder.add_output(
         Loader.Cardano.TransactionOutput.new(
           changeAddress,
-          Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str(String(protocolParameters.minUtxo)))
+          Loader.Cardano.Value.new(
+            Loader.Cardano.BigNum.from_str(String(protocolParameters.minUtxo))
+          )
         )
       );
 

@@ -697,14 +697,13 @@ export const getCollateral = async () => {
     return [collateralUtxo];
   }
   const utxos = await getUtxos();
-  return utxos.filter(
-    (utxo) =>
-      utxo
-        .output()
-        .amount()
-        .coin() <= BigInt('50000000') &&
-      !utxo.output().amount().multi_asset()
-  );
+  return utxos.filter((utxo) => {
+    const amt = utxo.output().amount();
+    const coinOk =
+      BigInt(amt.coin().to_str()) <= BigInt('50000000');
+    const ma = amt.multiasset();
+    return coinOk && (!ma || ma.len() === 0);
+  });
 };
 
 export const getAddress = async () => {

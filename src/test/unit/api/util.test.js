@@ -24,34 +24,34 @@ test('expect correct assets to value conversion', async () => {
   ];
   const value = await assetsToValue(assets);
 
-  expect(value.coin()).toBe(1000000n);
-  const multiAsset = value.multi_asset();
+  expect(value.coin().to_str()).toBe('1000000');
+  const multiAsset = value.multiasset();
   expect(multiAsset.keys().len()).toBe(1);
   const scriptHash = multiAsset.keys().get(0);
   expect(scriptHash.to_hex()).toBe(policyId);
-  const assetsMap = multiAsset.get_assets(scriptHash);
+  const assetsMap = multiAsset.get(scriptHash);
   expect(assetsMap.len()).toBe(1);
   const cmlAssetName = assetsMap.keys().get(0);
-  expect(cmlAssetName.to_hex()).toBe(assetName);
-  expect(assetsMap.get(cmlAssetName)).toBe(10n)
+  expect(Buffer.from(cmlAssetName.name()).toString('hex')).toBe(assetName);
+  expect(assetsMap.get(cmlAssetName).to_str()).toBe('10');
 });
 
 test('expect correct value to assets conversion', async () => {
   const multiAsset = Loader.Cardano.MultiAsset.new();
-  const value = Loader.Cardano.Value.new(
-    BigInt('1000000'), multiAsset
+  const value = Loader.Cardano.Value.new_with_assets(
+    Loader.Cardano.BigNum.from_str('1000000'),
+    multiAsset
   );
-  const assetsSet = Loader.Cardano.MapAssetNameToCoin.new();
+  const assetsSet = Loader.Cardano.Assets.new();
   assetsSet.insert(
-    Loader.Cardano.AssetName.from_bytes(Buffer.from('74657374313233', 'hex')),
-    BigInt('10')
+    Loader.Cardano.AssetName.new(
+      new Uint8Array(Buffer.from('74657374313233', 'hex'))
+    ),
+    Loader.Cardano.BigNum.from_str('10')
   );
-  multiAsset.insert_assets(
-    Loader.Cardano.ScriptHash.from_bytes(
-      Buffer.from(
-        '2a286ad895d091f2b3d168a6091ad2627d30a72761a5bc36eef00740',
-        'hex'
-      )
+  multiAsset.insert(
+    Loader.Cardano.ScriptHash.from_hex(
+      '2a286ad895d091f2b3d168a6091ad2627d30a72761a5bc36eef00740'
     ),
     assetsSet
   );

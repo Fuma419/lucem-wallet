@@ -4,7 +4,41 @@ process.env.NODE_ENV = 'production';
 process.env.ASSET_PATH = '/';
 
 var fs = require('fs'),
-  path = require('path');
+  path = require('path'),
+  spawn = require('child_process').spawn;
+
+function startLocalPwaPreview() {
+  var env = require('./env');
+  var root = path.join(__dirname, '..');
+  var port = String(process.env.PORT || env.PORT || 3000);
+  var serveMain;
+  try {
+    serveMain = require.resolve('serve/build/main.js');
+  } catch (e) {
+    console.error(
+      'Could not resolve `serve`. Install devDependencies: NODE_ENV=development npm install'
+    );
+    process.exit(1);
+  }
+  console.log('🌐 PWA (production build): http://localhost:' + port + '/mainPopup.html');
+  console.log('📦 Chrome extension: chrome://extensions → Load unpacked → select build/');
+  console.log('   Stop the preview server with Ctrl+C.\n');
+  console.log('   (Set CI=true or LUCEM_SKIP_SERVE=1 to skip serving.)\n');
+  var child = spawn(process.execPath, [serveMain, 'build', '-l', port], {
+    cwd: root,
+    stdio: 'inherit',
+  });
+  child.on('error', function (err) {
+    console.error('Failed to start preview server:', err);
+    process.exit(1);
+  });
+  child.on('exit', function (code, signal) {
+    if (signal) {
+      process.exit(1);
+    }
+    process.exit(code == null ? 1 : code);
+  });
+}
 
 // Auto-generate secrets.production.js before webpack config is loaded,
 // since webpack.config.js checks for this file at require-time.
@@ -65,5 +99,9 @@ webpack(config, function (err, stats) {
     console.log('\n');
     console.log('✨ Build information saved to build/build-info.json');
     console.log('\n');
+
+    if (!process.env.CI && process.env.LUCEM_SKIP_SERVE !== '1') {
+      startLocalPwaPreview();
+    }
   }
 });

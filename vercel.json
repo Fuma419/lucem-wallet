@@ -4,6 +4,10 @@
   "installCommand": "npm install",
   "framework": null,
   "rewrites": [
+    { "source": "/api/koios/mainnet/:path*", "destination": "https://api.koios.rest/api/v1/:path*" },
+    { "source": "/api/koios/testnet/:path*", "destination": "https://testnet.koios.rest/api/v1/:path*" },
+    { "source": "/api/koios/preview/:path*", "destination": "https://preview.koios.rest/api/v1/:path*" },
+    { "source": "/api/koios/preprod/:path*", "destination": "https://preprod.koios.rest/api/v1/:path*" },
     { "source": "/", "destination": "/mainPopup.html" },
     { "source": "/wallet", "destination": "/mainPopup.html" },
     { "source": "/welcome", "destination": "/mainPopup.html" },

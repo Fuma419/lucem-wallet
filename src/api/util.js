@@ -2,6 +2,35 @@ import { getNetwork } from './extension';
 import provider from '../config/provider';
 import Loader from './loader';
 import { NETWORK_ID } from '../config/config';
+
+function isExtensionRuntime() {
+  return (
+    typeof chrome !== 'undefined' &&
+    typeof chrome.runtime !== 'undefined' &&
+    typeof chrome.runtime.id !== 'undefined'
+  );
+}
+
+/** Extension: call Koios directly (host_permissions). Web/PWA: same-origin proxy avoids CORS. */
+function getKoiosBaseUrl(networkKey) {
+  const direct = {
+    mainnet: 'https://api.koios.rest/api/v1',
+    testnet: 'https://testnet.koios.rest/api/v1',
+    preview: 'https://preview.koios.rest/api/v1',
+    preprod: 'https://preprod.koios.rest/api/v1',
+  };
+  const base = direct[networkKey];
+  if (!base) {
+    return direct.mainnet;
+  }
+  if (isExtensionRuntime()) {
+    return base;
+  }
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return `${window.location.origin}/api/koios/${networkKey}`;
+  }
+  return base;
+}
 import AssetFingerprint from '@emurgo/cip14-js';
 import {
   AddressType,
@@ -44,24 +73,19 @@ export async function koiosRequest(endpoint, headers, body, signal) {
       await delay(100);
     }
     
-    // Koios API endpoints
-    const koiosEndpoints = {
-      mainnet: 'https://api.koios.rest/api/v1',
-      testnet: 'https://testnet.koios.rest/api/v1',
-      preview: 'https://preview.koios.rest/api/v1',
-      preprod: 'https://preprod.koios.rest/api/v1',
-    };
-    
     const networkKey = network.name || network.id;
-    const baseUrl = koiosEndpoints[networkKey];
-    
-    console.log('Koios request debug:', {
-      network,
-      networkKey,
-      baseUrl,
-      endpoint,
-      fullUrl: baseUrl + endpoint
-    });
+    const baseUrl = getKoiosBaseUrl(networkKey);
+
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('Koios request debug:', {
+        network,
+        networkKey,
+        baseUrl,
+        endpoint,
+        fullUrl: baseUrl + endpoint,
+      });
+    }
     
     // Prepare headers - optionally include API key
     const requestHeaders = {

@@ -4,8 +4,10 @@
  * the wallet entry URL (mainPopup.html) in the "Accepting connections" line.
  */
 const http = require('http');
+const https = require('https');
 const path = require('path');
 const fs = require('fs');
+const { URL } = require('url');
 const { promisify } = require('util');
 const chalk = require('chalk');
 const compression = require('compression');
@@ -36,17 +38,100 @@ if (fs.existsSync(serveJsonPath)) {
 const httpLog = (...message) =>
   console.info(chalk.bgBlue.bold(' HTTP '), ...message);
 
-const server = http.createServer((request, response) => {
-  const run = async () => {
-    const requestTime = new Date();
-    const formattedTime = `${requestTime.toLocaleDateString()} ${requestTime.toLocaleTimeString()}`;
-    const ipAddress =
-      request.socket.remoteAddress?.replace('::ffff:', '') ?? 'unknown';
+const KOIOS_UPSTREAM = {
+  mainnet: { host: 'api.koios.rest', apiPrefix: '/api/v1' },
+  testnet: { host: 'testnet.koios.rest', apiPrefix: '/api/v1' },
+  preview: { host: 'preview.koios.rest', apiPrefix: '/api/v1' },
+  preprod: { host: 'preprod.koios.rest', apiPrefix: '/api/v1' },
+};
+
+const HOP_BY_HOP = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailers',
+  'transfer-encoding',
+  'upgrade',
+]);
+
+/**
+ * Same-origin Koios proxy for PWA static preview (serve-handler cannot proxy externally).
+ */
+function tryProxyKoios(request, response, requestTime, formattedTime, ipAddress) {
+  const base = `http://${request.headers.host || '127.0.0.1'}`;
+  let u;
+  try {
+    u = new URL(request.url || '/', base);
+  } catch (_) {
+    return false;
+  }
+  const m = u.pathname.match(
+    /^\/api\/koios\/(mainnet|testnet|preview|preprod)(\/[^?]*)?$/
+  );
+  if (!m) return false;
+  const network = m[1];
+  const suffix = m[2] || '';
+  const upstream = KOIOS_UPSTREAM[network];
+  if (!upstream) return false;
+  const targetPath = `${upstream.apiPrefix}${suffix}${u.search}`;
+
+  const outHeaders = {};
+  for (const [k, v] of Object.entries(request.headers)) {
+    if (!v) continue;
+    const lower = k.toLowerCase();
+    if (HOP_BY_HOP.has(lower) || lower === 'host') continue;
+    outHeaders[k] = v;
+  }
+
+  const opts = {
+    hostname: upstream.host,
+    port: 443,
+    path: targetPath,
+    method: request.method,
+    headers: outHeaders,
+  };
+
+  const pReq = https.request(opts, (pRes) => {
+    response.writeHead(pRes.statusCode, pRes.headers);
+    pRes.pipe(response);
+    const responseTime = Date.now() - requestTime.getTime();
     httpLog(
       chalk.dim(formattedTime),
       chalk.yellow(ipAddress),
-      chalk.cyan(`${request.method ?? 'GET'} ${request.url ?? '/'}`)
+      chalk[pRes.statusCode < 400 ? 'green' : 'red'](
+        `Returned ${pRes.statusCode} in ${responseTime} ms (Koios proxy)`
+      )
     );
+  });
+  pReq.on('error', (err) => {
+    console.error(chalk.red('Koios proxy error:'), err.message);
+    if (!response.headersSent) {
+      response.statusCode = 502;
+      response.end('Bad gateway');
+    }
+  });
+  request.pipe(pReq);
+  return true;
+}
+
+const server = http.createServer((request, response) => {
+  const requestTime = new Date();
+  const formattedTime = `${requestTime.toLocaleDateString()} ${requestTime.toLocaleTimeString()}`;
+  const ipAddress =
+    request.socket.remoteAddress?.replace('::ffff:', '') ?? 'unknown';
+  httpLog(
+    chalk.dim(formattedTime),
+    chalk.yellow(ipAddress),
+    chalk.cyan(`${request.method ?? 'GET'} ${request.url ?? '/'}`)
+  );
+
+  if (tryProxyKoios(request, response, requestTime, formattedTime, ipAddress)) {
+    return;
+  }
+
+  const run = async () => {
     await compress(request, response);
     await handler(request, response, config);
     const responseTime = Date.now() - requestTime.getTime();

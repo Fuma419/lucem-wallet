@@ -59,6 +59,36 @@ const server = new WebpackDevServer({
     'Access-Control-Allow-Origin': '*', // Set headers to allow cross-origin requests
   },
   allowedHosts: 'all', // Allow all hosts to connect
+  proxy: [
+    {
+      context: ['/api/koios/mainnet'],
+      target: 'https://api.koios.rest',
+      pathRewrite: { '^/api/koios/mainnet': '/api/v1' },
+      changeOrigin: true,
+      secure: true,
+    },
+    {
+      context: ['/api/koios/testnet'],
+      target: 'https://testnet.koios.rest',
+      pathRewrite: { '^/api/koios/testnet': '/api/v1' },
+      changeOrigin: true,
+      secure: true,
+    },
+    {
+      context: ['/api/koios/preview'],
+      target: 'https://preview.koios.rest',
+      pathRewrite: { '^/api/koios/preview': '/api/v1' },
+      changeOrigin: true,
+      secure: true,
+    },
+    {
+      context: ['/api/koios/preprod'],
+      target: 'https://preprod.koios.rest',
+      pathRewrite: { '^/api/koios/preprod': '/api/v1' },
+      changeOrigin: true,
+      secure: true,
+    },
+  ],
 }, compiler);
 
 // Start the server using the new async `startCallback` method

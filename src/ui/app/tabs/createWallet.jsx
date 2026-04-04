@@ -607,12 +607,89 @@ const ImportSeed = ({ colorTheme }) => {
 
 const MakeAccount = ({ colorTheme }) => {
   const [state, setState] = React.useState({});
+  const [confirmEdited, setConfirmEdited] = React.useState(false);
+  const confirmEditedRef = React.useRef(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
   const { state: navigationState = {} } = useLocation();
   const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
   colorTheme = colorTheme || stateColorTheme || 'purple';
   const [isDone, setIsDone] = React.useState(false);
+
+  React.useEffect(() => {
+    confirmEditedRef.current = confirmEdited;
+  }, [confirmEdited]);
+
+  /** Keeps confirm in sync when the user (or iOS Strong Password) only fills the first field. */
+  const applyPasswordValue = React.useCallback((value) => {
+    setState((s) => {
+      const mirror = !confirmEditedRef.current;
+      if (
+        s.password === value &&
+        (mirror ? (s.passwordConfirm ?? '') === value : true)
+      ) {
+        return s;
+      }
+      return {
+        ...s,
+        password: value,
+        ...(mirror ? { passwordConfirm: value } : {}),
+      };
+    });
+  }, []);
+
+  React.useEffect(() => {
+    const el = document.getElementById('lucem-account-password');
+    if (!el) return undefined;
+    const sync = () => applyPasswordValue(el.value);
+    el.addEventListener('input', sync);
+    el.addEventListener('change', sync);
+    return () => {
+      el.removeEventListener('input', sync);
+      el.removeEventListener('change', sync);
+    };
+  }, [applyPasswordValue]);
+
+  /** iOS sometimes autofills the first field without firing input/change; briefly poll the DOM. */
+  const lastPolledPasswordRef = React.useRef('');
+  React.useEffect(() => {
+    const id = window.setInterval(() => {
+      const el = document.getElementById('lucem-account-password');
+      const v = el?.value ?? '';
+      if (!v || v === lastPolledPasswordRef.current) return;
+      lastPolledPasswordRef.current = v;
+      applyPasswordValue(v);
+    }, 400);
+    const stop = window.setTimeout(() => clearInterval(id), 8000);
+    return () => {
+      clearInterval(id);
+      clearTimeout(stop);
+    };
+  }, [applyPasswordValue]);
+
+  const passwordValue = state.password ?? '';
+  const confirmDisplayValue = confirmEdited
+    ? (state.passwordConfirm ?? '')
+    : passwordValue;
+
+  /** Prefer live DOM values so iOS Strong Password still works if events do not update React state. */
+  const readPasswordPair = React.useCallback(() => {
+    const pwEl = document.getElementById('lucem-account-password');
+    const cfEl = document.getElementById('lucem-account-password-confirm');
+    const pw = pwEl ? pwEl.value : passwordValue;
+    const cf = confirmEdited
+      ? cfEl
+        ? cfEl.value
+        : (state.passwordConfirm ?? '')
+      : pw;
+    return { pw, cf };
+  }, [confirmEdited, passwordValue, state.passwordConfirm]);
+
+  const { pw: effectivePw, cf: effectiveCf } = readPasswordPair();
+  const canSubmit =
+    Boolean(state.name) &&
+    effectivePw.length >= 8 &&
+    effectivePw === effectiveCf;
 
   return isDone ? (
     <SuccessAndClose flow={flow} />
@@ -652,14 +729,19 @@ const MakeAccount = ({ colorTheme }) => {
             autoCapitalize="off"
             autoCorrect="off"
             autoComplete="new-password"
-            onChange={(e) => setState((s) => ({ ...s, password: e.target.value }))}
-            onBlur={(e) =>
-              e.target.value &&
-              setState((s) => ({
-                ...s,
-                regularPassword: e.target.value.length >= 8,
-              }))
-            }
+            value={passwordValue}
+            onChange={(e) => applyPasswordValue(e.target.value)}
+            onInput={(e) => applyPasswordValue(e.target.value)}
+            onBlur={(e) => {
+              const v = e.target.value;
+              applyPasswordValue(v);
+              if (v) {
+                setState((s) => ({
+                  ...s,
+                  regularPassword: v.length >= 8,
+                }));
+              }
+            }}
             placeholder="Enter password"
           />
           <InputRightElement width="4.5rem">
@@ -681,7 +763,7 @@ const MakeAccount = ({ colorTheme }) => {
         )}
         <Spacer height="10" />
 
-        <InputGroup size="md">
+        <InputGroup size="md" width="100%">
           <Input
             id="lucem-account-password-confirm"
             name="lucemAccountPasswordConfirm"
@@ -694,15 +776,29 @@ const MakeAccount = ({ colorTheme }) => {
             pr="4.5rem"
             autoCapitalize="off"
             autoCorrect="off"
-            autoComplete="new-password"
-            onChange={(e) => setState((s) => ({ ...s, passwordConfirm: e.target.value }))}
-            onBlur={(e) =>
-              e.target.value &&
+            autoComplete="off"
+            value={confirmDisplayValue}
+            onFocus={() => {
+              setConfirmEdited(true);
               setState((s) => ({
                 ...s,
-                matchingPassword: e.target.value === s.password,
-              }))
+                passwordConfirm: s.passwordConfirm ?? s.password ?? '',
+              }));
+            }}
+            onChange={(e) =>
+              setState((s) => ({ ...s, passwordConfirm: e.target.value }))
             }
+            onInput={(e) =>
+              setState((s) => ({ ...s, passwordConfirm: e.target.value }))
+            }
+            onBlur={(e) => {
+              const v = e.target.value;
+              setState((s) => ({
+                ...s,
+                passwordConfirm: v,
+                matchingPassword: v ? v === s.password : undefined,
+              }));
+            }}
             type={state.show ? 'text' : 'password'}
             placeholder="Confirm password"
           />
@@ -734,12 +830,7 @@ const MakeAccount = ({ colorTheme }) => {
         <Button
           type="button"
           className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
-          isDisabled={
-            !state.password ||
-            state.password.length < 8 ||
-            state.password !== state.passwordConfirm ||
-            !state.name
-          }
+          isDisabled={!canSubmit}
           isLoading={loading}
           loadingText="Creating"
           rightIcon={<ChevronRightIcon />}
@@ -747,10 +838,16 @@ const MakeAccount = ({ colorTheme }) => {
             setLoading(true);
             setError(null);
             try {
+              const { pw, cf } = readPasswordPair();
+              if (!state.name || pw.length < 8 || pw !== cf) {
+                setError('Please enter a matching password (8+ characters).');
+                setLoading(false);
+                return;
+              }
               const { createWallet: createWalletApi } = await import(
                 '../../../api/extension'
               );
-              await createWalletApi(state.name, mnemonic, state.password);
+              await createWalletApi(state.name, mnemonic, pw);
               setIsDone(true);
             } catch (e) {
               console.error('Wallet creation failed:', e);

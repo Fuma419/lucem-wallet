@@ -23,7 +23,6 @@ import {
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import { createRoot } from 'react-dom/client';
 import Theme from '../../theme';
-import { Scrollbars } from '../components/scrollbar';
 import { TAB } from '../../../config/config';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
 
@@ -49,16 +48,16 @@ function mnemonicFromObject(mnemonicMap) {
 
 /** Full-page tab layout like Main (non-popup), without StoreProvider — avoids loading api/extension until Create. */
 const CreateWalletShell = ({ children }) => (
-  <Box width="100%" minW="100%" maxW="100%" minH="100vh" mx={0}>
-    <Theme>
-      <Scrollbars
-        id="scroll"
-        style={{ width: '100%', height: '100vh' }}
-        autoHide
-      >
-        {children}
-      </Scrollbars>
-    </Theme>
+  <Box
+    width="100%"
+    minW="100%"
+    maxW="100vw"
+    minH="100vh"
+    mx="auto"
+    overflowX="hidden"
+    overflowY="auto"
+  >
+    <Theme>{children}</Theme>
   </Box>
 );
 
@@ -124,42 +123,73 @@ const App = () => {
   return (
     <Box
       display="flex"
-      justifyContent="center"
-      alignItems="center"
-      width="full"
-      height="100vh"
+      flexDirection="column"
+      alignItems="stretch"
+      width="100%"
+      minW="100%"
+      minH="100vh"
       position="relative"
       opacity={0.9}
       backgroundImage={`url(${backgroundImage})`}
       backgroundSize="cover"
       backgroundPosition="center"
       backgroundRepeat="no-repeat"
+      boxSizing="border-box"
     >
-      <Box position="absolute" left="80px" top="80px">
-        <Image draggable={false} src={LogoWhite} width="100px" />
+      <Box
+        as="header"
+        width="100%"
+        flexShrink={0}
+        display="flex"
+        justifyContent="flex-start"
+        pt={{ base: 5, md: 8 }}
+        pb={2}
+        px={{ base: 4, md: 8 }}
+      >
+        <Image
+          draggable={false}
+          src={LogoWhite}
+          width="100px"
+          maxW="min(100px, 40vw)"
+          objectFit="contain"
+          alt=""
+        />
       </Box>
       <Box
-        className={`modal-glow-${colorTheme}`}
-        rounded="2xl"
-        shadow="md"
+        flex="1"
         display="flex"
-        alignItems="stretch"
         flexDirection="column"
+        alignItems="center"
         justifyContent="center"
-        width="90%"
-        maxWidth="560px"
-        maxHeight="925px"
-        p={10}
-        background="rgba(0, 0, 0, .85)"
-        color="whiteAlpha.900"
-        fontSize="md"
+        width="100%"
+        px={{ base: 4, md: 8 }}
+        pb={{ base: 10, md: 12 }}
       >
-        <Routes>
-          <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
-          <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
-          <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
-          <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
-        </Routes>
+        <Box
+          className={`modal-glow-${colorTheme}`}
+          rounded="2xl"
+          shadow="md"
+          display="flex"
+          alignItems="stretch"
+          flexDirection="column"
+          justifyContent="center"
+          width="100%"
+          maxW="560px"
+          maxH="925px"
+          mx="auto"
+          flexShrink={0}
+          p={{ base: 6, md: 10 }}
+          background="rgba(0, 0, 0, .85)"
+          color="whiteAlpha.900"
+          fontSize="md"
+        >
+          <Routes>
+            <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
+            <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
+            <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
+            <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
+          </Routes>
+        </Box>
       </Box>
     </Box>
   );
@@ -189,9 +219,16 @@ const GenerateSeed = ({ colorTheme }) => {
         New Seed Phrase
       </Text>
       <Spacer height="10" />
-      <Stack spacing={10} direction="row" alignItems="center" justifyContent="center">
+      <Stack
+        spacing={10}
+        direction="row"
+        alignItems="flex-start"
+        justifyContent="center"
+        width="100%"
+        flexWrap="wrap"
+      >
         {[0, 1].map((colIndex) => (
-          <Box key={colIndex} width={140}>
+          <Box key={colIndex} width={140} flexShrink={0}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
@@ -314,9 +351,16 @@ const VerifySeed = ({ colorTheme }) => {
         Verify Seed Phrase
       </Text>
       <Spacer height="10" />
-      <Stack spacing={10} direction="row">
+      <Stack
+        spacing={10}
+        direction="row"
+        alignItems="flex-start"
+        justifyContent="center"
+        width="100%"
+        flexWrap="wrap"
+      >
         {[0, 1].map((colIndex) => (
-          <Box key={colIndex} width={140}>
+          <Box key={colIndex} width={140} flexShrink={0}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               return (
@@ -483,9 +527,16 @@ const ImportSeed = ({ colorTheme }) => {
       </Text>
       <Spacer height="5" />
 
-      <Stack spacing={10} direction="row">
+      <Stack
+        spacing={10}
+        direction="row"
+        alignItems="flex-start"
+        justifyContent="center"
+        width="100%"
+        flexWrap="wrap"
+      >
         {[0, 1].map((colIndex) => (
-          <Box key={colIndex} width={140}>
+          <Box key={colIndex} width={140} flexShrink={0}>
             {[...Array(12)].map((_, rowIndex) => {
               const index = colIndex * 12 + rowIndex + 1;
               if (index > seedLength) return null;
@@ -606,9 +657,13 @@ const ImportSeed = ({ colorTheme }) => {
 };
 
 const MakeAccount = ({ colorTheme }) => {
+  /** Uncontrolled password inputs so Safari / iOS Keychain autofill is not wiped by React controlled values. */
+  const passwordRef = React.useRef(null);
+  const confirmRef = React.useRef(null);
+  const [, bumpForm] = React.useReducer((n) => n + 1, 0);
+  const prevPwCfRef = React.useRef({ pw: '', cf: '' });
+
   const [state, setState] = React.useState({});
-  const [confirmEdited, setConfirmEdited] = React.useState(false);
-  const confirmEditedRef = React.useRef(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
   const { state: navigationState = {} } = useLocation();
@@ -616,261 +671,222 @@ const MakeAccount = ({ colorTheme }) => {
   colorTheme = colorTheme || stateColorTheme || 'purple';
   const [isDone, setIsDone] = React.useState(false);
 
-  React.useEffect(() => {
-    confirmEditedRef.current = confirmEdited;
-  }, [confirmEdited]);
-
-  /** Keeps confirm in sync when the user (or iOS Strong Password) only fills the first field. */
-  const applyPasswordValue = React.useCallback((value) => {
-    setState((s) => {
-      const mirror = !confirmEditedRef.current;
-      if (
-        s.password === value &&
-        (mirror ? (s.passwordConfirm ?? '') === value : true)
-      ) {
-        return s;
-      }
-      return {
-        ...s,
-        password: value,
-        ...(mirror ? { passwordConfirm: value } : {}),
-      };
-    });
+  const readPasswords = React.useCallback(() => {
+    const pw = passwordRef.current?.value ?? '';
+    const cf = confirmRef.current?.value ?? '';
+    return { pw, cf };
   }, []);
 
-  React.useEffect(() => {
-    const el = document.getElementById('lucem-account-password');
-    if (!el) return undefined;
-    const sync = () => applyPasswordValue(el.value);
-    el.addEventListener('input', sync);
-    el.addEventListener('change', sync);
-    return () => {
-      el.removeEventListener('input', sync);
-      el.removeEventListener('change', sync);
-    };
-  }, [applyPasswordValue]);
-
-  /** iOS sometimes autofills the first field without firing input/change; briefly poll the DOM. */
-  const lastPolledPasswordRef = React.useRef('');
+  /** Password managers may not fire React events; re-render when DOM values change so Create enables. */
   React.useEffect(() => {
     const id = window.setInterval(() => {
-      const el = document.getElementById('lucem-account-password');
-      const v = el?.value ?? '';
-      if (!v || v === lastPolledPasswordRef.current) return;
-      lastPolledPasswordRef.current = v;
-      applyPasswordValue(v);
-    }, 400);
-    const stop = window.setTimeout(() => clearInterval(id), 8000);
+      const pw = passwordRef.current?.value ?? '';
+      const cf = confirmRef.current?.value ?? '';
+      const prev = prevPwCfRef.current;
+      if (pw !== prev.pw || cf !== prev.cf) {
+        prevPwCfRef.current = { pw, cf };
+        bumpForm();
+      }
+    }, 300);
+    const stop = window.setTimeout(() => clearInterval(id), 12000);
     return () => {
       clearInterval(id);
       clearTimeout(stop);
     };
-  }, [applyPasswordValue]);
+  }, []);
 
-  const passwordValue = state.password ?? '';
-  const confirmDisplayValue = confirmEdited
-    ? (state.passwordConfirm ?? '')
-    : passwordValue;
-
-  /** Prefer live DOM values so iOS Strong Password still works if events do not update React state. */
-  const readPasswordPair = React.useCallback(() => {
-    const pwEl = document.getElementById('lucem-account-password');
-    const cfEl = document.getElementById('lucem-account-password-confirm');
-    const pw = pwEl ? pwEl.value : passwordValue;
-    const cf = confirmEdited
-      ? cfEl
-        ? cfEl.value
-        : (state.passwordConfirm ?? '')
-      : pw;
-    return { pw, cf };
-  }, [confirmEdited, passwordValue, state.passwordConfirm]);
-
-  const { pw: effectivePw, cf: effectiveCf } = readPasswordPair();
+  const { pw, cf } = readPasswords();
   const canSubmit =
-    Boolean(state.name) &&
-    effectivePw.length >= 8 &&
-    effectivePw === effectiveCf;
+    Boolean(state.name && pw.length >= 8 && pw === cf);
+
+  const submitCreate = async () => {
+    const { pw: p, cf: c } = readPasswords();
+    setLoading(true);
+    setError(null);
+    try {
+      if (!state.name || p.length < 8 || p !== c) {
+        setError('Please enter a matching password (8+ characters).');
+        setLoading(false);
+        return;
+      }
+      const { createWallet: createWalletApi } = await import(
+        '../../../api/extension'
+      );
+      await createWalletApi(state.name, mnemonic, p);
+      setIsDone(true);
+    } catch (e) {
+      console.error('Wallet creation failed:', e);
+      const msg = e && e.message ? String(e.message) : '';
+      if (
+        e &&
+        (e.name === 'EvalError' ||
+          msg.includes('Content Security Policy') ||
+          msg.includes('unsafe-eval'))
+      ) {
+        setError(
+          'This page cannot run wallet crypto (browser CSP). Create the wallet from the PWA at http://localhost…/mainPopup.html or your deployed site, not from a chrome-extension:// tab.'
+        );
+      } else {
+        setError(msg || 'Failed to create wallet. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return isDone ? (
     <SuccessAndClose flow={flow} />
   ) : (
     <Box textAlign="center" display="flex" alignItems="center" justifyContent="center" width="100%">
-      <Box width="65%">
+      <Box width="100%" maxW="400px" mx="auto">
         <Text className="walletTitle" fontWeight="bold" fontSize="lg">
           Create Account
         </Text>
         <Spacer height="10" />
-        <Input
-          id="lucem-account-name"
-          name="lucemAccountName"
-          autoComplete="username"
-          variant="filled"
-          bg="gray.900"
-          color="whiteAlpha.900"
-          _placeholder={{ color: 'whiteAlpha.500' }}
-          focusBorderColor={`${colorTheme}.700`}
-          onChange={(e) => { setState((s) => ({ ...s, name: e.target.value })); setError(null); }}
-          placeholder="Enter account name"
-        />
-        <Spacer height="10" />
-
-        <InputGroup size="md" width="100%">
-          <Input
-            id="lucem-account-password"
-            name="lucemAccountPassword"
-            variant="filled"
-            bg="gray.900"
-            color="whiteAlpha.900"
-            _placeholder={{ color: 'whiteAlpha.500' }}
-            focusBorderColor={`${colorTheme}.700`}
-            isInvalid={state.regularPassword === false}
-            pr="4.5rem"
-            type={state.show ? 'text' : 'password'}
-            autoCapitalize="off"
-            autoCorrect="off"
-            autoComplete="new-password"
-            value={passwordValue}
-            onChange={(e) => applyPasswordValue(e.target.value)}
-            onInput={(e) => applyPasswordValue(e.target.value)}
-            onBlur={(e) => {
-              const v = e.target.value;
-              applyPasswordValue(v);
-              if (v) {
-                setState((s) => ({
-                  ...s,
-                  regularPassword: v.length >= 8,
-                }));
-              }
-            }}
-            placeholder="Enter password"
-          />
-          <InputRightElement width="4.5rem">
-            <Button
-              type="button"
-              h="1.75rem"
-              size="sm"
-              onClick={() => setState((s) => ({ ...s, show: !s.show }))}
-              colorScheme={colorTheme}
-            >
-              {state.show ? 'Hide' : 'Show'}
-            </Button>
-          </InputRightElement>
-        </InputGroup>
-        {state.regularPassword === false && (
-          <Text fontSize="sm" color="red.300">
-            Password must be at least 8 characters long
-          </Text>
-        )}
-        <Spacer height="10" />
-
-        <InputGroup size="md" width="100%">
-          <Input
-            id="lucem-account-password-confirm"
-            name="lucemAccountPasswordConfirm"
-            variant="filled"
-            bg="gray.900"
-            color="whiteAlpha.900"
-            _placeholder={{ color: 'whiteAlpha.500' }}
-            focusBorderColor={`${colorTheme}.700`}
-            isInvalid={state.matchingPassword === false}
-            pr="4.5rem"
-            autoCapitalize="off"
-            autoCorrect="off"
-            autoComplete="off"
-            value={confirmDisplayValue}
-            onFocus={() => {
-              setConfirmEdited(true);
-              setState((s) => ({
-                ...s,
-                passwordConfirm: s.passwordConfirm ?? s.password ?? '',
-              }));
-            }}
-            onChange={(e) =>
-              setState((s) => ({ ...s, passwordConfirm: e.target.value }))
-            }
-            onInput={(e) =>
-              setState((s) => ({ ...s, passwordConfirm: e.target.value }))
-            }
-            onBlur={(e) => {
-              const v = e.target.value;
-              setState((s) => ({
-                ...s,
-                passwordConfirm: v,
-                matchingPassword: v ? v === s.password : undefined,
-              }));
-            }}
-            type={state.show ? 'text' : 'password'}
-            placeholder="Confirm password"
-          />
-          <InputRightElement _disabled={true} width="4.5rem">
-            <Button
-              type="button"
-              h="1.75rem"
-              size="sm"
-              onClick={() => setState((s) => ({ ...s, show: !s.show }))}
-              colorScheme={colorTheme}
-            >
-              {state.show ? 'Hide' : 'Show'}
-            </Button>
-          </InputRightElement>
-        </InputGroup>
-        {state.matchingPassword === false && (
-          <Text fontSize="sm" color="red.300">
-            Password doesn't match
-          </Text>
-        )}
-        <Spacer height="4" />
-
-        {error && (
-          <Text fontSize="sm" color="red.300" mb={4}>
-            {error}
-          </Text>
-        )}
-        
-        <Button
-          type="button"
-          className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
-          isDisabled={!canSubmit}
-          isLoading={loading}
-          loadingText="Creating"
-          rightIcon={<ChevronRightIcon />}
-          onClick={async () => {
-            setLoading(true);
-            setError(null);
-            try {
-              const { pw, cf } = readPasswordPair();
-              if (!state.name || pw.length < 8 || pw !== cf) {
-                setError('Please enter a matching password (8+ characters).');
-                setLoading(false);
-                return;
-              }
-              const { createWallet: createWalletApi } = await import(
-                '../../../api/extension'
-              );
-              await createWalletApi(state.name, mnemonic, pw);
-              setIsDone(true);
-            } catch (e) {
-              console.error('Wallet creation failed:', e);
-              const msg = e && e.message ? String(e.message) : '';
-              if (
-                e &&
-                (e.name === 'EvalError' ||
-                  msg.includes('Content Security Policy') ||
-                  msg.includes('unsafe-eval'))
-              ) {
-                setError(
-                  'This page cannot run wallet crypto (browser CSP). Create the wallet from the PWA at http://localhost…/mainPopup.html or your deployed site, not from a chrome-extension:// tab.'
-                );
-              } else {
-                setError(msg || 'Failed to create wallet. Please try again.');
-              }
-            } finally {
-              setLoading(false);
-            }
+        <Box
+          as="form"
+          autoComplete="on"
+          width="100%"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitCreate();
           }}
         >
-          Create
-        </Button>
+          <Input
+            id="lucem-account-name"
+            name="username"
+            autoComplete="username"
+            variant="filled"
+            bg="gray.900"
+            color="whiteAlpha.900"
+            _placeholder={{ color: 'whiteAlpha.500' }}
+            focusBorderColor={`${colorTheme}.700`}
+            onChange={(e) => {
+              setState((s) => ({ ...s, name: e.target.value }));
+              setError(null);
+            }}
+            placeholder="Enter account name"
+          />
+          <Spacer height="10" />
+
+          <InputGroup size="md" width="100%">
+            <Input
+              ref={passwordRef}
+              id="lucem-account-password"
+              name="new-password"
+              variant="filled"
+              bg="gray.900"
+              color="whiteAlpha.900"
+              _placeholder={{ color: 'whiteAlpha.500' }}
+              focusBorderColor={`${colorTheme}.700`}
+              isInvalid={state.regularPassword === false}
+              pr="4.5rem"
+              type={state.show ? 'text' : 'password'}
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="new-password"
+              defaultValue=""
+              onChange={bumpForm}
+              onInput={bumpForm}
+              onBlur={(e) => {
+                bumpForm();
+                const v = e.target.value;
+                if (v) {
+                  setState((s) => ({
+                    ...s,
+                    regularPassword: v.length >= 8,
+                  }));
+                }
+              }}
+              placeholder="New password"
+            />
+            <InputRightElement width="4.5rem">
+              <Button
+                type="button"
+                h="1.75rem"
+                size="sm"
+                onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+                colorScheme={colorTheme}
+              >
+                {state.show ? 'Hide' : 'Show'}
+              </Button>
+            </InputRightElement>
+          </InputGroup>
+          {state.regularPassword === false && (
+            <Text fontSize="sm" color="red.300">
+              Password must be at least 8 characters long
+            </Text>
+          )}
+          <Spacer height="10" />
+
+          <InputGroup size="md" width="100%">
+            <Input
+              ref={confirmRef}
+              id="lucem-account-password-confirm"
+              name="confirm-new-password"
+              variant="filled"
+              bg="gray.900"
+              color="whiteAlpha.900"
+              _placeholder={{ color: 'whiteAlpha.500' }}
+              focusBorderColor={`${colorTheme}.700`}
+              isInvalid={state.matchingPassword === false}
+              pr="4.5rem"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="new-password"
+              defaultValue=""
+              onChange={bumpForm}
+              onInput={bumpForm}
+              onBlur={(e) => {
+                bumpForm();
+                const v = e.target.value;
+                const p = passwordRef.current?.value ?? '';
+                setState((s) => ({
+                  ...s,
+                  matchingPassword: v ? v === p : undefined,
+                }));
+              }}
+              type={state.show ? 'text' : 'password'}
+              placeholder="Confirm new password"
+            />
+            <InputRightElement width="4.5rem">
+              <Button
+                type="button"
+                h="1.75rem"
+                size="sm"
+                onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+                colorScheme={colorTheme}
+              >
+                {state.show ? 'Hide' : 'Show'}
+              </Button>
+            </InputRightElement>
+          </InputGroup>
+          {state.matchingPassword === false && (
+            <Text fontSize="sm" color="red.300">
+              Password doesn&apos;t match
+            </Text>
+          )}
+          <Spacer height="4" />
+
+          {error && (
+            <Text fontSize="sm" color="red.300" mb={4}>
+              {error}
+            </Text>
+          )}
+
+          <Button
+            type="submit"
+            className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
+            isDisabled={!canSubmit}
+            isLoading={loading}
+            loadingText="Creating"
+            rightIcon={<ChevronRightIcon />}
+          >
+            Create
+          </Button>
+        </Box>
       </Box>
     </Box>
   );
@@ -883,12 +899,20 @@ const isExtension =
 
 const SuccessAndClose = ({ flow }) => {
   return (
-    <>
-      <Text mt={10} fontSize="xl" fontWeight="semibold" width={200} textAlign="center">
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      textAlign="center"
+      width="100%"
+      maxW="400px"
+      mx="auto"
+    >
+      <Text mt={10} fontSize="xl" fontWeight="semibold" maxW="100%" px={2}>
         Successfully created wallet!
       </Text>
       <Box h={10} />
-      <Text>
+      <Text px={2}>
         {isExtension
           ? 'You can now close this tab and continue with the extension.'
           : 'Redirecting to your wallet...'}
@@ -909,7 +933,7 @@ const SuccessAndClose = ({ flow }) => {
       >
         {isExtension ? 'Close' : 'Open Wallet'}
       </Button>
-    </>
+    </Box>
   );
 };
 

@@ -2,6 +2,16 @@ import { NETWORK_ID, STORAGE } from '../../config/config';
 import { getStorage, setStorage } from '../../api/extension/index';
 import Loader from '../../api/loader';
 
+function networkIdForMigration(network) {
+  if (network === NETWORK_ID.mainnet) {
+    return Loader.Cardano.NetworkInfo.mainnet().network_id();
+  }
+  if (network === NETWORK_ID.preprod) {
+    return Loader.Cardano.NetworkInfo.testnet_preprod().network_id();
+  }
+  return Loader.Cardano.NetworkInfo.testnet_preview().network_id();
+}
+
 const migration = {
   version: '2.3.3',
   up: async (pwd) => {
@@ -16,16 +26,14 @@ const migration = {
           const currentAccount = storage[accounts[i]];
           const network = networks[j];
           const currentAccountNetwork = currentAccount[network];
-          const paymentKeyHash = Loader.Cardano.Ed25519KeyHash.from_raw_bytes(
+          const paymentKeyHash = Loader.Cardano.Ed25519KeyHash.from_bytes(
             Buffer.from(currentAccount.paymentKeyHash, 'hex')
           );
-          const stakeKeyHash = Loader.Cardano.Ed25519KeyHash.from_raw_bytes(
+          const stakeKeyHash = Loader.Cardano.Ed25519KeyHash.from_bytes(
             Buffer.from(currentAccount.stakeKeyHash, 'hex')
           );
           const paymentAddr = Loader.Cardano.BaseAddress.new(
-            network === NETWORK_ID.mainnet
-              ? Loader.Cardano.NetworkInfo.mainnet().network_id()
-              : Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+            networkIdForMigration(network),
             Loader.Cardano.Credential.from_keyhash(paymentKeyHash),
             Loader.Cardano.Credential.from_keyhash(stakeKeyHash)
           )
@@ -33,9 +41,7 @@ const migration = {
             .to_bech32();
 
           const rewardAddr = Loader.Cardano.RewardAddress.new(
-            network === NETWORK_ID.mainnet
-              ? Loader.Cardano.NetworkInfo.mainnet().network_id()
-              : Loader.Cardano.NetworkInfo.testnet_preprod().network_id(),
+            networkIdForMigration(network),
             Loader.Cardano.Credential.from_keyhash(stakeKeyHash)
           )
             .to_address()

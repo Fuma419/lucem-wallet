@@ -7,31 +7,13 @@ var fs = require('fs'),
   path = require('path'),
   spawn = require('child_process').spawn;
 
-/**
- * `serve` reads serve.json from the directory being served (build/).
- * Cardano Serialization Lib’s browser WASM uses wasm-bindgen helpers that call
- * `new Function(...)`, which MV3 extension CSP blocks; a normal http://localhost
- * tab needs an explicit policy that allows it (extension manifest CSP cannot).
- */
+/** Optional serve-handler config (no CSP — avoids eval/CSP noise with other extensions on localhost). */
 function writeLocalPreviewServeConfig(buildDir) {
-  var csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com blob:",
-    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data: https: blob:",
-    "connect-src https: http: ws: wss: data: blob:",
-    "worker-src 'self' blob:",
-    "frame-src 'self' https://connect.trezor.io",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join('; ');
   var cfg = {
-    headers: [
-      {
-        source: '**',
-        headers: [{ key: 'Content-Security-Policy', value: csp }],
-      },
+    rewrites: [
+      { source: '/', destination: '/mainPopup.html' },
+      { source: '/wallet', destination: '/mainPopup.html' },
+      { source: '/welcome', destination: '/mainPopup.html' },
     ],
   };
   fs.writeFileSync(
@@ -44,33 +26,21 @@ function startLocalPwaPreview() {
   var env = require('./env');
   var root = path.join(__dirname, '..');
   var port = String(process.env.PORT || env.PORT || 3000);
-  var walletUrl = 'http://localhost:' + port + '/mainPopup.html';
-  var serveMain;
-  try {
-    serveMain = require.resolve('serve/build/main.js');
-  } catch (e) {
-    console.error(
-      'Could not resolve `serve`. Install devDependencies: NODE_ENV=development npm install'
-    );
-    process.exit(1);
-  }
-  console.log('🌐 PWA (production build) — open the wallet UI at:');
-  console.log('   ' + walletUrl);
-  console.log(
-    '   (The `serve` line below may show only http://localhost:' +
-      port +
-      ' — use /mainPopup.html for the app.)'
-  );
+  var previewScript = path.join(__dirname, 'preview-static-server.js');
+  console.log('🌐 PWA (production build) — preview URL is printed below by the static server.');
   console.log('📦 Chrome extension: chrome://extensions → Load unpacked → select build/');
   console.log(
     '   MV3 extension pages cannot run CSL WASM helpers (new Function); if you see CSP/eval errors'
   );
   console.log(
-    '   on create-wallet tabs, open the same HTML from the URL above (e.g. …/createWalletTab.html?…).'
+    '   on create-wallet tabs, use the same host/port as below with /createWalletTab.html?… in a normal tab.'
+  );
+  console.log(
+    '   Tip: Other wallet extensions often inject into localhost and can trigger CSP “eval” Issues in DevTools — try Guest mode or disable them when testing.'
   );
   console.log('   Stop the preview server with Ctrl+C.\n');
   console.log('   (Set CI=true or LUCEM_SKIP_SERVE=1 to skip serving.)\n');
-  var child = spawn(process.execPath, [serveMain, 'build', '-l', port], {
+  var child = spawn(process.execPath, [previewScript, port], {
     cwd: root,
     stdio: 'inherit',
   });
@@ -145,9 +115,6 @@ webpack(config, function (err, stats) {
     console.log(`📂 Version: ${buildInfo.version}`);
     console.log('\n');
     console.log('✨ Build information saved to build/build-info.json');
-    console.log(
-      '🔒 Local preview CSP: build/serve.json (allows WASM bindgen new Function for http://localhost only)'
-    );
     console.log('\n');
 
     if (!process.env.CI && process.env.LUCEM_SKIP_SERVE !== '1') {

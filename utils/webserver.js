@@ -35,6 +35,13 @@ const server = new WebpackDevServer({
   server: {
     type: 'http', // Changed from https: false to server: { type: 'http' }
   },
+  historyApiFallback: {
+    rewrites: [
+      { from: /^\/wallet$/, to: '/mainPopup.html' },
+      { from: /^\/welcome$/, to: '/mainPopup.html' },
+      { from: /^\/$/, to: '/mainPopup.html' },
+    ],
+  },
   hot: true, // Keep hot reloading enabled
   client: {
     overlay: false, // Disable overlay in the browser for runtime errors

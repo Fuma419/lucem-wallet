@@ -7,7 +7,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { getAccounts } from '../api/extension';
+import { hasStoredAccounts } from '../api/extension';
 import { Messaging } from '../api/messaging';
 
 import { METHOD, POPUP } from '../config/config';
@@ -24,7 +24,7 @@ const App = () => {
 
   const init = async () => {
     const request = await controller.requestData();
-    const hasWallet = await getAccounts();
+    const hasWallet = await hasStoredAccounts();
     setRequest(request);
     if (!hasWallet) navigate('/noWallet');
     else if (request.method === METHOD.enable) navigate('/enable');

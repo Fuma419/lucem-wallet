@@ -1,5 +1,4 @@
 import React from 'react';
-import platform from '../../../platform';
 import '../../app/components/styles.css';
 import {
   Box,
@@ -14,14 +13,54 @@ import {
   Image,
   Textarea,
 } from '@chakra-ui/react';
-import { BrowserRouter as Router, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import {
+  HashRouter as Router,
+  Route,
+  Routes,
+  useNavigate,
+  useLocation,
+} from 'react-router-dom';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import { createRoot } from 'react-dom/client';
-import Main from '../../index';
+import Theme from '../../theme';
+import { Scrollbars } from '../components/scrollbar';
 import { TAB } from '../../../config/config';
-import { useStoreActions } from 'easy-peasy';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
-import { createWallet, mnemonicFromObject, mnemonicToObject } from '../../../api/extension';
+
+/**
+ * Local copies of api/extension helpers — avoids importing the extension module
+ * (and Cardano WASM) until the user submits "Create", so MV3 pages and strict CSP
+ * environments can render this flow first.
+ */
+function mnemonicToObject(mnemonic) {
+  const mnemonicMap = {};
+  mnemonic.split(' ').forEach((word, index) => {
+    mnemonicMap[index + 1] = word;
+  });
+  return mnemonicMap;
+}
+
+function mnemonicFromObject(mnemonicMap) {
+  return Object.keys(mnemonicMap).reduce(
+    (acc, key) => (acc ? `${acc} ${mnemonicMap[key]}` : mnemonicMap[key]),
+    ''
+  );
+}
+
+/** Full-page tab layout like Main (non-popup), without StoreProvider — avoids loading api/extension until Create. */
+const CreateWalletShell = ({ children }) => (
+  <Box width="100%" height="100vh" maxWidth="500px" mx="auto">
+    <Theme>
+      <Scrollbars
+        id="scroll"
+        style={{ width: '100%', height: '100vh' }}
+        autoHide
+      >
+        {children}
+      </Scrollbars>
+    </Theme>
+  </Box>
+);
 
 // Use the same paths as preloaded in the HTML
 const BackgroundImagePurple = '/assets/img/background-purple.webp';
@@ -32,9 +71,18 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [colorTheme, setColorTheme] = React.useState('purple');
+  // React Router’s navigate callback identity changes when the location changes
+  // (see useNavigateUnstable deps). Do not re-run URL bootstrap on that — it would
+  // read ?type=generate again and replace /verify with /generate after “Next”.
+  const didBootstrapFromQuery = React.useRef(false);
 
+  // Bootstrap query lives on the real URL (…/createWalletTab.html?type=…), not the hash.
+  // HashRouter only sees the hash for path matching; window.location.search is always correct.
   React.useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    if (didBootstrapFromQuery.current) return;
+    didBootstrapFromQuery.current = true;
+
+    const params = new URLSearchParams(window.location.search);
     const type = params.get('type');
     const length = params.get('length');
 
@@ -43,8 +91,8 @@ const App = () => {
 
     if (type === 'import') {
       if (!validLengths.includes(seedLength)) {
-        // Handle invalid seed length
-        navigate('/', { replace: true });
+        navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
+        setColorTheme('purple');
         return;
       }
       navigate('/import', { state: { seedLength, colorTheme: 'cyan' }, replace: true });
@@ -53,9 +101,12 @@ const App = () => {
       navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
       setColorTheme('purple');
     } else {
-      // If 'type' is missing or invalid, redirect to the main page
-      navigate('/', { replace: true });
+      navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
+      setColorTheme('purple');
     }
+    // Intentionally []: bootstrap from URL once. Including `navigate` re-runs when the
+    // route changes (unstable identity in RR’s useNavigateUnstable) and resets /verify → /generate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   React.useEffect(() => {
@@ -164,6 +215,9 @@ const GenerateSeed = ({ colorTheme }) => {
                     </Box>
                   )}
                   <Input
+                    id={`lucem-seed-generate-word-${index}`}
+                    name={`lucemSeedGenerateWord${index}`}
+                    autoComplete="off"
                     focusBorderColor={`${colorTheme}.700`}
                     width={110}
                     size="sm"
@@ -211,6 +265,7 @@ const GenerateSeed = ({ colorTheme }) => {
         </Stack>
         <Box height="4" />
         <Button
+          type="button"
           className="button new-wallet"
           isDisabled={!checked}
           rightIcon={<ChevronRightIcon />}
@@ -285,6 +340,9 @@ const VerifySeed = ({ colorTheme }) => {
                     </Box>
                   )}
                   <Input
+                    id={`lucem-seed-verify-word-${index}`}
+                    name={`lucemSeedVerifyWord${index}`}
+                    autoComplete="off"
                     variant={index % 5 !== 0 ? 'filled' : 'outline'}
                     defaultValue={index % 5 !== 0 ? displayMnemonic[index] : ''}
                     isReadOnly={index % 5 !== 0}
@@ -335,6 +393,7 @@ const VerifySeed = ({ colorTheme }) => {
       <Spacer height="6" />
       <Stack alignItems="center" justifyContent="center" direction="row">
         <Button
+          type="button"
           fontWeight="medium"
           className="button"
           onClick={() => {
@@ -347,6 +406,7 @@ const VerifySeed = ({ colorTheme }) => {
           Skip
         </Button>
         <Button
+          type="button"
           ml="3"
           className="button new-wallet"
           isDisabled={!allValid}
@@ -370,7 +430,7 @@ const ImportSeed = ({ colorTheme }) => {
   const { state } = location;
 
   if (!state || !state.seedLength) {
-    navigate('/', { replace: true });
+    navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
     return null;
   }
 
@@ -378,7 +438,7 @@ const ImportSeed = ({ colorTheme }) => {
   const validSeedLengths = [12, 15, 24];
 
   if (!validSeedLengths.includes(seedLength)) {
-    navigate('/', { replace: true });
+    navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
     return null;
   }
 
@@ -449,6 +509,9 @@ const ImportSeed = ({ colorTheme }) => {
                     </Box>
                   )}
                   <Input
+                    id={`lucem-seed-import-word-${index}`}
+                    name={`lucemSeedImportWord${index}`}
+                    autoComplete="off"
                     variant="filled"
                     width={110}
                     focusBorderColor={`${colorTheme}.700`}
@@ -494,6 +557,9 @@ const ImportSeed = ({ colorTheme }) => {
       <Spacer height="5" />
 
       <Textarea
+        id="lucem-seed-import-paste"
+        name="lucemSeedImportPaste"
+        autoComplete="off"
         placeholder={`Or paste your ${seedLength}-word seed phrase here`}
         size="sm"
         focusBorderColor={`${colorTheme}.700`}
@@ -517,6 +583,7 @@ const ImportSeed = ({ colorTheme }) => {
 
       <Stack alignItems="center" direction="column">
         <Button
+          type="button"
           isDisabled={!allValid}
           className="button import-wallet"
           rightIcon={<ChevronRightIcon />}
@@ -546,7 +613,6 @@ const MakeAccount = ({ colorTheme }) => {
   const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
   colorTheme = colorTheme || stateColorTheme || 'purple';
   const [isDone, setIsDone] = React.useState(false);
-  const setRoute = useStoreActions((actions) => actions.globalModel.routeStore.setRoute);
 
   return isDone ? (
     <SuccessAndClose flow={flow} />
@@ -558,6 +624,9 @@ const MakeAccount = ({ colorTheme }) => {
         </Text>
         <Spacer height="10" />
         <Input
+          id="lucem-account-name"
+          name="lucemAccountName"
+          autoComplete="username"
           variant="filled"
           bg="gray.900"
           color="whiteAlpha.900"
@@ -570,6 +639,8 @@ const MakeAccount = ({ colorTheme }) => {
 
         <InputGroup size="md" width="100%">
           <Input
+            id="lucem-account-password"
+            name="lucemAccountPassword"
             variant="filled"
             bg="gray.900"
             color="whiteAlpha.900"
@@ -593,6 +664,7 @@ const MakeAccount = ({ colorTheme }) => {
           />
           <InputRightElement width="4.5rem">
             <Button
+              type="button"
               h="1.75rem"
               size="sm"
               onClick={() => setState((s) => ({ ...s, show: !s.show }))}
@@ -611,6 +683,8 @@ const MakeAccount = ({ colorTheme }) => {
 
         <InputGroup size="md">
           <Input
+            id="lucem-account-password-confirm"
+            name="lucemAccountPasswordConfirm"
             variant="filled"
             bg="gray.900"
             color="whiteAlpha.900"
@@ -634,6 +708,7 @@ const MakeAccount = ({ colorTheme }) => {
           />
           <InputRightElement _disabled={true} width="4.5rem">
             <Button
+              type="button"
               h="1.75rem"
               size="sm"
               onClick={() => setState((s) => ({ ...s, show: !s.show }))}
@@ -657,6 +732,7 @@ const MakeAccount = ({ colorTheme }) => {
         )}
         
         <Button
+          type="button"
           className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
           isDisabled={
             !state.password ||
@@ -671,12 +747,26 @@ const MakeAccount = ({ colorTheme }) => {
             setLoading(true);
             setError(null);
             try {
-              await createWallet(state.name, mnemonic, state.password);
-              setRoute('/wallet');
+              const { createWallet: createWalletApi } = await import(
+                '../../../api/extension'
+              );
+              await createWalletApi(state.name, mnemonic, state.password);
               setIsDone(true);
             } catch (e) {
               console.error('Wallet creation failed:', e);
-              setError(e.message || 'Failed to create wallet. Please try again.');
+              const msg = e && e.message ? String(e.message) : '';
+              if (
+                e &&
+                (e.name === 'EvalError' ||
+                  msg.includes('Content Security Policy') ||
+                  msg.includes('unsafe-eval'))
+              ) {
+                setError(
+                  'This page cannot run wallet crypto (browser CSP). Create the wallet from the PWA at http://localhost…/mainPopup.html or your deployed site, not from a chrome-extension:// tab.'
+                );
+              } else {
+                setError(msg || 'Failed to create wallet. Please try again.');
+              }
             } finally {
               setLoading(false);
             }
@@ -708,13 +798,15 @@ const SuccessAndClose = ({ flow }) => {
       </Text>
       <Box h={10} />
       <Button
+        type="button"
         className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
         mt="auto"
         onClick={async () => {
           if (isExtension) {
             window.close();
           } else {
-            window.location.href = '/mainPopup.html';
+            // Load the main bundle at /wallet so the URL matches the in-app route (matches Vercel rewrites).
+            window.location.assign(`${window.location.origin}/wallet`);
           }
         }}
       >
@@ -726,11 +818,11 @@ const SuccessAndClose = ({ flow }) => {
 
 const root = createRoot(window.document.querySelector(`#${TAB.createWallet}`));
 root.render(
-  <Main>
+  <CreateWalletShell>
     <Router>
       <App />
     </Router>
-  </Main>
+  </CreateWalletShell>
 );
 
 if (module.hot) module.hot.accept();

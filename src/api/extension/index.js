@@ -786,9 +786,22 @@ export const getCurrentAccount = async () => {
   return accountToNetworkSpecific(accounts[currentAccountIndex], network);
 };
 
+/** True when encrypted storage has at least one account (wallet bootstrap / routing). */
+export const hasStoredAccounts = async () => {
+  const accounts = await getStorage(STORAGE.accounts);
+  return (
+    accounts != null &&
+    typeof accounts === 'object' &&
+    Object.keys(accounts).length > 0
+  );
+};
+
 /** Returns accounts with network specific settings (e.g. address, reward address, etc.) */
 export const getAccounts = async () => {
   const accounts = await getStorage(STORAGE.accounts);
+  if (!accounts || typeof accounts !== 'object') {
+    return {};
+  }
   const network = await getNetwork();
   for (const index in accounts) {
     accounts[index] = await accountToNetworkSpecific(accounts[index], network);

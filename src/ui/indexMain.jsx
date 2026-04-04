@@ -16,11 +16,19 @@ import Main from './index';
 import { Box, Spinner } from '@chakra-ui/react';
 import Welcome from './app/pages/welcome';
 import Wallet from './app/pages/wallet';
-import { getAccounts } from '../api/extension';
+import { hasStoredAccounts } from '../api/extension';
 import Settings from './app/pages/settings';
 import Send from './app/pages/send';
 import { useStoreActions, useStoreState } from 'easy-peasy';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
+
+/** Do not replay these after login — they override /wallet and send users to onboarding or shell URLs. */
+function shouldReplayPersistedRoute(route) {
+  if (!route || route === '/wallet') return false;
+  if (route === '/welcome' || route === '/') return false;
+  if (/\.html$/i.test(route)) return false;
+  return true;
+}
 
 const App = () => {
   const route = useStoreState((state) => state.globalModel.routeStore.route);
@@ -31,11 +39,10 @@ const App = () => {
   const location = useLocation();
   const [isLoading, setIsLoading] = React.useState(true);
   const init = async () => {
-    const hasWallet = await getAccounts();
+    const hasWallet = await hasStoredAccounts();
     if (hasWallet) {
       navigate('/wallet');
-      // Set route from localStorage if available
-      if (route && route !== '/wallet') {
+      if (shouldReplayPersistedRoute(route)) {
         route
           .slice(1)
           .split('/')
@@ -44,6 +51,8 @@ const App = () => {
             navigate(fullRoute);
             return fullRoute;
           }, '');
+      } else {
+        setRoute('/wallet');
       }
     } else {
       navigate('/welcome');
@@ -74,6 +83,9 @@ const App = () => {
   ) : (
     <div style={{ overflowX: 'hidden' }}>
       <Routes>
+        <Route path="/welcome" element={<Welcome />} />
+        <Route path="/settings/*" element={<Settings />} />
+        <Route path="/send" element={<Send />} />
         <Route
           path="*"
           element={
@@ -82,9 +94,6 @@ const App = () => {
             </TermsAndPrivacyProvider>
           }
         />
-        <Route path="/welcome" element={<Welcome />} />
-        <Route path="/settings/*" element={<Settings />} />
-        <Route path="/send" element={<Send />} />
       </Routes>
     </div>
   );

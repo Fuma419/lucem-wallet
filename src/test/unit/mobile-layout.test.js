@@ -147,6 +147,43 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(signDataSrc).not.toMatch(/height=["']278px["']/);
   });
 
+  test('account.jsx header uses flex row (no absolute logo stack)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/account.jsx'),
+      'utf8'
+    );
+    expect(src).toContain('<Flex align="center"');
+    expect(src).not.toMatch(/position=["']absolute["'][\s\S]{0,40}top=["']13px["']/);
+  });
+
+  test('welcome.jsx uses column shell with safe-area padding (no absolute header/footer)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/welcome.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/safe-area-inset-top/);
+    expect(src).toMatch(/safe-area-inset-bottom/);
+    expect(src).not.toMatch(/position=["']absolute["'][\s\S]{0,30}top=["']9["']/);
+  });
+
+  test('hw.jsx hardware tab uses minHeight 100dvh shell (no fixed 100vh center only)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/hw.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/100dvh/);
+    expect(src).not.toMatch(/left=["']70px["']/);
+  });
+
+  test('signTx.jsx DetailsModal should not use 88vh Scrollbars wrapper', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/signTx.jsx'),
+      'utf8'
+    );
+    expect(src).not.toMatch(/height:\s*['"]88vh['"]/);
+    expect(src).toMatch(/WebkitOverflowScrolling/);
+  });
+
   test('send.jsx primary Send button should not use fixed width="366px"', () => {
     const sendSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/send.jsx'),

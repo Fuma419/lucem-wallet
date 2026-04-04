@@ -2,7 +2,7 @@ import React from 'react';
 import { getCurrentAccount } from '../../../api/extension';
 
 import Logo from '../../../assets/img/icon-128.svg';
-import { Box, Text, Image, useColorModeValue } from '@chakra-ui/react';
+import { Box, Flex, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import AvatarLoader from './avatarLoader';
 
 const Account = React.forwardRef((props, ref) => {
@@ -25,57 +25,61 @@ const Account = React.forwardRef((props, ref) => {
 
   return (
     <Box
-      height="16"
       roundedBottom="3xl"
       background={panelBg}
       shadow="md"
       width="full"
-      position="relative"
+      pt={{
+        base: 'max(0.35rem, env(safe-area-inset-top, 0px))',
+        md: 2,
+      }}
+      pb={2}
+      px={{ base: 3, md: 4 }}
     >
-      <Box
-        zIndex="2"
-        position="absolute"
-        top="13px"
-        left="6"
-        width="10"
-        height="10"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <Image draggable={false} src={Logo} width="45px" />
-      </Box>
-      <Box
-        zIndex="2"
-        position="absolute"
-        top="13px"
-        right="6"
-        rounded="full"
-        background={avatarBg}
-        width="10"
-        height="10"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <AvatarLoader
-          avatar={account && account.avatar}
-          width="10"
-        />
-      </Box>
-      <Box
-        zIndex="1"
-        position="absolute"
-        width="full"
-        top="20px"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <Text color="white" fontSize="lg" isTruncated={true} maxWidth="210px">
+      <Flex align="center" justify="space-between" gap={2} minH="10">
+        <Box
+          boxSize="10"
+          rounded="full"
+          overflow="hidden"
+          flexShrink={0}
+          bg="blackAlpha.400"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Image
+            draggable={false}
+            src={Logo}
+            boxSize="9"
+            objectFit="contain"
+            alt=""
+          />
+        </Box>
+        <Text
+          flex="1"
+          textAlign="center"
+          color="white"
+          fontSize="lg"
+          fontWeight="medium"
+          isTruncated
+          minW={0}
+          px={1}
+        >
           {account && account.name}
         </Text>
-      </Box>
+        <Box
+          boxSize="10"
+          rounded="full"
+          overflow="hidden"
+          flexShrink={0}
+          bg={avatarBg}
+          position="relative"
+        >
+          <Box position="absolute" inset={0}>
+            <AvatarLoader avatar={account && account.avatar} width="100%" />
+          </Box>
+        </Box>
+      </Flex>
     </Box>
   );
 });

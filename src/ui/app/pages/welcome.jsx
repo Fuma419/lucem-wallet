@@ -1,15 +1,13 @@
 // Welcome.js
 import React from 'react';
 import { Backpack } from 'react-kawaii';
-import { Checkbox, Image } from '@chakra-ui/react';
 import {
   Box,
   Button,
-  Spacer,
-  Text,
+  Checkbox,
+  Flex,
+  Image,
   Link,
-  Select,
-  useDisclosure,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -17,6 +15,10 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Select,
+  Spacer,
+  Text,
+  useDisclosure,
 } from '@chakra-ui/react';
 import BannerDark from '../../../assets/img/bannerBlack.png'; // Directly using the dark banner
 import TermsOfUse from '../components/termsOfUse';
@@ -33,53 +35,79 @@ const Welcome = () => {
   return (
     <>
       <Box
-        style={{
-          height: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          backgroundColor: '#121212', // Ensure dark background
-          color: '#ffffff', // Ensure white text
-        }}
-        position="relative"
+        minH="100vh"
+        sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
+        display="flex"
+        flexDirection="column"
+        alignItems="stretch"
+        bg="#121212"
+        color="#ffffff"
+        className="lucem-wallet-main-column"
       >
-        {/* Header */}
-        <Box position="absolute" top="9">
-          <Image draggable={false} width="150px" src={BannerDark} />
+        <Box
+          flexShrink={0}
+          pt="max(1rem, env(safe-area-inset-top, 0px))"
+          px={4}
+          textAlign="center"
+        >
+          <Image
+            draggable={false}
+            width="150px"
+            maxW="min(150px, 72vw)"
+            src={BannerDark}
+            mx="auto"
+            alt=""
+          />
         </Box>
-        {/* Footer */}
-        <Box position="absolute" bottom="3" fontSize="xs" color="gray.500">
+        <Flex
+          flex="1"
+          minH={0}
+          direction="column"
+          align="center"
+          justify="center"
+          px={4}
+          py={6}
+          overflowY="auto"
+        >
+          <Text className="welcome">Greetings</Text>
+          <Box height="6" />
+          <Text className="message">Let&apos;s setup a wallet</Text>
+          <Box height="6" />
+          <Button
+            className="button new-wallet"
+            onClick={() => {
+              refWallet.current.openModal();
+            }}
+          >
+            New Wallet
+          </Button>
+          <Box height="6" />
+          <Button
+            className="button import-wallet"
+            onClick={() => {
+              refImport.current.openModal();
+            }}
+          >
+            Import
+          </Button>
+        </Flex>
+        <Box
+          flexShrink={0}
+          pb="calc(1rem + env(safe-area-inset-bottom, 0px))"
+          pt={2}
+          px={4}
+          textAlign="center"
+          fontSize="xs"
+          color="gray.500"
+        >
           <Link
-            onClick={() => window.open('https://www.hodlerstaking.com/lucem-wallet')}
+            onClick={() =>
+              window.open('https://www.hodlerstaking.com/lucem-wallet')
+            }
           >
             Lucem Wallet
           </Link>
         </Box>
-        <Box height="10"/>
-        <Text className="welcome">
-          Greetings
-        </Text>
-        <Box height="6"/>
-        <Text className="message">
-          Let's setup a wallet
-        </Text>
-        <Box height="6"/>
-        <Button className="button new-wallet"
-          onClick={() => {
-            refWallet.current.openModal();
-          }}
-        >
-          New Wallet
-        </Button >
-        <Box height="6"/>
-        <Button className="button import-wallet"
-          onClick={() => {
-            refImport.current.openModal();
-          }}
-        >
-          Import
-        </Button>
       </Box>
       <WalletModal ref={refWallet} />
       <ImportModal ref={refImport} />

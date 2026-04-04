@@ -10,6 +10,7 @@ import { createRoot } from 'react-dom/client';
 import {
   Button,
   Box,
+  Flex,
   useColorModeValue,
   useColorMode,
   Image,
@@ -54,45 +55,79 @@ const App = () => {
 
   return (
     <Box
+      minH="100vh"
+      sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
       display="flex"
-      justifyContent="center"
-      alignItems="center"
-      width="full"
-      height="100vh"
-      position="relative"
+      flexDirection="column"
+      w="full"
       background={backgroundColor}
+      className="lucem-wallet-main-column"
     >
-      {/* Logo */}
-      <Box position="absolute" left="70px" top="70px">
-        <Image draggable={false} src={Logo} width="190px" />
-      </Box>
+      <Flex
+        flexShrink={0}
+        align="center"
+        px={{ base: 4, md: 10 }}
+        pt={{
+          base: 'max(1rem, env(safe-area-inset-top, 0px))',
+          md: 10,
+        }}
+        pb={4}
+      >
+        <Image
+          draggable={false}
+          src={Logo}
+          w={{ base: 'min(160px, 55vw)', md: '190px' }}
+          maxW="190px"
+          alt=""
+        />
+      </Flex>
 
       <Box
-        rounded="2xl"
-        shadow="md"
+        flex="1"
+        minH={0}
         display="flex"
-        alignItems="center"
-        flexDirection="column"
-        width="90%"
-        maxWidth="460px"
-        maxHeight="550px"
-        height="70vh"
-        p={10}
-        background={cardColor}
-        fontSize="sm"
+        justifyContent="center"
+        alignItems={{ base: 'stretch', md: 'center' }}
+        px={{ base: 4, md: 6 }}
+        pb="calc(1rem + env(safe-area-inset-bottom, 0px))"
+        py={{ base: 2, md: 4 }}
       >
-        {tab === 0 && (
-          <ConnectHW
-            onConfirm={({ device, id }) => {
-              data.current = { device, id };
-              setTab(1);
-            }}
-          />
-        )}
-        {tab === 1 && (
-          <SelectAccounts data={data.current} onConfirm={() => setTab(2)} />
-        )}
-        {tab === 2 && <SuccessAndClose />}
+        <Box
+          rounded="2xl"
+          shadow="md"
+          display="flex"
+          alignItems="stretch"
+          flexDirection="column"
+          w="full"
+          maxW="460px"
+          minH={0}
+          flex={{ base: '1 1 auto', md: '0 1 auto' }}
+          p={{ base: 6, md: 10 }}
+          background={cardColor}
+          fontSize="sm"
+          overflow="hidden"
+          sx={{
+            maxHeight: 'min(34.375rem, calc(100dvh - 9rem))',
+            '@supports not (height: 100dvh)': {
+              maxHeight: 'min(34.375rem, calc(100vh - 9rem))',
+            },
+          }}
+        >
+          <Box flex="1" minH={0} overflowY="auto" display="flex" flexDirection="column">
+            {tab === 0 && (
+              <ConnectHW
+                onConfirm={({ device, id }) => {
+                  data.current = { device, id };
+                  setTab(1);
+                }}
+              />
+            )}
+            {tab === 1 && (
+              <SelectAccounts data={data.current} onConfirm={() => setTab(2)} />
+            )}
+            {tab === 2 && <SuccessAndClose />}
+          </Box>
+        </Box>
       </Box>
     </Box>
   );
@@ -259,7 +294,14 @@ const SelectAccounts = ({ data, onConfirm }) => {
         </Text>
         <Box h={8} />
 
-        <Box width="80%" height="50%" rounded="md" border="solid 1px">
+        <Box
+          width="80%"
+          minH="160px"
+          h="200px"
+          rounded="md"
+          border="solid 1px"
+          sx={{ maxHeight: 'min(16.25rem, 42vh)' }}
+        >
           <Scrollbars
             style={{
               width: '100%',

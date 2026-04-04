@@ -43,7 +43,7 @@ const migration = {
     //add public key
     const encryptedKey = await getStorage(STORAGE.encryptedKey);
     const decryptedKey = await decryptWithPassword(pwd, encryptedKey);
-    let privateKey = Loader.Cardano.Bip32PrivateKey.from_raw_bytes(
+    let privateKey = Loader.Cardano.Bip32PrivateKey.from_bytes(
       Buffer.from(decryptedKey, 'hex')
     );
 

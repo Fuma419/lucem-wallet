@@ -382,7 +382,7 @@ export const delegationTx = async (
 
     // Add stake registration if not active
     if (!delegation.active) {
-      const stakeCredential = Loader.Cardano.Credential.new_pub_key(
+      const stakeCredential = Loader.Cardano.Credential.from_keyhash(
         Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
       );
       txBuilder.add_certificate(
@@ -394,7 +394,7 @@ export const delegationTx = async (
     }
 
     // Add delegation certificate
-    const stakeCredential = Loader.Cardano.Credential.new_pub_key(
+    const stakeCredential = Loader.Cardano.Credential.from_keyhash(
       Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
     );
     const poolId = Loader.Cardano.PoolId.from_bytes(Buffer.from(poolKeyHash, 'hex'));
@@ -548,7 +548,7 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
       txBuilder.add_cert(
         Loader.Cardano.SingleCertificateBuilder.new(
           Loader.Cardano.Certificate.new_stake_deregistration(
-            Loader.Cardano.Credential.new_pub_key(
+            Loader.Cardano.Credential.from_keyhash(
               Loader.Cardano.Ed25519KeyHash.from_bytes(
                 Buffer.from(account.stakeKeyHash, 'hex')
               )

@@ -75,7 +75,7 @@ export const encryptWithPassword = async (password, rootKeyBytes) => {
   const passwordHex = Buffer.from(password).toString('hex');
   const salt = cryptoRandomString({ length: 2 * 32 });
   const nonce = cryptoRandomString({ length: 2 * 12 });
-  return Loader.Cardano.emip3_encrypt_with_password(
+  return Loader.Cardano.encrypt_with_password(
     passwordHex,
     salt,
     nonce,
@@ -88,7 +88,7 @@ export const decryptWithPassword = async (password, encryptedKeyHex) => {
   const passwordHex = Buffer.from(password).toString('hex');
   let decryptedHex;
   try {
-    decryptedHex = Loader.Cardano.emip3_decrypt_with_password(
+    decryptedHex = Loader.Cardano.decrypt_with_password(
       passwordHex,
       encryptedKeyHex
     );

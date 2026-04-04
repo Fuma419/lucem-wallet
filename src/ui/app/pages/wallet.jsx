@@ -30,7 +30,6 @@ import {
   Stack,
   Text,
   Icon,
-  Image,
   Input,
   InputGroup,
   InputRightElement,
@@ -102,6 +101,25 @@ import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
 import Logo from '../../../assets/img/logo.png';
+
+/**
+ * Root cause of “smaller Lucem orb”: `logo.png` packs most of its bounding box in soft glow +
+ * transparency; the salient black disc is much smaller than the file edges. Wallet avatars are
+ * DiceBear (or uploads) drawn under `background-size: cover`, so they read to the circular clip.
+ * Matching only outer `boxSize` never equalizes perceived size. Fix: render the logo with the
+ * same CSS pipeline as avatars (`background-*`) and overscan with a larger `background-size` so
+ * the luminous ring + disc fill the clip like avatar art. Tune if the asset changes.
+ */
+const WALLET_HEADER_LOGO_BG_SIZE = '138%';
+
+const walletHeaderOrbShellProps = {
+  boxSize: { base: '12', sm: '13', md: '14' },
+  minW: { base: '12', sm: '13', md: '14' },
+  minH: { base: '12', sm: '13', md: '14' },
+  rounded: 'full',
+  overflow: 'hidden',
+  flexShrink: 0,
+};
 
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
@@ -279,38 +297,19 @@ const Wallet = () => {
             flexShrink={0}
           >
             <Box
-              boxSize={{ base: '12', sm: '13', md: '14' }}
-              minW={{ base: '12', sm: '13', md: '14' }}
-              minH={{ base: '12', sm: '13', md: '14' }}
-              rounded="full"
-              overflow="hidden"
-              flexShrink={0}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
+              {...walletHeaderOrbShellProps}
+              role="img"
+              aria-label="Lucem"
               bg="blackAlpha.500"
-            >
-              <Image
-                draggable={false}
-                src={Logo}
-                alt=""
-                boxSize="full"
-                objectFit="cover"
-              />
-            </Box>
-            <Box
-              boxSize={{ base: '12', sm: '13', md: '14' }}
-              minW={{ base: '12', sm: '13', md: '14' }}
-              minH={{ base: '12', sm: '13', md: '14' }}
-              rounded="full"
-              overflow="hidden"
-              flexShrink={0}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              bg={avatarBg}
-            >
-              <AvatarLoader avatar={info.avatar} width="100%" />
+              backgroundImage={`url(${Logo})`}
+              backgroundRepeat="no-repeat"
+              backgroundPosition="50% 50%"
+              backgroundSize={`${WALLET_HEADER_LOGO_BG_SIZE} ${WALLET_HEADER_LOGO_BG_SIZE}`}
+            />
+            <Box {...walletHeaderOrbShellProps} bg={avatarBg} position="relative">
+              <Box position="absolute" inset={0}>
+                <AvatarLoader avatar={info.avatar} width="100%" />
+              </Box>
             </Box>
           </Flex>
 

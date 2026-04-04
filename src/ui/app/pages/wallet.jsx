@@ -253,11 +253,14 @@ const Wallet = () => {
         flexDirection="column"
       >
         <Box
-          height="52"
+          minHeight="52"
           background={panelBg}
           shadow="md"
           width="full"
+          maxWidth="100%"
           position="relative"
+          overflow="hidden"
+          pb="14"
         >
           <Box
             zIndex="2"
@@ -269,47 +272,6 @@ const Wallet = () => {
             justifyContent="center"
           >
             <Image draggable={false} width="85px" src={Logo} />
-          </Box>
-          {/* Delegation */}
-          <Box 
-            zIndex="1"
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            position="absolute"
-            top="85%"  /* Adjust the vertical position as needed */
-            left="50%"
-            transform="translate(-50%, -50%)"
-            flexDirection="row"  /* Ensure the direction is row (horizontal) */
-            flexWrap="nowrap"  /* Prevent wrapping */
-            >
-            {state.delegation && (
-              <>
-                {state.delegation.active ? (
-                  <DelegationPopover
-                    account={state.account}
-                    delegation={state.delegation}
-                  >
-                    {state.delegation.ticker ||
-                      state.delegation.poolId.slice(-9)}
-                  </DelegationPopover>
-                ) : (
-                  <Button
-                    onClick={() => {
-                      builderRef.current.initDelegation(
-                        state.account,
-                        state.delegation
-                      );
-                    }}
-                    variant="solid"
-                    size="xs"
-                    rounded="lg"
-                  >
-                    Delegate
-                  </Button>
-                )}
-              </>
-            )}
           </Box>
           {/* Upper right wallet icon - non-interactive */}
           <Box zIndex="2" position="absolute" top="7" right="7">
@@ -631,9 +593,11 @@ const Wallet = () => {
             )}
           </Box>
           <Box
-            style={{ bottom: 66 }}
+            bottom="46px"
             position="absolute"
             width="full"
+            maxWidth="100%"
+            px={2}
             display="flex"
             alignItems="center"
             justifyContent="center"
@@ -665,28 +629,34 @@ const Wallet = () => {
             />
           </Box>
 
-          {/* Single Flex Container for Both Buttons */}
+          {/* Receive, delegation, Send — one flex row (wraps on very narrow widths) */}
           <Box
             display="flex"
+            flexWrap="wrap"
             justifyContent="center"
             alignItems="center"
+            alignContent="center"
             position="absolute"
-            top="90%"
+            bottom="2"
             left="50%"
-            transform="translate(-50%, -50%)"
-            gap={{ base: '24px', md: '80px' }}
-            width="90%"
-            maxWidth="400px"
+            transform="translateX(-50%)"
+            gap={{ base: 2, sm: 3, md: 6 }}
+            width="calc(100% - 16px)"
+            maxWidth="100%"
+            px={2}
+            zIndex={2}
           >
           <Popover>
             <PopoverTrigger>
               <Button
+                data-testid="wallet-receive"
                 className="button hw-wallet"
                 background={receiveButton}
                 rightIcon={<Icon as={BsArrowDownRight} />}
                 size="sm"
                 rounded="lg"
                 shadow="md"
+                flexShrink={0}
                 onClick={() => {
                 }}
               >
@@ -731,8 +701,46 @@ const Wallet = () => {
               </PopoverContent>
             </Portal>
           </Popover>
-          
+
+            {state.delegation && (
+              <Box
+                data-testid="wallet-delegation"
+                flex="0 1 auto"
+                minW={0}
+                maxW={{ base: '9rem', sm: '11rem' }}
+                display="flex"
+                justifyContent="center"
+                alignItems="center"
+              >
+                {state.delegation.active ? (
+                  <DelegationPopover
+                    account={state.account}
+                    delegation={state.delegation}
+                  >
+                    {state.delegation.ticker ||
+                      state.delegation.poolId.slice(-9)}
+                  </DelegationPopover>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      builderRef.current.initDelegation(
+                        state.account,
+                        state.delegation
+                      );
+                    }}
+                    variant="solid"
+                    size="sm"
+                    rounded="lg"
+                    flexShrink={0}
+                  >
+                    Delegate
+                  </Button>
+                )}
+              </Box>
+            )}
+
             <Button
+              data-testid="wallet-send"
               onClick={() => {
                 navigate('/send');
               }}
@@ -742,6 +750,7 @@ const Wallet = () => {
               rounded="lg"
               rightIcon={<Icon as={BsArrowUpRight} />}
               shadow="md"
+              flexShrink={0}
             >
               Send
             </Button>
@@ -1013,7 +1022,8 @@ const DelegationPopover = ({ account, delegation, children }) => {
     <>
       <Popover offset={[80, 8]}>
         <PopoverTrigger>
-          <Button className="lineClamp"
+          <Button
+            className="lineClamp"
             style={{
               all: 'revert',
               background: 'none',
@@ -1023,12 +1033,15 @@ const DelegationPopover = ({ account, delegation, children }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              maxWidth: '100%',
             }}
             onClick={() => {
             }}
             rightIcon={<ChevronDownIcon />}
           >
-            {children}
+            <Text as="span" isTruncated maxW="100%">
+              {children}
+            </Text>
           </Button>
         </PopoverTrigger>
         <PopoverContent width="60">

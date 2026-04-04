@@ -35,7 +35,8 @@ const Main = ({ children }) => {
     <Box
       width={isExtensionPopup ? POPUP_WINDOW.width + 'px' : '100%'}
       height={isExtensionPopup ? POPUP_WINDOW.height + 'px' : '100vh'}
-      maxWidth={isExtensionPopup ? undefined : '500px'}
+      maxWidth={isExtensionPopup ? undefined : 'min(100vw, 500px)'}
+      minW={0}
       mx={isExtensionPopup ? undefined : 'auto'}
     >
       <Theme>

@@ -24,6 +24,24 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(walletSrc).toMatch(/gap=\{\{/);
   });
 
+  test('wallet.jsx should not overlay delegation on the action row (absolute 85% band)', () => {
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
+      'utf8'
+    );
+    expect(walletSrc).not.toMatch(/top=["']85%["']/);
+  });
+
+  test('wallet.jsx exposes test ids for layout automation', () => {
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
+      'utf8'
+    );
+    expect(walletSrc).toMatch(/data-testid="wallet-receive"/);
+    expect(walletSrc).toMatch(/data-testid="wallet-send"/);
+    expect(walletSrc).toMatch(/data-testid="wallet-delegation"/);
+  });
+
   test('send.jsx primary Send button should not use fixed width="366px"', () => {
     const sendSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/send.jsx'),

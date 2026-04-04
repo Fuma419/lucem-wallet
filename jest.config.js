@@ -3,6 +3,7 @@ module.exports = {
     '/node_modules/',
     '/yoroi-frontend/',
     '/koios-artifacts/',
+    '/e2e/',
   ],
   moduleNameMapper: {
     '@emurgo/cardano-serialization-lib-browser':

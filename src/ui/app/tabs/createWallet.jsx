@@ -49,7 +49,7 @@ function mnemonicFromObject(mnemonicMap) {
 
 /** Full-page tab layout like Main (non-popup), without StoreProvider — avoids loading api/extension until Create. */
 const CreateWalletShell = ({ children }) => (
-  <Box width="100%" height="100vh" maxWidth="500px" mx="auto">
+  <Box width="100%" minW="100%" maxW="100%" minH="100vh" mx={0}>
     <Theme>
       <Scrollbars
         id="scroll"

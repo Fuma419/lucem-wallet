@@ -262,38 +262,45 @@ const Wallet = () => {
           overflow="hidden"
           pb="14"
         >
+          {/* Upper corners: same inset and box size (mirror left / right) */}
           <Box
             zIndex="2"
             position="absolute"
             top="5"
             left="5"
+            boxSize="14"
             display="flex"
             alignItems="center"
             justifyContent="center"
           >
-            <Image draggable={false} width="85px" src={Logo} />
+            <Image
+              draggable={false}
+              src={Logo}
+              alt=""
+              width="100%"
+              height="100%"
+              objectFit="contain"
+            />
           </Box>
-          {/* Upper right wallet icon - non-interactive */}
-          <Box zIndex="2" position="absolute" top="7" right="7">
+          <Box
+            zIndex="2"
+            position="absolute"
+            top="5"
+            right="5"
+            boxSize="14"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
             <Box
               position="relative"
               rounded="full"
               background={avatarBg}
-              width="14"
-              height="14"
+              width="full"
+              height="full"
+              overflow="hidden"
             >
-              <Box
-                position="absolute"
-                top="0"
-                right="0"
-                width={'full'}
-                height={'full'}
-                display={'flex'}
-                alignItems={'center'}
-                justifyContent={'center'}
-              >
-                <AvatarLoader avatar={info.avatar} width="14" />
-              </Box>
+              <AvatarLoader avatar={info.avatar} width="100%" />
             </Box>
           </Box>
 

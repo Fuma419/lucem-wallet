@@ -7,6 +7,16 @@ const fs = require('fs');
 const path = require('path');
 
 describe('mobile layout - no hardcoded overflow widths', () => {
+  test('createWallet.jsx full-page shell should not cap width at 500px (desktop background)', () => {
+    const tabSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/createWallet.jsx'),
+      'utf8'
+    );
+    expect(tabSrc).not.toMatch(
+      /CreateWalletShell[\s\S]{0,400}maxWidth=\{?["']500px["']\}?/
+    );
+  });
+
   test('wallet.jsx Receive/Send buttons should not use gap="250px"', () => {
     const walletSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/wallet.jsx'),

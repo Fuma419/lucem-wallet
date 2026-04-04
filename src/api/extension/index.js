@@ -184,12 +184,19 @@ export const getBalance = async () => {
   if (result.error) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
-    else return Loader.Cardano.Value.new(BigInt('0'), Loader.Cardano.MultiAsset.new());
+    else
+      return Loader.Cardano.Value.new_with_assets(
+        Loader.Cardano.BigNum.from_str('0'),
+        Loader.Cardano.MultiAsset.new()
+      );
   }
   
   // If no UTXOs, return zero balance
   if (!result || result.length === 0) {
-    return Loader.Cardano.Value.new(BigInt('0'), Loader.Cardano.MultiAsset.new());
+    return Loader.Cardano.Value.new_with_assets(
+      Loader.Cardano.BigNum.from_str('0'),
+      Loader.Cardano.MultiAsset.new()
+    );
   }
   
   // Aggregate all UTXOs to get total balance
@@ -687,8 +694,8 @@ export const getCollateral = async () => {
         Loader.Cardano.Address.from_bech32(
           currentAccount[network.id].paymentAddr
         ),
-        Loader.Cardano.Value.new(
-          Loader.Cardano.BigNum.from_str(collateral.lovelace.toString()), 
+        Loader.Cardano.Value.new_with_assets(
+          Loader.Cardano.BigNum.from_str(collateral.lovelace.toString()),
           Loader.Cardano.MultiAsset.new()
         )
       )
@@ -696,14 +703,13 @@ export const getCollateral = async () => {
     return [collateralUtxo];
   }
   const utxos = await getUtxos();
-  return utxos.filter(
-    (utxo) =>
-      utxo
-        .output()
-        .amount()
-        .coin() <= BigInt('50000000') &&
-      !utxo.output().amount().multi_asset()
-  );
+  return utxos.filter((utxo) => {
+    const amt = utxo.output().amount();
+    const coinOk =
+      BigInt(amt.coin().to_str()) <= BigInt('50000000');
+    const ma = amt.multiasset();
+    return coinOk && (!ma || ma.len() === 0);
+  });
 };
 
 export const getAddress = async () => {
@@ -1499,7 +1505,7 @@ export const createAccount = async (name, password, accountIndex = null) => {
     .to_bech32();
 
   const paymentAddrTestnet = Loader.Cardano.BaseAddress.new(
-    Loader.Cardano.NetworkInfo.testnet().network_id(),
+    Loader.Cardano.NetworkInfo.testnet_preview().network_id(),
     Loader.Cardano.Credential.from_keyhash(paymentKeyPub.hash()),
     Loader.Cardano.Credential.from_keyhash(stakeKeyPub.hash())
   )
@@ -1507,7 +1513,7 @@ export const createAccount = async (name, password, accountIndex = null) => {
     .to_bech32();
 
   const rewardAddrTestnet = Loader.Cardano.RewardAddress.new(
-    Loader.Cardano.NetworkInfo.testnet().network_id(),
+    Loader.Cardano.NetworkInfo.testnet_preview().network_id(),
     Loader.Cardano.Credential.from_keyhash(stakeKeyPub.hash())
   )
     .to_address()
@@ -1595,7 +1601,7 @@ export const createHWAccounts = async (accounts) => {
       .to_bech32();
 
     const paymentAddrTestnet = Loader.Cardano.BaseAddress.new(
-      Loader.Cardano.NetworkInfo.testnet().network_id(),
+      Loader.Cardano.NetworkInfo.testnet_preview().network_id(),
       Loader.Cardano.Credential.from_keyhash(paymentKeyHashRaw),
       Loader.Cardano.Credential.from_keyhash(stakeKeyHashRaw)
     )
@@ -1603,7 +1609,7 @@ export const createHWAccounts = async (accounts) => {
       .to_bech32();
 
     const rewardAddrTestnet = Loader.Cardano.RewardAddress.new(
-      Loader.Cardano.NetworkInfo.testnet().network_id(),
+      Loader.Cardano.NetworkInfo.testnet_preview().network_id(),
       Loader.Cardano.Credential.from_keyhash(stakeKeyHashRaw)
     )
       .to_address()

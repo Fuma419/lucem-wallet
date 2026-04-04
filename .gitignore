@@ -32,3 +32,7 @@ build.pem
 BugList.text
 lucem-wallet.code-workspace
 .vercel
+
+# Large local clones (not part of Lucem app source)
+/koios-artifacts/
+/yoroi-frontend/

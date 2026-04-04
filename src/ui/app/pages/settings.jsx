@@ -150,6 +150,7 @@ const Overview = () => {
 
 const GeneralSettings = ({ accountRef }) => {
   const navigate = useNavigate();
+  const toast = useToast();
   const settings = useStoreState((state) => state.settings.settings);
   const setSettings = useStoreActions(
     (actions) => actions.settings.setSettings
@@ -314,7 +315,16 @@ const GeneralSettings = ({ accountRef }) => {
           return resetStorage(password);
         }}
         onConfirm={async (status, signedTx) => {
-          if (status === true) window.close();
+          if (status === true) {
+            ref.current.closeModal();
+            toast({
+              title: 'Wallet reset',
+              description: 'All data has been cleared.',
+              status: 'success',
+              duration: 3000,
+            });
+            navigate('/welcome');
+          }
         }}
       />
       <ChangePasswordModal ref={changePasswordRef} />

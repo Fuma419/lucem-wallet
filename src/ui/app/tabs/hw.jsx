@@ -36,6 +36,9 @@ import {
   indexToHw,
   initHW,
 } from '../../../api/extension';
+import { AnimatedQRScanner } from '@keystonehq/animated-qr';
+import { URType } from '@keystonehq/keystone-sdk';
+import { parseKeystoneCardanoConnectUr } from '../../../api/keystone-cardano';
 import { MdUsb } from 'react-icons/md';
 import { Planet } from 'react-kawaii';
 import { ledgerUSBVendorId } from '@ledgerhq/devices';
@@ -51,7 +54,11 @@ const App = () => {
   const cardColor = useColorModeValue('blue.100', 'gray.900');
   const backgroundColor = useColorModeValue('gray.200', 'inherit');
   const [tab, setTab] = React.useState(0);
-  const data = React.useRef({ device: '', id: '' });
+  const data = React.useRef({
+    device: '',
+    id: '',
+    keystoneAccounts: null,
+  });
 
   return (
     <Box
@@ -116,8 +123,8 @@ const App = () => {
           <Box flex="1" minH={0} overflowY="auto" display="flex" flexDirection="column">
             {tab === 0 && (
               <ConnectHW
-                onConfirm={({ device, id }) => {
-                  data.current = { device, id };
+                onConfirm={({ device, id, keystoneAccounts }) => {
+                  data.current = { device, id, keystoneAccounts };
                   setTab(1);
                 }}
               />

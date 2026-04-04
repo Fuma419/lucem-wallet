@@ -26,7 +26,6 @@ import {
   Button,
   Box,
   Flex,
-  Spacer,
   Stack,
   Text,
   Icon,
@@ -43,7 +42,6 @@ import {
   ModalBody,
   ModalCloseButton,
   ModalContent,
-  ModalFooter,
   ModalHeader,
   ModalOverlay,
   useDisclosure,
@@ -944,7 +942,7 @@ const NewAccountModal = React.forwardRef((props, ref) => {
                 }
                 placeholder="Enter password"
                 onKeyDown={(e) => {
-                  if (e.key == 'Enter') confirmHandler();
+                  if (e.key === 'Enter') confirmHandler();
                 }}
                 _focus={{
                   borderColor: 'rgba(220, 27, 250, 0.75)',
@@ -982,7 +980,7 @@ const NewAccountModal = React.forwardRef((props, ref) => {
                 }
                 placeholder="Confirm password"
                 onKeyDown={(e) => {
-                  if (e.key == 'Enter') confirmHandler();
+                  if (e.key === 'Enter') confirmHandler();
                 }}
                 _focus={{
                   borderColor: 'rgba(220, 27, 250, 0.75)',

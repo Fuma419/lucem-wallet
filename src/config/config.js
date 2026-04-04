@@ -59,6 +59,7 @@ export const STORAGE = {
   migration: 'migration',
   userId: 'userId',
   acceptedLegalDocsVersion: 'acceptedLegalDocsVersion',
+  keystoneTxPending: 'keystoneTxPending',
 };
 
 export const LOCAL_STORAGE = {
@@ -94,12 +95,14 @@ export const POPUP = {
 export const TAB = {
   hw: 'hwTab',
   createWallet: 'createWalletTab',
+  trezorTx: 'trezorTx',
   keystoneTx: 'keystoneTx',
 };
 
 export const HW = {
   keystone: 'keystone',
   ledger: 'ledger',
+  trezor: 'trezor',
 };
 
 export const POPUP_WINDOW = {

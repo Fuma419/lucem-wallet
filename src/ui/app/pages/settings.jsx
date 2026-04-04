@@ -23,7 +23,7 @@ import {
   RepeatIcon,
   CheckIcon,
 } from '@chakra-ui/icons';
-import React, { useCallback } from 'react';
+import React from 'react';
 import platform from '../../../platform';
 import {
   getCurrentAccount,
@@ -254,9 +254,9 @@ const GeneralSettings = ({ accountRef }) => {
           {...settingsInputProps}
           onKeyDown={(e) => {
             if (
-              e.key == 'Enter' &&
+              e.key === 'Enter' &&
               account.name.length > 0 &&
-              account.name != originalName
+              account.name !== originalName
             )
               nameHandler();
           }}
@@ -269,7 +269,7 @@ const GeneralSettings = ({ accountRef }) => {
           pr="4.5rem"
         />
         <InputRightElement width="4.5rem" h="full">
-          {account.name == originalName ? (
+          {account.name === originalName ? (
             <Icon mr="-2" as={MdModeEdit} color="whiteAlpha.700" />
           ) : (
             <Button
@@ -551,7 +551,7 @@ const Network = () => {
           value={value}
           placeholder="http://localhost:8090/api/submit/tx"
           onKeyDown={(e) => {
-            if (e.key == 'Enter' && value.length > 0) {
+            if (e.key === 'Enter' && value.length > 0) {
               endpointHandler();
             }
           }}

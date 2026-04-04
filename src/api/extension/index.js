@@ -9,6 +9,7 @@ import {
   NODE,
   SENDER,
   STORAGE,
+  TAB,
   TARGET,
   TxSendError,
   TxSignError,
@@ -828,6 +829,44 @@ export const createPopup = (popup) => platform.navigation.createPopup(popup);
 export const createTab = (tab, query = '') =>
   platform.navigation.createTab(tab, query);
 
+export const pushKeystoneSignPayload = async (payload) => {
+  const signId =
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const prev = (await getStorage(STORAGE.keystoneTxPending)) || {};
+  await setStorage({
+    [STORAGE.keystoneTxPending]: {
+      ...prev,
+      [signId]: { ...payload, created: Date.now() },
+    },
+  });
+  return signId;
+};
+
+export const takeKeystoneSignPayload = async (signId) => {
+  const prev = (await getStorage(STORAGE.keystoneTxPending)) || {};
+  const data = prev[signId];
+  if (!data) return null;
+  const next = { ...prev };
+  delete next[signId];
+  await setStorage({ [STORAGE.keystoneTxPending]: next });
+  return data;
+};
+
+/** Air-gapped Keystone: opens full tab with QR flow; payload is removed when consumed. */
+export const openKeystoneSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
+  const signId = await pushKeystoneSignPayload({
+    txHex,
+    keyHashes,
+    partialSign: !!partialSign,
+  });
+  await createTab(
+    TAB.keystoneTx,
+    `?signId=${encodeURIComponent(signId)}`
+  );
+};
+
 export const getCurrentWebpage = () =>
   platform.navigation.getCurrentWebpage();
 
@@ -1286,7 +1325,11 @@ export const signTxHW = async (
     });
     witnessSet.set_vkeywitnesses(vkeys);
     return witnessSet;
-  } else {
+  }
+  if (hw.device === HW.keystone) {
+    throw new Error('Keystone signing runs in the Keystone signing tab.');
+  }
+  if (hw.device === HW.trezor) {
     keyHashes.forEach((keyHash) => {
       if (keyHash === account.paymentKeyHash)
         keys.payment = {
@@ -1308,13 +1351,17 @@ export const signTxHW = async (
       Buffer.from(address.to_bytes()).toString('hex'),
       hw.account
     );
-    const result = await TrezorConnect.cardanoSignTransaction({ ...trezorTx, tagCborSets: hasTaggedSets(tx) });
+    const result = await TrezorConnect.cardanoSignTransaction({
+      ...trezorTx,
+      tagCborSets: hasTaggedSets(tx),
+    });
     if (!result.success) throw new Error('Trezor could not sign tx');
-    // getting public keys
     const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
     const vkeys = Loader.Cardano.VkeywitnessList.new();
     result.payload.witnesses.forEach((witness) => {
-      const vkey = Loader.Cardano.PublicKey.from_bytes(Buffer.from(witness.pubKey, 'hex'));
+      const vkey = Loader.Cardano.PublicKey.from_bytes(
+        Buffer.from(witness.pubKey, 'hex')
+      );
       const signature = Loader.Cardano.Ed25519Signature.from_hex(
         witness.signature
       );
@@ -1323,6 +1370,7 @@ export const signTxHW = async (
     witnessSet.set_vkeywitnesses(vkeys);
     return witnessSet;
   }
+  throw new Error('Unsupported hardware wallet device');
 };
 
 /**
@@ -1715,7 +1763,10 @@ export const isHW = (accountIndex) =>
   accountIndex != undefined &&
   accountIndex != 0 &&
   typeof accountIndex !== 'number' &&
-  (accountIndex.startsWith(HW.trezor) || accountIndex.startsWith(HW.ledger));
+  typeof accountIndex === 'string' &&
+  (accountIndex.startsWith(HW.keystone) ||
+    accountIndex.startsWith(HW.trezor) ||
+    accountIndex.startsWith(HW.ledger));
 
 export const initHW = async ({ device, id }) => {
   if (device == HW.ledger) {

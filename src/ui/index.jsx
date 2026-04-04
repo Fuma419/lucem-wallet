@@ -38,12 +38,22 @@ const Main = ({ children }) => {
       maxW={isExtensionPopup ? undefined : '100%'}
       minW={0}
       mx={isExtensionPopup ? undefined : 0}
+      sx={
+        !isExtensionPopup
+          ? {
+              '@supports (height: 100dvh)': {
+                height: '100dvh',
+                maxHeight: '100dvh',
+              },
+            }
+          : undefined
+      }
     >
       <Theme>
         <StoreProvider>
           <Scrollbars
             id="scroll"
-            style={{ width: '100%', height: '100vh' }}
+            style={{ width: '100%', height: '100%' }}
             autoHide
             onScroll={(e) => {
               setScroll({ el: e.target, y: e.target.scrollTop });
@@ -56,8 +66,8 @@ const Main = ({ children }) => {
                   scroll.el.scrollTo({ behavior: 'smooth', top: 0 });
                 }}
                 position="fixed"
-                bottom="15px"
-                right="15px"
+                bottom="calc(15px + env(safe-area-inset-bottom, 0px))"
+                right="calc(15px + env(safe-area-inset-right, 0px))"
                 size="sm"
                 rounded="xl"
                 colorScheme="yellow"

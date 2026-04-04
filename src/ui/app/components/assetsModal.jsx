@@ -2,13 +2,13 @@ import React from 'react';
 import {
   Box,
   Button,
+  Flex,
   Modal,
   ModalBody,
   ModalContent,
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react';
-import { Scrollbars } from './scrollbar';
 import { LazyLoadComponent } from 'react-lazy-load-image-component';
 import Asset from './asset';
 
@@ -43,24 +43,51 @@ const AssetsModal = React.forwardRef((props, ref) => {
       <ModalContent
         m={0}
         rounded="none"
-        overflow={'hidden'}
+        overflow="hidden"
         background={background}
+        display="flex"
+        flexDirection="column"
+        sx={{
+          width: '100vw',
+          maxW: '100vw',
+          maxHeight: '100dvh',
+          height: '100vh',
+          '@supports (height: 100dvh)': {
+            height: '100dvh',
+          },
+          '@supports not (height: 100dvh)': {
+            maxHeight: '100vh',
+          },
+        }}
       >
-        <ModalBody p={0}>
-          <Scrollbars style={{ width: '100%', height: '88vh' }} autoHide>
+        <ModalBody
+          p={0}
+          flex="1"
+          minH={0}
+          display="flex"
+          flexDirection="column"
+          overflow="hidden"
+        >
+          <Box
+            flex="1"
+            minH={0}
+            overflowY="auto"
+            w="full"
+            sx={{ WebkitOverflowScrolling: 'touch' }}
+          >
             <Box
-              width={'full'}
-              display={'flex'}
-              alignItems={'center'}
-              justifyContent={'center'}
-              flexDirection={'column'}
+              width="full"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              flexDirection="column"
             >
               <Box h={8} />
               <Box
-                fontSize={'xl'}
-                fontWeight={'bold'}
-                maxWidth={'240px'}
-                textAlign={'center'}
+                fontSize="xl"
+                fontWeight="bold"
+                maxWidth="240px"
+                textAlign="center"
               >
                 {data.title}
               </Box>
@@ -74,10 +101,10 @@ const AssetsModal = React.forwardRef((props, ref) => {
                   <Box key={index} width="full" px={4} my={2}>
                     <LazyLoadComponent>
                       <Box
-                        width={'full'}
-                        display={'flex'}
-                        alignItems={'center'}
-                        justifyContent={'center'}
+                        width="full"
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
                         key={index}
                       >
                         <Asset
@@ -90,29 +117,24 @@ const AssetsModal = React.forwardRef((props, ref) => {
                   </Box>
                 );
               })}
-              <Box
-                position={'fixed'}
-                bottom={0}
-                width={'full'}
-                display={'flex'}
-                alignItems={'center'}
-                justifyContent={'center'}
-              >
-                <Box
-                  width={'full'}
-                  height={'12vh'}
-                  background={background}
-                  display={'flex'}
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                >
-                  <Button onClick={onClose} width={'180px'}>
-                    Back
-                  </Button>
-                </Box>
-              </Box>
+              <Box h={6} />
             </Box>
-          </Scrollbars>
+          </Box>
+          <Flex
+            flexShrink={0}
+            w="full"
+            py={4}
+            pb="calc(1rem + env(safe-area-inset-bottom, 0px))"
+            borderTopWidth="1px"
+            borderTopColor="whiteAlpha.200"
+            background={background}
+            align="center"
+            justify="center"
+          >
+            <Button onClick={onClose} width="180px" maxW="calc(100% - 2rem)">
+              Back
+            </Button>
+          </Flex>
         </ModalBody>
       </ModalContent>
     </Modal>

@@ -66,25 +66,27 @@ const Settings = () => {
         maxW="100%"
         className="lucem-wallet-main-column"
       >
-        <Account ref={accountRef} />
-        <Flex
-          align="center"
-          w="full"
-          px={{ base: 2, md: 4 }}
-          pt={2}
-          pb={1}
-          flexShrink={0}
-        >
-          <IconButton
-            rounded="md"
-            onClick={() => navigate(-1)}
-            variant="ghost"
-            icon={<ChevronLeftIcon boxSize="7" />}
-            aria-label="Go back"
-          />
-        </Flex>
+        <Account
+          ref={accountRef}
+          leadingSlot={
+            <IconButton
+              rounded="md"
+              onClick={() => navigate(-1)}
+              variant="ghost"
+              icon={<ChevronLeftIcon boxSize="6" />}
+              aria-label="Go back"
+            />
+          }
+        />
 
-        <Box flex="1" minH={0} overflowY="auto" w="full">
+        <Box
+          flex="1"
+          minH={0}
+          overflowY="auto"
+          w="full"
+          px={{ base: 4, md: 6 }}
+          pb={6}
+        >
           <Routes>
             <Route path="*" element={<Overview />} />
             <Route
@@ -105,60 +107,61 @@ const Overview = () => {
   const navigate = useNavigate();
   // const { colorMode, toggleColorMode } = useColorMode();
   return (
-    <>
-      <Box height="10" />
-      <Text fontSize="lg" fontWeight="bold">
+    <Box w="full" maxW="md" mx="auto" pt={2}>
+      <Text fontSize="lg" fontWeight="bold" mb={6}>
         Settings
       </Text>
-      <Box height="10" />
-      <Button
-        justifyContent="space-between"
-        width="65%"
-        rightIcon={<ChevronRightIcon />}
-        variant="ghost"
-        onClick={() => {
-          navigate('general');
-        }}
-      >
-        General settings
-      </Button>
-      <Box height="1" />
-      <Button
-        justifyContent="space-between"
-        width="65%"
-        rightIcon={<ChevronRightIcon />}
-        variant="ghost"
-        onClick={() => {
-          navigate('whitelisted');
-        }}
-      >
-        Whitelisted sites
-      </Button>
-      <Box height="1" />
-      <Button
-        justifyContent="space-between"
-        width="65%"
-        rightIcon={<ChevronRightIcon />}
-        variant="ghost"
-        onClick={() => {
-          navigate('network');
-        }}
-      >
-        Network
-      </Button>
-      <Box height="1" />
-      <Button
-        justifyContent="space-between"
-        width="65%"
-        rightIcon={<ChevronRightIcon />}
-        variant="ghost"
-        onClick={() => {
-          navigate('legal');
-        }}
-      >
-        Legal
-      </Button>
-    </>
+      <Flex direction="column" gap={1}>
+        <Button
+          justifyContent="space-between"
+          w="full"
+          py={6}
+          rightIcon={<ChevronRightIcon />}
+          variant="ghost"
+          onClick={() => {
+            navigate('general');
+          }}
+        >
+          General settings
+        </Button>
+        <Button
+          justifyContent="space-between"
+          w="full"
+          py={6}
+          rightIcon={<ChevronRightIcon />}
+          variant="ghost"
+          onClick={() => {
+            navigate('whitelisted');
+          }}
+        >
+          Whitelisted sites
+        </Button>
+        <Button
+          justifyContent="space-between"
+          w="full"
+          py={6}
+          rightIcon={<ChevronRightIcon />}
+          variant="ghost"
+          onClick={() => {
+            navigate('network');
+          }}
+        >
+          Network
+        </Button>
+        <Button
+          justifyContent="space-between"
+          w="full"
+          py={6}
+          rightIcon={<ChevronRightIcon />}
+          variant="ghost"
+          onClick={() => {
+            navigate('legal');
+          }}
+        >
+          Legal
+        </Button>
+      </Flex>
+    </Box>
   );
 };
 
@@ -216,14 +219,16 @@ const GeneralSettings = ({ accountRef }) => {
   }, []);
 
   return (
-    <>
-      <Box height="10" />
-      <Text fontSize="lg" fontWeight="bold">
+    <Box w="full" maxW="md" mx="auto" pt={2}>
+      <Text fontSize="lg" fontWeight="bold" mb={4}>
         General settings
       </Text>
-      <Box height="6" />
-      <InputGroup size="md" width="210px">
+      <InputGroup size="md" w="full" maxW="sm">
         <Input
+          variant="filled"
+          bg="gray.800"
+          color="whiteAlpha.900"
+          _placeholder={{ color: 'whiteAlpha.600' }}
           onKeyDown={(e) => {
             if (
               e.key == 'Enter' &&
@@ -232,7 +237,7 @@ const GeneralSettings = ({ accountRef }) => {
             )
               nameHandler();
           }}
-          placeholder="Change name"
+          placeholder="Account name"
           value={account.name}
           onChange={(e) => {
             account.name = e.target.value;
@@ -255,26 +260,23 @@ const GeneralSettings = ({ accountRef }) => {
           )}
         </InputRightElement>
       </InputGroup>
-      <Box height="6" />
-      <Box display="flex" alignItems="center">
-        <Box width="65px" height="65px">
+      <Flex align="center" gap={4} mt={6}>
+        <Box w="65px" h="65px" flexShrink={0}>
           <AvatarLoader forceUpdate avatar={account.avatar} width="full" />
         </Box>
-        <Box w={4} />
         <IconButton
           onClick={() => {
             avatarHandler();
           }}
           rounded="md"
           size="sm"
+          aria-label="New avatar"
           icon={<RepeatIcon />}
         />
-      </Box>
+      </Flex>
 
-      <Box height="6" />
-      <Box display="flex" alignItems="center" justifyContent="center">
+      <Flex align="center" gap={2} mt={8} w="full" maxW="sm">
         <Text>USD</Text>
-        <Box width="2" />
         <ButtonSwitch
           defaultChecked={settings.currency !== 'usd'}
           onChange={(e) => {
@@ -285,26 +287,26 @@ const GeneralSettings = ({ accountRef }) => {
             }
           }}
         />
-        <Box width="2" />
         <Text>EUR</Text>
-      </Box>
-      <Box height="10" />
-      <Button disabled={refreshed} size="sm" onClick={refreshHandler}>
-        Refresh Balance
-      </Button>
-      <Box height="5" />
+      </Flex>
+      <Flex direction="column" gap={3} mt={8} w="full" maxW="sm">
+        <Button disabled={refreshed} size="md" w="full" onClick={refreshHandler}>
+          Refresh Balance
+        </Button>
+        <Button
+          colorScheme="gray"
+          size="md"
+          w="full"
+          onClick={() => {
+            changePasswordRef.current.openModal();
+          }}
+        >
+          Change Password
+        </Button>
+      </Flex>
       <Button
-        colorScheme="gray"
+        mt={10}
         size="sm"
-        onClick={() => {
-          changePasswordRef.current.openModal();
-        }}
-      >
-        Change Password
-      </Button>
-      <Box height="10" />
-      <Button
-        size="xs"
         colorScheme="red"
         variant="link"
         onClick={() => {
@@ -342,7 +344,7 @@ const GeneralSettings = ({ accountRef }) => {
         }}
       />
       <ChangePasswordModal ref={changePasswordRef} />
-    </>
+    </Box>
   );
 };
 

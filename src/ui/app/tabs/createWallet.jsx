@@ -760,6 +760,8 @@ const MakeAccount = ({ colorTheme }) => {
     }
   };
 
+  const placeholderMuted = { color: 'whiteAlpha.700' };
+
   return isDone ? (
     <SuccessAndClose flow={flow} />
   ) : (
@@ -768,11 +770,13 @@ const MakeAccount = ({ colorTheme }) => {
         <Text className="walletTitle" fontWeight="bold" fontSize="lg">
           Create Account
         </Text>
-        <Spacer height="10" />
-        <Box
+        <Spacer height="8" />
+        <Stack
           as="form"
           autoComplete="on"
           width="100%"
+          spacing={5}
+          align="stretch"
           onSubmit={(e) => {
             e.preventDefault();
             submitCreate();
@@ -785,7 +789,7 @@ const MakeAccount = ({ colorTheme }) => {
             variant="filled"
             bg="gray.900"
             color="whiteAlpha.900"
-            _placeholder={{ color: 'whiteAlpha.500' }}
+            _placeholder={placeholderMuted}
             focusBorderColor={`${colorTheme}.700`}
             onChange={(e) => {
               setState((s) => ({ ...s, name: e.target.value }));
@@ -793,111 +797,118 @@ const MakeAccount = ({ colorTheme }) => {
             }}
             placeholder="Enter account name"
           />
-          <Spacer height="10" />
 
-          <InputGroup size="md" width="100%">
-            <Input
-              ref={passwordRef}
-              id="lucem-account-password"
-              name="new-password"
-              variant="filled"
-              bg="gray.900"
-              color="whiteAlpha.900"
-              _placeholder={{ color: 'whiteAlpha.500' }}
-              focusBorderColor={`${colorTheme}.700`}
-              isInvalid={state.regularPassword === false}
-              pr="4.5rem"
-              type={state.show ? 'text' : 'password'}
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              autoComplete="new-password"
-              defaultValue=""
-              onChange={bumpForm}
-              onInput={bumpForm}
-              onBlur={(e) => {
-                bumpForm();
-                const v = e.target.value;
-                if (v) {
+          <Box>
+            <InputGroup size="md" width="100%">
+              <Input
+                ref={passwordRef}
+                id="lucem-account-password"
+                name="new-password"
+                variant="filled"
+                bg="gray.900"
+                color="whiteAlpha.900"
+                _placeholder={placeholderMuted}
+                focusBorderColor={`${colorTheme}.700`}
+                isInvalid={state.regularPassword === false}
+                pr="4.5rem"
+                type={state.show ? 'text' : 'password'}
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="new-password"
+                defaultValue=""
+                onChange={bumpForm}
+                onInput={bumpForm}
+                onBlur={(e) => {
+                  bumpForm();
+                  const v = e.target.value;
+                  if (v) {
+                    setState((s) => ({
+                      ...s,
+                      regularPassword: v.length >= 8,
+                    }));
+                  }
+                }}
+                placeholder="New password"
+              />
+              <InputRightElement width="4.5rem">
+                <Button
+                  type="button"
+                  h="1.75rem"
+                  size="sm"
+                  variant="outline"
+                  borderColor={`${colorTheme}.500`}
+                  color="whiteAlpha.900"
+                  _hover={{ bg: 'whiteAlpha.100' }}
+                  onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+                >
+                  {state.show ? 'Hide' : 'Show'}
+                </Button>
+              </InputRightElement>
+            </InputGroup>
+            {state.regularPassword === false && (
+              <Text fontSize="sm" color="red.300" mt={1}>
+                Password must be at least 8 characters long
+              </Text>
+            )}
+          </Box>
+
+          <Box>
+            <InputGroup size="md" width="100%">
+              <Input
+                ref={confirmRef}
+                id="lucem-account-password-confirm"
+                name="confirm-new-password"
+                variant="filled"
+                bg="gray.900"
+                color="whiteAlpha.900"
+                _placeholder={placeholderMuted}
+                focusBorderColor={`${colorTheme}.700`}
+                isInvalid={state.matchingPassword === false}
+                pr="4.5rem"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="new-password"
+                defaultValue=""
+                onChange={bumpForm}
+                onInput={bumpForm}
+                onBlur={(e) => {
+                  bumpForm();
+                  const v = e.target.value;
+                  const p = passwordRef.current?.value ?? '';
                   setState((s) => ({
                     ...s,
-                    regularPassword: v.length >= 8,
+                    matchingPassword: v ? v === p : undefined,
                   }));
-                }
-              }}
-              placeholder="New password"
-            />
-            <InputRightElement width="4.5rem">
-              <Button
-                type="button"
-                h="1.75rem"
-                size="sm"
-                onClick={() => setState((s) => ({ ...s, show: !s.show }))}
-                colorScheme={colorTheme}
-              >
-                {state.show ? 'Hide' : 'Show'}
-              </Button>
-            </InputRightElement>
-          </InputGroup>
-          {state.regularPassword === false && (
-            <Text fontSize="sm" color="red.300">
-              Password must be at least 8 characters long
-            </Text>
-          )}
-          <Spacer height="10" />
-
-          <InputGroup size="md" width="100%">
-            <Input
-              ref={confirmRef}
-              id="lucem-account-password-confirm"
-              name="confirm-new-password"
-              variant="filled"
-              bg="gray.900"
-              color="whiteAlpha.900"
-              _placeholder={{ color: 'whiteAlpha.500' }}
-              focusBorderColor={`${colorTheme}.700`}
-              isInvalid={state.matchingPassword === false}
-              pr="4.5rem"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              autoComplete="new-password"
-              defaultValue=""
-              onChange={bumpForm}
-              onInput={bumpForm}
-              onBlur={(e) => {
-                bumpForm();
-                const v = e.target.value;
-                const p = passwordRef.current?.value ?? '';
-                setState((s) => ({
-                  ...s,
-                  matchingPassword: v ? v === p : undefined,
-                }));
-              }}
-              type={state.show ? 'text' : 'password'}
-              placeholder="Confirm new password"
-            />
-            <InputRightElement width="4.5rem">
-              <Button
-                type="button"
-                h="1.75rem"
-                size="sm"
-                onClick={() => setState((s) => ({ ...s, show: !s.show }))}
-                colorScheme={colorTheme}
-              >
-                {state.show ? 'Hide' : 'Show'}
-              </Button>
-            </InputRightElement>
-          </InputGroup>
-          {state.matchingPassword === false && (
-            <Text fontSize="sm" color="red.300">
-              Password doesn&apos;t match
-            </Text>
-          )}
-          <Spacer height="4" />
+                }}
+                type={state.show ? 'text' : 'password'}
+                placeholder="Confirm new password"
+              />
+              <InputRightElement width="4.5rem">
+                <Button
+                  type="button"
+                  h="1.75rem"
+                  size="sm"
+                  variant="outline"
+                  borderColor={`${colorTheme}.500`}
+                  color="whiteAlpha.900"
+                  _hover={{ bg: 'whiteAlpha.100' }}
+                  onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+                >
+                  {state.show ? 'Hide' : 'Show'}
+                </Button>
+              </InputRightElement>
+            </InputGroup>
+            {state.matchingPassword === false && (
+              <Text fontSize="sm" color="red.300" mt={1}>
+                Password doesn&apos;t match
+              </Text>
+            )}
+          </Box>
 
           {error && (
-            <Text fontSize="sm" color="red.300" mb={4}>
+            <Text fontSize="sm" color="red.300">
               {error}
             </Text>
           )}
@@ -909,10 +920,13 @@ const MakeAccount = ({ colorTheme }) => {
             isLoading={loading}
             loadingText="Creating"
             rightIcon={<ChevronRightIcon />}
+            w="100%"
+            minH="48px"
+            mt={2}
           >
             Create
           </Button>
-        </Box>
+        </Stack>
       </Box>
     </Box>
   );

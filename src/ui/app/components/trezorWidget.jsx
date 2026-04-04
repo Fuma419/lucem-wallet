@@ -36,10 +36,12 @@ const TrezorWidget = React.forwardRef((props, ref) => {
         alignItems="center"
         justifyContent="center"
         width="full"
+        maxW="100vw"
+        px={2}
       >
         <Box
-          width="370px"
-          height="full"
+          w={{ base: 'min(370px, 100%)', md: '370px' }}
+          maxW="370px"
           display="flex"
           alignItems="center"
           justifyContent="center"
@@ -49,17 +51,23 @@ const TrezorWidget = React.forwardRef((props, ref) => {
             cursor="pointer"
             onClick={onClose}
             position="absolute"
-            top="20px"
-            right="30px"
+            top="calc(20px + env(safe-area-inset-top, 0px))"
+            right="calc(12px + env(safe-area-inset-right, 0px))"
             color="black"
             zIndex={1}
           />
-          <Box rounded="3xl" overflow="hidden" background="white">
+          <Box rounded="3xl" overflow="hidden" background="white" w="full" maxW="360px">
             <iframe
               src={getTrezorUrl()}
               id="trezorPopupLucem"
-              width="360px"
-              height="560px"
+              title="Trezor"
+              style={{
+                width: '100%',
+                maxWidth: 360,
+                height: 'min(560px, calc(100vh - 3rem))',
+                border: 'none',
+                display: 'block',
+              }}
             />
           </Box>
         </Box>

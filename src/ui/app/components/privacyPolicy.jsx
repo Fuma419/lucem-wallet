@@ -33,7 +33,16 @@ const PrivacyPolicy = React.forwardRef((props, ref) => {
         <ModalHeader fontSize="md">Privacy Policy</ModalHeader>
 
         <ModalBody pr="0.5">
-          <Scrollbars style={{ width: '100%', height: '400px' }}>
+          <Box
+            w="full"
+            sx={{
+              height: 'min(25rem, 55vh)',
+              '@supports (height: 100dvh)': {
+                height: 'min(25rem, 52dvh)',
+              },
+            }}
+          >
+          <Scrollbars style={{ width: '100%', height: '100%' }} autoHide>
             <Box width="92%">
               <Text mb="3">Last updated September 6, 2023</Text>
 
@@ -638,6 +647,7 @@ const PrivacyPolicy = React.forwardRef((props, ref) => {
               <Box h="2" />
             </Box>
           </Scrollbars>
+          </Box>
         </ModalBody>
       </ModalContent>
     </Modal>

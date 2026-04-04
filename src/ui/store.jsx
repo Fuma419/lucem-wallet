@@ -120,7 +120,8 @@ const StoreInit = ({ children }) => {
       {isLoading || !isRehydrated ? (
         <>
           <Box
-            height="100vh"
+            minH="100vh"
+            sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
             width="full"
             display="flex"
             alignItems="center"

@@ -184,6 +184,60 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).toMatch(/WebkitOverflowScrolling/);
   });
 
+  test('assetsModal.jsx should match full-screen modal scroll pattern (no 88vh)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/assetsModal.jsx'),
+      'utf8'
+    );
+    expect(src).not.toMatch(/88vh/);
+    expect(src).toMatch(/WebkitOverflowScrolling/);
+  });
+
+  test('index.jsx Main Scrollbars should fill parent height (100%) not standalone 100vh', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/index.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/id="scroll"/);
+    expect(src).toMatch(/height:\s*['"]100%['"]/);
+  });
+
+  test('store.jsx loading shell should use dvh-aware minHeight', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/store.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/minH="100vh"/);
+    expect(src).toMatch(/100dvh/);
+  });
+
+  test('termsOfUse.jsx legal scroll region should cap height with viewport (not fixed 400px only)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/termsOfUse.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/min\(25rem/);
+    expect(src).not.toMatch(/height:\s*['"]400px['"]/);
+  });
+
+  test('trezorTx.jsx should use safe-area-aware column shell', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/trezorTx.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/safe-area-inset-bottom/);
+    expect(src).toMatch(/lucem-wallet-main-column/);
+  });
+
+  test('trezorWidget.jsx iframe should be viewport-capped and titled for a11y', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/trezorWidget.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/title=["']Trezor["']/);
+    expect(src).toMatch(/min\(560px/);
+  });
+
   test('send.jsx primary Send button should not use fixed width="366px"', () => {
     const sendSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/send.jsx'),

@@ -3,26 +3,53 @@ import React from 'react';
 import { avatarToImage } from '../../../api/extension';
 
 const AvatarLoader = ({ avatar, width, smallRobot }) => {
-  const [loaded, setLoaded] = React.useState('');
-
-  const fetchAvatar = async () => {
-    if (!avatar || avatar === loaded) return;
-    setLoaded(Number(avatar) ? avatarToImage(avatar) : avatar);
-  };
+  const [src, setSrc] = React.useState('');
 
   React.useEffect(() => {
-    fetchAvatar();
+    if (!avatar) {
+      setSrc('');
+      return undefined;
+    }
+
+    let blobUrl = null;
+    if (Number(avatar)) {
+      blobUrl = avatarToImage(avatar);
+      setSrc(blobUrl);
+    } else {
+      setSrc(avatar);
+    }
+
+    return () => {
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
   }, [avatar]);
+
+  const w = Number(avatar) && smallRobot ? '85%' : width;
+  const h = Number(avatar) && smallRobot ? '85%' : width;
+
   return (
     <Box
-      width={Number(avatar) && smallRobot ? '85%' : width}
-      height={Number(avatar) && smallRobot ? '85%' : width}
-      rounded={'full'}
-      overflow={'hidden'}
-      backgroundImage={loaded ? `url(${loaded})` : 'none'}
-      backgroundRepeat={'no-repeat'}
-      backgroundSize={'cover'}
-    ></Box>
+      width={w}
+      height={h}
+      rounded="full"
+      overflow="hidden"
+      position="relative"
+      bg="blackAlpha.400"
+    >
+      {src ? (
+        <Image
+          src={src}
+          alt=""
+          w="100%"
+          h="100%"
+          objectFit="cover"
+          objectPosition="center"
+          draggable={false}
+        />
+      ) : null}
+    </Box>
   );
 };
 

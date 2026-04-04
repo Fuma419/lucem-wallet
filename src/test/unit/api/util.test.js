@@ -43,11 +43,11 @@ test('expect correct value to assets conversion', async () => {
   );
   const assetsSet = Loader.Cardano.MapAssetNameToCoin.new();
   assetsSet.insert(
-    Loader.Cardano.AssetName.from_raw_bytes(Buffer.from('74657374313233', 'hex')),
+    Loader.Cardano.AssetName.from_bytes(Buffer.from('74657374313233', 'hex')),
     BigInt('10')
   );
   multiAsset.insert_assets(
-    Loader.Cardano.ScriptHash.from_raw_bytes(
+    Loader.Cardano.ScriptHash.from_bytes(
       Buffer.from(
         '2a286ad895d091f2b3d168a6091ad2627d30a72761a5bc36eef00740',
         'hex'

@@ -250,7 +250,7 @@ const SignTx = ({ request, controller }) => {
     try {
       return Buffer.from(
         Loader.Cardano.BaseAddress.from_address(
-          Loader.Cardano.Address.from_raw_bytes(address.to_bytes())
+          Loader.Cardano.Address.from_bytes(address.to_bytes())
         )
           .payment_cred()
           .to_keyhash()
@@ -260,7 +260,7 @@ const SignTx = ({ request, controller }) => {
     try {
       return Buffer.from(
         Loader.Cardano.EnterpriseAddress.from_address(
-          Loader.Cardano.Address.from_raw_bytes(address.to_bytes())
+          Loader.Cardano.Address.from_bytes(address.to_bytes())
         )
           .payment_cred()
           .to_keyhash()
@@ -270,7 +270,7 @@ const SignTx = ({ request, controller }) => {
     try {
       return Buffer.from(
         Loader.Cardano.PointerAddress.from_address(
-          Loader.Cardano.Address.from_raw_bytes(address.to_bytes())
+          Loader.Cardano.Address.from_bytes(address.to_bytes())
         )
           .payment_cred()
           .to_keyhash()

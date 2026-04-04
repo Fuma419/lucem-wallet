@@ -16,10 +16,10 @@ const migration = {
           const currentAccount = storage[accounts[i]];
           const network = networks[j];
           const currentAccountNetwork = currentAccount[network];
-          const paymentKeyHash = Loader.Cardano.Ed25519KeyHash.from_raw_bytes(
+          const paymentKeyHash = Loader.Cardano.Ed25519KeyHash.from_bytes(
             Buffer.from(currentAccount.paymentKeyHash, 'hex')
           );
-          const stakeKeyHash = Loader.Cardano.Ed25519KeyHash.from_raw_bytes(
+          const stakeKeyHash = Loader.Cardano.Ed25519KeyHash.from_bytes(
             Buffer.from(currentAccount.stakeKeyHash, 'hex')
           );
           const paymentAddr = Loader.Cardano.BaseAddress.new(

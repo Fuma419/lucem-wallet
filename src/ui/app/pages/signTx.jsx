@@ -100,7 +100,7 @@ const SignTx = ({ request, controller }) => {
       const output = outputs.get(i);
       if (output.datum()) {
         datum = true;
-        const prefix = bytesAddressToBinary(output.address().to_raw_bytes()).slice(
+        const prefix = bytesAddressToBinary(output.address().to_bytes()).slice(
           0,
           4
         );
@@ -136,12 +136,12 @@ const SignTx = ({ request, controller }) => {
     for (let i = 0; i < inputs.len(); i++) {
       const input = inputs.get(i);
       const inputTxHash = Buffer.from(
-        input.transaction_id().to_raw_bytes()
+        input.transaction_id().to_bytes()
       ).toString('hex');
       const inputTxId = parseInt(input.index().toString());
       const utxo = utxos.find((utxo) => {
         const utxoTxHash = Buffer.from(
-          utxo.input().transaction_id().to_raw_bytes()
+          utxo.input().transaction_id().to_bytes()
         ).toString('hex');
         const utxoTxId = parseInt(utxo.input().index().toString());
         return inputTxHash === utxoTxHash && inputTxId === utxoTxId;
@@ -160,7 +160,7 @@ const SignTx = ({ request, controller }) => {
       const output = outputs.get(i);
       const address = output.address().to_bech32();
       const hashBech32 = await extractKeyOrScriptHash(
-        Buffer.from(output.address().to_raw_bytes()).toString('hex')
+        Buffer.from(output.address().to_bytes()).toString('hex')
       );
       // making sure funds at mangled addresses are also included
       if (hashBech32 === account.paymentKeyHashBech32) {
@@ -176,7 +176,7 @@ const SignTx = ({ request, controller }) => {
           externalOutputs[address].value = externalOutputs[
             address
           ].value.checked_add(output.amount());
-        const prefix = bytesAddressToBinary(output.address().to_raw_bytes()).slice(
+        const prefix = bytesAddressToBinary(output.address().to_bytes()).slice(
           0,
           4
         );
@@ -193,10 +193,10 @@ const SignTx = ({ request, controller }) => {
         if (datum)
           externalOutputs[address].datumHash = Buffer.from(
             datum.kind() === 0
-              ? datum.as_hash().to_raw_bytes()
+              ? datum.as_hash().to_bytes()
               : Loader.Cardano.hash_plutus_data(
                   datum.as_datum()
-                ).to_raw_bytes()
+                ).to_bytes()
           ).toString('hex');
       }
     }
@@ -250,31 +250,31 @@ const SignTx = ({ request, controller }) => {
     try {
       return Buffer.from(
         Loader.Cardano.BaseAddress.from_address(
-          Loader.Cardano.Address.from_raw_bytes(address.to_raw_bytes())
+          Loader.Cardano.Address.from_bytes(address.to_bytes())
         )
-          .payment()
-          .as_pub_key()
-          .to_raw_bytes()
+          .payment_cred()
+          .to_keyhash()
+          .to_bytes()
       ).toString('hex');
     } catch (e) {}
     try {
       return Buffer.from(
         Loader.Cardano.EnterpriseAddress.from_address(
-          Loader.Cardano.Address.from_raw_bytes(address.to_raw_bytes())
+          Loader.Cardano.Address.from_bytes(address.to_bytes())
         )
-          .payment()
-          .as_pub_key()
-          .to_raw_bytes()
+          .payment_cred()
+          .to_keyhash()
+          .to_bytes()
       ).toString('hex');
     } catch (e) {}
     try {
       return Buffer.from(
         Loader.Cardano.PointerAddress.from_address(
-          Loader.Cardano.Address.from_raw_bytes(address.to_raw_bytes())
+          Loader.Cardano.Address.from_bytes(address.to_bytes())
         )
-          .payment()
-          .as_pub_key()
-          .to_raw_bytes()
+          .payment_cred()
+          .to_keyhash()
+          .to_bytes()
       ).toString('hex');
     } catch (e) {}
     throw Error('Not supported address type');
@@ -286,24 +286,24 @@ const SignTx = ({ request, controller }) => {
       Loader.Cardano.Address.from_bech32(account.paymentAddr)
     );
     const paymentKeyHash = Buffer.from(
-      baseAddr.payment().as_pub_key().to_raw_bytes()
+      baseAddr.payment_cred().to_keyhash().to_bytes()
     ).toString('hex');
     const stakeKeyHash = Buffer.from(
-      baseAddr.stake().as_pub_key().to_raw_bytes()
+      baseAddr.stake_cred().to_keyhash().to_bytes()
     ).toString('hex');
 
     //get key hashes from inputs
     const inputs = tx.body().inputs();
     for (let i = 0; i < inputs.len(); i++) {
       const input = inputs.get(i);
-      const txHash = Buffer.from(input.transaction_id().to_raw_bytes()).toString(
+      const txHash = Buffer.from(input.transaction_id().to_bytes()).toString(
         'hex'
       );
       const index = parseInt(input.index().toString());
       if (
         utxos.some(
           (utxo) =>
-            Buffer.from(utxo.input().transaction_id().to_raw_bytes()).toString(
+            Buffer.from(utxo.input().transaction_id().to_bytes()).toString(
               'hex'
             ) === txHash && parseInt(utxo.input().index().toString()) === index
         )
@@ -328,7 +328,7 @@ const SignTx = ({ request, controller }) => {
           const credential = cert.as_stake_deregistration().stake_credential();
           if (credential.kind() === 0) {
             const keyHash = Buffer.from(
-              credential.as_pub_key().to_raw_bytes()
+              credential.to_keyhash().to_bytes()
             ).toString('hex');
             requiredKeyHashes.push(keyHash);
           }
@@ -336,7 +336,7 @@ const SignTx = ({ request, controller }) => {
           const credential = cert.as_stake_delegation().stake_credential();
           if (credential.kind() === 0) {
             const keyHash = Buffer.from(
-              credential.as_pub_key().to_raw_bytes()
+              credential.to_keyhash().to_bytes()
             ).toString('hex');
             requiredKeyHashes.push(keyHash);
           }
@@ -346,7 +346,7 @@ const SignTx = ({ request, controller }) => {
             .pool_params()
             .pool_owners();
           for (let i = 0; i < owners.len(); i++) {
-            const keyHash = Buffer.from(owners.get(i).to_raw_bytes()).toString(
+            const keyHash = Buffer.from(owners.get(i).to_bytes()).toString(
               'hex'
             );
             requiredKeyHashes.push(keyHash);
@@ -365,7 +365,7 @@ const SignTx = ({ request, controller }) => {
 
             if (credential.kind() === 0) {
               const keyHash = Buffer.from(
-                credential.as_pub_key().to_raw_bytes()
+                credential.to_keyhash().to_bytes()
               ).toString('hex');
               requiredKeyHashes.push(keyHash);
             }
@@ -380,9 +380,9 @@ const SignTx = ({ request, controller }) => {
     const keyHashFromWithdrawal = (withdrawals) => {
       const rewardAddresses = withdrawals.keys();
       for (let i = 0; i < rewardAddresses.len(); i++) {
-        const credential = rewardAddresses.get(i).payment();
+        const credential = rewardAddresses.get(i).payment_cred();
         if (credential.kind() === 0) {
-          requiredKeyHashes.push(credential.as_pub_key().to_hex());
+          requiredKeyHashes.push(credential.to_keyhash().to_hex());
         }
       }
     };
@@ -395,7 +395,7 @@ const SignTx = ({ request, controller }) => {
         const script = scripts.get(i);
         if (script.kind() === 0) {
           const keyHash = Buffer.from(
-            script.as_script_pubkey().ed25519_key_hash().to_raw_bytes()
+            script.as_script_pubkey().ed25519_key_hash().to_bytes()
           ).toString('hex');
           requiredKeyHashes.push(keyHash);
         }
@@ -417,7 +417,7 @@ const SignTx = ({ request, controller }) => {
     if (requiredSigners) {
       for (let i = 0; i < requiredSigners.len(); i++) {
         requiredKeyHashes.push(
-          Buffer.from(requiredSigners.get(i).to_raw_bytes()).toString('hex')
+          Buffer.from(requiredSigners.get(i).to_bytes()).toString('hex')
         );
       }
     }
@@ -428,7 +428,7 @@ const SignTx = ({ request, controller }) => {
       for (let i = 0; i < collateral.len(); i++) {
         const c = collateral.get(i);
         const utxo = await getSpecificUtxo(
-          Buffer.from(c.transaction_id().to_raw_bytes()).toString('hex'),
+          Buffer.from(c.transaction_id().to_bytes()).toString('hex'),
           c.index()
         );
         if (utxo) {
@@ -462,8 +462,8 @@ const SignTx = ({ request, controller }) => {
       for (let j = 0; j < utxos.length; j++) {
         const input = utxos[j].input();
         if (
-          Buffer.from(input.transaction_id().to_raw_bytes()).toString('hex') ==
-            Buffer.from(collateral.transaction_id().to_raw_bytes()).toString(
+          Buffer.from(input.transaction_id().to_bytes()).toString('hex') ==
+            Buffer.from(collateral.transaction_id().to_bytes()).toString(
               'hex'
             ) &&
           input.index() == collateral.index()
@@ -497,7 +497,7 @@ const SignTx = ({ request, controller }) => {
 
           if (
             !(
-              Buffer.from(collateral.transaction_id().to_raw_bytes()).toString(
+              Buffer.from(collateral.transaction_id().to_bytes()).toString(
                 'hex'
               ) == account.collateral.txHash &&
               collateral.index() == account.collateral.txId

@@ -22,7 +22,7 @@ const migration = {
 
     for (let i = 0; i < accounts.length; i++) {
       const currentAccount = storage[accounts[i]];
-      const paymentKeyHash = Loader.Cardano.Ed25519KeyHash.from_raw_bytes(
+      const paymentKeyHash = Loader.Cardano.Ed25519KeyHash.from_bytes(
         Buffer.from(currentAccount.paymentKeyHash, 'hex')
       );
       const paymentKeyHashBech32 = paymentKeyHash.to_bech32('addr_vkh');

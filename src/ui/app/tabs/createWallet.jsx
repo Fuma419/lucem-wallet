@@ -92,7 +92,7 @@ const App = () => {
         rounded="2xl"
         shadow="md"
         display="flex"
-        alignItems="center"
+        alignItems="stretch"
         flexDirection="column"
         justifyContent="center"
         width="90%"
@@ -558,6 +558,10 @@ const MakeAccount = ({ colorTheme }) => {
         </Text>
         <Spacer height="10" />
         <Input
+          variant="filled"
+          bg="gray.900"
+          color="whiteAlpha.900"
+          _placeholder={{ color: 'whiteAlpha.500' }}
           focusBorderColor={`${colorTheme}.700`}
           onChange={(e) => { setState((s) => ({ ...s, name: e.target.value })); setError(null); }}
           placeholder="Enter account name"
@@ -566,6 +570,10 @@ const MakeAccount = ({ colorTheme }) => {
 
         <InputGroup size="md" width="100%">
           <Input
+            variant="filled"
+            bg="gray.900"
+            color="whiteAlpha.900"
+            _placeholder={{ color: 'whiteAlpha.500' }}
             focusBorderColor={`${colorTheme}.700`}
             isInvalid={state.regularPassword === false}
             pr="4.5rem"
@@ -583,7 +591,6 @@ const MakeAccount = ({ colorTheme }) => {
             }
             placeholder="Enter password"
           />
-          <Spacer height="10" />
           <InputRightElement width="4.5rem">
             <Button
               h="1.75rem"
@@ -600,10 +607,14 @@ const MakeAccount = ({ colorTheme }) => {
             Password must be at least 8 characters long
           </Text>
         )}
-        <Spacer height="2" />
+        <Spacer height="10" />
 
         <InputGroup size="md">
           <Input
+            variant="filled"
+            bg="gray.900"
+            color="whiteAlpha.900"
+            _placeholder={{ color: 'whiteAlpha.500' }}
             focusBorderColor={`${colorTheme}.700`}
             isInvalid={state.matchingPassword === false}
             pr="4.5rem"

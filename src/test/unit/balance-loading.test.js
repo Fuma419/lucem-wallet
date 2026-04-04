@@ -13,6 +13,7 @@ describe('koiosRequest retry behavior', () => {
   beforeEach(() => {
     jest.resetModules();
     global.fetch = jest.fn();
+    jest.spyOn(console, 'log').mockImplementation(() => {});
     mockGetNetwork = jest.fn().mockResolvedValue({ id: 'mainnet', name: 'mainnet' });
 
     jest.doMock('../../api/extension', () => ({
@@ -67,16 +68,21 @@ describe('koiosRequest retry behavior', () => {
   });
 
   test('should throw on non-500 HTTP errors', async () => {
-    const { koiosRequest: kr } = require('../../api/util');
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { koiosRequest: kr } = require('../../api/util');
 
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 429,
-      statusText: 'Too Many Requests',
-      text: () => Promise.resolve('rate limited'),
-    });
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        text: () => Promise.resolve('rate limited'),
+      });
 
-    await expect(kr('/test-endpoint', {})).rejects.toThrow('Koios API error');
+      await expect(kr('/test-endpoint', {})).rejects.toThrow('Koios API error');
+    } finally {
+      errSpy.mockRestore();
+    }
   });
 });
 

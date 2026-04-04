@@ -158,7 +158,13 @@ const options = {
         options: {
           sources: {
             urlFilter: (attribute, value) => {
-              if (value.startsWith('/assets/') || value.startsWith('/manifest')) return false;
+              if (
+                value.startsWith('/assets/') ||
+                value.startsWith('/manifest') ||
+                value.startsWith('/favicon')
+              ) {
+                return false;
+              }
               return true;
             },
           },
@@ -204,6 +210,11 @@ const options = {
         {
           from: 'src/manifest.webmanifest',
           to: path.join(__dirname, 'build'),
+          force: true,
+        },
+        {
+          from: 'src/assets/img/favicon-dark.ico',
+          to: path.join(__dirname, 'build', 'favicon.ico'),
           force: true,
         },
         {

@@ -11,6 +11,7 @@ function startLocalPwaPreview() {
   var env = require('./env');
   var root = path.join(__dirname, '..');
   var port = String(process.env.PORT || env.PORT || 3000);
+  var walletUrl = 'http://localhost:' + port + '/mainPopup.html';
   var serveMain;
   try {
     serveMain = require.resolve('serve/build/main.js');
@@ -20,7 +21,13 @@ function startLocalPwaPreview() {
     );
     process.exit(1);
   }
-  console.log('🌐 PWA (production build): http://localhost:' + port + '/mainPopup.html');
+  console.log('🌐 PWA (production build) — open the wallet UI at:');
+  console.log('   ' + walletUrl);
+  console.log(
+    '   (The `serve` line below may show only http://localhost:' +
+      port +
+      ' — use /mainPopup.html for the app.)'
+  );
   console.log('📦 Chrome extension: chrome://extensions → Load unpacked → select build/');
   console.log('   Stop the preview server with Ctrl+C.\n');
   console.log('   (Set CI=true or LUCEM_SKIP_SERVE=1 to skip serving.)\n');

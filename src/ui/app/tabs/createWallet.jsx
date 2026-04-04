@@ -59,6 +59,26 @@ function mnemonicFromObject(mnemonicMap) {
   );
 }
 
+const VALID_IMPORT_SEED_LENGTHS = [12, 15, 24];
+
+/**
+ * Import flow opens as createWalletTab.html?type=import&length=… (see welcome.jsx).
+ * History state can be missing on reload or briefly before bootstrap navigate runs; the query
+ * string is the source of truth so we do not bounce users to "new seed" incorrectly.
+ */
+function resolveImportSeedLength(locationState) {
+  const fromState = locationState?.seedLength;
+  if (VALID_IMPORT_SEED_LENGTHS.includes(fromState)) return fromState;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type') !== 'import') return null;
+    const n = parseInt(params.get('length') || '', 10);
+    return VALID_IMPORT_SEED_LENGTHS.includes(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Full-page tab layout like Main (non-popup), without StoreProvider — avoids loading api/extension until Create. */
 const CreateWalletShell = ({ children }) => (
   <Box
@@ -504,22 +524,9 @@ const VerifySeed = ({ colorTheme }) => {
 const ImportSeed = ({ colorTheme }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { state } = location;
+  const seedLength = resolveImportSeedLength(location.state);
+  const stateColorTheme = location.state?.colorTheme;
 
-  if (!state || !state.seedLength) {
-    navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
-    return null;
-  }
-
-  const { seedLength, colorTheme: stateColorTheme } = state;
-  const validSeedLengths = [12, 15, 24];
-
-  if (!validSeedLengths.includes(seedLength)) {
-    navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
-    return null;
-  }
-
-  colorTheme = colorTheme || stateColorTheme;
   const [input, setInput] = React.useState({});
   const [fullSeedPhrase, setFullSeedPhrase] = React.useState('');
   const [allValid, setAllValid] = React.useState(null);
@@ -527,9 +534,16 @@ const ImportSeed = ({ colorTheme }) => {
   const words = wordlists[getDefaultWordlist()];
 
   React.useEffect(() => {
+    if (seedLength == null) {
+      navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
+    }
+  }, [seedLength, navigate]);
+
+  React.useEffect(() => {
+    if (seedLength == null) return;
     const hasFullPhrase = fullSeedPhrase.trim().length > 0;
     const hasWordInputs = Object.keys(input).length > 0;
-  
+
     if (hasFullPhrase) {
       const cleanedPhrase = fullSeedPhrase.trim().toLowerCase();
       const wordsArray = cleanedPhrase.split(/\s+/);
@@ -539,7 +553,10 @@ const ImportSeed = ({ colorTheme }) => {
         setAllValid(false);
       }
     } else if (hasWordInputs) {
-      if (Object.keys(input).length === seedLength && validateMnemonic(mnemonicFromObject(input))) {
+      if (
+        Object.keys(input).length === seedLength &&
+        validateMnemonic(mnemonicFromObject(input))
+      ) {
         setAllValid(true);
       } else {
         setAllValid(false);
@@ -547,7 +564,13 @@ const ImportSeed = ({ colorTheme }) => {
     } else {
       setAllValid(null);
     }
-  }, [input, fullSeedPhrase]);
+  }, [input, fullSeedPhrase, seedLength]);
+
+  if (seedLength == null) {
+    return null;
+  }
+
+  colorTheme = colorTheme || stateColorTheme || 'cyan';
 
   return (
     <Box>
@@ -766,16 +789,16 @@ const MakeAccount = ({ colorTheme }) => {
     <SuccessAndClose flow={flow} />
   ) : (
     <Box textAlign="center" display="flex" alignItems="center" justifyContent="center" width="100%">
-      <Box width="100%" maxW="400px" mx="auto">
-        <Text className="walletTitle" fontWeight="bold" fontSize="lg">
+      <Box className="lucem-create-account-panel">
+        <Text className="walletTitle" fontWeight="bold" fontSize="md" letterSpacing="wide">
           Create Account
         </Text>
-        <Spacer height="8" />
+        <Spacer height="4" />
         <Stack
           as="form"
           autoComplete="on"
           width="100%"
-          spacing={5}
+          spacing={3}
           align="stretch"
           onSubmit={(e) => {
             e.preventDefault();
@@ -786,11 +809,13 @@ const MakeAccount = ({ colorTheme }) => {
             id="lucem-account-name"
             name="username"
             autoComplete="username"
-            variant="filled"
-            bg="gray.900"
+            variant="outline"
+            bg="black"
+            borderColor="whiteAlpha.300"
             color="whiteAlpha.900"
             _placeholder={placeholderMuted}
-            focusBorderColor={`${colorTheme}.700`}
+            focusBorderColor={`${colorTheme}.500`}
+            rounded="lg"
             onChange={(e) => {
               setState((s) => ({ ...s, name: e.target.value }));
               setError(null);
@@ -804,11 +829,13 @@ const MakeAccount = ({ colorTheme }) => {
                 ref={passwordRef}
                 id="lucem-account-password"
                 name="new-password"
-                variant="filled"
-                bg="gray.900"
+                variant="outline"
+                bg="black"
+                borderColor="whiteAlpha.300"
                 color="whiteAlpha.900"
                 _placeholder={placeholderMuted}
-                focusBorderColor={`${colorTheme}.700`}
+                focusBorderColor={`${colorTheme}.500`}
+                rounded="lg"
                 isInvalid={state.regularPassword === false}
                 pr="4.5rem"
                 type={state.show ? 'text' : 'password'}
@@ -829,17 +856,18 @@ const MakeAccount = ({ colorTheme }) => {
                     }));
                   }
                 }}
-                placeholder="New password"
+                placeholder="Enter password"
               />
               <InputRightElement width="4.5rem">
                 <Button
                   type="button"
                   h="1.75rem"
                   size="sm"
-                  variant="outline"
-                  borderColor={`${colorTheme}.500`}
-                  color="whiteAlpha.900"
-                  _hover={{ bg: 'whiteAlpha.100' }}
+                  rounded="md"
+                  px={2}
+                  bg={`${colorTheme}.500`}
+                  color="white"
+                  _hover={{ bg: `${colorTheme}.400` }}
                   onClick={() => setState((s) => ({ ...s, show: !s.show }))}
                 >
                   {state.show ? 'Hide' : 'Show'}
@@ -859,11 +887,13 @@ const MakeAccount = ({ colorTheme }) => {
                 ref={confirmRef}
                 id="lucem-account-password-confirm"
                 name="confirm-new-password"
-                variant="filled"
-                bg="gray.900"
+                variant="outline"
+                bg="black"
+                borderColor="whiteAlpha.300"
                 color="whiteAlpha.900"
                 _placeholder={placeholderMuted}
-                focusBorderColor={`${colorTheme}.700`}
+                focusBorderColor={`${colorTheme}.500`}
+                rounded="lg"
                 isInvalid={state.matchingPassword === false}
                 pr="4.5rem"
                 autoCapitalize="off"
@@ -883,17 +913,18 @@ const MakeAccount = ({ colorTheme }) => {
                   }));
                 }}
                 type={state.show ? 'text' : 'password'}
-                placeholder="Confirm new password"
+                placeholder="Confirm password"
               />
               <InputRightElement width="4.5rem">
                 <Button
                   type="button"
                   h="1.75rem"
                   size="sm"
-                  variant="outline"
-                  borderColor={`${colorTheme}.500`}
-                  color="whiteAlpha.900"
-                  _hover={{ bg: 'whiteAlpha.100' }}
+                  rounded="md"
+                  px={2}
+                  bg={`${colorTheme}.500`}
+                  color="white"
+                  _hover={{ bg: `${colorTheme}.400` }}
                   onClick={() => setState((s) => ({ ...s, show: !s.show }))}
                 >
                   {state.show ? 'Hide' : 'Show'}
@@ -921,8 +952,9 @@ const MakeAccount = ({ colorTheme }) => {
             loadingText="Creating"
             rightIcon={<ChevronRightIcon />}
             w="100%"
-            minH="48px"
-            mt={2}
+            minH="44px"
+            mt={1}
+            rounded="lg"
           >
             Create
           </Button>

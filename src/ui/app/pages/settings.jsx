@@ -3,7 +3,6 @@ import {
   Button,
   IconButton,
   Text,
-  useColorMode,
   Switch as ButtonSwitch,
   Image,
   SkeletonCircle,
@@ -15,13 +14,11 @@ import {
   Icon,
   Select,
   useToast,
-  Badge,
   Flex,
 } from '@chakra-ui/react';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  SunIcon,
   SmallCloseIcon,
   RepeatIcon,
   CheckIcon,
@@ -50,6 +47,69 @@ import AvatarLoader from '../components/avatarLoader';
 import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
 
+const settingsInputProps = {
+  bg: 'black',
+  borderColor: 'whiteAlpha.300',
+  color: 'white',
+  _placeholder: { color: 'whiteAlpha.500' },
+  _hover: { borderColor: 'whiteAlpha.400' },
+};
+
+const settingsPrimaryButtonProps = {
+  size: 'md',
+  w: 'full',
+  h: '12',
+  rounded: 'xl',
+  bg: 'gray.800',
+  color: 'white',
+  fontWeight: 'semibold',
+  _hover: { bg: 'gray.700' },
+  _active: { bg: 'gray.700' },
+};
+
+function SettingsListNavItem({ label, onClick }) {
+  return (
+    <Box
+      as="button"
+      type="button"
+      w="full"
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      py={4}
+      px={4}
+      rounded="xl"
+      bg="transparent"
+      borderWidth={0}
+      cursor="pointer"
+      transition="background 0.15s ease"
+      _hover={{ bg: 'whiteAlpha.50' }}
+      onClick={onClick}
+    >
+      <Text fontWeight="semibold" color="white" fontSize="md" textAlign="left">
+        {label}
+      </Text>
+      <ChevronRightIcon color="whiteAlpha.600" boxSize={5} />
+    </Box>
+  );
+}
+
+function SettingsPageTitle({ children }) {
+  return (
+    <Text
+      textAlign="center"
+      fontSize="xl"
+      fontWeight="bold"
+      color="white"
+      letterSpacing="tight"
+      mb={6}
+      mt={1}
+    >
+      {children}
+    </Text>
+  );
+}
+
 const Settings = () => {
   const navigate = useNavigate();
   const accountRef = React.useRef();
@@ -64,7 +124,8 @@ const Settings = () => {
         position="relative"
         w="full"
         maxW="100%"
-        className="lucem-wallet-main-column"
+        bg="black"
+        className="lucem-settings-shell lucem-wallet-main-column"
       >
         <Account
           ref={accountRef}
@@ -84,8 +145,8 @@ const Settings = () => {
           minH={0}
           overflowY="auto"
           w="full"
-          px={{ base: 4, md: 6 }}
-          pb={6}
+          px={{ base: 4, md: 5 }}
+          pb="calc(1.5rem + env(safe-area-inset-bottom, 0px))"
         >
           <Routes>
             <Route path="*" element={<Overview />} />
@@ -105,61 +166,26 @@ const Settings = () => {
 
 const Overview = () => {
   const navigate = useNavigate();
-  // const { colorMode, toggleColorMode } = useColorMode();
   return (
-    <Box w="full" maxW="md" mx="auto" pt={2}>
-      <Text fontSize="lg" fontWeight="bold" mb={6}>
-        Settings
-      </Text>
-      <Flex direction="column" gap={1}>
-        <Button
-          justifyContent="space-between"
-          w="full"
-          py={6}
-          rightIcon={<ChevronRightIcon />}
-          variant="ghost"
-          onClick={() => {
-            navigate('general');
-          }}
-        >
-          General settings
-        </Button>
-        <Button
-          justifyContent="space-between"
-          w="full"
-          py={6}
-          rightIcon={<ChevronRightIcon />}
-          variant="ghost"
-          onClick={() => {
-            navigate('whitelisted');
-          }}
-        >
-          Whitelisted sites
-        </Button>
-        <Button
-          justifyContent="space-between"
-          w="full"
-          py={6}
-          rightIcon={<ChevronRightIcon />}
-          variant="ghost"
-          onClick={() => {
-            navigate('network');
-          }}
-        >
-          Network
-        </Button>
-        <Button
-          justifyContent="space-between"
-          w="full"
-          py={6}
-          rightIcon={<ChevronRightIcon />}
-          variant="ghost"
-          onClick={() => {
-            navigate('legal');
-          }}
-        >
-          Legal
-        </Button>
+    <Box w="full" maxW="md" mx="auto" pt={1}>
+      <SettingsPageTitle>Settings</SettingsPageTitle>
+      <Flex direction="column" gap={2}>
+        <SettingsListNavItem
+          label="General settings"
+          onClick={() => navigate('general')}
+        />
+        <SettingsListNavItem
+          label="Whitelisted sites"
+          onClick={() => navigate('whitelisted')}
+        />
+        <SettingsListNavItem
+          label="Network"
+          onClick={() => navigate('network')}
+        />
+        <SettingsListNavItem
+          label="Legal"
+          onClick={() => navigate('legal')}
+        />
       </Flex>
     </Box>
   );
@@ -219,16 +245,13 @@ const GeneralSettings = ({ accountRef }) => {
   }, []);
 
   return (
-    <Box w="full" maxW="md" mx="auto" pt={2}>
-      <Text fontSize="lg" fontWeight="bold" mb={4}>
-        General settings
-      </Text>
-      <InputGroup size="md" w="full" maxW="sm">
+    <Box w="full" maxW="sm" mx="auto" pt={1}>
+      <SettingsPageTitle>General settings</SettingsPageTitle>
+      <InputGroup size="md" w="full">
         <Input
-          variant="filled"
-          bg="gray.800"
-          color="whiteAlpha.900"
-          _placeholder={{ color: 'whiteAlpha.600' }}
+          variant="outline"
+          rounded="xl"
+          {...settingsInputProps}
           onKeyDown={(e) => {
             if (
               e.key == 'Enter' &&
@@ -245,14 +268,15 @@ const GeneralSettings = ({ accountRef }) => {
           }}
           pr="4.5rem"
         />
-        <InputRightElement width="4.5rem">
+        <InputRightElement width="4.5rem" h="full">
           {account.name == originalName ? (
-            <Icon mr="-4" as={MdModeEdit} />
+            <Icon mr="-2" as={MdModeEdit} color="whiteAlpha.700" />
           ) : (
             <Button
               isDisabled={account.name.length <= 0}
               h="1.75rem"
               size="sm"
+              rounded="md"
               onClick={nameHandler}
             >
               Apply
@@ -260,23 +284,37 @@ const GeneralSettings = ({ accountRef }) => {
           )}
         </InputRightElement>
       </InputGroup>
-      <Flex align="center" gap={4} mt={6}>
-        <Box w="65px" h="65px" flexShrink={0}>
+
+      <Flex align="center" justify="center" gap={5} mt={8} w="full">
+        <Box w="72px" h="72px" flexShrink={0} rounded="full" overflow="hidden">
           <AvatarLoader forceUpdate avatar={account.avatar} width="full" />
         </Box>
         <IconButton
           onClick={() => {
             avatarHandler();
           }}
-          rounded="md"
-          size="sm"
+          rounded="lg"
+          size="md"
+          variant="outline"
+          borderColor="whiteAlpha.300"
+          color="whiteAlpha.900"
+          bg="black"
+          _hover={{ bg: 'whiteAlpha.50' }}
           aria-label="New avatar"
           icon={<RepeatIcon />}
         />
       </Flex>
 
-      <Flex align="center" gap={2} mt={8} w="full" maxW="sm">
-        <Text>USD</Text>
+      <Flex
+        align="center"
+        justify="center"
+        gap={3}
+        mt={8}
+        w="full"
+      >
+        <Text color="white" fontWeight="medium">
+          USD
+        </Text>
         <ButtonSwitch
           defaultChecked={settings.currency !== 'usd'}
           onChange={(e) => {
@@ -287,16 +325,21 @@ const GeneralSettings = ({ accountRef }) => {
             }
           }}
         />
-        <Text>EUR</Text>
+        <Text color="white" fontWeight="medium">
+          EUR
+        </Text>
       </Flex>
-      <Flex direction="column" gap={3} mt={8} w="full" maxW="sm">
-        <Button disabled={refreshed} size="md" w="full" onClick={refreshHandler}>
+
+      <Flex direction="column" gap={3} mt={8} w="full">
+        <Button
+          {...settingsPrimaryButtonProps}
+          isDisabled={refreshed}
+          onClick={refreshHandler}
+        >
           Refresh Balance
         </Button>
         <Button
-          colorScheme="gray"
-          size="md"
-          w="full"
+          {...settingsPrimaryButtonProps}
           onClick={() => {
             changePasswordRef.current.openModal();
           }}
@@ -307,8 +350,10 @@ const GeneralSettings = ({ accountRef }) => {
       <Button
         mt={10}
         size="sm"
-        colorScheme="red"
         variant="link"
+        color="red.400"
+        fontWeight="semibold"
+        w="full"
         onClick={() => {
           ref.current.openModal();
         }}
@@ -358,69 +403,60 @@ const Whitelisted = () => {
     getData();
   }, []);
   return (
-    <Box
-      width="100%"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      flexDirection="column"
-    >
-      <Box height="10" />
-      <Text fontSize="lg" fontWeight="bold">
-        Whitelisted sites
-      </Text>
-      <Box height="6" />
+    <Box w="full" maxW="md" mx="auto" pt={1}>
+      <SettingsPageTitle>Whitelisted sites</SettingsPageTitle>
       {whitelisted ? (
         whitelisted.length > 0 ? (
-          whitelisted.map((origin, index) => (
-            <Box
-              mb="2"
-              key={index}
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              width="65%"
-            >
-              <Image
-                width="24px"
-                src={platform.icons.getFaviconUrl(origin)}
-                fallback={<SkeletonCircle width="24px" height="24px" />}
-              />
-              <Text>{origin.split('//')[1]}</Text>
-              <SmallCloseIcon
-                cursor="pointer"
-                onClick={async () => {
-                  await removeWhitelisted(origin);
-                  getData();
-                }}
-              />
-            </Box>
-          ))
+          <Flex direction="column" gap={3} w="full">
+            {whitelisted.map((origin, index) => (
+              <Flex
+                key={index}
+                align="center"
+                justify="space-between"
+                gap={3}
+                py={3}
+                px={4}
+                rounded="xl"
+                bg="whiteAlpha.50"
+                borderWidth="1px"
+                borderColor="whiteAlpha.100"
+              >
+                <Image
+                  width="24px"
+                  src={platform.icons.getFaviconUrl(origin)}
+                  fallback={<SkeletonCircle width="24px" height="24px" />}
+                />
+                <Text
+                  flex="1"
+                  color="white"
+                  fontSize="sm"
+                  fontWeight="medium"
+                  isTruncated
+                >
+                  {origin.split('//')[1]}
+                </Text>
+                <SmallCloseIcon
+                  cursor="pointer"
+                  color="whiteAlpha.700"
+                  _hover={{ color: 'white' }}
+                  onClick={async () => {
+                    await removeWhitelisted(origin);
+                    getData();
+                  }}
+                />
+              </Flex>
+            ))}
+          </Flex>
         ) : (
-          <Box
-            mt="200"
-            width="full"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            color="GrayText"
-          >
+          <Text textAlign="center" color="whiteAlpha.500" py={16} fontSize="sm">
             No whitelisted sites
-          </Box>
+          </Text>
         )
       ) : (
-        <Box
-          mt="200"
-          width="full"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
+        <Flex w="full" py={20} align="center" justify="center">
           <Spinner color="yellow" speed="0.5s" />
-        </Box>
+        </Flex>
       )}
-
-      <Box height="6" />
     </Box>
   );
 };
@@ -458,46 +494,33 @@ const Network = () => {
   }, [settings]);
 
   return (
-    <>
-      <Box height="10" />
-      <Text fontSize="lg" fontWeight="bold">
-        Network
-      </Text>
-      <Box height="6" />
-      <Box display="flex" alignItems="center" justifyContent="center">
-        <Select
-          defaultValue={settings.network.id}
-          onChange={(e) => {
-            switch (e.target.value) {
-              case NETWORK_ID.mainnet:
-                break;
-              case NETWORK_ID.preprod:
-                break;
-              case NETWORK_ID.preview:
-                break;
-              default:
-                break;
-            }
-
-            const id = e.target.value;
-
-            setSettings({
-              ...settings,
-              network: {
-                ...settings.network,
-                id: NETWORK_ID[id],
-                node: NODE[id],
-              },
-            });
-          }}
-        >
-          <option value={NETWORK_ID.mainnet}>Mainnet</option>
-          <option value={NETWORK_ID.preprod}>Preprod</option>
-          <option value={NETWORK_ID.preview}>Preview</option>
-        </Select>
-      </Box>
-      <Box height="8" />
-      <Box display="flex" alignItems="center" justifyContent="center">
+    <Box w="full" maxW="sm" mx="auto" pt={1}>
+      <SettingsPageTitle>Network</SettingsPageTitle>
+      <Select
+        w="full"
+        rounded="xl"
+        bg="gray.900"
+        borderColor="whiteAlpha.300"
+        color="white"
+        mb={6}
+        defaultValue={settings.network.id}
+        onChange={(e) => {
+          const id = e.target.value;
+          setSettings({
+            ...settings,
+            network: {
+              ...settings.network,
+              id: NETWORK_ID[id],
+              node: NODE[id],
+            },
+          });
+        }}
+      >
+        <option value={NETWORK_ID.mainnet}>Mainnet</option>
+        <option value={NETWORK_ID.preprod}>Preprod</option>
+        <option value={NETWORK_ID.preview}>Preview</option>
+      </Select>
+      <Flex align="center" gap={3} mb={4}>
         <Checkbox
           isChecked={isEnabled}
           onChange={(e) => {
@@ -514,14 +537,17 @@ const Network = () => {
             setIsEnabled(e.target.checked);
           }}
           size="md"
-        />{' '}
-        <Box width="2" /> <Text>Custom node</Text>
-      </Box>
-      <Box height="3" />
-      <InputGroup size="md" width={'280px'}>
+        />
+        <Text color="white" fontWeight="medium">
+          Custom node
+        </Text>
+      </Flex>
+      <InputGroup size="md" w="full">
         <Input
           isDisabled={!isEnabled}
-          fontSize={'xs'}
+          fontSize="sm"
+          rounded="xl"
+          {...settingsInputProps}
           value={value}
           placeholder="http://localhost:8090/api/submit/tx"
           onKeyDown={(e) => {
@@ -532,18 +558,19 @@ const Network = () => {
           onChange={(e) => setValue(e.target.value)}
           pr="4.5rem"
         />
-        <InputRightElement width="4.5rem">
+        <InputRightElement width="4.5rem" h="full">
           <Button
             isDisabled={applied || !isEnabled || value.length <= 0}
             h="1.75rem"
             size="sm"
+            rounded="md"
             onClick={endpointHandler}
           >
             {applied ? <CheckIcon color={'yellow.400'} /> : 'Apply'}
           </Button>
         </InputRightElement>
       </InputGroup>
-    </>
+    </Box>
   );
 };
 

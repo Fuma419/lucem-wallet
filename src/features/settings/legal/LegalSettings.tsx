@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   Flex,
   Link,
   Popover,
@@ -18,16 +17,62 @@ import { ChevronRightIcon, InfoOutlineIcon } from '@chakra-ui/icons';
 import PrivacyPolicy from '../../../ui/app/components/privacyPolicy';
 import TermsOfUse from '../../../ui/app/components/termsOfUse';
 
+function SettingsPageTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <Text
+      textAlign="center"
+      fontSize="xl"
+      fontWeight="bold"
+      color="white"
+      letterSpacing="tight"
+      mb={6}
+      mt={1}
+    >
+      {children}
+    </Text>
+  );
+}
+
+function SettingsListNavItem({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <Box
+      as="button"
+      type="button"
+      w="full"
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      py={4}
+      px={4}
+      rounded="xl"
+      bg="transparent"
+      borderWidth={0}
+      cursor="pointer"
+      transition="background 0.15s ease"
+      _hover={{ bg: 'whiteAlpha.50' }}
+      onClick={onClick}
+    >
+      <Text fontWeight="semibold" color="white" fontSize="md" textAlign="left">
+        {label}
+      </Text>
+      <ChevronRightIcon color="whiteAlpha.600" boxSize={5} />
+    </Box>
+  );
+}
+
 export const LegalSettings = () => {
   const termsRef = useRef<{ openModal: () => void }>();
   const privacyPolicyRef = useRef<{ openModal: () => void }>();
   return (
     <>
-      <Box height="10" />
-      <Text fontSize="lg" fontWeight="bold">
-        Legal
-      </Text>
-      <Box height="6" />
+      <Box w="full" maxW="md" mx="auto" pt={1}>
+      <SettingsPageTitle>Legal</SettingsPageTitle>
       {/* <Flex minWidth="65%" padding="0 16px" alignItems="center" gap="2">
         <Text fontSize="16" fontWeight="bold">
           Analytics
@@ -73,28 +118,19 @@ export const LegalSettings = () => {
           onChange={() => setAnalyticsConsent(!analytics.consent)}
         />
       </Flex> */}
-      <Box height="3" />
-      <Button
-        justifyContent="space-between"
-        width="65%"
-        rightIcon={<ChevronRightIcon />}
-        variant="ghost"
-        onClick={() => termsRef.current?.openModal()}
-      >
-        Terms of Use
-      </Button>
-      <Box height="1" />
-      <Button
-        justifyContent="space-between"
-        width="65%"
-        rightIcon={<ChevronRightIcon />}
-        variant="ghost"
-        onClick={() => privacyPolicyRef.current?.openModal()}
-      >
-        Privacy Policy
-      </Button>
+      <Flex direction="column" gap={2} w="full">
+        <SettingsListNavItem
+          label="Terms of Use"
+          onClick={() => termsRef.current?.openModal()}
+        />
+        <SettingsListNavItem
+          label="Privacy Policy"
+          onClick={() => privacyPolicyRef.current?.openModal()}
+        />
+      </Flex>
       <PrivacyPolicy ref={privacyPolicyRef} />
       <TermsOfUse ref={termsRef} />
+      </Box>
     </>
   );
 };

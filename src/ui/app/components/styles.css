@@ -60,6 +60,26 @@ body {
   margin-right: auto;
 }
 
+/* Settings + extension: pure black shell (mock-aligned). */
+.lucem-settings-shell {
+  background-color: #000000;
+}
+
+/* Tight “Create Account” card (create-wallet tab + similar). */
+.lucem-create-account-panel {
+  width: 100%;
+  max-width: min(22rem, 92vw);
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1rem 1.125rem 1.125rem;
+  border-radius: 12px;
+  background: rgba(8, 8, 8, 0.96);
+  border: 1px solid rgba(220, 27, 250, 0.35);
+  box-shadow:
+    0 0 28px rgba(220, 27, 250, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 /* Sign-data / similar: payload area scales on short internal popups. */
 .lucem-sign-payload-scroll {
   width: 76%;

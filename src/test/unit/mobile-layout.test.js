@@ -220,6 +220,15 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).not.toMatch(/height:\s*['"]400px['"]/);
   });
 
+  test('privacyPolicy.jsx legal scroll region should cap height with viewport (not fixed 400px only)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/privacyPolicy.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/min\(25rem/);
+    expect(src).not.toMatch(/height:\s*['"]400px['"]/);
+  });
+
   test('trezorTx.jsx should use safe-area-aware column shell', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '../../ui/app/tabs/trezorTx.jsx'),

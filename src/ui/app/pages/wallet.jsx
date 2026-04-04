@@ -74,6 +74,7 @@ import {
   DeleteIcon,
   CopyIcon,
   ChevronDownIcon,
+  ChevronRightIcon,
   InfoOutlineIcon,
 } from '@chakra-ui/icons';
 import { Scrollbars } from '../components/scrollbar';
@@ -93,7 +94,6 @@ import { NETWORK_ID, TAB, STORAGE } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
-import { BiWallet } from 'react-icons/bi';
 import { GiToken, GiUsbKey } from 'react-icons/gi';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
@@ -836,11 +836,17 @@ const NewAccountModal = React.forwardRef((props, ref) => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [state, setState] = React.useState({
     password: '',
+    confirmPassword: '',
     show: false,
     name: '',
+    wrongPassword: false,
   });
 
+  const passwordsMatch =
+    state.password.length > 0 && state.password === state.confirmPassword;
+
   const confirmHandler = async () => {
+    if (!passwordsMatch) return;
     setIsLoading(true);
     try {
       const index = await createAccount(state.name, state.password);
@@ -864,12 +870,19 @@ const NewAccountModal = React.forwardRef((props, ref) => {
     if (isOpen) {
       setState({
         password: '',
+        confirmPassword: '',
         show: false,
         name: '',
         wrongPassword: false,
       });
     }
   }, [isOpen]);
+
+  const canCreate =
+    Boolean(state.name?.trim()) &&
+    state.password.length >= 8 &&
+    passwordsMatch &&
+    !isLoading;
 
   return (
     <Modal
@@ -881,83 +894,141 @@ const NewAccountModal = React.forwardRef((props, ref) => {
       isCentered
     >
       <ModalOverlay />
-      <ModalContent className='modal-glow-purple'>
-        <ModalHeader fontSize="md">
-          {' '}
-          <Box display="flex" alignItems="center">
-            <Icon as={BiWallet} mr="2" /> <Box>Create new account</Box>
-          </Box>
+      <ModalContent className="modal-glow-purple" mx={3}>
+        <ModalHeader fontSize="md" textAlign="center" pt={5} pb={1} px={4}>
+          Create Account
         </ModalHeader>
         <ModalCloseButton />
-        <ModalBody px="10">
-          <Input
-            autoFocus={true}
-            value={state.name}
-            onChange={(e) => setState((s) => ({ ...s, name: e.target.value, wrongPassword: false }))}
-            placeholder="Enter account name"
-            _focus={{
-              borderColor: 'rgba(220, 27, 250, 0.75)',
-              boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)'
-            }}
-          />
-          <Spacer height="4" />
-          <InputGroup size="md">
+        <ModalBody px={4} pt={2} pb={4}>
+          <Stack spacing={3}>
             <Input
-              variant="filled"
-              isInvalid={state.wrongPassword === true}
-              pr="4.5rem"
-              type={state.show ? 'text' : 'password'}
-              value={state.password}
+              autoFocus={true}
+              variant="outline"
+              bg="black"
+              borderColor="whiteAlpha.300"
+              color="white"
+              _placeholder={{ color: 'whiteAlpha.500' }}
+              rounded="lg"
+              value={state.name}
               onChange={(e) =>
-                setState((s) => ({ ...s, password: e.target.value, wrongPassword: false }))
+                setState((s) => ({
+                  ...s,
+                  name: e.target.value,
+                  wrongPassword: false,
+                }))
               }
-              placeholder="Enter password"
-              onKeyDown={(e) => {
-                if (e.key == 'Enter') confirmHandler();
-              }}
+              placeholder="Enter account name"
               _focus={{
                 borderColor: 'rgba(220, 27, 250, 0.75)',
-                boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)'
+                boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)',
               }}
             />
-            <InputRightElement width="4.5rem">
-              <Button
-                h="1.75rem"
-                size="sm"
-                onClick={() => setState((s) => ({ ...s, show: !s.show }))}
-              >
-                {state.show ? 'Hide' : 'Show'}
-              </Button>
-            </InputRightElement>
-          </InputGroup>
-          {state.wrongPassword === true && (
-            <Text color="red.300">Password is wrong</Text>
-          )}
+            <InputGroup size="md">
+              <Input
+                variant="outline"
+                bg="black"
+                borderColor="whiteAlpha.300"
+                color="white"
+                _placeholder={{ color: 'whiteAlpha.500' }}
+                rounded="lg"
+                isInvalid={state.wrongPassword === true}
+                pr="4.5rem"
+                type={state.show ? 'text' : 'password'}
+                value={state.password}
+                onChange={(e) =>
+                  setState((s) => ({
+                    ...s,
+                    password: e.target.value,
+                    wrongPassword: false,
+                  }))
+                }
+                placeholder="Enter password"
+                onKeyDown={(e) => {
+                  if (e.key == 'Enter') confirmHandler();
+                }}
+                _focus={{
+                  borderColor: 'rgba(220, 27, 250, 0.75)',
+                  boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)',
+                }}
+              />
+              <InputRightElement width="4.5rem">
+                <Button
+                  h="1.75rem"
+                  size="sm"
+                  rounded="md"
+                  px={2}
+                  bg="purple.500"
+                  color="white"
+                  _hover={{ bg: 'purple.400' }}
+                  onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+                >
+                  {state.show ? 'Hide' : 'Show'}
+                </Button>
+              </InputRightElement>
+            </InputGroup>
+            <InputGroup size="md">
+              <Input
+                variant="outline"
+                bg="black"
+                borderColor="whiteAlpha.300"
+                color="white"
+                _placeholder={{ color: 'whiteAlpha.500' }}
+                rounded="lg"
+                pr="4.5rem"
+                type={state.show ? 'text' : 'password'}
+                value={state.confirmPassword}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, confirmPassword: e.target.value }))
+                }
+                placeholder="Confirm password"
+                onKeyDown={(e) => {
+                  if (e.key == 'Enter') confirmHandler();
+                }}
+                _focus={{
+                  borderColor: 'rgba(220, 27, 250, 0.75)',
+                  boxShadow: '0 0 0 1px rgba(220, 27, 250, 0.75)',
+                }}
+              />
+              <InputRightElement width="4.5rem">
+                <Button
+                  h="1.75rem"
+                  size="sm"
+                  rounded="md"
+                  px={2}
+                  bg="purple.500"
+                  color="white"
+                  _hover={{ bg: 'purple.400' }}
+                  onClick={() => setState((s) => ({ ...s, show: !s.show }))}
+                >
+                  {state.show ? 'Hide' : 'Show'}
+                </Button>
+              </InputRightElement>
+            </InputGroup>
+            {state.confirmPassword.length > 0 && !passwordsMatch && (
+              <Text fontSize="sm" color="red.300">
+                Passwords do not match
+              </Text>
+            )}
+            {state.wrongPassword === true && (
+              <Text fontSize="sm" color="red.300">
+                Password is wrong
+              </Text>
+            )}
+            <Button
+              isDisabled={!canCreate}
+              isLoading={isLoading}
+              className="button new-account"
+              size="md"
+              w="full"
+              minH="44px"
+              rounded="lg"
+              rightIcon={<ChevronRightIcon />}
+              onClick={confirmHandler}
+            >
+              Create
+            </Button>
+          </Stack>
         </ModalBody>
-
-        <ModalFooter>
-          <Button
-            mr={3}
-            variant="ghost"
-            onClick={() => {
-              onClose();
-            }}
-          >
-            Close
-          </Button>
-          <Button
-            isDisabled={!state.password || !state.name || isLoading}
-            isLoading={isLoading}
-            className="button new-account"
-            size="sm"
-            background="purple.500"
-            rounded="lg"
-            shadow="md"
-            onClick={confirmHandler}
-          >
-            Create
-          </Button>
-        </ModalFooter>
       </ModalContent>
     </Modal>
   );

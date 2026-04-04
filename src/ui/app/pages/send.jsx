@@ -645,7 +645,8 @@ const Send = () => {
                   !address.error &&
                   (value.ada || value.assets.length > 0)
                 }
-                width={'366px'}
+                width={{ base: '90%', md: '366px' }}
+                maxWidth="366px"
                 height={'50px'}
                 isDisabled={!tx || !address.result || fee.error}
                 colorScheme="gray"
@@ -1259,7 +1260,7 @@ const AssetsSelector = ({ assets, addAssets, value }) => {
                   height={200}
                   itemCount={filterAssets().length}
                   itemSize={45}
-                  width={385}
+                  width={Math.min(385, typeof window !== 'undefined' ? window.innerWidth - 40 : 385)}
                   layout="vertical"
                 >
                   {({ index, style }) => {
@@ -1285,7 +1286,8 @@ const AssetsSelector = ({ assets, addAssets, value }) => {
                 </List>
               ) : (
                 <Box
-                  width={385}
+                  width="100%"
+                  maxWidth={385}
                   height={200}
                   display="flex"
                   alignItems="center"
@@ -1301,7 +1303,8 @@ const AssetsSelector = ({ assets, addAssets, value }) => {
               )
             ) : (
               <Box
-                width={385}
+                width="100%"
+                maxWidth={385}
                 height={200}
                 display="flex"
                 alignItems="center"

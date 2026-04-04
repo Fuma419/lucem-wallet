@@ -36,7 +36,8 @@ const AssetPopover = ({ asset, gutter, ...props }) => {
           >
             {asset && (
               <Box
-                width={330}
+                width="100%"
+                maxWidth={330}
                 mt="8"
                 mb="3"
                 alignItems="center"

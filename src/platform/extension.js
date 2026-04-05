@@ -24,7 +24,12 @@ const extensionAdapter = {
         })
       ),
     clear: () =>
-      new Promise((res) => chrome.storage.local.clear(() => res())),
+      new Promise((res, rej) =>
+        chrome.storage.local.clear(() => {
+          if (chrome.runtime.lastError) rej(chrome.runtime.lastError);
+          else res();
+        })
+      ),
   },
 
   navigation: {

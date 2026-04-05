@@ -1506,9 +1506,72 @@ export const requestAccountKey = async (password, accountIndex) => {
   };
 };
 
+/** Remove easy-peasy and other browser-only caches so wiped state is consistent. */
+const clearBrowserWalletCaches = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    window.localStorage.removeItem(LOCAL_STORAGE.assets);
+    const keys = Object.keys(window.localStorage);
+    keys.forEach((k) => {
+      if (k.startsWith('[EasyPeasyStore]')) {
+        window.localStorage.removeItem(k);
+      }
+    });
+  } catch (_) {
+    /* ignore quota / private mode */
+  }
+};
+
 export const resetStorage = async (password) => {
   await requestAccountKey(password, 0);
   await platform.storage.clear();
+  clearBrowserWalletCaches();
+  return true;
+};
+
+/**
+ * Clears all wallet data from extension / IndexedDB without verifying the spending password.
+ * Call only from UI that requires an explicit typed confirmation (see settings).
+ */
+export const eraseLocalWalletData = async () => {
+  await platform.storage.clear();
+  clearBrowserWalletCaches();
+  return true;
+};
+
+/**
+ * First-time hardware / air-gapped setup: store an encrypted local root key so the
+ * wallet has a spending password for reset, change password, and optional new
+ * software accounts. The key is generated in-browser and is not the Keystone/Ledger seed.
+ */
+export const initLocalWalletSecretIfAbsent = async (password) => {
+  await Loader.load();
+  const encryptedKey = await getStorage(STORAGE.encryptedKey);
+  if (encryptedKey) return false;
+  const rootKey = Loader.Cardano.Bip32PrivateKey.generate_ed25519_bip32();
+  try {
+    const encryptedRootKey = await encryptWithPassword(
+      password,
+      rootKey.as_bytes()
+    );
+    const [network, currency] = await Promise.all([
+      getStorage(STORAGE.network),
+      getStorage(STORAGE.currency),
+    ]);
+    const patch = { [STORAGE.encryptedKey]: encryptedRootKey };
+    if (!network) {
+      patch[STORAGE.network] = {
+        id: NETWORK_ID.mainnet,
+        node: NODE.mainnet,
+      };
+    }
+    if (!currency) {
+      patch[STORAGE.currency] = 'usd';
+    }
+    await setStorage(patch);
+  } finally {
+    rootKey.free();
+  }
   return true;
 };
 

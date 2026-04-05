@@ -10,6 +10,8 @@ import {
   getNetwork,
   setNetwork,
   getCurrentAccount,
+  eraseLocalWalletData,
+  initLocalWalletSecretIfAbsent,
 } from '../../../../api/extension';
 import Loader from '../../../../api/loader';
 import { ERROR, NODE, STORAGE } from '../../../../config/config';
@@ -106,4 +108,30 @@ test('should encrypt/decrypt root key correctly', async () => {
   );
   const decryptedKey = await decryptWithPassword(password, encryptedKey);
   expect(Buffer.from(rootKeyBytes, 'hex').toString('hex')).toBe(decryptedKey);
+});
+
+describe('initLocalWalletSecretIfAbsent', () => {
+  beforeEach(() => {
+    global.chrome.storage.local.clear();
+  });
+
+  test('sets encryptedKey and defaults when absent', async () => {
+    await initLocalWalletSecretIfAbsent('abcdefgh');
+    expect(await getStorage(STORAGE.encryptedKey)).toBeDefined();
+    expect(await getStorage(STORAGE.network)).toBeDefined();
+    expect(await getStorage(STORAGE.currency)).toBe('usd');
+  });
+
+  test('second call leaves encryptedKey unchanged', async () => {
+    await initLocalWalletSecretIfAbsent('abcdefgh');
+    const first = await getStorage(STORAGE.encryptedKey);
+    await initLocalWalletSecretIfAbsent('zzzzzzzz');
+    expect(await getStorage(STORAGE.encryptedKey)).toBe(first);
+  });
+});
+
+test('eraseLocalWalletData clears all local data', async () => {
+  await eraseLocalWalletData();
+  const store = await getStorage();
+  expect(store).toEqual({});
 });

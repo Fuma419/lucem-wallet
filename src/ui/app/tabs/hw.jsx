@@ -22,6 +22,7 @@ import {
   Radio,
   RadioGroup,
   Stack,
+  Input,
 } from '@chakra-ui/react';
 import { Scrollbars } from '../components/scrollbar';
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
@@ -41,6 +42,7 @@ import {
   getStorage,
   indexToHw,
   initHW,
+  initLocalWalletSecretIfAbsent,
   keystoneImportRowKey,
 } from '../../../api/extension';
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
@@ -214,6 +216,14 @@ const ConnectHW = ({ onConfirm }) => {
     [keystoneRequestedIndices.length]
   );
 
+  /** animated-qr BaseQRScanner pins decode callback on mount (`useEffect([], …)`); keep latest choices here. */
+  const keystoneDerivationRef = React.useRef(keystoneDerivation);
+  const keystoneRequestedIndicesRef = React.useRef(keystoneRequestedIndices);
+  React.useLayoutEffect(() => {
+    keystoneDerivationRef.current = keystoneDerivation;
+    keystoneRequestedIndicesRef.current = keystoneRequestedIndices;
+  }, [keystoneDerivation, keystoneRequestedIndices]);
+
   if (selected === HW.keystone && keystoneStep === 'showRequest') {
     const cborHex = Buffer.from(keyDerivationUr.cbor).toString('hex');
     return (
@@ -312,16 +322,18 @@ const ConnectHW = ({ onConfirm }) => {
             handleScan={(data) => {
               try {
                 if (keystoneScanConsumedRef.current) return;
+                const deriv = keystoneDerivationRef.current;
+                const indices = keystoneRequestedIndicesRef.current;
                 const { masterFingerprint, keys } =
                   parseKeystoneCardanoConnectUr(data, {
                     forceExportProfile:
-                      keystoneDerivation === 'ledger'
+                      deriv === 'ledger'
                         ? KEYSTONE_DERIVATION.ledger
                         : KEYSTONE_DERIVATION.standard,
                   });
                 const filtered = filterKeystoneKeysForRequestedAccounts(
                   keys,
-                  keystoneRequestedIndices
+                  indices
                 );
                 keystoneScanConsumedRef.current = true;
                 onConfirm({
@@ -490,8 +502,11 @@ const ConnectHW = ({ onConfirm }) => {
                 ADA derivation (two supported paths)
               </Text>
               <RadioGroup
+                name="keystone-ada-derivation"
                 value={keystoneDerivation}
-                onChange={setKeystoneDerivation}
+                onChange={(v) =>
+                  setKeystoneDerivation(v === 'ledger' ? 'ledger' : 'standard')
+                }
                 mt={2}
                 pb={1}
               >
@@ -504,6 +519,11 @@ const ConnectHW = ({ onConfirm }) => {
                   </Radio>
                 </Stack>
               </RadioGroup>
+              <Text fontSize="xs" color="gray.500" mt={2} maxW="340px">
+                This must match the ADA address type you export on Keystone; otherwise
+                the account label may be wrong and addresses will not match Ledger-style
+                Cardano.
+              </Text>
             </Box>
           </Collapse>
         </>
@@ -579,6 +599,11 @@ const SelectAccounts = ({ data, onConfirm }) => {
   const [existing, setExisting] = React.useState({});
   const [isLoading, setIsLoading] = React.useState(false);
   const [isInit, setIsInit] = React.useState(false);
+  const [needsKeystonePassword, setNeedsKeystonePassword] =
+    React.useState(null);
+  const [localWalletPassword, setLocalWalletPassword] = React.useState('');
+  const [localWalletPasswordConfirm, setLocalWalletPasswordConfirm] =
+    React.useState('');
 
   const isKeystone =
     data.device === HW.keystone &&
@@ -612,6 +637,20 @@ const SelectAccounts = ({ data, onConfirm }) => {
   }, []);
 
   React.useEffect(() => {
+    if (!isKeystone) {
+      setNeedsKeystonePassword(false);
+      return;
+    }
+    let cancelled = false;
+    getStorage(STORAGE.encryptedKey).then((enc) => {
+      if (!cancelled) setNeedsKeystonePassword(!enc);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isKeystone]);
+
+  React.useEffect(() => {
     if (!isInit || isKeystone) return;
     setSelected({ 0: true });
   }, [isInit, isKeystone]);
@@ -630,6 +669,11 @@ const SelectAccounts = ({ data, onConfirm }) => {
   const keystoneRows = isKeystone
     ? data.keystoneAccounts.map((k) => k.rowKey)
     : [];
+
+  const keystoneLocalPasswordOk =
+    needsKeystonePassword !== true ||
+    (localWalletPassword.length >= 8 &&
+      localWalletPassword === localWalletPasswordConfirm);
 
   return (
     isInit && (
@@ -704,13 +748,47 @@ const SelectAccounts = ({ data, onConfirm }) => {
             ))}
           </Scrollbars>
         </Box>
+        {needsKeystonePassword === true && (
+          <Box w="full" mt={4}>
+            <Text fontSize="sm" fontWeight="semibold" mb={1}>
+              Set a wallet password for this browser
+            </Text>
+            <Text fontSize="xs" color="gray.500" mb={2}>
+              Used to protect Lucem on this device (reset wallet, change password,
+              and any normal accounts you add later). This is not your Keystone
+              PIN or recovery phrase.
+            </Text>
+            <Stack spacing={2}>
+              <Input
+                type="password"
+                size="sm"
+                rounded="md"
+                placeholder="Password (min 8 characters)"
+                value={localWalletPassword}
+                onChange={(e) => setLocalWalletPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+              <Input
+                type="password"
+                size="sm"
+                rounded="md"
+                placeholder="Confirm password"
+                value={localWalletPasswordConfirm}
+                onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}
+                autoComplete="new-password"
+              />
+            </Stack>
+          </Box>
+        )}
         <Button
           isDisabled={
             isLoading ||
             (isKeystone
               ? keystoneNewAccounts.length === 0 ||
                 Object.keys(selected).filter((s) => selected[s] && !existing[s])
-                  .length < 1
+                  .length < 1 ||
+                needsKeystonePassword === null ||
+                !keystoneLocalPasswordOk
               : Object.keys(selected).filter((s) => selected[s] && !existing[s])
                   .length <= 0)
           }
@@ -766,14 +844,19 @@ const SelectAccounts = ({ data, onConfirm }) => {
               if (!accounts || accounts.length === 0) {
                 throw new Error('No accounts selected');
               }
+              if (device === HW.keystone && needsKeystonePassword) {
+                await initLocalWalletSecretIfAbsent(localWalletPassword);
+              }
               await createHWAccounts(accounts);
-              return onConfirm();
+              onConfirm();
             } catch (e) {
               console.warn(e);
-              setError('An error occured');
+              setError(
+                e && e.message ? String(e.message) : 'An error occured'
+              );
+            } finally {
+              setIsLoading(false);
             }
-
-            setIsLoading(false);
           }}
         >
           Continue

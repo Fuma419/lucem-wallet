@@ -295,7 +295,19 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
     throw new Error('Invalid Keystone QR: missing master fingerprint.');
   }
 
-  const adaAccounts = [];
+  const coerceKeystoneForceExportProfile = (fp) => {
+    if (fp === KEYSTONE_DERIVATION.ledger || fp === 'ledger') {
+      return KEYSTONE_DERIVATION.ledger;
+    }
+    if (fp === KEYSTONE_DERIVATION.standard || fp === 'standard') {
+      return KEYSTONE_DERIVATION.standard;
+    }
+    return null;
+  };
+  const forcedProfile = coerceKeystoneForceExportProfile(forceExportProfile);
+
+  /** Raw ADA rows with profile inferred from UR only (never UI override). */
+  const rawAdaRows = [];
   for (const k of keys) {
     if (k.chain !== 'ADA') continue;
     const account = parseCip1852AccountIndexFromPath(k.path || '');
@@ -307,25 +319,76 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
         'Keystone QR is missing chain code or public key (use Cardano account sync on the device).'
       );
     }
-    const profile =
-      forceExportProfile === KEYSTONE_DERIVATION.ledger ||
-      forceExportProfile === KEYSTONE_DERIVATION.standard
-        ? forceExportProfile
-        : inferKeystoneDerivationProfile(k.note, k.name);
-    const rowKey = `${account}-${profile}`;
-    adaAccounts.push({
+    const inferred = inferKeystoneDerivationProfile(k.note, k.name);
+    rawAdaRows.push({
       account,
       publicKey: pub + chain,
-      cip1852Path: cip1852AccountPath(account),
-      profile,
-      rowKey,
-      name: formatKeystoneCardanoAccountLabel(account, profile),
+      inferred,
     });
   }
 
-  if (adaAccounts.length === 0) {
+  if (rawAdaRows.length === 0) {
     throw new Error(
       'No Cardano (ADA) account keys found in this QR. Use CIP-1852 paths m/1852\'/1815\'/… on the device (Ledger-compatible or Cardano standard).'
+    );
+  }
+
+  const accountOrder = [];
+  const byAccount = new Map();
+  for (const row of rawAdaRows) {
+    if (!byAccount.has(row.account)) {
+      accountOrder.push(row.account);
+      byAccount.set(row.account, []);
+    }
+    byAccount.get(row.account).push(row);
+  }
+
+  const adaAccounts = [];
+  for (const account of accountOrder) {
+    const rows = byAccount.get(account);
+    if (!forcedProfile) {
+      for (const r of rows) {
+        const profile = r.inferred;
+        adaAccounts.push({
+          account,
+          publicKey: r.publicKey,
+          cip1852Path: cip1852AccountPath(account),
+          profile,
+          rowKey: `${account}-${profile}`,
+          name: formatKeystoneCardanoAccountLabel(account, profile),
+        });
+      }
+      continue;
+    }
+
+    const matches = rows.filter((r) => r.inferred === forcedProfile);
+    if (matches.length >= 1) {
+      adaAccounts.push({
+        account,
+        publicKey: matches[0].publicKey,
+        cip1852Path: cip1852AccountPath(account),
+        profile: forcedProfile,
+        rowKey: `${account}-${forcedProfile}`,
+        name: formatKeystoneCardanoAccountLabel(account, forcedProfile),
+      });
+      continue;
+    }
+    if (rows.length === 1) {
+      const r = rows[0];
+      adaAccounts.push({
+        account,
+        publicKey: r.publicKey,
+        cip1852Path: cip1852AccountPath(account),
+        profile: forcedProfile,
+        rowKey: `${account}-${forcedProfile}`,
+        name: formatKeystoneCardanoAccountLabel(account, forcedProfile),
+      });
+      continue;
+    }
+    const wantLedger = forcedProfile === KEYSTONE_DERIVATION.ledger;
+    throw new Error(
+      `Keystone sent several ADA keys for account ${account} but none match the derivation you chose in Lucem (${wantLedger ? 'Ledger-compatible' : 'Cardano standard'}). ` +
+        'Export again from Keystone with only that address type, or change the derivation in Lucem Advanced to match a key the device lists.'
     );
   }
 

@@ -66,12 +66,12 @@ const idbRemove = async (key) => {
 };
 
 const idbClear = async () => {
-  const db = await openDB();
+  dbPromise = null;
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).clear();
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    const req = indexedDB.deleteDatabase(DB_NAME);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => resolve();
   });
 };
 

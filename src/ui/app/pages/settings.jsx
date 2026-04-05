@@ -15,6 +15,12 @@ import {
   Select,
   useToast,
   Flex,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from '@chakra-ui/react';
 import {
   ChevronLeftIcon,
@@ -33,6 +39,7 @@ import {
   getWhitelisted,
   removeWhitelisted,
   resetStorage,
+  eraseLocalWalletData,
   setAccountAvatar,
   setAccountName,
   setStorage,
@@ -46,6 +53,12 @@ import { MdModeEdit } from 'react-icons/md';
 import AvatarLoader from '../components/avatarLoader';
 import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
+
+/** Must match the gray link label so users type what they already read. */
+const ERASE_WALLET_CONFIRM_PHRASE = 'Erase data on this device';
+
+const normalizeErasePhraseInput = (s) =>
+  s.trim().replace(/\s+/g, ' ').toLowerCase();
 
 const settingsInputProps = {
   bg: 'black',
@@ -204,6 +217,10 @@ const GeneralSettings = ({ accountRef }) => {
   // const { colorMode, toggleColorMode } = useColorMode();
   const ref = React.useRef();
   const changePasswordRef = React.useRef();
+  const [eraseModalOpen, setEraseModalOpen] = React.useState(false);
+  const [eraseAck, setEraseAck] = React.useState(false);
+  const [erasePhrase, setErasePhrase] = React.useState('');
+  const [eraseBusy, setEraseBusy] = React.useState(false);
 
   const nameHandler = async () => {
     await setAccountName(account.name);
@@ -360,15 +377,139 @@ const GeneralSettings = ({ accountRef }) => {
       >
         Reset Wallet
       </Button>
+      <Button
+        mt={2}
+        size="xs"
+        variant="link"
+        color="whiteAlpha.600"
+        fontWeight="normal"
+        w="full"
+        onClick={() => {
+          setEraseAck(false);
+          setErasePhrase('');
+          setEraseModalOpen(true);
+        }}
+      >
+        Lost password or reset not working? Erase data on this device
+      </Button>
+      <Modal
+        isOpen={eraseModalOpen}
+        onClose={() => {
+          if (!eraseBusy) setEraseModalOpen(false);
+        }}
+        isCentered
+        size="sm"
+      >
+        <ModalOverlay />
+        <ModalContent bg="gray.900" color="white" mx={3}>
+          <ModalHeader fontSize="md">Erase wallet on this device</ModalHeader>
+          <ModalBody>
+            <Text fontSize="sm" mb={3}>
+              This removes all Lucem data from this browser or extension,
+              including accounts and settings. It does not verify your
+              password. You will need your recovery phrase to use this wallet
+              again.
+            </Text>
+            <Checkbox
+              isChecked={eraseAck}
+              onChange={(e) => setEraseAck(e.target.checked)}
+              colorScheme="yellow"
+              mb={3}
+            >
+              I have saved my recovery phrase or I accept losing access to these
+              funds.
+            </Checkbox>
+            <Text fontSize="xs" color="whiteAlpha.600" mb={1}>
+              Type the same phrase as the gray link (spacing and capitalization
+              are flexible):
+            </Text>
+            <Text
+              fontSize="sm"
+              fontFamily="mono"
+              color="yellow.200"
+              mb={2}
+              userSelect="all"
+            >
+              {ERASE_WALLET_CONFIRM_PHRASE}
+            </Text>
+            <Input
+              {...settingsInputProps}
+              rounded="md"
+              value={erasePhrase}
+              onChange={(e) => setErasePhrase(e.target.value)}
+              placeholder={ERASE_WALLET_CONFIRM_PHRASE}
+              autoComplete="off"
+            />
+          </ModalBody>
+          <ModalFooter flexDirection="column" gap={2}>
+            <Button
+              w="full"
+              colorScheme="red"
+              isDisabled={
+                !eraseAck ||
+                normalizeErasePhraseInput(erasePhrase) !==
+                  normalizeErasePhraseInput(ERASE_WALLET_CONFIRM_PHRASE) ||
+                eraseBusy
+              }
+              isLoading={eraseBusy}
+              onClick={async () => {
+                setEraseBusy(true);
+                try {
+                  await eraseLocalWalletData();
+                  setEraseModalOpen(false);
+                  toast({
+                    title: 'Wallet data erased',
+                    description: 'Reloading…',
+                    status: 'success',
+                    duration: 2000,
+                  });
+                  window.setTimeout(() => {
+                    window.location.reload();
+                  }, 250);
+                } catch (e) {
+                  toast({
+                    title: 'Could not erase data',
+                    description:
+                      e && e.message ? String(e.message) : 'Please try again.',
+                    status: 'error',
+                    duration: 5000,
+                  });
+                  setEraseBusy(false);
+                }
+              }}
+            >
+              Erase all local data
+            </Button>
+            <Button
+              variant="ghost"
+              w="full"
+              isDisabled={eraseBusy}
+              onClick={() => setEraseModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
       <ConfirmModal
         info={
           <Box mb="4" fontSize="sm" width="full">
             The wallet will be reset.{' '}
             <b>Make sure you have written down your seed phrase.</b> It's the
             only way to recover your current wallet! <br />
-            Type your password below, if you want to continue.
+            <Text as="span" display="block" mt={3} color="orange.200">
+              Enter your <b>wallet password</b> here only. Do not type &quot;Erase
+              data on this device&quot; in this box — that is not your password and
+              will show &quot;wrong password&quot;. Close this dialog and tap the gray
+              &quot;Erase data on this device&quot; link under Reset Wallet instead.
+            </Text>
+            <Text as="span" display="block" mt={2}>
+              A blank password only works if this install used an empty encryption
+              password (rare).
+            </Text>
           </Box>
         }
+        allowEmptyPassword
         ref={ref}
         onCloseBtn={() => {
         }}
@@ -380,11 +521,13 @@ const GeneralSettings = ({ accountRef }) => {
             ref.current.closeModal();
             toast({
               title: 'Wallet reset',
-              description: 'All data has been cleared.',
+              description: 'Reloading…',
               status: 'success',
-              duration: 3000,
+              duration: 2000,
             });
-            navigate('/welcome');
+            window.setTimeout(() => {
+              window.location.reload();
+            }, 250);
           }
         }}
       />

@@ -20,7 +20,19 @@ import { indexToHw, initHW, isHW } from '../../../api/extension';
 import { ERROR, HW } from '../../../config/config';
 
 const ConfirmModal = React.forwardRef(
-  ({ ready, onConfirm, sign, onCloseBtn, title, info, onHwKeystone }, ref) => {
+  (
+    {
+      ready,
+      onConfirm,
+      sign,
+      onCloseBtn,
+      title,
+      info,
+      onHwKeystone,
+      allowEmptyPassword,
+    },
+    ref
+  ) => {
     const {
       isOpen: isOpenNormal,
       onOpen: onOpenNormal,
@@ -38,6 +50,7 @@ const ConfirmModal = React.forwardRef(
       onCloseBtn,
       title,
       info,
+      allowEmptyPassword: Boolean(allowEmptyPassword),
     };
     const [hw, setHw] = React.useState('');
 
@@ -98,7 +111,12 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
   }, [isOpen]);
 
   const confirmHandler = async () => {
-    if (!state.password || props.ready === false || !waitReady) return;
+    if (
+      (!props.allowEmptyPassword && !state.password) ||
+      props.ready === false ||
+      !waitReady
+    )
+      return;
     try {
       setWaitReady(false);
       const signedMessage = await props.sign(state.password);
@@ -175,7 +193,11 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
             Close
           </Button>
           <Button
-            isDisabled={!state.password || props.ready === false || !waitReady}
+            isDisabled={
+              (!props.allowEmptyPassword && !state.password) ||
+              props.ready === false ||
+              !waitReady
+            }
             isLoading={!waitReady}
             colorScheme="yellow"
             onClick={confirmHandler}

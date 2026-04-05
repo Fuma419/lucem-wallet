@@ -12,4 +12,7 @@ global.chrome.storage.local.set = (item, callback) => {
   global.mockStore = { ...global.mockStore, ...item };
   callback();
 };
-global.chrome.storage.local.clear = () => (global.mockStore = {});
+global.chrome.storage.local.clear = (callback) => {
+  global.mockStore = {};
+  if (typeof callback === 'function') callback();
+};

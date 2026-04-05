@@ -98,6 +98,19 @@ const extensionAdapter = {
         )
       ),
 
+    /**
+     * Leave full-page flows (hw, create wallet, Trezor/Keystone tabs) and return
+     * to the main UI. `window.close()` is blocked for tabs opened via
+     * `chrome.tabs.create`; `tabs.getCurrent` / `tabs.remove` are brittle without the `tabs` permission.
+     * In-document navigation always works for extension pages.
+     */
+    closeCurrentTab: () => {
+      if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
+        window.location.href = chrome.runtime.getURL('mainPopup.html');
+      }
+      return Promise.resolve(true);
+    },
+
     getCurrentWebpage: () =>
       new Promise((res) => {
         chrome.tabs.query(

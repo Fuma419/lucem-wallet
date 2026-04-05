@@ -67,7 +67,6 @@ describe('platform/web.js - events', () => {
 
 describe('platform/web.js - navigation', () => {
   let webAdapter;
-  const originalLocation = window.location;
 
   beforeAll(() => {
     delete global.chrome;

@@ -30,15 +30,19 @@ import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import TrezorWidget from '../components/trezorWidget';
 import {
+  closeCurrentTab,
   createHWAccounts,
   getHwAccounts,
   getStorage,
   indexToHw,
   initHW,
 } from '../../../api/extension';
-import { AnimatedQRScanner } from '@keystonehq/animated-qr';
+import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
-import { parseKeystoneCardanoConnectUr } from '../../../api/keystone-cardano';
+import {
+  generateCardanoKeystoneKeyDerivationUr,
+  parseKeystoneCardanoConnectUr,
+} from '../../../api/keystone-cardano';
 import { MdUsb } from 'react-icons/md';
 import { Planet } from 'react-kawaii';
 import { ledgerUSBVendorId } from '@ledgerhq/devices';
@@ -148,17 +152,77 @@ const ConnectHW = ({ onConfirm }) => {
   const [keystoneStep, setKeystoneStep] = React.useState('pick');
   const [scanError, setScanError] = React.useState('');
 
-  if (selected === HW.keystone && keystoneStep === 'scan') {
+  const keyDerivationUr = React.useMemo(
+    () => generateCardanoKeystoneKeyDerivationUr(),
+    []
+  );
+
+  if (selected === HW.keystone && keystoneStep === 'showRequest') {
+    const cborHex = Buffer.from(keyDerivationUr.cbor).toString('hex');
     return (
       <>
         <Text fontSize="x-large" fontWeight="semibold">
-          Scan Keystone
+          Step 1 — Keystone scans Lucem
+        </Text>
+        <Box h={4} />
+        <Text fontSize="sm" maxW="340px">
+          On your Keystone, open the <b>scanner / camera</b> flow used to
+          connect a software wallet (often under <b>Software Wallet</b> or{' '}
+          <b>Connect Wallet</b>). Point the device camera at the animated QR
+          below and approve the Cardano key request on the device.
+        </Text>
+        <Box h={4} />
+        <Box
+          alignSelf="center"
+          bg="white"
+          p={3}
+          rounded="lg"
+          boxShadow="md"
+          maxW="100%"
+        >
+          <AnimatedQRCode
+            type={keyDerivationUr.type}
+            cbor={cborHex}
+            options={{ size: 220, capacity: 400, interval: 100 }}
+          />
+        </Box>
+        <Box h={4} />
+        <Text fontSize="sm" maxW="340px" color="gray.600">
+          When Keystone shows its animated QR (Account 1 / default path), tap
+          Continue here and allow the webcam to scan it.
+        </Text>
+        <Button
+          mt={4}
+          colorScheme="cyan"
+          rightIcon={<ChevronRightIcon />}
+          onClick={() => {
+            setScanError('');
+            setKeystoneStep('scanReply');
+          }}
+        >
+          Continue to scan Keystone QR
+        </Button>
+        <Button
+          mt={2}
+          variant="ghost"
+          onClick={() => setKeystoneStep('pick')}
+        >
+          Back
+        </Button>
+      </>
+    );
+  }
+
+  if (selected === HW.keystone && keystoneStep === 'scanReply') {
+    return (
+      <>
+        <Text fontSize="x-large" fontWeight="semibold">
+          Step 2 — Scan Keystone
         </Text>
         <Box h={4} />
         <Text fontSize="sm" maxW="320px">
-          On Keystone open <b>Software Wallet</b>, choose <b>Cardano</b>, then
-          export the sync QR (multi-accounts or account key). Allow the camera
-          when prompted.
+          Scan the animated QR on your Keystone screen. Allow the camera when
+          the browser asks.
         </Text>
         <Box h={4} />
         <Box
@@ -194,8 +258,15 @@ const ConnectHW = ({ onConfirm }) => {
             {scanError}
           </Text>
         )}
-        <Button mt={4} variant="ghost" onClick={() => setKeystoneStep('pick')}>
-          Back
+        <Button
+          mt={4}
+          variant="ghost"
+          onClick={() => {
+            setScanError('');
+            setKeystoneStep('showRequest');
+          }}
+        >
+          Back to Step 1
         </Button>
       </>
     );
@@ -263,9 +334,9 @@ const ConnectHW = ({ onConfirm }) => {
       </Box>
       <Box h={10} />
       {selected === HW.keystone && (
-        <Text width="320px" fontSize="sm">
-          Use <b>Continue</b>, then scan the animated sync QR from your
-          Keystone. No USB connection is used.
+        <Text width="340px" fontSize="sm">
+          Two-step air-gapped link: Lucem shows a QR for Keystone to scan first,
+          then you scan Keystone&apos;s QR with this device. No USB.
         </Text>
       )}
       {selected === HW.ledger && (
@@ -283,7 +354,7 @@ const ConnectHW = ({ onConfirm }) => {
         onClick={async () => {
           setError('');
           if (selected === HW.keystone) {
-            setKeystoneStep('scan');
+            setKeystoneStep('showRequest');
             setScanError('');
             return;
           }
@@ -382,7 +453,9 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Box h={6} />
         <Text width="300px">
           {isKeystone
-            ? 'Choose which Cardano accounts from this Keystone sync QR to add.'
+            ? data.keystoneAccounts.length === 1
+              ? 'Confirm adding this Cardano account (Account 1).'
+              : 'Choose which Cardano accounts from this Keystone sync QR to add.'
             : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device.'}
         </Text>
         <Box h={8} />
@@ -521,12 +594,7 @@ const SuccessAndClose = () => {
       <Text width="300px">
         You can now close this tab and continue with the extension.
       </Text>
-      <Button
-        mt="auto"
-        onClick={async () => {
-          window.close();
-        }}
-      >
+      <Button mt="auto" onClick={() => closeCurrentTab()}>
         Close
       </Button>
     </>

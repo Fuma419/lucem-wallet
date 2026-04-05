@@ -386,8 +386,9 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
           <ModalCloseButton />
           <ModalBody>
             <Text fontSize="sm">
-              Connect a Ledger via USB or a Keystone by scanning sync QR codes
-              in a new tab (camera required for Keystone).
+              Connect a Ledger via USB, or a Keystone in two steps: Lucem shows
+              a QR for Keystone to scan first, then you scan Keystone&apos;s QR
+              (camera required in the browser for step 2).
             </Text>
             <Box h="4" />
             <Box display="flex" alignItems="center" justifyContent="center">

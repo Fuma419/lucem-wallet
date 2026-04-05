@@ -24,6 +24,7 @@ import { ChevronRightIcon } from '@chakra-ui/icons';
 import { createRoot } from 'react-dom/client';
 import Theme from '../../theme';
 import { TAB } from '../../../config/config';
+import platform from '../../../platform';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
 
 /** Two-column seed UI: tighter on phones, standard on tablet/desktop. */
@@ -996,7 +997,7 @@ const SuccessAndClose = ({ flow }) => {
         mt="auto"
         onClick={async () => {
           if (isExtension) {
-            window.close();
+            platform.navigation.closeCurrentTab();
           } else {
             // Load the main bundle at /wallet so the URL matches the in-app route (matches Vercel rewrites).
             window.location.assign(`${window.location.origin}/wallet`);

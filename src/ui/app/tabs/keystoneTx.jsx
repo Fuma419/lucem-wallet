@@ -21,6 +21,7 @@ import { URType } from '@keystonehq/keystone-sdk';
 import LogoOriginal from '../../../assets/img/logo.svg';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import {
+  closeCurrentTab,
   getCurrentAccount,
   getUtxos,
   indexToHw,
@@ -147,7 +148,7 @@ const App = () => {
     } finally {
       resetSend();
       setRoute('/wallet');
-      setTimeout(() => window.close(), 2500);
+      setTimeout(() => closeCurrentTab(), 2500);
     }
   };
 

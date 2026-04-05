@@ -314,6 +314,11 @@ describe('getNativeAccounts', () => {
     const accounts = { 'ledger-a-0': { name: 'L1' } };
     expect(Object.keys(getNativeAccounts(accounts)).length).toBe(0);
   });
+
+  test('returns empty object when accounts is null or undefined', () => {
+    expect(getNativeAccounts(undefined)).toEqual({});
+    expect(getNativeAccounts(null)).toEqual({});
+  });
 });
 
 describe('getHwAccounts', () => {
@@ -333,6 +338,13 @@ describe('getHwAccounts', () => {
     const accounts = { 0: { name: 'Native' } };
     const result = getHwAccounts(accounts, { device: 'ledger', id: 'nope' });
     expect(Object.keys(result).length).toBe(0);
+  });
+
+  test('returns empty object when accounts storage is missing', () => {
+    expect(getHwAccounts(undefined, { device: 'ledger', id: 'abc' })).toEqual(
+      {}
+    );
+    expect(getHwAccounts(null, { device: 'keystone', id: 'x' })).toEqual({});
   });
 });
 

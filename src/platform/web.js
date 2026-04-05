@@ -98,6 +98,11 @@ const webAdapter = {
       return Promise.resolve({ id: Date.now() });
     },
 
+    closeCurrentTab: () => {
+      window.location.href = 'mainPopup.html';
+      return Promise.resolve(true);
+    },
+
     getCurrentWebpage: async () => ({
       url: window.location.origin,
       favicon: null,

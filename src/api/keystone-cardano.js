@@ -2,10 +2,48 @@
  * Keystone air-gapped helpers (Cardano CIP-1852) using @keystonehq/keystone-sdk.
  */
 
-import KeystoneSDK, { UR, URType } from '@keystonehq/keystone-sdk';
+import KeystoneSDK, {
+  UR,
+  URType,
+  Curve,
+  DerivationAlgorithm,
+  QRHardwareCallVersion,
+} from '@keystonehq/keystone-sdk';
 import Loader from './loader';
 
 const CARDANO_ACCOUNT_PATH_RE = /^m\/1852'\/1815'\/(\d+)'$/i;
+
+/**
+ * Default: first Cardano account only (CIP-1852 `m/1852'/1815'/0'`, i.e. “Account 1”).
+ * A single schema keeps the hardware-call QR small so Keystone accepts it.
+ */
+export const KEYSTONE_CARDANO_ACCOUNT_SLOTS = 1;
+
+/**
+ * QR the user shows to Keystone first (Hardware Call / key derivation).
+ * Keystone scans this, then displays the sync QR for the wallet to scan.
+ * @param {number} [accountCount] — number of consecutive accounts from index 0 (default 1).
+ * @see https://dev.keyst.one/docs/integration-tutorial-advanced/hardware-call
+ */
+export function generateCardanoKeystoneKeyDerivationUr({
+  origin = 'Lucem',
+  accountCount = KEYSTONE_CARDANO_ACCOUNT_SLOTS,
+} = {}) {
+  const schemas = [];
+  for (let i = 0; i < accountCount; i++) {
+    schemas.push({
+      path: `m/1852'/1815'/${i}'`,
+      curve: Curve.ed25519,
+      algo: DerivationAlgorithm.bip32ed25519,
+      chainType: 'ADA',
+    });
+  }
+  return KeystoneSDK.generateKeyDerivationCall({
+    schemas,
+    origin,
+    version: QRHardwareCallVersion.V1,
+  });
+}
 
 export function urFromScan({ type, cbor }) {
   return new UR(Buffer.from(cbor, 'hex'), type);
@@ -38,7 +76,9 @@ export function parseKeystoneCardanoConnectUr(scan) {
       },
     ];
   } else {
-    throw new Error('Scan a Keystone Cardano sync QR (multi-accounts or HD key).');
+    throw new Error(
+      'Unexpected QR type. After scanning the Lucem QR on Keystone, scan the animated QR Keystone shows (multi-accounts or HD key).'
+    );
   }
 
   if (!masterFingerprint) {

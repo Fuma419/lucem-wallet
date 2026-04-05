@@ -829,6 +829,8 @@ export const createPopup = (popup) => platform.navigation.createPopup(popup);
 export const createTab = (tab, query = '') =>
   platform.navigation.createTab(tab, query);
 
+export const closeCurrentTab = () => platform.navigation.closeCurrentTab();
+
 export const pushKeystoneSignPayload = async (payload) => {
   const signId =
     typeof crypto !== 'undefined' && crypto.randomUUID
@@ -1624,7 +1626,10 @@ export const createAccount = async (name, password, accountIndex = null) => {
 
 export const createHWAccounts = async (accounts) => {
   await Loader.load();
-  const existingAccounts = await getStorage(STORAGE.accounts);
+  let existingAccounts = await getStorage(STORAGE.accounts);
+  if (!existingAccounts || typeof existingAccounts !== 'object') {
+    existingAccounts = {};
+  }
   accounts.forEach((account) => {
     const publicKey = Loader.Cardano.Bip32PublicKey.from_hex(
       account.publicKey
@@ -1713,9 +1718,19 @@ export const createHWAccounts = async (accounts) => {
       avatar: Math.random().toString(),
     };
   });
-  await setStorage({
-    [STORAGE.accounts]: existingAccounts,
-  });
+  const setPayload = { [STORAGE.accounts]: existingAccounts };
+  if (accounts.length > 0) {
+    const firstNewIndex = accounts[0].accountIndex;
+    const currentIndex = await getStorage(STORAGE.currentAccount);
+    const needsCurrent =
+      currentIndex === undefined ||
+      currentIndex === null ||
+      existingAccounts[currentIndex] === undefined;
+    if (needsCurrent) {
+      setPayload[STORAGE.currentAccount] = firstNewIndex;
+    }
+  }
+  await setStorage(setPayload);
 };
 
 export const deleteAccount = async () => {
@@ -1728,6 +1743,7 @@ export const deleteAccount = async () => {
 };
 
 export const getNativeAccounts = (accounts) => {
+  if (!accounts || typeof accounts !== 'object') return {};
   const nativeAccounts = {};
   Object.keys(accounts)
     .filter((accountIndex) => !isHW(accountIndex))
@@ -1744,6 +1760,7 @@ export const indexToHw = (accountIndex) => ({
 });
 
 export const getHwAccounts = (accounts, { device, id }) => {
+  if (!accounts || typeof accounts !== 'object') return {};
   const hwAccounts = {};
   Object.keys(accounts)
     .filter(

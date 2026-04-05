@@ -15,7 +15,12 @@ import {
 // assets
 import LogoOriginal from '../../../assets/img/logo.svg';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
-import { getCurrentAccount, indexToHw, initHW } from '../../../api/extension';
+import {
+  closeCurrentTab,
+  getCurrentAccount,
+  indexToHw,
+  initHW,
+} from '../../../api/extension';
 import { signAndSubmitHW } from '../../../api/extension/wallet';
 import Loader from '../../../api/loader';
 import { useStoreActions } from 'easy-peasy';
@@ -62,7 +67,7 @@ const App = () => {
     }
     resetSend();
     setRoute('/wallet');
-    setTimeout(() => window.close(), 3000);
+    setTimeout(() => closeCurrentTab(), 3000);
   };
 
   React.useEffect(() => init(), []);

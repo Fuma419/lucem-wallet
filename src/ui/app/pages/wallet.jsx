@@ -1086,8 +1086,16 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
               colorScheme="red"
               onClick={async () => {
                 setIsLoading(true);
-                await deleteAccount();
-                await switchAccount(0);
+                try {
+                  await deleteAccount();
+                  const remaining = await getAccounts();
+                  const firstKey = Object.keys(remaining)[0];
+                  if (firstKey !== undefined) {
+                    await switchAccount(isNaN(firstKey) ? firstKey : parseInt(firstKey));
+                  }
+                } catch (e) {
+                  console.error('Delete account error:', e);
+                }
                 onClose();
                 setIsLoading(false);
               }}

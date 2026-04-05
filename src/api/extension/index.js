@@ -1897,6 +1897,8 @@ export const initHW = async ({ device, id }) => {
         },
       });
     } catch (e) {}
+  } else if (device == HW.keystone) {
+    throw new Error('Keystone hardware wallet uses QR-based signing, not USB initialization');
   }
 };
 

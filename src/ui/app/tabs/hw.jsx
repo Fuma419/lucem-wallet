@@ -388,7 +388,7 @@ const ConnectHW = ({ onConfirm }) => {
         Connect Hardware Wallet
       </Text>
       <Box h={6} />
-      <Text width="300px">
+      <Text width="90%" maxWidth="300px" textAlign="center">
         Choose <b>Keystone</b> (QR, air-gapped) or <b>Ledger</b> (USB).
       </Text>
       <Box h={8} />
@@ -449,7 +449,7 @@ const ConnectHW = ({ onConfirm }) => {
       <Box h={10} />
       {selected === HW.keystone && (
         <>
-          <Text width="340px" fontSize="sm">
+          <Text width="90%" maxWidth="340px" fontSize="sm">
             By default Lucem connects <b>account 0</b> using{' '}
             <b>Cardano standard</b> derivation (CIP-1852). Open{' '}
             <b>Advanced options</b> to request more accounts (at least one) or
@@ -543,9 +543,10 @@ const ConnectHW = ({ onConfirm }) => {
         </>
       )}
       {selected === HW.ledger && (
-        <Text width="300px">
-          Connect your <b>Ledger</b> device directly to your computer. Unlock
-          the device and open the Cardano app. Then click Continue.
+        <Text width="90%" maxWidth="300px" textAlign="center">
+          {typeof navigator !== 'undefined' && navigator.usb
+            ? 'Connect your Ledger device directly to your computer. Unlock the device and open the Cardano app. Then click Continue.'
+            : 'WebUSB is not available in this browser. Please use a desktop browser (Chrome or Edge) to connect your Ledger device.'}
         </Text>
       )}
       {selected === HW.ledger && <Icon as={MdUsb} boxSize={7} mt="6" />}
@@ -567,10 +568,16 @@ const ConnectHW = ({ onConfirm }) => {
           }
           setIsLoading(true);
           try {
+            if (!navigator.usb) {
+              setError('WebUSB is not supported in this browser. Use Chrome or Edge on desktop.');
+              setIsLoading(false);
+              return;
+            }
             const device = await navigator.usb.requestDevice({
               filters: [],
             });
             if (
+              !Array.isArray(VENDOR_IDS[selected]) ||
               !VENDOR_IDS[selected].some(
                 (vendorId) => vendorId === device.vendorId
               )
@@ -696,7 +703,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
           Select Accounts
         </Text>
         <Box h={6} />
-        <Text width="300px">
+        <Text width="90%" maxWidth="300px" textAlign="center">
           {isKeystone
             ? keystoneNewAccounts.length === 0
               ? 'Every Cardano account in this sync is already in Lucem. Close this tab or run the Keystone flow again to export a different account.'
@@ -899,7 +906,7 @@ const SuccessAndClose = () => {
         Successfully added accounts!
       </Text>
       <Box h={10} />
-      <Text width="300px">
+      <Text width="90%" maxWidth="300px" textAlign="center">
         You can now close this tab and continue with the extension.
       </Text>
       <Button mt={8} onClick={() => closeCurrentTab()}>

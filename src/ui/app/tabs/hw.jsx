@@ -40,6 +40,8 @@ import {
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import {
+  KEYSTONE_CARDANO_ACCOUNT_SLOTS,
+  formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
   parseKeystoneCardanoConnectUr,
 } from '../../../api/keystone-cardano';
@@ -166,10 +168,11 @@ const ConnectHW = ({ onConfirm }) => {
         </Text>
         <Box h={4} />
         <Text fontSize="sm" maxW="340px">
-          On your Keystone, open the <b>scanner / camera</b> flow used to
-          connect a software wallet (often under <b>Software Wallet</b> or{' '}
-          <b>Connect Wallet</b>). Point the device camera at the animated QR
-          below and approve the Cardano key request on the device.
+          On Keystone, select the <b>Cardano account number</b> you want in this
+          wallet, then open the <b>scanner</b> flow to connect a software wallet.
+          Scan the animated QR below and approve; Keystone will include keys for
+          the account you picked (among accounts 1–{KEYSTONE_CARDANO_ACCOUNT_SLOTS}{' '}
+          on the derivation path).
         </Text>
         <Box h={4} />
         <Box
@@ -183,13 +186,14 @@ const ConnectHW = ({ onConfirm }) => {
           <AnimatedQRCode
             type={keyDerivationUr.type}
             cbor={cborHex}
-            options={{ size: 220, capacity: 400, interval: 100 }}
+            options={{ size: 220, capacity: 360, interval: 110 }}
           />
         </Box>
         <Box h={4} />
         <Text fontSize="sm" maxW="340px" color="gray.600">
-          When Keystone shows its animated QR (Account 1 / default path), tap
-          Continue here and allow the webcam to scan it.
+          When Keystone shows its animated sync QR, tap Continue here and allow
+          the webcam to scan it. To add another account later, open this flow
+          again after choosing a different account on the device.
         </Text>
         <Button
           mt={4}
@@ -335,8 +339,10 @@ const ConnectHW = ({ onConfirm }) => {
       <Box h={10} />
       {selected === HW.keystone && (
         <Text width="340px" fontSize="sm">
-          Two-step air-gapped link: Lucem shows a QR for Keystone to scan first,
-          then you scan Keystone&apos;s QR with this device. No USB.
+          Air-gapped (no USB): on Keystone, select the <b>Cardano account</b> you want
+          to add (Accounts / Cardano), then continue. Lucem&apos;s QR lists the first{' '}
+          {KEYSTONE_CARDANO_ACCOUNT_SLOTS} CIP-1852 accounts so Keystone can export the
+          one you choose. You scan Keystone&apos;s reply QR here next.
         </Text>
       )}
       {selected === HW.ledger && (
@@ -454,8 +460,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Text width="300px">
           {isKeystone
             ? data.keystoneAccounts.length === 1
-              ? 'Confirm adding this Cardano account (Account 1).'
-              : 'Choose which Cardano accounts from this Keystone sync QR to add.'
+              ? 'Confirm adding this Cardano account. The name includes the CIP-1852 path so it matches what you selected on Keystone.'
+              : 'Choose which Cardano accounts from this Keystone sync QR to add. Each label shows the account number and CIP-1852 path.'
             : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device.'}
         </Text>
         <Box h={8} />
@@ -484,9 +490,17 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 display="flex"
                 alignItems="center"
               >
-                <Box ml={6} fontWeight="bold">
-                  Account {parseInt(accountIndex, 10) + 1}{' '}
-                  {accountIndex === '0' && ' - Default'}
+                <Box ml={6} fontWeight="bold" fontSize="sm" maxW="85%">
+                  {isKeystone
+                    ? data.keystoneAccounts.find(
+                        (x) => String(x.account) === accountIndex
+                      )?.name ||
+                      formatKeystoneCardanoAccountLabel(
+                        parseInt(accountIndex, 10)
+                      )
+                    : `Account ${parseInt(accountIndex, 10) + 1}${
+                        accountIndex === '0' ? ' - Default' : ''
+                      }`}
                 </Box>
                 <Checkbox
                   isDisabled={!!existing[accountIndex]}
@@ -545,10 +559,11 @@ const SelectAccounts = ({ data, onConfirm }) => {
                     (x) => String(x.account) === accStr
                   );
                   if (!k) throw new Error('Missing Keystone account key');
+                  const acc = parseInt(accStr, 10);
                   return {
                     accountIndex: `${HW.keystone}-${id}-${accStr}`,
                     publicKey: k.publicKey,
-                    name: k.name,
+                    name: formatKeystoneCardanoAccountLabel(acc),
                   };
                 });
               }

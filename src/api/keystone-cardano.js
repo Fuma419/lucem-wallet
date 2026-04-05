@@ -14,15 +14,35 @@ import Loader from './loader';
 const CARDANO_ACCOUNT_PATH_RE = /^m\/1852'\/1815'\/(\d+)'$/i;
 
 /**
- * Default: first Cardano account only (CIP-1852 `m/1852'/1815'/0'`, i.e. “Account 1”).
- * A single schema keeps the hardware-call QR small so Keystone accepts it.
+ * How many consecutive CIP-1852 account paths (`m/1852'/1815'/0'` …) we put in the
+ * hardware-call QR. Keystone lets the user pick which of these accounts to include in
+ * the sync QR; a single path would always force account 0 regardless of the device UI.
+ * Keep this modest to limit QR size (see AnimatedQRCode `capacity` in hw.jsx).
+ * Matches Keystone hardware-call V0 range through `m/1852'/1815'/22'` (23 accounts;
+ * CIP-1852 indices 0–22; UI “Account 1” … “Account 23”).
  */
-export const KEYSTONE_CARDANO_ACCOUNT_SLOTS = 1;
+export const KEYSTONE_CARDANO_ACCOUNT_SLOTS = 23;
+
+/** @param {number} accountIndex — 0-based CIP-1852 account index */
+export function cip1852AccountPath(accountIndex) {
+  return `m/1852'/1815'/${accountIndex}'`;
+}
+
+/**
+ * Stored / UI label: wallet brand, 1-based account number, full CIP-1852 account path.
+ * @param {number} accountIndex — 0-based CIP-1852 account index
+ */
+export function formatKeystoneCardanoAccountLabel(accountIndex) {
+  const n = Number(accountIndex);
+  const path = cip1852AccountPath(n);
+  return `Keystone · Account ${n + 1} · CIP-1852 ${path}`;
+}
 
 /**
  * QR the user shows to Keystone first (Hardware Call / key derivation).
  * Keystone scans this, then displays the sync QR for the wallet to scan.
- * @param {number} [accountCount] — number of consecutive accounts from index 0 (default 1).
+ * @param {number} [accountCount] — number of consecutive CIP-1852 accounts from index 0
+ *   (default {@link KEYSTONE_CARDANO_ACCOUNT_SLOTS}).
  * @see https://dev.keyst.one/docs/integration-tutorial-advanced/hardware-call
  */
 export function generateCardanoKeystoneKeyDerivationUr({
@@ -32,7 +52,7 @@ export function generateCardanoKeystoneKeyDerivationUr({
   const schemas = [];
   for (let i = 0; i < accountCount; i++) {
     schemas.push({
-      path: `m/1852'/1815'/${i}'`,
+      path: cip1852AccountPath(i),
       curve: Curve.ed25519,
       algo: DerivationAlgorithm.bip32ed25519,
       chainType: 'ADA',
@@ -51,7 +71,7 @@ export function urFromScan({ type, cbor }) {
 
 /**
  * Parse Keystone sync QR (crypto-multi-accounts or crypto-hdkey).
- * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string }> }}
+ * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string, cip1852Path: string }> }}
  */
 export function parseKeystoneCardanoConnectUr(scan) {
   const sdk = new KeystoneSDK();
@@ -97,10 +117,12 @@ export function parseKeystoneCardanoConnectUr(scan) {
         'Keystone QR is missing chain code or public key (use Cardano account sync on the device).'
       );
     }
+    const account = parseInt(m[1], 10);
     adaAccounts.push({
-      account: parseInt(m[1], 10),
+      account,
       publicKey: pub + chain,
-      name: k.name || `Keystone ${parseInt(m[1], 10) + 1}`,
+      cip1852Path: cip1852AccountPath(account),
+      name: formatKeystoneCardanoAccountLabel(account),
     });
   }
 

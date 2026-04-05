@@ -20,7 +20,7 @@ import { indexToHw, initHW, isHW } from '../../../api/extension';
 import { ERROR, HW } from '../../../config/config';
 
 const ConfirmModal = React.forwardRef(
-  ({ ready, onConfirm, sign, onCloseBtn, title, info }, ref) => {
+  ({ ready, onConfirm, sign, onCloseBtn, title, info, onHwKeystone }, ref) => {
     const {
       isOpen: isOpenNormal,
       onOpen: onOpenNormal,
@@ -44,7 +44,13 @@ const ConfirmModal = React.forwardRef(
     React.useImperativeHandle(ref, () => ({
       openModal(accountIndex) {
         if (isHW(accountIndex)) {
-          setHw(indexToHw(accountIndex));
+          const parsed = indexToHw(accountIndex);
+          if (parsed.device === HW.keystone && typeof onHwKeystone === 'function') {
+            setHw(parsed);
+            onHwKeystone(parsed);
+            return;
+          }
+          setHw(parsed);
           onOpenHW();
         } else {
           onOpenNormal();
@@ -190,9 +196,15 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
     if (props.ready === false || !waitReady) return;
     try {
       setWaitReady(false);
-      const appAda = await initHW({ device: hw.device, id: hw.id });
-      const signedMessage = await props.sign(null, { ...hw, appAda });
-      await props.onConfirm(true, signedMessage);
+      if (hw.device === HW.ledger) {
+        const appAda = await initHW({ device: hw.device, id: hw.id });
+        const signedMessage = await props.sign(null, { ...hw, appAda });
+        await props.onConfirm(true, signedMessage);
+      } else {
+        await props.sign(null, hw);
+        onClose();
+        return;
+      }
     } catch (e) {
       if (e === ERROR.submit) props.onConfirm(false, e);
       else {
@@ -234,7 +246,13 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
-                background={hw.device == HW.ledger ? 'blue.400' : 'gray'}
+                background={
+                  hw.device === HW.ledger
+                    ? 'blue.400'
+                    : hw.device === HW.keystone
+                      ? 'teal.500'
+                      : 'gray'
+                }
                 rounded="xl"
                 py={2}
                 width="70%"
@@ -244,9 +262,19 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                 <Box fontSize="sm">
                   {!waitReady
                     ? `Waiting for ${
-                        hw.device == HW.ledger ? 'Ledger' : 'Trezor'
+                        hw.device === HW.ledger
+                          ? 'Ledger'
+                          : hw.device === HW.keystone
+                            ? 'Keystone'
+                            : 'Trezor'
                       }`
-                    : `Connect ${hw.device == HW.ledger ? 'Ledger' : 'Trezor'}`}
+                    : `Connect ${
+                        hw.device === HW.ledger
+                          ? 'Ledger'
+                          : hw.device === HW.keystone
+                            ? 'Keystone'
+                            : 'Trezor'
+                      }`}
                 </Box>
               </Box>
               {error && (

@@ -249,8 +249,12 @@ describe('isHW', () => {
     expect(isHW('ledger-abc-0')).toBe(true);
   });
 
-  test('returns false for trezor (HW.trezor not in config)', () => {
-    expect(isHW('trezor-xyz-1')).toBe(false);
+  test('returns true for trezor account index', () => {
+    expect(isHW('trezor-xyz-1')).toBe(true);
+  });
+
+  test('returns true for keystone account index', () => {
+    expect(isHW('keystone-a1b2c3d4-0')).toBe(true);
   });
 
   test('returns false for native numeric index', () => {
@@ -278,6 +282,13 @@ describe('indexToHw', () => {
     expect(hw.id).toBe('xyz');
     expect(hw.account).toBe(0);
   });
+
+  test('parses keystone account index', () => {
+    const hw = indexToHw('keystone-deadbeef-3');
+    expect(hw.device).toBe('keystone');
+    expect(hw.id).toBe('deadbeef');
+    expect(hw.account).toBe(3);
+  });
 });
 
 describe('getNativeAccounts', () => {
@@ -286,10 +297,12 @@ describe('getNativeAccounts', () => {
       0: { name: 'Native1' },
       1: { name: 'Native2' },
       'ledger-abc-0': { name: 'Ledger1' },
+      'keystone-deadbeef-0': { name: 'Ks1' },
     };
     const native = getNativeAccounts(accounts);
     expect(Object.keys(native)).toEqual(['0', '1']);
     expect(native['ledger-abc-0']).toBeUndefined();
+    expect(native['keystone-deadbeef-0']).toBeUndefined();
   });
 
   test('returns all accounts when none are HW', () => {

@@ -31,6 +31,7 @@ import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
 const Welcome = () => {
   const refWallet = React.useRef();
   const refImport = React.useRef();
+  const refHw = React.useRef();
 
   return (
     <>
@@ -90,6 +91,15 @@ const Welcome = () => {
           >
             Import
           </Button>
+          <Box height="6" />
+          <Button
+            className="button hw-wallet"
+            onClick={() => {
+              refHw.current.openModal();
+            }}
+          >
+            Hardware wallet
+          </Button>
         </Flex>
         <Box
           flexShrink={0}
@@ -111,6 +121,7 @@ const Welcome = () => {
       </Box>
       <WalletModal ref={refWallet} />
       <ImportModal ref={refImport} />
+      <HardwareWalletModal ref={refHw} />
     </>
   );
 };
@@ -326,6 +337,94 @@ const ImportModal = React.forwardRef((props, ref) => {
               isDisabled={!selected || !accepted}
               className="button import-wallet"
               onClick={handleContinue}
+            >
+              Continue
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <TermsOfUse ref={termsRef} />
+      <PrivacyPolicy ref={privacyPolicyRef} />
+    </>
+  );
+});
+
+const HardwareWalletModal = React.forwardRef((props, ref) => {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { accepted, setAccepted } = useAcceptDocs();
+  const termsRef = React.useRef();
+  const privacyPolicyRef = React.useRef();
+
+  React.useImperativeHandle(ref, () => ({
+    openModal() {
+      onOpen();
+    },
+  }));
+
+  return (
+    <>
+      <Modal
+        size="xs"
+        isOpen={isOpen}
+        onClose={onClose}
+        isCentered
+        blockScrollOnMount={false}
+      >
+        <ModalOverlay
+          style={{
+            backgroundColor: 'rgba(206, 250, 0, 0.12)',
+            backdropFilter: 'blur(5px)',
+          }}
+        />
+        <ModalContent
+          className="modal-glow-yellow-green"
+          backgroundColor="#1a1a1a"
+          borderColor="rgba(206, 250, 0, 0.35)"
+          borderWidth="1px"
+        >
+          <ModalHeader fontSize="md">Hardware wallet</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text fontSize="sm">
+              Connect a Ledger via USB or a Keystone by scanning sync QR codes
+              in a new tab (camera required for Keystone).
+            </Text>
+            <Box h="4" />
+            <Box display="flex" alignItems="center" justifyContent="center">
+              <Checkbox
+                colorScheme="green"
+                onChange={(e) => setAccepted(e.target.checked)}
+                _focus={false}
+              />
+              <Box w="2" />
+              <Text fontWeight={600}>
+                I read and accepted the{' '}
+                <Link
+                  onClick={() => termsRef.current.openModal()}
+                  textDecoration="underline"
+                  color="green.400"
+                >
+                  Terms of use
+                </Link>
+                <span> and </span>
+                <Link
+                  onClick={() => privacyPolicyRef.current.openModal()}
+                  textDecoration="underline"
+                  color="green.400"
+                >
+                  Privacy Policy
+                </Link>
+              </Text>
+            </Box>
+          </ModalBody>
+          <ModalFooter>
+            <Button mr={3} variant="ghost" onClick={onClose}>
+              Close
+            </Button>
+            <Button
+              className="button hw-wallet"
+              isDisabled={!accepted}
+              onClick={() => createTab(TAB.hw)}
             >
               Continue
             </Button>

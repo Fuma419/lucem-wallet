@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   createTab,
+  openKeystoneSignTxTab,
   displayUnit,
   getAccounts,
   getAdaHandle,
@@ -810,6 +811,13 @@ const Send = () => {
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(TAB.trezorTx, `?tx=${tx}`);
+            }
+            if (hw.device === HW.keystone) {
+              return openKeystoneSignTxTab({
+                txHex: tx,
+                keyHashes: [account.current.paymentKeyHash],
+                partialSign: false,
+              });
             }
             return await signAndSubmitHW(txDes, {
               keyHashes: [account.current.paymentKeyHash],

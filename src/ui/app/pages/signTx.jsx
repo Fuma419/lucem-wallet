@@ -31,11 +31,156 @@ import {
   Modal,
   ModalBody,
   ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalOverlay,
   Spinner,
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react';
 import AssetsModal from '../components/assetsModal';
+import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
+import { URType } from '@keystonehq/keystone-sdk';
+import KeystoneSDK from '@keystonehq/keystone-sdk';
+import {
+  buildKeystoneCardanoSignRequest,
+  parseKeystoneCardanoTxSignature,
+  witnessSetHexFromKeystoneSignature,
+} from '../../../api/keystone-cardano';
+
+const KPhase = { load: 'load', show: 'show', scan: 'scan' };
+
+const SignTxKeystoneInline = ({
+  hw,
+  txHex,
+  keyHashes,
+  account,
+  onSuccess,
+  onCancel,
+}) => {
+  const [phase, setPhase] = React.useState(KPhase.load);
+  const [err, setErr] = React.useState('');
+  const [urData, setUrData] = React.useState({ type: '', cbor: '' });
+  const sdkRef = React.useRef(null);
+  const txHexRef = React.useRef(txHex);
+
+  React.useEffect(() => {
+    txHexRef.current = txHex;
+  }, [txHex]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await Loader.load();
+        const utxos = await getUtxos();
+        const { ur, sdk } = await buildKeystoneCardanoSignRequest({
+          txHex,
+          account,
+          hw,
+          utxos,
+          keyHashes,
+        });
+        if (cancelled) return;
+        sdkRef.current = sdk;
+        setUrData({
+          type: ur.type,
+          cbor: Buffer.from(ur.cbor).toString('hex'),
+        });
+        setPhase(KPhase.show);
+      } catch (e) {
+        if (!cancelled) {
+          setErr(e.message || 'Could not build Keystone request');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hw, txHex, account, keyHashes]);
+
+  const onSigScan = async ({ type, cbor }) => {
+    try {
+      const sdk = sdkRef.current || new KeystoneSDK();
+      const sig = parseKeystoneCardanoTxSignature(sdk, { type, cbor });
+      const wh = witnessSetHexFromKeystoneSignature(sig);
+      if (!wh) throw new Error('Missing witness set');
+      await Loader.load();
+      const rawTx = Loader.Cardano.Transaction.from_cbor_bytes(
+        Buffer.from(txHexRef.current, 'hex')
+      );
+      const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
+        Buffer.from(wh, 'hex')
+      );
+      const merged = Loader.Cardano.Transaction.new(
+        rawTx.body(),
+        witnessSet,
+        true,
+        rawTx.auxiliary_data()
+      );
+      onSuccess(merged);
+    } catch (e) {
+      setErr(e.message || 'Invalid signature QR');
+    }
+  };
+
+  return (
+    <Box color="white">
+      {phase === KPhase.load && !err && (
+        <Text textAlign="center">Preparing Keystone QR…</Text>
+      )}
+      {err && (
+        <Text color="red.300" fontSize="sm">
+          {err}
+        </Text>
+      )}
+      {phase === KPhase.show && urData.cbor && (
+        <>
+          <Text fontSize="sm" mb={3}>
+            Scan with Keystone, approve, then tap below and scan the signature
+            QR.
+          </Text>
+          <Box bg="white" p={2} rounded="md" mx="auto" w="fit-content">
+            <AnimatedQRCode
+              type={urData.type}
+              cbor={urData.cbor}
+              options={{ size: 200, capacity: 400, interval: 100 }}
+            />
+          </Box>
+          <Button
+            mt={4}
+            colorScheme="cyan"
+            w="full"
+            onClick={() => setPhase(KPhase.scan)}
+          >
+            Scan signature from Keystone
+          </Button>
+        </>
+      )}
+      {phase === KPhase.scan && (
+        <>
+          <Text fontSize="xs" mb={2}>
+            Allow camera access to scan the Keystone signature QR.
+          </Text>
+          <Box rounded="md" overflow="hidden" bg="blackAlpha.800">
+            <AnimatedQRScanner
+              urTypes={[URType.CardanoSignature]}
+              handleScan={onSigScan}
+              handleError={(m) => setErr(m)}
+              options={{ width: '100%', height: 220 }}
+            />
+          </Box>
+          <Button mt={3} variant="ghost" onClick={() => setPhase(KPhase.show)}>
+            Back
+          </Button>
+        </>
+      )}
+      <Button mt={4} variant="outline" onClick={onCancel}>
+        Cancel
+      </Button>
+    </Box>
+  );
+};
 
 const abs = (big) => {
   return big < 0 ? big * BigInt(-1) : big;
@@ -44,6 +189,7 @@ const abs = (big) => {
 const SignTx = ({ request, controller }) => {
   const settings = useStoreState((state) => state.settings.settings);
   const ref = React.useRef();
+  const [keystoneHw, setKeystoneHw] = React.useState(null);
   const [account, setAccount] = React.useState(null);
   const [fee, setFee] = React.useState('0');
   const [value, setValue] = React.useState({
@@ -828,6 +974,7 @@ const SignTx = ({ request, controller }) => {
       />
       <ConfirmModal
         ref={ref}
+        onHwKeystone={(hwParsed) => setKeystoneHw(hwParsed)}
         onCloseBtn={() => {
         }}
         sign={async (password, hw) => {
@@ -859,6 +1006,36 @@ const SignTx = ({ request, controller }) => {
           window.close();
         }}
       />
+      <Modal
+        isOpen={!!keystoneHw}
+        onClose={() => setKeystoneHw(null)}
+        size="full"
+      >
+        <ModalOverlay />
+        <ModalContent bg="gray.900" m={0} maxW="100vw" minH="100vh">
+          <ModalHeader color="white">Sign with Keystone</ModalHeader>
+          <ModalCloseButton color="white" />
+          <ModalBody pb={8}>
+            {keystoneHw && account && (
+              <SignTxKeystoneInline
+                hw={keystoneHw}
+                txHex={request.data.tx}
+                keyHashes={keyHashes.key}
+                account={account}
+                onSuccess={(merged) => {
+                  controller.returnData({
+                    data: Buffer.from(merged.to_cbor_bytes(), 'hex').toString(
+                      'hex'
+                    ),
+                  });
+                  window.close();
+                }}
+                onCancel={() => setKeystoneHw(null)}
+              />
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </>
   );
 };

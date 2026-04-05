@@ -145,6 +145,62 @@ const ConnectHW = ({ onConfirm }) => {
   const [selected, setSelected] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [keystoneStep, setKeystoneStep] = React.useState('pick');
+  const [scanError, setScanError] = React.useState('');
+
+  if (selected === HW.keystone && keystoneStep === 'scan') {
+    return (
+      <>
+        <Text fontSize="x-large" fontWeight="semibold">
+          Scan Keystone
+        </Text>
+        <Box h={4} />
+        <Text fontSize="sm" maxW="320px">
+          On Keystone open <b>Software Wallet</b>, choose <b>Cardano</b>, then
+          export the sync QR (multi-accounts or account key). Allow the camera
+          when prompted.
+        </Text>
+        <Box h={4} />
+        <Box
+          w="full"
+          maxW="400px"
+          minH="220px"
+          rounded="md"
+          overflow="hidden"
+          bg="blackAlpha.700"
+          alignSelf="center"
+        >
+          <AnimatedQRScanner
+            urTypes={[URType.CryptoMultiAccounts, URType.CryptoHDKey]}
+            handleScan={(data) => {
+              try {
+                const { masterFingerprint, keys } =
+                  parseKeystoneCardanoConnectUr(data);
+                onConfirm({
+                  device: HW.keystone,
+                  id: masterFingerprint,
+                  keystoneAccounts: keys,
+                });
+              } catch (e) {
+                setScanError(e.message || 'Could not read QR');
+              }
+            }}
+            handleError={(msg) => setScanError(msg)}
+            options={{ width: '100%', height: 260 }}
+          />
+        </Box>
+        {scanError && (
+          <Text fontSize="xs" color="red.300" mt={2}>
+            {scanError}
+          </Text>
+        )}
+        <Button mt={4} variant="ghost" onClick={() => setKeystoneStep('pick')}>
+          Back
+        </Button>
+      </>
+    );
+  }
+
   return (
     <>
       <Text fontSize="x-large" fontWeight="semibold">
@@ -152,7 +208,7 @@ const ConnectHW = ({ onConfirm }) => {
       </Text>
       <Box h={6} />
       <Text width="300px">
-        Lucem currently supports Ledger HW devices. Keystone Wallet support coming soon!
+        Choose <b>Keystone</b> (QR, air-gapped) or <b>Ledger</b> (USB).
       </Text>
       <Box h={8} />
       <Box display="flex" alignItems="center" justifyContent="center">
@@ -167,10 +223,14 @@ const ConnectHW = ({ onConfirm }) => {
           rounded="xl"
           borderColor={selected === HW.keystone && 'cyan.400'}
           borderWidth={selected === HW.keystone && '3px'}
-          opacity={0.5} // Reduce opacity to indicate it's disabled
           p={4}
-          //_hover={{ opacity: 0.8 }}
-          // onClick={() => setSelected(HW.keystone)}
+          _hover={{ opacity: 0.85 }}
+          onClick={() => {
+            setSelected(HW.keystone);
+            setKeystoneStep('pick');
+            setError('');
+            setScanError('');
+          }}
         >
           <Image
             draggable={false}
@@ -203,8 +263,9 @@ const ConnectHW = ({ onConfirm }) => {
       </Box>
       <Box h={10} />
       {selected === HW.keystone && (
-        <Text width="300px">
-          <b>Keysone</b> are not currently supported. Please check back soon.
+        <Text width="320px" fontSize="sm">
+          Use <b>Continue</b>, then scan the animated sync QR from your
+          Keystone. No USB connection is used.
         </Text>
       )}
       {selected === HW.ledger && (
@@ -213,41 +274,44 @@ const ConnectHW = ({ onConfirm }) => {
           the device and open the Cardano app. Then click Continue.
         </Text>
       )}
-      {selected && <Icon as={MdUsb} boxSize={7} mt="6" />}
+      {selected === HW.ledger && <Icon as={MdUsb} boxSize={7} mt="6" />}
       <Button
         isDisabled={isLoading || !selected}
         isLoading={isLoading}
         mt="auto"
         rightIcon={<ChevronRightIcon />}
         onClick={async () => {
-          setIsLoading(true);
           setError('');
+          if (selected === HW.keystone) {
+            setKeystoneStep('scan');
+            setScanError('');
+            return;
+          }
+          setIsLoading(true);
           try {
             const device = await navigator.usb.requestDevice({
               filters: [],
             });
-            if (!VENDOR_IDS[selected].some((vendorId) => vendorId === device.vendorId)) {
-              setError(
-                `Device is not a ${selected == HW.ledger ? 'Ledger' : 'Keystone'}`
-              );
+            if (
+              !VENDOR_IDS[selected].some(
+                (vendorId) => vendorId === device.vendorId
+              )
+            ) {
+              setError('Device is not a Ledger');
               setIsLoading(false);
               return;
             }
-            if (selected === HW.ledger) {
-              try {
-                await initHW({ device: selected, id: device.productId });
-              } catch (e) {
-                setError('Cardano app not opened');
-                setIsLoading(false);
-                return;
-              }
+            try {
+              await initHW({ device: selected, id: device.productId });
+            } catch (e) {
+              setError('Cardano app not opened');
+              setIsLoading(false);
+              return;
             }
-
-            return onConfirm({ device: selected, id: device.productId });
+            onConfirm({ device: selected, id: device.productId });
           } catch (e) {
             setError('Device not found');
           }
-
           setIsLoading(false);
         }}
       >
@@ -271,22 +335,43 @@ const SelectAccounts = ({ data, onConfirm }) => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [isInit, setIsInit] = React.useState(false);
 
+  const isKeystone =
+    data.device === HW.keystone &&
+    Array.isArray(data.keystoneAccounts) &&
+    data.keystoneAccounts.length > 0;
+
   const getExistingAccounts = async () => {
     const accounts = await getStorage(STORAGE.accounts);
     const hwAccounts = getHwAccounts(accounts, {
       device: data.device,
       id: data.id,
     });
-    const existing = {};
+    const existingMap = {};
     Object.keys(hwAccounts).forEach(
-      (accountIndex) => (existing[indexToHw(accountIndex).account] = true)
+      (accountIndex) =>
+        (existingMap[String(indexToHw(accountIndex).account)] = true)
     );
-    setExisting(existing);
+    setExisting(existingMap);
     setIsInit(true);
   };
   React.useEffect(() => {
     getExistingAccounts();
   }, []);
+
+  React.useEffect(() => {
+    if (!isInit || !isKeystone) return;
+    const next = {};
+    data.keystoneAccounts.forEach((k) => {
+      const s = String(k.account);
+      if (!existing[s]) next[s] = true;
+    });
+    setSelected(next);
+  }, [isInit, isKeystone, data.keystoneAccounts, existing]);
+
+  const ledgerRows = Object.keys([...Array(50)]);
+  const keystoneRows = isKeystone
+    ? data.keystoneAccounts.map((k) => String(k.account))
+    : [];
 
   return (
     isInit && (
@@ -296,8 +381,9 @@ const SelectAccounts = ({ data, onConfirm }) => {
         </Text>
         <Box h={6} />
         <Text width="300px">
-          Select the accounts you would like to import. Afterwards click
-          Continue and follow the instructions on your device.
+          {isKeystone
+            ? 'Choose which Cardano accounts from this Keystone sync QR to add.'
+            : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device.'}
         </Text>
         <Box h={8} />
 
@@ -316,23 +402,24 @@ const SelectAccounts = ({ data, onConfirm }) => {
             }}
             autoHide
           >
-            {Object.keys([...Array(50)]).map((accountIndex) => (
+            {(isKeystone ? keystoneRows : ledgerRows).map((accountIndex) => (
               <Box
                 key={accountIndex}
-                opacity={existing[accountIndex] && 0.7}
+                opacity={existing[accountIndex] ? 0.7 : 1}
                 width="80%"
                 my={4}
                 display="flex"
                 alignItems="center"
               >
                 <Box ml={6} fontWeight="bold">
-                  {' '}
-                  Account {parseInt(accountIndex) + 1}{' '}
-                  {accountIndex == 0 && ' - Default'}
+                  Account {parseInt(accountIndex, 10) + 1}{' '}
+                  {accountIndex === '0' && ' - Default'}
                 </Box>
                 <Checkbox
-                  isDisabled={existing[accountIndex]}
-                  isChecked={selected[accountIndex] && !existing[accountIndex]}
+                  isDisabled={!!existing[accountIndex]}
+                  isChecked={
+                    !!(selected[accountIndex] && !existing[accountIndex])
+                  }
                   onChange={(e) =>
                     setSelected((s) => ({
                       ...s,
@@ -361,7 +448,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
               (s) => selected[s] && !existing[s]
             );
             try {
-              const { device, id } = data;
+              const { device, id, keystoneAccounts } = data;
               let accounts;
               if (device === HW.ledger) {
                 const appAda = await initHW({ device, id });
@@ -369,39 +456,36 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   paths: accountIndexes.map((index) => [
                     HARDENED + 1852,
                     HARDENED + 1815,
-                    HARDENED + parseInt(index),
+                    HARDENED + parseInt(index, 10),
                   ]),
                 });
                 accounts = ledgerKeys.map(
                   ({ publicKeyHex, chainCodeHex }, index) => ({
                     accountIndex: `${HW.ledger}-${id}-${accountIndexes[index]}`,
                     publicKey: publicKeyHex + chainCodeHex,
-                    name: `Ledger ${parseInt(accountIndexes[index]) + 1}`,
+                    name: `Ledger ${parseInt(accountIndexes[index], 10) + 1}`,
                   })
                 );
-              } else if (device == HW.keystone) {
-                // await initHW({ device });
-                // const trezorKeys = await TrezorConnect.cardanoGetPublicKey({
-                //   bundle: accountIndexes.map((index) => ({
-                //     path: `m/1852'/1815'/${parseInt(index)}'`,
-                //     showOnTrezor: false,
-                //   })),
-                // });
-                // if (trezorKeys.success == false) {
-                //   trezorRef.current.closeModal();
-                // }
-                // accounts = trezorKeys.payload.map(({ publicKey }, index) => ({
-                //   accountIndex: `${HW.keystone}-${id}-${accountIndexes[index]}`,
-                //   publicKey,
-                //   name: `Keystone ${parseInt(accountIndexes[index]) + 1}`,
-                // }));
-                // trezorRef.current.closeModal();
+              } else if (device === HW.keystone) {
+                accounts = accountIndexes.map((accStr) => {
+                  const k = keystoneAccounts.find(
+                    (x) => String(x.account) === accStr
+                  );
+                  if (!k) throw new Error('Missing Keystone account key');
+                  return {
+                    accountIndex: `${HW.keystone}-${id}-${accStr}`,
+                    publicKey: k.publicKey,
+                    name: k.name,
+                  };
+                });
+              }
+              if (!accounts || accounts.length === 0) {
+                throw new Error('No accounts selected');
               }
               await createHWAccounts(accounts);
-              ;
               return onConfirm();
             } catch (e) {
-              console.log(e);
+              console.warn(e);
               setError('An error occured');
             }
 

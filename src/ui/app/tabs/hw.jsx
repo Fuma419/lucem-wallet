@@ -145,7 +145,14 @@ const App = () => {
             },
           }}
         >
-          <Box flex="1" minH={0} overflowY="auto" display="flex" flexDirection="column">
+          <Box
+            flex="1"
+            minH={0}
+            overflowY="auto"
+            overflowX="hidden"
+            pb={3}
+            sx={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {tab === 0 && (
               <ConnectHW
                 onConfirm={({ device, id, keystoneAccounts }) => {
@@ -452,41 +459,33 @@ const ConnectHW = ({ onConfirm }) => {
               </Text>
               <Text fontSize="xs" color="gray.500" mt={1} maxW="340px">
                 Each checked account adds a derivation step on Keystone (more checks =
-                longer approval).
+                longer approval). Scroll the card to see all options and Continue below.
               </Text>
-              <Box
-                maxH="min(11rem, 32vh)"
-                overflowY="auto"
-                mt={2}
-                pr={1}
-                sx={{ scrollbarGutter: 'stable' }}
-              >
-                <Stack spacing={1}>
-                  {Array.from(
-                    { length: KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX + 1 },
-                    (_, i) => (
-                      <Checkbox
-                        key={i}
-                        size="sm"
-                        isChecked={!!keystoneAccountChecks[i]}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          const n = Object.values(keystoneAccountChecks).filter(
-                            Boolean
-                          ).length;
-                          if (!checked && n <= 1) return;
-                          setKeystoneAccountChecks((prev) => ({
-                            ...prev,
-                            [i]: checked,
-                          }));
-                        }}
-                      >
-                        Account {i} — m/1852&apos;/1815&apos;/{i}&apos;
-                      </Checkbox>
-                    )
-                  )}
-                </Stack>
-              </Box>
+              <Stack spacing={1} mt={2} pr={1}>
+                {Array.from(
+                  { length: KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX + 1 },
+                  (_, i) => (
+                    <Checkbox
+                      key={i}
+                      size="sm"
+                      isChecked={!!keystoneAccountChecks[i]}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const n = Object.values(keystoneAccountChecks).filter(
+                          Boolean
+                        ).length;
+                        if (!checked && n <= 1) return;
+                        setKeystoneAccountChecks((prev) => ({
+                          ...prev,
+                          [i]: checked,
+                        }));
+                      }}
+                    >
+                      Account {i} — m/1852&apos;/1815&apos;/{i}&apos;
+                    </Checkbox>
+                  )
+                )}
+              </Stack>
               <Text fontSize="sm" fontWeight="semibold" mt={4}>
                 ADA derivation (two supported paths)
               </Text>
@@ -494,6 +493,7 @@ const ConnectHW = ({ onConfirm }) => {
                 value={keystoneDerivation}
                 onChange={setKeystoneDerivation}
                 mt={2}
+                pb={1}
               >
                 <Stack spacing={2}>
                   <Radio value="standard" size="sm">
@@ -518,7 +518,7 @@ const ConnectHW = ({ onConfirm }) => {
       <Button
         isDisabled={isLoading || !selected}
         isLoading={isLoading}
-        mt="auto"
+        mt={8}
         rightIcon={<ChevronRightIcon />}
         onClick={async () => {
           setError('');
@@ -715,7 +715,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   .length <= 0)
           }
           isLoading={isLoading}
-          mt="auto"
+          mt={8}
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
             setIsLoading(true);
@@ -805,7 +805,7 @@ const SuccessAndClose = () => {
       <Text width="300px">
         You can now close this tab and continue with the extension.
       </Text>
-      <Button mt="auto" onClick={() => closeCurrentTab()}>
+      <Button mt={8} onClick={() => closeCurrentTab()}>
         Close
       </Button>
     </>

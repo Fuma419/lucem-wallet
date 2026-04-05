@@ -193,12 +193,14 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).toMatch(/WebkitOverflowScrolling/);
   });
 
-  test('index.jsx Main Scrollbars should fill parent height (100%) not standalone 100vh', () => {
+  test('index.jsx Main Scrollbars: extension uses 100vw/100vh (release); PWA uses 100%', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '../../ui/index.jsx'),
       'utf8'
     );
     expect(src).toMatch(/id="scroll"/);
+    expect(src).toMatch(/isExtensionPopup/);
+    expect(src).toMatch(/height:\s*['"]100vh['"]/);
     expect(src).toMatch(/height:\s*['"]100%['"]/);
   });
 

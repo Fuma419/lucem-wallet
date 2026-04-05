@@ -109,7 +109,7 @@ export const POPUP_WINDOW = {
   top: 50,
   left: 100,
   width: 400,
-  height: 500,
+  height: 600,
 };
 
 export const ERROR = {

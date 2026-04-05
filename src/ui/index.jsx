@@ -7,10 +7,13 @@ import StoreProvider from './store';
 import { Box, IconButton } from '@chakra-ui/react';
 import { ChevronUpIcon } from '@chakra-ui/icons';
 
-const isMain = window.document.querySelector(`#${POPUP.main}`);
+/** Main wallet popup (`mainPopup.html`) */
+const isMainPopup = window.document.querySelector(`#${POPUP.main}`);
+/** dApp approval popup (`internalPopup.html`); must use POPUP_WINDOW like main */
+const isInternalPopup = window.document.querySelector(`#${POPUP.internal}`);
 const isTab = window.document.querySelector(`#${TAB.hw}`);
 const isExtensionPopup =
-  isMain &&
+  (isMainPopup || isInternalPopup) &&
   typeof chrome !== 'undefined' &&
   typeof chrome.runtime !== 'undefined' &&
   typeof chrome.runtime.id !== 'undefined';
@@ -23,7 +26,7 @@ const Main = ({ children }) => {
       'keydown',
       (e) => e.key === 'Escape' && e.preventDefault()
     );
-    if (navigator.userAgent.indexOf('Win') != -1 && !isMain && !isTab) {
+    if (navigator.userAgent.indexOf('Win') != -1 && !isMainPopup && !isTab) {
       const width =
         POPUP_WINDOW.width + (window.outerWidth - window.innerWidth);
       const height =
@@ -35,9 +38,9 @@ const Main = ({ children }) => {
     <Box
       width={isExtensionPopup ? POPUP_WINDOW.width + 'px' : '100%'}
       height={isExtensionPopup ? POPUP_WINDOW.height + 'px' : '100vh'}
-      maxW={isExtensionPopup ? undefined : '100%'}
+      maxW={isExtensionPopup ? undefined : '480px'}
       minW={0}
-      mx={isExtensionPopup ? undefined : 0}
+      mx={isExtensionPopup ? undefined : 'auto'}
       sx={
         !isExtensionPopup
           ? {
@@ -53,7 +56,11 @@ const Main = ({ children }) => {
         <StoreProvider>
           <Scrollbars
             id="scroll"
-            style={{ width: '100%', height: '100%' }}
+            style={
+              isExtensionPopup
+                ? { width: '100vw', height: '100vh' }
+                : { width: '100%', height: '100%' }
+            }
             autoHide
             onScroll={(e) => {
               setScroll({ el: e.target, y: e.target.scrollTop });
@@ -66,8 +73,16 @@ const Main = ({ children }) => {
                   scroll.el.scrollTo({ behavior: 'smooth', top: 0 });
                 }}
                 position="fixed"
-                bottom="calc(15px + env(safe-area-inset-bottom, 0px))"
-                right="calc(15px + env(safe-area-inset-right, 0px))"
+                bottom={
+                  isExtensionPopup
+                    ? '15px'
+                    : 'calc(15px + env(safe-area-inset-bottom, 0px))'
+                }
+                right={
+                  isExtensionPopup
+                    ? '15px'
+                    : 'calc(15px + env(safe-area-inset-right, 0px))'
+                }
                 size="sm"
                 rounded="xl"
                 colorScheme="yellow"

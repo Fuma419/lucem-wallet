@@ -10,11 +10,11 @@ import { NETWORK_ID, NODE } from '../config/config';
 import {
   createStore,
   action,
+  useStore,
   useStoreActions,
   StoreProvider,
   useStoreState,
   persist,
-  useStoreRehydrated,
 } from 'easy-peasy';
 import { Box, Text, Spinner } from '@chakra-ui/react';
 import { InfoOutlineIcon } from '@chakra-ui/icons';
@@ -79,28 +79,46 @@ const initStore = async (state, actions) => {
 
 // Store component that loads the store and calls initStore
 const StoreInit = ({ children }) => {
+  const store = useStore();
   const actions = useStoreActions((actions) => actions);
   const state = useStoreState((state) => state);
   const settings = state.settings.settings;
   const [isLoading, setIsLoading] = React.useState(true);
-  const isRehydrated = useStoreRehydrated();
+  /** easy-peasy's useStoreRehydrated only flips true on .then(); if rehydration rejects, the app hung forever. */
+  const [persistReady, setPersistReady] = React.useState(false);
   const [info, setInfo] = React.useState(null);
   const [password, setPassword] = React.useState(false);
   const refA = React.useRef();
   const refB = React.useRef();
 
+  React.useEffect(() => {
+    store.persist
+      .resolveRehydration()
+      .catch((err) => {
+        console.error('Easy-peasy persist rehydration failed:', err);
+      })
+      .finally(() => setPersistReady(true));
+  }, [store]);
+
   const init = async () => {
-    if (await needUpgrade()) {
-      await upgrade();
-      // Password modal path: upgrade() returns early; stay on spinner until user submits.
+    try {
       if (await needUpgrade()) {
-        return;
+        await upgrade();
+      } else {
+        await initStore(state, actions);
+        setIsLoading(false);
+        if (info && info.length) {
+          refB.current.openModal();
+        }
       }
-    }
-    await initStore(state, actions);
-    setIsLoading(false);
-    if (info && info.length) {
-      refB.current.openModal();
+    } catch (e) {
+      console.error('Wallet bootstrap failed:', e);
+      try {
+        await initStore(state, actions);
+      } catch (_) {
+        /* ignore */
+      }
+      setIsLoading(false);
     }
   };
 
@@ -120,7 +138,7 @@ const StoreInit = ({ children }) => {
   }, [password, info]);
   return (
     <>
-      {isLoading || !isRehydrated ? (
+      {isLoading || !persistReady ? (
         <>
           <Box
             minH="100vh"

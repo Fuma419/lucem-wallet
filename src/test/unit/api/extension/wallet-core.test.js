@@ -100,6 +100,7 @@ import {
   getNativeAccounts,
   isHW,
   indexToHw,
+  keystoneImportRowKey,
   getHwAccounts,
   displayUnit,
   toUnit,
@@ -288,6 +289,24 @@ describe('indexToHw', () => {
     expect(hw.device).toBe('keystone');
     expect(hw.id).toBe('deadbeef');
     expect(hw.account).toBe(3);
+    expect(hw.keystoneDerivation).toBeUndefined();
+  });
+
+  test('parses keystone account index with Ledger derivation suffix', () => {
+    const hw = indexToHw('keystone-deadbeef-3-vledger');
+    expect(hw.device).toBe('keystone');
+    expect(hw.id).toBe('deadbeef');
+    expect(hw.account).toBe(3);
+    expect(hw.keystoneDerivation).toBe('ledger');
+  });
+});
+
+describe('keystoneImportRowKey', () => {
+  test('maps Keystone storage index to import row key', () => {
+    expect(keystoneImportRowKey('keystone-abcd1234-1')).toBe('1-standard');
+    expect(keystoneImportRowKey('keystone-abcd1234-1-vledger')).toBe(
+      '1-ledger'
+    );
   });
 });
 

@@ -1753,11 +1753,38 @@ export const getNativeAccounts = (accounts) => {
   return nativeAccounts;
 };
 
-export const indexToHw = (accountIndex) => ({
-  device: accountIndex.split('-')[0],
-  id: accountIndex.split('-')[1],
-  account: parseInt(accountIndex.split('-')[2]),
-});
+export const indexToHw = (accountIndex) => {
+  if (accountIndex == null || typeof accountIndex !== 'string') {
+    return { device: '', id: '', account: NaN };
+  }
+  const parts = accountIndex.split('-');
+  const device = parts[0];
+  const id = parts[1];
+  if (
+    device === HW.keystone &&
+    parts.length >= 4 &&
+    parts[3].startsWith('v')
+  ) {
+    return {
+      device,
+      id,
+      account: parseInt(parts[2], 10),
+      keystoneDerivation: parts[3].slice(1),
+    };
+  }
+  return {
+    device,
+    id,
+    account: parseInt(parts[2], 10),
+  };
+};
+
+/** Row key for Keystone import UI / duplicate detection (`${account}-standard|ledger`). */
+export const keystoneImportRowKey = (accountIndex) => {
+  const h = indexToHw(accountIndex);
+  if (h.device !== HW.keystone || Number.isNaN(h.account)) return null;
+  return `${h.account}-${h.keystoneDerivation || 'standard'}`;
+};
 
 export const getHwAccounts = (accounts, { device, id }) => {
   if (!accounts || typeof accounts !== 'object') return {};

@@ -17,6 +17,7 @@ import {
   Text,
   Checkbox,
   Icon,
+  Select,
 } from '@chakra-ui/react';
 import { Scrollbars } from '../components/scrollbar';
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
@@ -36,13 +37,16 @@ import {
   getStorage,
   indexToHw,
   initHW,
+  keystoneImportRowKey,
 } from '../../../api/extension';
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import {
-  KEYSTONE_CARDANO_ACCOUNT_SLOTS,
+  KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX,
+  filterKeystoneKeysForRequestedAccount,
   formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
+  keystoneAccountStorageSuffix,
   parseKeystoneCardanoConnectUr,
 } from '../../../api/keystone-cardano';
 import { MdUsb } from 'react-icons/md';
@@ -153,10 +157,12 @@ const ConnectHW = ({ onConfirm }) => {
   const [error, setError] = React.useState('');
   const [keystoneStep, setKeystoneStep] = React.useState('pick');
   const [scanError, setScanError] = React.useState('');
+  /** CIP-1852 account index 0–23; must match the Cardano account selected on Keystone */
+  const [keystoneCip1852Index, setKeystoneCip1852Index] = React.useState(0);
 
   const keyDerivationUr = React.useMemo(
-    () => generateCardanoKeystoneKeyDerivationUr(),
-    []
+    () => generateCardanoKeystoneKeyDerivationUr({ accountIndex: keystoneCip1852Index }),
+    [keystoneCip1852Index]
   );
 
   if (selected === HW.keystone && keystoneStep === 'showRequest') {
@@ -168,11 +174,10 @@ const ConnectHW = ({ onConfirm }) => {
         </Text>
         <Box h={4} />
         <Text fontSize="sm" maxW="340px">
-          On Keystone, select the <b>Cardano account number</b> you want in this
-          wallet, then open the <b>scanner</b> flow to connect a software wallet.
-          Scan the animated QR below and approve; Keystone will include keys for
-          the account you picked (among accounts 1–{KEYSTONE_CARDANO_ACCOUNT_SLOTS}{' '}
-          on the derivation path).
+          On Keystone, select the <b>same Cardano account number</b> you chose below
+          (Ledger-compatible or Cardano standard as set on the device). Open the{' '}
+          <b>scanner</b> flow to connect a software wallet, scan this QR, and approve.
+          Only that single account is requested.
         </Text>
         <Box h={4} />
         <Box
@@ -244,10 +249,14 @@ const ConnectHW = ({ onConfirm }) => {
               try {
                 const { masterFingerprint, keys } =
                   parseKeystoneCardanoConnectUr(data);
+                const only = filterKeystoneKeysForRequestedAccount(
+                  keys,
+                  keystoneCip1852Index
+                );
                 onConfirm({
                   device: HW.keystone,
                   id: masterFingerprint,
-                  keystoneAccounts: keys,
+                  keystoneAccounts: only,
                 });
               } catch (e) {
                 setScanError(e.message || 'Could not read QR');
@@ -303,6 +312,7 @@ const ConnectHW = ({ onConfirm }) => {
           onClick={() => {
             setSelected(HW.keystone);
             setKeystoneStep('pick');
+            setKeystoneCip1852Index(0);
             setError('');
             setScanError('');
           }}
@@ -338,12 +348,35 @@ const ConnectHW = ({ onConfirm }) => {
       </Box>
       <Box h={10} />
       {selected === HW.keystone && (
-        <Text width="340px" fontSize="sm">
-          Air-gapped (no USB): on Keystone, select the <b>Cardano account</b> you want
-          to add (Accounts / Cardano), then continue. Lucem&apos;s QR lists the first{' '}
-          {KEYSTONE_CARDANO_ACCOUNT_SLOTS} CIP-1852 accounts so Keystone can export the
-          one you choose. You scan Keystone&apos;s reply QR here next.
-        </Text>
+        <>
+          <Text width="340px" fontSize="sm">
+            Air-gapped (no USB): choose <b>Ledger-compatible</b> or{' '}
+            <b>Cardano standard</b> for ADA on Keystone, then select the{' '}
+            <b>same account #</b> below and on the device.
+          </Text>
+          <Box h={4} />
+          <Text fontSize="sm" fontWeight="semibold" alignSelf="flex-start" maxW="340px">
+            Cardano account index (CIP-1852, 0–23)
+          </Text>
+          <Select
+            mt={2}
+            maxW="340px"
+            size="sm"
+            value={keystoneCip1852Index}
+            onChange={(e) =>
+              setKeystoneCip1852Index(parseInt(e.target.value, 10))
+            }
+          >
+            {Array.from(
+              { length: KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX + 1 },
+              (_, i) => (
+                <option key={i} value={i}>
+                  Account {i} — m/1852&apos;/1815&apos;/{i}&apos;
+                </option>
+              )
+            )}
+          </Select>
+        </>
       )}
       {selected === HW.ledger && (
         <Text width="300px">
@@ -424,10 +457,14 @@ const SelectAccounts = ({ data, onConfirm }) => {
       id: data.id,
     });
     const existingMap = {};
-    Object.keys(hwAccounts).forEach(
-      (accountIndex) =>
-        (existingMap[String(indexToHw(accountIndex).account)] = true)
-    );
+    Object.keys(hwAccounts).forEach((accountIndex) => {
+      if (data.device === HW.keystone) {
+        const rk = keystoneImportRowKey(accountIndex);
+        if (rk) existingMap[rk] = true;
+      } else {
+        existingMap[String(indexToHw(accountIndex).account)] = true;
+      }
+    });
     setExisting(existingMap);
     setIsInit(true);
   };
@@ -439,15 +476,14 @@ const SelectAccounts = ({ data, onConfirm }) => {
     if (!isInit || !isKeystone) return;
     const next = {};
     data.keystoneAccounts.forEach((k) => {
-      const s = String(k.account);
-      if (!existing[s]) next[s] = true;
+      if (!existing[k.rowKey]) next[k.rowKey] = true;
     });
     setSelected(next);
   }, [isInit, isKeystone, data.keystoneAccounts, existing]);
 
   const ledgerRows = Object.keys([...Array(50)]);
   const keystoneRows = isKeystone
-    ? data.keystoneAccounts.map((k) => String(k.account))
+    ? data.keystoneAccounts.map((k) => k.rowKey)
     : [];
 
   return (
@@ -460,8 +496,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Text width="300px">
           {isKeystone
             ? data.keystoneAccounts.length === 1
-              ? 'Confirm adding this Cardano account. The name includes the CIP-1852 path so it matches what you selected on Keystone.'
-              : 'Choose which Cardano accounts from this Keystone sync QR to add. Each label shows the account number and CIP-1852 path.'
+              ? 'Confirm adding this account. The label shows CIP-1852 path and whether Keystone exported Ledger-compatible or Cardano standard keys.'
+              : 'Choose accounts from this Keystone sync. Labels match the device derivation mode (Ledger-compatible vs Cardano standard).'
             : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device.'}
         </Text>
         <Box h={8} />
@@ -481,10 +517,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
             }}
             autoHide
           >
-            {(isKeystone ? keystoneRows : ledgerRows).map((accountIndex) => (
+            {(isKeystone ? keystoneRows : ledgerRows).map((rowKey) => (
               <Box
-                key={accountIndex}
-                opacity={existing[accountIndex] ? 0.7 : 1}
+                key={rowKey}
+                opacity={existing[rowKey] ? 0.7 : 1}
                 width="80%"
                 my={4}
                 display="flex"
@@ -492,25 +528,20 @@ const SelectAccounts = ({ data, onConfirm }) => {
               >
                 <Box ml={6} fontWeight="bold" fontSize="sm" maxW="85%">
                   {isKeystone
-                    ? data.keystoneAccounts.find(
-                        (x) => String(x.account) === accountIndex
-                      )?.name ||
-                      formatKeystoneCardanoAccountLabel(
-                        parseInt(accountIndex, 10)
-                      )
-                    : `Account ${parseInt(accountIndex, 10) + 1}${
-                        accountIndex === '0' ? ' - Default' : ''
+                    ? data.keystoneAccounts.find((x) => x.rowKey === rowKey)
+                        ?.name ||
+                      rowKey
+                    : `Account ${parseInt(rowKey, 10) + 1}${
+                        rowKey === '0' ? ' - Default' : ''
                       }`}
                 </Box>
                 <Checkbox
-                  isDisabled={!!existing[accountIndex]}
-                  isChecked={
-                    !!(selected[accountIndex] && !existing[accountIndex])
-                  }
+                  isDisabled={!!existing[rowKey]}
+                  isChecked={!!(selected[rowKey] && !existing[rowKey])}
                   onChange={(e) =>
                     setSelected((s) => ({
                       ...s,
-                      [accountIndex]: e.target.checked,
+                      [rowKey]: e.target.checked,
                     }))
                   }
                   ml="auto"
@@ -554,16 +585,16 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   })
                 );
               } else if (device === HW.keystone) {
-                accounts = accountIndexes.map((accStr) => {
-                  const k = keystoneAccounts.find(
-                    (x) => String(x.account) === accStr
-                  );
+                accounts = accountIndexes.map((rk) => {
+                  const k = keystoneAccounts.find((x) => x.rowKey === rk);
                   if (!k) throw new Error('Missing Keystone account key');
-                  const acc = parseInt(accStr, 10);
                   return {
-                    accountIndex: `${HW.keystone}-${id}-${accStr}`,
+                    accountIndex: `${HW.keystone}-${id}-${k.account}${keystoneAccountStorageSuffix(k.profile)}`,
                     publicKey: k.publicKey,
-                    name: formatKeystoneCardanoAccountLabel(acc),
+                    name: formatKeystoneCardanoAccountLabel(
+                      k.account,
+                      k.profile
+                    ),
                   };
                 });
               }

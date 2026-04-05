@@ -11,17 +11,61 @@ import KeystoneSDK, {
 } from '@keystonehq/keystone-sdk';
 import Loader from './loader';
 
-const CARDANO_ACCOUNT_PATH_RE = /^m\/1852'\/1815'\/(\d+)'$/i;
+/**
+ * CIP-1852 account node or deeper (payment/stake leaf). Keystone may report either
+ * depending on firmware / export mode; the account index is always the third step.
+ */
+const CIP1852_ACCOUNT_STEP_RE =
+  /^m\/1852'\/1815'\/(\d+)'(?:\/\d+\/\d+)?$/i;
+
+/** @typedef {'standard' | 'ledger'} KeystoneDerivationProfile */
+
+export const KEYSTONE_DERIVATION = {
+  standard: 'standard',
+  ledger: 'ledger',
+};
+
+const LEDGER_DERIVATION_HINT = /ledger|bit\s*box|bitbox|lbx2|\blbx\b/i;
+const STANDARD_DERIVATION_HINT =
+  /icarus|yoroi|daedalus|eternl|typhon|nami|standard|cardano(?!\s*ledger)/i;
+
+export function normalizeKeystonePath(path) {
+  if (!path || typeof path !== 'string') return '';
+  return path.trim().replace(/^M\//, 'm/');
+}
+
+/** @returns {number | null} CIP-1852 account index, or null if not a supported path */
+export function parseCip1852AccountIndexFromPath(path) {
+  const p = normalizeKeystonePath(path);
+  const m = p.match(CIP1852_ACCOUNT_STEP_RE);
+  return m ? parseInt(m[1], 10) : null;
+}
 
 /**
- * How many consecutive CIP-1852 account paths (`m/1852'/1815'/0'` …) we put in the
- * hardware-call QR. Keystone lets the user pick which of these accounts to include in
- * the sync QR; a single path would always force account 0 regardless of the device UI.
- * Keep this modest to limit QR size (see AnimatedQRCode `capacity` in hw.jsx).
- * Matches Keystone hardware-call V0 range through `m/1852'/1815'/22'` (23 accounts;
- * CIP-1852 indices 0–22; UI “Account 1” … “Account 23”).
+ * Infer whether Keystone exported Ledger/BitBox-style keys vs Cardano-standard keys
+ * from device-provided metadata (same idea as Eternl: follow the device setting).
  */
-export const KEYSTONE_CARDANO_ACCOUNT_SLOTS = 23;
+export function inferKeystoneDerivationProfile(note, name) {
+  const text = `${note || ''} ${name || ''}`;
+  if (LEDGER_DERIVATION_HINT.test(text)) {
+    return KEYSTONE_DERIVATION.ledger;
+  }
+  if (STANDARD_DERIVATION_HINT.test(text)) {
+    return KEYSTONE_DERIVATION.standard;
+  }
+  return KEYSTONE_DERIVATION.standard;
+}
+
+/** Storage suffix so account 0 Ledger vs standard can coexist */
+export function keystoneAccountStorageSuffix(profile) {
+  return profile === KEYSTONE_DERIVATION.ledger ? '-vledger' : '';
+}
+
+/**
+ * Max CIP-1852 **account index** (0-based) allowed in the Keystone picker / QR.
+ * Keystone supports `m/1852'/1815'/0'` … `m/1852'/1815'/23'` — indices **0–23** inclusive.
+ */
+export const KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX = 23;
 
 /** @param {number} accountIndex — 0-based CIP-1852 account index */
 export function cip1852AccountPath(accountIndex) {
@@ -29,40 +73,75 @@ export function cip1852AccountPath(accountIndex) {
 }
 
 /**
- * Stored / UI label: wallet brand, 1-based account number, full CIP-1852 account path.
+ * Stored / UI label: path + which derivation profile Keystone reported.
  * @param {number} accountIndex — 0-based CIP-1852 account index
+ * @param {KeystoneDerivationProfile} [profile]
  */
-export function formatKeystoneCardanoAccountLabel(accountIndex) {
+export function formatKeystoneCardanoAccountLabel(
+  accountIndex,
+  profile = KEYSTONE_DERIVATION.standard
+) {
   const n = Number(accountIndex);
   const path = cip1852AccountPath(n);
-  return `Keystone · Account ${n + 1} · CIP-1852 ${path}`;
+  const tail =
+    profile === KEYSTONE_DERIVATION.ledger
+      ? 'Ledger-compatible'
+      : 'Cardano standard';
+  return `Keystone · Account ${n} · ${path} · ${tail}`;
 }
 
 /**
  * QR the user shows to Keystone first (Hardware Call / key derivation).
- * Keystone scans this, then displays the sync QR for the wallet to scan.
- * @param {number} [accountCount] — number of consecutive CIP-1852 accounts from index 0
- *   (default {@link KEYSTONE_CARDANO_ACCOUNT_SLOTS}).
+ * Requests **one** CIP-1852 account path so Keystone only exports that account (match
+ * the same account selected on the device before scanning).
+ * @param {number} [accountIndex] — 0-based CIP-1852 account index (`0 … {@link KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}`).
  * @see https://dev.keyst.one/docs/integration-tutorial-advanced/hardware-call
  */
 export function generateCardanoKeystoneKeyDerivationUr({
   origin = 'Lucem',
-  accountCount = KEYSTONE_CARDANO_ACCOUNT_SLOTS,
+  accountIndex = 0,
 } = {}) {
-  const schemas = [];
-  for (let i = 0; i < accountCount; i++) {
-    schemas.push({
+  const i = Number(accountIndex);
+  if (
+    !Number.isInteger(i) ||
+    i < 0 ||
+    i > KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX
+  ) {
+    throw new Error(
+      `Invalid Keystone account index ${accountIndex}. Use 0–${KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}.`
+    );
+  }
+  const schemas = [
+    {
       path: cip1852AccountPath(i),
       curve: Curve.ed25519,
       algo: DerivationAlgorithm.bip32ed25519,
       chainType: 'ADA',
-    });
-  }
+    },
+  ];
   return KeystoneSDK.generateKeyDerivationCall({
     schemas,
     origin,
     version: QRHardwareCallVersion.V1,
   });
+}
+
+/**
+ * Keep only keys for the account the user requested; Keystone may still return extras.
+ */
+export function filterKeystoneKeysForRequestedAccount(
+  keys,
+  requestedAccountIndex
+) {
+  const want = Number(requestedAccountIndex);
+  const filtered = (keys || []).filter((k) => k.account === want);
+  if (filtered.length === 0) {
+    throw new Error(
+      `Keystone did not return account ${want} (${cip1852AccountPath(want)}). ` +
+        'Pick the same account number in Lucem as on Keystone, then export again.'
+    );
+  }
+  return filtered;
 }
 
 export function urFromScan({ type, cbor }) {
@@ -71,7 +150,7 @@ export function urFromScan({ type, cbor }) {
 
 /**
  * Parse Keystone sync QR (crypto-multi-accounts or crypto-hdkey).
- * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string, cip1852Path: string }> }}
+ * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string, cip1852Path: string, profile: KeystoneDerivationProfile, rowKey: string }> }}
  */
 export function parseKeystoneCardanoConnectUr(scan) {
   const sdk = new KeystoneSDK();
@@ -93,6 +172,7 @@ export function parseKeystoneCardanoConnectUr(scan) {
         publicKey: one.publicKey,
         name: one.name,
         chainCode: one.chainCode,
+        note: one.note,
       },
     ];
   } else {
@@ -108,8 +188,8 @@ export function parseKeystoneCardanoConnectUr(scan) {
   const adaAccounts = [];
   for (const k of keys) {
     if (k.chain !== 'ADA') continue;
-    const m = (k.path || '').match(CARDANO_ACCOUNT_PATH_RE);
-    if (!m) continue;
+    const account = parseCip1852AccountIndexFromPath(k.path || '');
+    if (account == null) continue;
     const pub = (k.publicKey || '').toLowerCase();
     const chain = (k.chainCode || '').toLowerCase();
     if (pub.length !== 64 || chain.length !== 64) {
@@ -117,22 +197,44 @@ export function parseKeystoneCardanoConnectUr(scan) {
         'Keystone QR is missing chain code or public key (use Cardano account sync on the device).'
       );
     }
-    const account = parseInt(m[1], 10);
+    const profile = inferKeystoneDerivationProfile(k.note, k.name);
+    const rowKey = `${account}-${profile}`;
     adaAccounts.push({
       account,
       publicKey: pub + chain,
       cip1852Path: cip1852AccountPath(account),
-      name: formatKeystoneCardanoAccountLabel(account),
+      profile,
+      rowKey,
+      name: formatKeystoneCardanoAccountLabel(account, profile),
     });
   }
 
   if (adaAccounts.length === 0) {
-    throw new Error('No Cardano (ADA) account keys found in this QR.');
+    throw new Error(
+      'No Cardano (ADA) account keys found in this QR. Use CIP-1852 paths m/1852\'/1815\'/… on the device (Ledger-compatible or Cardano standard).'
+    );
   }
 
-  adaAccounts.sort((a, b) => a.account - b.account);
+  const byRow = new Map();
+  for (const row of adaAccounts) {
+    const prev = byRow.get(row.rowKey);
+    if (prev) {
+      if (prev.publicKey === row.publicKey) continue;
+      throw new Error(
+        'Keystone returned different keys for the same account and derivation profile. Export again from the device.'
+      );
+    }
+    byRow.set(row.rowKey, row);
+  }
+  const deduped = Array.from(byRow.values());
 
-  return { masterFingerprint, keys: adaAccounts };
+  deduped.sort((a, b) =>
+    a.account !== b.account
+      ? a.account - b.account
+      : a.profile.localeCompare(b.profile)
+  );
+
+  return { masterFingerprint, keys: deduped };
 }
 
 function buildKeystoneExtraSigners(tx, account, hw, keyHashes) {

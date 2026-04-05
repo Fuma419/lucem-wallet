@@ -89,24 +89,16 @@ describe('koiosRequest retry behavior', () => {
 // --- Test 2: Zero-balance quantity expression ---
 
 describe('balance display quantity logic', () => {
-  /**
-   * This replicates the quantity expression from wallet.jsx:
-   *   state.account &&
-   *   (state.account.lovelace || state.account.lovelace === 0 || state.account.lovelace === '0')
-   *     ? BigInt(state.account.lovelace) - BigInt(state.account.minAda) - BigInt(collateral)
-   *     : undefined
-   */
+  const { bigIntLovelace } = require('../../api/lovelace-scalar');
+
+  /** Mirrors wallet.jsx UnitDisplay quantity after bigIntLovelace hardening. */
   function computeDisplayQuantity(account) {
     if (!account) return undefined;
-    if (
-      account.lovelace ||
-      account.lovelace === 0 ||
-      account.lovelace === '0'
-    ) {
+    if (account.lovelace !== null && account.lovelace !== undefined) {
       return (
-        BigInt(account.lovelace) -
-        BigInt(account.minAda) -
-        BigInt(account.collateral ? account.collateral.lovelace : 0)
+        bigIntLovelace(account.lovelace) -
+        bigIntLovelace(account.minAda) -
+        bigIntLovelace(account.collateral?.lovelace)
       ).toString();
     }
     return undefined;
@@ -147,6 +139,15 @@ describe('balance display quantity logic', () => {
       collateral: { lovelace: '5000000' },
     };
     expect(computeDisplayQuantity(account)).toBe('3000000');
+  });
+
+  test('should not throw when lovelace is a stray object (truthy pre-fix bug)', () => {
+    const account = {
+      lovelace: { not: 'valid' },
+      minAda: 0,
+      collateral: null,
+    };
+    expect(computeDisplayQuantity(account)).toBe('0');
   });
 });
 

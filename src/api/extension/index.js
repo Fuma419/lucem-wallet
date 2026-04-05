@@ -44,6 +44,7 @@ import { milkomedaNetworks } from '@dcspark/milkomeda-constants';
 import { Cardano, Serialization } from '@cardano-sdk/core';
 import provider from '../../config/provider';
 import { KOIOS_REQUESTS } from '../koios-endpoints';
+import { bigIntLovelace, normalizeLovelaceScalar } from '../lovelace-scalar';
 
 const hasTaggedSets = (cbor) => {
   const tx = Serialization.Transaction.fromCbor(cbor);
@@ -198,24 +199,21 @@ export const getBalance = async () => {
   // Aggregate all UTXOs to get total balance
   const aggregatedAssets = {};
   let totalLovelace = BigInt(0);
-  
+
   for (const utxo of result) {
-    // Add lovelace
-    totalLovelace += BigInt(utxo.value || '0');
-    
-    // Add other assets
+    totalLovelace += bigIntLovelace(utxo.value);
+
     if (utxo.asset_list && Array.isArray(utxo.asset_list)) {
       for (const asset of utxo.asset_list) {
         const unit = asset.policy_id + asset.asset_name;
         if (!aggregatedAssets[unit]) {
           aggregatedAssets[unit] = BigInt(0);
         }
-        aggregatedAssets[unit] += BigInt(asset.quantity || '0');
+        aggregatedAssets[unit] += bigIntLovelace(asset.quantity);
       }
     }
   }
-  
-  // Convert to the format expected by assetsToValue
+
   const assets = [
     { unit: 'lovelace', quantity: totalLovelace.toString() },
     ...Object.entries(aggregatedAssets).map(([unit, quantity]) => ({
@@ -223,7 +221,7 @@ export const getBalance = async () => {
       quantity: quantity.toString()
     }))
   ];
-  
+
   const value = await assetsToValue(assets);
   return value;
 };
@@ -251,22 +249,19 @@ export const getBalanceExtended = async () => {
   let totalLovelace = BigInt(0);
   
   for (const utxo of result) {
-    // Add lovelace
-    totalLovelace += BigInt(utxo.value || '0');
-    
-    // Add other assets
+    totalLovelace += bigIntLovelace(utxo.value);
+
     if (utxo.asset_list && Array.isArray(utxo.asset_list)) {
       for (const asset of utxo.asset_list) {
         const unit = asset.policy_id + asset.asset_name;
         if (!aggregatedAssets[unit]) {
           aggregatedAssets[unit] = BigInt(0);
         }
-        aggregatedAssets[unit] += BigInt(asset.quantity || '0');
+        aggregatedAssets[unit] += bigIntLovelace(asset.quantity);
       }
     }
   }
-  
-  // Convert to the format expected by assetsToValue
+
   const assets = [
     { unit: 'lovelace', quantity: totalLovelace.toString() },
     ...Object.entries(aggregatedAssets).map(([unit, quantity]) => ({
@@ -274,7 +269,7 @@ export const getBalanceExtended = async () => {
       quantity: quantity.toString()
     }))
   ];
-  
+
   return assets;
 };
 
@@ -2272,9 +2267,10 @@ export const updateBalance = async (currentAccount, network) => {
   await checkCollateral(currentAccount, network);
 
   if (assets.length > 0) {
-    currentAccount[network.id].lovelace = assets.find(
-      (am) => am.unit === 'lovelace'
-    ).quantity;
+    const lovelaceRow = assets.find((am) => am.unit === 'lovelace');
+    currentAccount[network.id].lovelace = normalizeLovelaceScalar(
+      lovelaceRow ? lovelaceRow.quantity : null
+    );
     currentAccount[network.id].assets = assets.filter(
       (am) => am.unit !== 'lovelace'
     );
@@ -2293,7 +2289,7 @@ export const updateBalance = async (currentAccount, network) => {
         checkOutput,
         dataCost
       ).toString();
-      currentAccount[network.id].minAda = minAda;
+      currentAccount[network.id].minAda = normalizeLovelaceScalar(minAda);
     } else {
       currentAccount[network.id].minAda = 0;
     }
@@ -2337,7 +2333,10 @@ export const setCollateral = async (collateral) => {
   const currentIndex = await getCurrentAccountIndex();
   const network = await getNetwork();
   const accounts = await getStorage(STORAGE.accounts);
-  accounts[currentIndex][network.id].collateral = collateral;
+  accounts[currentIndex][network.id].collateral = {
+    ...collateral,
+    lovelace: normalizeLovelaceScalar(collateral.lovelace),
+  };
   return await setStorage({
     [STORAGE.accounts]: {
       ...accounts,

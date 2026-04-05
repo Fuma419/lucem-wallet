@@ -17,6 +17,7 @@ import {
   updateAccount,
   getStorage,
 } from '../../../api/extension';
+import { bigIntLovelace } from '../../../api/lovelace-scalar';
 import {
   BsArrowDownRight,
   BsArrowUpRight,
@@ -183,39 +184,43 @@ const Wallet = () => {
     await updateAccount(forceUpdate);
     const allAccounts = await getAccounts();
     const currentAccount = allAccounts[currentIndex];
+    const totalAda = bigIntLovelace(currentAccount.lovelace);
     currentAccount.ft =
-      currentAccount.lovelace > 0
+      totalAda > 0n
         ? [
             {
               unit: 'lovelace',
               quantity: (
-                BigInt(currentAccount.lovelace) -
-                BigInt(currentAccount.minAda) -
-                BigInt(
-                  currentAccount.collateral
-                    ? currentAccount.collateral.lovelace
-                    : 0
-                )
+                totalAda -
+                bigIntLovelace(currentAccount.minAda) -
+                bigIntLovelace(currentAccount.collateral?.lovelace)
               ).toString(),
             },
           ]
         : [];
     currentAccount.nft = [];
     currentAccount.assets.forEach((asset) => {
-      asset.policy = asset.unit.slice(0, 56);
-      asset.name = Buffer.from(asset.unit.slice(56), 'hex');
-      asset.fingerprint = AssetFingerprint.fromParts(
-        Buffer.from(asset.policy, 'hex'),
-        asset.name
-      ).fingerprint();
-      asset.name = asset.name.toString();
-      if (
-        (asset.has_nft_onchain_metadata === true &&
-          !fromAssetUnit(asset.unit).label) ||
-        fromAssetUnit(asset.unit).label === 222
-      )
-        currentAccount.nft.push(asset);
-      else currentAccount.ft.push(asset);
+      try {
+        if (!asset || typeof asset.unit !== 'string' || asset.unit.length < 56) {
+          return;
+        }
+        asset.policy = asset.unit.slice(0, 56);
+        asset.name = Buffer.from(asset.unit.slice(56), 'hex');
+        asset.fingerprint = AssetFingerprint.fromParts(
+          Buffer.from(asset.policy, 'hex'),
+          asset.name
+        ).fingerprint();
+        asset.name = asset.name.toString();
+        if (
+          (asset.has_nft_onchain_metadata === true &&
+            !fromAssetUnit(asset.unit).label) ||
+          fromAssetUnit(asset.unit).label === 222
+        )
+          currentAccount.nft.push(asset);
+        else currentAccount.ft.push(asset);
+      } catch (err) {
+        console.warn('Skipping malformed asset row', asset?.unit, err);
+      }
     });
     let price = fiatPrice.current;
     try {
@@ -251,6 +256,10 @@ const Wallet = () => {
         getCurrentAccountIndex().then((currentIndex) => {
           if (!isMounted.current) return;
           const currentAccount = accounts[currentIndex];
+          if (currentAccount) {
+            currentAccount.ft = currentAccount.ft ?? [];
+            currentAccount.nft = currentAccount.nft ?? [];
+          }
           setState((s) => ({ ...s, account: currentAccount }));
         });
       }).catch(() => {});
@@ -402,28 +411,22 @@ const Wallet = () => {
                                   {accountInfo.name}
                                 </Text>
                                 {account ? (
-                                  account[state.network.id].lovelace ||
-                                  account[state.network.id].lovelace == 0 ? (
+                                  account[state.network.id].lovelace !== null &&
+                                  account[state.network.id].lovelace !==
+                                    undefined ? (
                                     <UnitDisplay
-                                      quantity={
-                                        account &&
-                                        account[state.network.id].lovelace &&
-                                        (
-                                          BigInt(
-                                            account[state.network.id].lovelace
-                                          ) -
-                                          BigInt(
-                                            account[state.network.id].minAda
-                                          ) -
-                                          BigInt(
-                                            account[state.network.id]
-                                              .collateral
-                                              ? account[state.network.id]
-                                                  .collateral.lovelace
-                                              : 0
-                                          )
-                                        ).toString()
-                                      }
+                                      quantity={(
+                                        bigIntLovelace(
+                                          account[state.network.id].lovelace
+                                        ) -
+                                        bigIntLovelace(
+                                          account[state.network.id].minAda
+                                        ) -
+                                        bigIntLovelace(
+                                          account[state.network.id].collateral
+                                            ?.lovelace
+                                        )
+                                      ).toString()}
                                       decimals={6}
                                       symbol={settings.adaSymbol}
                                     />
@@ -542,16 +545,15 @@ const Wallet = () => {
                 fontWeight="bold"
                 quantity={
                   state.account &&
-                  (state.account.lovelace || state.account.lovelace === 0 || state.account.lovelace === '0')
+                  state.account.lovelace !== null &&
+                  state.account.lovelace !== undefined
                     ? (
-                      BigInt(state.account.lovelace) -
-                      BigInt(state.account.minAda) -
-                      BigInt(
-                        state.account.collateral
-                          ? state.account.collateral.lovelace
-                          : 0
-                      )
-                    ).toString()
+                        bigIntLovelace(state.account.lovelace) -
+                        bigIntLovelace(state.account.minAda) -
+                        bigIntLovelace(
+                          state.account.collateral?.lovelace
+                        )
+                      ).toString()
                     : undefined
                 }
                 decimals={6}
@@ -580,7 +582,9 @@ const Wallet = () => {
                           <Box display="flex">
                             <Text mr="0.5">+</Text>
                             <UnitDisplay
-                              quantity={state.account.collateral.lovelace}
+                              quantity={bigIntLovelace(
+                                state.account.collateral.lovelace
+                              ).toString()}
                               symbol={settings.adaSymbol}
                               decimals={6}
                             />
@@ -612,16 +616,15 @@ const Wallet = () => {
               fontSize="md"
               quantity={
                 state.account &&
-                state.account.lovelace &&
+                state.account.lovelace !== null &&
+                state.account.lovelace !== undefined &&
                 parseInt(
                   displayUnit(
                     (
-                      BigInt(state.account.lovelace) -
-                      BigInt(state.account.minAda) -
-                      BigInt(
-                        state.account.collateral
-                          ? state.account.collateral.lovelace
-                          : 0
+                      bigIntLovelace(state.account.lovelace) -
+                      bigIntLovelace(state.account.minAda) -
+                      bigIntLovelace(
+                        state.account.collateral?.lovelace
                       )
                     ).toString()
                   ) *
@@ -790,11 +793,21 @@ const Wallet = () => {
           </TabList>
           <TabPanels>
             <TabPanel>
-              <AssetsViewer assets={state.account && state.account.ft} />
+              <AssetsViewer
+                assets={
+                  state.account == null
+                    ? undefined
+                    : (state.account.ft ?? [])
+                }
+              />
             </TabPanel>
             <TabPanel>
               <CollectiblesViewer
-                assets={state.account && state.account.nft}
+                assets={
+                  state.account == null
+                    ? undefined
+                    : (state.account.nft ?? [])
+                }
                 onUpdateAvatar={() => getData()}
               />
             </TabPanel>
@@ -1149,14 +1162,14 @@ const DelegationPopover = ({ account, delegation, children }) => {
               hide
               fontWeight="bold"
               fontSize="sm"
-              quantity={delegation.rewards}
+              quantity={bigIntLovelace(delegation.rewards).toString()}
               decimals={6}
               symbol={settings.adaSymbol}
             />
             <Box h="4" />
             <Tooltip
               placement="top"
-              isDisabled={BigInt(delegation.rewards) >= BigInt('2000000')}
+              isDisabled={bigIntLovelace(delegation.rewards) >= 2000000n}
               label="2 ADA minimum"
             >
               <span>
@@ -1164,7 +1177,7 @@ const DelegationPopover = ({ account, delegation, children }) => {
                   onClick={() =>
                     withdrawRef.current.initWithdrawal(account, delegation)
                   }
-                  isDisabled={BigInt(delegation.rewards) < BigInt('2000000')}
+                  isDisabled={bigIntLovelace(delegation.rewards) < 2000000n}
                   size="sm"
                 >
                   Withdraw

@@ -92,12 +92,15 @@ const StoreInit = ({ children }) => {
   const init = async () => {
     if (await needUpgrade()) {
       await upgrade();
-    } else {
-      await initStore(state, actions);
-      setIsLoading(false);
-      if (info && info.length) {
-        refB.current.openModal();
+      // Password modal path: upgrade() returns early; stay on spinner until user submits.
+      if (await needUpgrade()) {
+        return;
       }
+    }
+    await initStore(state, actions);
+    setIsLoading(false);
+    if (info && info.length) {
+      refB.current.openModal();
     }
   };
 

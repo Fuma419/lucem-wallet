@@ -15,10 +15,12 @@ const {
   KEYSTONE_DERIVATION,
   cip1852AccountPath,
   filterKeystoneKeysForRequestedAccount,
+  filterKeystoneKeysForRequestedAccounts,
   formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
   inferKeystoneDerivationProfile,
   parseCip1852AccountIndexFromPath,
+  trimKeystoneConnectKeysToOne,
 } = require('../../../api/keystone-cardano');
 
 describe('keystone-cardano', () => {
@@ -77,11 +79,19 @@ describe('keystone-cardano', () => {
     );
   });
 
-  test('generateCardanoKeystoneKeyDerivationUr default includes all CIP-1852 slots', () => {
-    const all = generateCardanoKeystoneKeyDerivationUr();
-    const one = generateCardanoKeystoneKeyDerivationUr({ accountIndex: 0 });
-    expect(all.type).toBeTruthy();
-    expect(all.cbor.length).toBeGreaterThan(one.cbor.length);
+  test('generateCardanoKeystoneKeyDerivationUr default is single path account 0', () => {
+    const def = generateCardanoKeystoneKeyDerivationUr();
+    const zero = generateCardanoKeystoneKeyDerivationUr({ accountIndex: 0 });
+    expect(def.type).toBe(zero.type);
+    expect(Buffer.from(def.cbor).equals(Buffer.from(zero.cbor))).toBe(true);
+  });
+
+  test('generateCardanoKeystoneKeyDerivationUr multiple indices larger than one', () => {
+    const one = generateCardanoKeystoneKeyDerivationUr({ accountIndices: [0] });
+    const two = generateCardanoKeystoneKeyDerivationUr({
+      accountIndices: [0, 3],
+    });
+    expect(two.cbor.length).toBeGreaterThan(one.cbor.length);
   });
 
   test('generateCardanoKeystoneKeyDerivationUr rejects out-of-range index', () => {
@@ -90,6 +100,29 @@ describe('keystone-cardano', () => {
         accountIndex: KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX + 1,
       })
     ).toThrow(/Invalid Keystone account index/);
+  });
+
+  test('trimKeystoneConnectKeysToOne', () => {
+    const a = { rowKey: '0-standard', account: 0 };
+    const b = { rowKey: '1-standard', account: 1 };
+    expect(trimKeystoneConnectKeysToOne([])).toEqual([]);
+    expect(trimKeystoneConnectKeysToOne([a])).toEqual([a]);
+    expect(trimKeystoneConnectKeysToOne([a, b])).toEqual([a]);
+  });
+
+  test('filterKeystoneKeysForRequestedAccounts', () => {
+    const keys = [
+      { account: 0, rowKey: '0-standard', publicKey: 'a' },
+      { account: 2, rowKey: '2-standard', publicKey: 'b' },
+    ];
+    expect(filterKeystoneKeysForRequestedAccounts(keys, [0, 2])).toEqual(keys);
+    expect(filterKeystoneKeysForRequestedAccounts(keys, [2, 0])).toEqual([
+      keys[0],
+      keys[1],
+    ]);
+    expect(() =>
+      filterKeystoneKeysForRequestedAccounts(keys, [0, 1])
+    ).toThrow(/did not return account 1/);
   });
 
   test('filterKeystoneKeysForRequestedAccount', () => {

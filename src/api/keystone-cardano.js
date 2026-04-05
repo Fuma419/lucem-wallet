@@ -100,7 +100,7 @@ export function keystoneAccountStorageSuffix(profile) {
 }
 
 /**
- * Max CIP-1852 **account index** (0-based) in the default multi-slot hardware-call QR.
+ * Max CIP-1852 **account index** (0-based) for a single-path hardware-call QR.
  * Keystone supports `m/1852'/1815'/0'` … `m/1852'/1815'/23'` — indices **0–23** inclusive.
  */
 export const KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX = 23;
@@ -130,45 +130,49 @@ export function formatKeystoneCardanoAccountLabel(
 
 /**
  * QR the user shows to Keystone first (Hardware Call / key derivation).
- * By default requests **every** CIP-1852 account slot (`m/1852'/1815'/0'…N'`) so the
- * user picks the account **on Keystone**; the sync QR then contains only what they
- * exported (typically one account).
+ * One schema per requested CIP-1852 account index (default `[0]` only). More indices
+ * mean a larger QR and more approvals on the device.
  * @param {object} [opts]
  * @param {string} [opts.origin]
- * @param {number} [opts.accountIndex] — If set, request a **single** path (tests / advanced).
- *   Omit for device-driven export (all slots 0…{@link KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}).
+ * @param {number[]} [opts.accountIndices] — 0-based CIP-1852 indices (deduped, sorted). Default `[0]`.
+ * @param {number} [opts.accountIndex] — Shorthand for a single index (tests / callers).
  * @see https://dev.keyst.one/docs/integration-tutorial-advanced/hardware-call
  */
 export function generateCardanoKeystoneKeyDerivationUr({
   origin = 'Lucem',
+  accountIndices: accountIndicesIn,
   accountIndex,
 } = {}) {
-  const schemaForIndex = (i) => ({
+  let indices;
+  if (Array.isArray(accountIndicesIn) && accountIndicesIn.length > 0) {
+    indices = [
+      ...new Set(
+        accountIndicesIn.map((n) => Number(n)).filter((n) => Number.isInteger(n))
+      ),
+    ].sort((a, b) => a - b);
+  } else if (accountIndex !== undefined && accountIndex !== null) {
+    indices = [Number(accountIndex)];
+  } else {
+    indices = [0];
+  }
+  if (indices.length === 0) {
+    throw new Error(
+      'At least one Keystone account index is required (CIP-1852, 0–23).'
+    );
+  }
+  for (const i of indices) {
+    if (i < 0 || i > KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX) {
+      throw new Error(
+        `Invalid Keystone account index ${i}. Use 0–${KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}.`
+      );
+    }
+  }
+  const schemas = indices.map((i) => ({
     path: cip1852AccountPath(i),
     curve: Curve.ed25519,
     algo: DerivationAlgorithm.bip32ed25519,
     chainType: 'ADA',
-  });
-
-  let schemas;
-  if (accountIndex !== undefined && accountIndex !== null) {
-    const i = Number(accountIndex);
-    if (
-      !Number.isInteger(i) ||
-      i < 0 ||
-      i > KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX
-    ) {
-      throw new Error(
-        `Invalid Keystone account index ${accountIndex}. Use 0–${KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}.`
-      );
-    }
-    schemas = [schemaForIndex(i)];
-  } else {
-    schemas = [];
-    for (let i = 0; i <= KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX; i++) {
-      schemas.push(schemaForIndex(i));
-    }
-  }
+  }));
 
   return KeystoneSDK.generateKeyDerivationCall({
     schemas,
@@ -193,6 +197,58 @@ export function filterKeystoneKeysForRequestedAccount(
     );
   }
   return filtered;
+}
+
+/**
+ * Keep one parsed row per requested account index (in ascending index order).
+ * @param {Array<{ account: number }>} keys
+ * @param {number[]} requestedIndices
+ */
+export function filterKeystoneKeysForRequestedAccounts(keys, requestedIndices) {
+  const order = [
+    ...new Set((requestedIndices || []).map((n) => Number(n))),
+  ].sort((a, b) => a - b);
+  if (order.length === 0) {
+    throw new Error('Select at least one Cardano account.');
+  }
+  for (const i of order) {
+    if (
+      !Number.isInteger(i) ||
+      i < 0 ||
+      i > KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX
+    ) {
+      throw new Error(
+        `Invalid Keystone account index ${i}. Use 0–${KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}.`
+      );
+    }
+  }
+  const list = keys || [];
+  const out = [];
+  for (const i of order) {
+    const row = list.find((k) => k.account === i);
+    if (!row) {
+      throw new Error(
+        `Keystone did not return account ${i} (${cip1852AccountPath(i)}). ` +
+          'Export again from the device with the same accounts selected in Lucem.'
+      );
+    }
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * Connect flow: add **one** Lucem account per Keystone sync. Firmware often puts several
+ * CIP-1852 rows in one `crypto-multi-accounts` UR (e.g. after a multi-path hardware call);
+ * we keep a single row so the UI never bulk-imports. Order follows {@link parseKeystoneCardanoConnectUr}
+ * (UR / first-seen order). When several rows are present we keep the **first**; if that does not
+ * match the account you chose on Keystone, try again after switching the active Cardano account
+ * or contact Keystone — the UR does not label which row is “current”.
+ * @param {Array<{ rowKey: string }>} keys
+ */
+export function trimKeystoneConnectKeysToOne(keys) {
+  if (!keys || keys.length <= 1) return keys;
+  return [keys[0]];
 }
 
 export function urFromScan({ type, cbor }) {
@@ -273,7 +329,9 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
     );
   }
 
+  /** Preserve sync QR key order (device / firmware order), not sorted by account index. */
   const byRow = new Map();
+  const order = [];
   for (const row of adaAccounts) {
     const prev = byRow.get(row.rowKey);
     if (prev) {
@@ -283,14 +341,9 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
       );
     }
     byRow.set(row.rowKey, row);
+    order.push(row.rowKey);
   }
-  const deduped = Array.from(byRow.values());
-
-  deduped.sort((a, b) =>
-    a.account !== b.account
-      ? a.account - b.account
-      : a.profile.localeCompare(b.profile)
-  );
+  const deduped = order.map((rk) => byRow.get(rk));
 
   return { masterFingerprint, keys: deduped };
 }

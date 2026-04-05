@@ -18,6 +18,10 @@ import {
   Checkbox,
   Icon,
   Select,
+  Collapse,
+  Radio,
+  RadioGroup,
+  Stack,
 } from '@chakra-ui/react';
 import { Scrollbars } from '../components/scrollbar';
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
@@ -28,7 +32,7 @@ import LogoOriginal from '../../../assets/img/logo.svg';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
-import { ChevronRightIcon } from '@chakra-ui/icons';
+import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import TrezorWidget from '../components/trezorWidget';
 import {
   closeCurrentTab,
@@ -42,7 +46,9 @@ import {
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import {
+  KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX,
   KEYSTONE_DERIVATION,
+  filterKeystoneKeysForRequestedAccounts,
   formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
   keystoneAccountStorageSuffix,
@@ -57,6 +63,16 @@ const VENDOR_IDS = {
   trezor: [0x534c, 0x1209], // Model T HID 0x534c and others 0x1209 - taken from https://github.com/vacuumlabs/trezor-suite/blob/develop/packages/transport/src/constants.ts#L13-L21
   keystone: 'keystone',
 };
+
+/** CIP-1852 account checkboxes: only account 0 on by default (Cardano standard path). */
+function defaultKeystoneAccountChecks() {
+  const o = {};
+  for (let i = 0; i <= KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX; i += 1) {
+    o[i] = false;
+  }
+  o[0] = true;
+  return o;
+}
 
 const App = () => {
   const Logo = useColorModeValue(LogoOriginal, LogoWhite);
@@ -156,12 +172,39 @@ const ConnectHW = ({ onConfirm }) => {
   const [error, setError] = React.useState('');
   const [keystoneStep, setKeystoneStep] = React.useState('pick');
   const [scanError, setScanError] = React.useState('');
-  /** Ledger-compatible vs Cardano standard — must match ADA setting on Keystone */
-  const [keystoneExportMode, setKeystoneExportMode] = React.useState('auto');
+  /** Prevents animated QR from firing multiple successful imports in one session */
+  const keystoneScanConsumedRef = React.useRef(false);
+  const [keystoneAdvancedOpen, setKeystoneAdvancedOpen] = React.useState(false);
+  const [keystoneAccountChecks, setKeystoneAccountChecks] = React.useState(
+    () => defaultKeystoneAccountChecks()
+  );
+  /** Must match Keystone ADA export: standard (default) vs Ledger-compatible */
+  const [keystoneDerivation, setKeystoneDerivation] = React.useState('standard');
+
+  const keystoneRequestedIndices = React.useMemo(() => {
+    return Object.keys(keystoneAccountChecks)
+      .map((k) => parseInt(k, 10))
+      .filter(
+        (i) =>
+          !Number.isNaN(i) &&
+          i >= 0 &&
+          i <= KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX &&
+          keystoneAccountChecks[i]
+      )
+      .sort((a, b) => a - b);
+  }, [keystoneAccountChecks]);
 
   const keyDerivationUr = React.useMemo(
-    () => generateCardanoKeystoneKeyDerivationUr(),
-    []
+    () =>
+      generateCardanoKeystoneKeyDerivationUr({
+        accountIndices: keystoneRequestedIndices,
+      }),
+    [keystoneRequestedIndices]
+  );
+
+  const keystoneQrCapacity = React.useMemo(
+    () => Math.min(900, 280 + keystoneRequestedIndices.length * 55),
+    [keystoneRequestedIndices.length]
   );
 
   if (selected === HW.keystone && keystoneStep === 'showRequest') {
@@ -173,10 +216,18 @@ const ConnectHW = ({ onConfirm }) => {
         </Text>
         <Box h={4} />
         <Text fontSize="sm" maxW="340px">
-          On Keystone, choose the <b>Cardano account</b> you want and the{' '}
-          <b>ADA export type</b> (Ledger-compatible vs Cardano standard) to match the
-          export mode below. Open the <b>scanner</b>, scan this QR, and approve — Lucem
-          imports whatever account you export from the device.
+          This QR asks Keystone for{' '}
+          <b>
+            {keystoneRequestedIndices.length === 1
+              ? `account ${keystoneRequestedIndices[0]}`
+              : `${keystoneRequestedIndices.length} accounts (${keystoneRequestedIndices.join(', ')})`}
+          </b>
+          . Use the same <b>ADA derivation</b> on the device as in Lucem (
+          {keystoneDerivation === 'ledger'
+            ? 'Ledger-compatible'
+            : 'Cardano standard'}
+          ). Open the <b>scanner</b>, scan this QR, and approve. More accounts take longer
+          on the device.
         </Text>
         <Box h={4} />
         <Box
@@ -190,7 +241,11 @@ const ConnectHW = ({ onConfirm }) => {
           <AnimatedQRCode
             type={keyDerivationUr.type}
             cbor={cborHex}
-            options={{ size: 220, capacity: 520, interval: 110 }}
+            options={{
+              size: 220,
+              capacity: keystoneQrCapacity,
+              interval: 110,
+            }}
           />
         </Box>
         <Box h={4} />
@@ -213,7 +268,10 @@ const ConnectHW = ({ onConfirm }) => {
         <Button
           mt={2}
           variant="ghost"
-          onClick={() => setKeystoneStep('pick')}
+          onClick={() => {
+            keystoneScanConsumedRef.current = false;
+            setKeystoneStep('pick');
+          }}
         >
           Back
         </Button>
@@ -246,19 +304,23 @@ const ConnectHW = ({ onConfirm }) => {
             urTypes={[URType.CryptoMultiAccounts, URType.CryptoHDKey]}
             handleScan={(data) => {
               try {
+                if (keystoneScanConsumedRef.current) return;
                 const { masterFingerprint, keys } =
                   parseKeystoneCardanoConnectUr(data, {
                     forceExportProfile:
-                      keystoneExportMode === 'ledger'
+                      keystoneDerivation === 'ledger'
                         ? KEYSTONE_DERIVATION.ledger
-                        : keystoneExportMode === 'standard'
-                          ? KEYSTONE_DERIVATION.standard
-                          : undefined,
+                        : KEYSTONE_DERIVATION.standard,
                   });
+                const filtered = filterKeystoneKeysForRequestedAccounts(
+                  keys,
+                  keystoneRequestedIndices
+                );
+                keystoneScanConsumedRef.current = true;
                 onConfirm({
                   device: HW.keystone,
                   id: masterFingerprint,
-                  keystoneAccounts: keys,
+                  keystoneAccounts: filtered,
                 });
               } catch (e) {
                 setScanError(e.message || 'Could not read QR');
@@ -278,6 +340,7 @@ const ConnectHW = ({ onConfirm }) => {
           variant="ghost"
           onClick={() => {
             setScanError('');
+            keystoneScanConsumedRef.current = false;
             setKeystoneStep('showRequest');
           }}
         >
@@ -314,7 +377,10 @@ const ConnectHW = ({ onConfirm }) => {
           onClick={() => {
             setSelected(HW.keystone);
             setKeystoneStep('pick');
-            setKeystoneExportMode('auto');
+            keystoneScanConsumedRef.current = false;
+            setKeystoneAccountChecks(defaultKeystoneAccountChecks());
+            setKeystoneDerivation('standard');
+            setKeystoneAdvancedOpen(false);
             setError('');
             setScanError('');
           }}
@@ -352,35 +418,94 @@ const ConnectHW = ({ onConfirm }) => {
       {selected === HW.keystone && (
         <>
           <Text width="340px" fontSize="sm">
-            Air-gapped (no USB): pick the <b>Cardano account on Keystone</b>; Lucem does
-            not ask for an account number. Set <b>ADA export type</b> below to match the
-            device (Ledger-compatible vs Cardano standard).
+            By default Lucem connects <b>account 0</b> using{' '}
+            <b>Cardano standard</b> derivation (CIP-1852). Open{' '}
+            <b>Advanced options</b> to request more accounts (at least one) or
+            Ledger-compatible keys — settings must match Keystone when you approve the
+            QR.
           </Text>
           <Box h={4} />
-          <Text
-            fontSize="sm"
-            fontWeight="semibold"
-            alignSelf="flex-start"
-            maxW="340px"
-          >
-            ADA export type (match Keystone)
-          </Text>
-          <Select
-            mt={2}
-            maxW="340px"
+          <Button
+            variant="ghost"
             size="sm"
-            value={keystoneExportMode}
-            onChange={(e) => setKeystoneExportMode(e.target.value)}
+            alignSelf="flex-start"
+            rightIcon={
+              <ChevronDownIcon
+                transform={keystoneAdvancedOpen ? 'rotate(-180deg)' : undefined}
+                transition="transform 0.2s"
+              />
+            }
+            onClick={() => setKeystoneAdvancedOpen((o) => !o)}
           >
-            <option value="auto">Auto-detect from QR metadata</option>
-            <option value="ledger">Ledger-compatible (Ledger / BitBox)</option>
-            <option value="standard">Cardano standard (Icarus-style)</option>
-          </Select>
-          <Text fontSize="xs" color="gray.500" maxW="340px" mt={2}>
-            If the imported label shows the wrong type, pick Ledger-compatible or
-            Cardano standard here — it must match the ADA derivation setting on the
-            device.
-          </Text>
+            Advanced options
+          </Button>
+          <Collapse in={keystoneAdvancedOpen} animateOpacity>
+            <Box
+              mt={3}
+              pl={1}
+              borderLeftWidth="2px"
+              borderColor="cyan.400"
+              py={1}
+            >
+              <Text fontSize="sm" fontWeight="semibold">
+                Accounts to request (at least one)
+              </Text>
+              <Text fontSize="xs" color="gray.500" mt={1} maxW="340px">
+                Each checked account adds a derivation step on Keystone (more checks =
+                longer approval).
+              </Text>
+              <Box
+                maxH="min(11rem, 32vh)"
+                overflowY="auto"
+                mt={2}
+                pr={1}
+                sx={{ scrollbarGutter: 'stable' }}
+              >
+                <Stack spacing={1}>
+                  {Array.from(
+                    { length: KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX + 1 },
+                    (_, i) => (
+                      <Checkbox
+                        key={i}
+                        size="sm"
+                        isChecked={!!keystoneAccountChecks[i]}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          const n = Object.values(keystoneAccountChecks).filter(
+                            Boolean
+                          ).length;
+                          if (!checked && n <= 1) return;
+                          setKeystoneAccountChecks((prev) => ({
+                            ...prev,
+                            [i]: checked,
+                          }));
+                        }}
+                      >
+                        Account {i} — m/1852&apos;/1815&apos;/{i}&apos;
+                      </Checkbox>
+                    )
+                  )}
+                </Stack>
+              </Box>
+              <Text fontSize="sm" fontWeight="semibold" mt={4}>
+                ADA derivation (two supported paths)
+              </Text>
+              <RadioGroup
+                value={keystoneDerivation}
+                onChange={setKeystoneDerivation}
+                mt={2}
+              >
+                <Stack spacing={2}>
+                  <Radio value="standard" size="sm">
+                    Cardano standard (default)
+                  </Radio>
+                  <Radio value="ledger" size="sm">
+                    Ledger-compatible (Ledger / BitBox)
+                  </Radio>
+                </Stack>
+              </RadioGroup>
+            </Box>
+          </Collapse>
         </>
       )}
       {selected === HW.ledger && (
@@ -398,6 +523,10 @@ const ConnectHW = ({ onConfirm }) => {
         onClick={async () => {
           setError('');
           if (selected === HW.keystone) {
+            if (keystoneRequestedIndices.length < 1) {
+              setError('Select at least one Cardano account (Advanced).');
+              return;
+            }
             setKeystoneStep('showRequest');
             setScanError('');
             return;
@@ -443,7 +572,8 @@ const ConnectHW = ({ onConfirm }) => {
 };
 
 const SelectAccounts = ({ data, onConfirm }) => {
-  const [selected, setSelected] = React.useState({ 0: true });
+  /** Ledger defaults to account slot 0; Keystone must start empty (no ghost `0` rowKey). */
+  const [selected, setSelected] = React.useState({});
   const [error, setError] = React.useState('');
   const trezorRef = React.useRef();
   const [existing, setExisting] = React.useState({});
@@ -454,6 +584,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
     data.device === HW.keystone &&
     Array.isArray(data.keystoneAccounts) &&
     data.keystoneAccounts.length > 0;
+
+  const keystoneNewAccounts = isKeystone
+    ? data.keystoneAccounts.filter((k) => !existing[k.rowKey])
+    : [];
 
   const getExistingAccounts = async () => {
     const accounts = await getStorage(STORAGE.accounts);
@@ -478,10 +612,16 @@ const SelectAccounts = ({ data, onConfirm }) => {
   }, []);
 
   React.useEffect(() => {
+    if (!isInit || isKeystone) return;
+    setSelected({ 0: true });
+  }, [isInit, isKeystone]);
+
+  React.useEffect(() => {
     if (!isInit || !isKeystone) return;
+    const newOnes = data.keystoneAccounts.filter((k) => !existing[k.rowKey]);
     const next = {};
-    data.keystoneAccounts.forEach((k) => {
-      if (!existing[k.rowKey]) next[k.rowKey] = true;
+    newOnes.forEach((k) => {
+      next[k.rowKey] = true;
     });
     setSelected(next);
   }, [isInit, isKeystone, data.keystoneAccounts, existing]);
@@ -500,9 +640,11 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Box h={6} />
         <Text width="300px">
           {isKeystone
-            ? data.keystoneAccounts.length === 1
-              ? 'Confirm adding this account. The label shows CIP-1852 path and whether Keystone exported Ledger-compatible or Cardano standard keys.'
-              : 'Choose accounts from this Keystone sync. Labels match the device derivation mode (Ledger-compatible vs Cardano standard).'
+            ? keystoneNewAccounts.length === 0
+              ? 'Every Cardano account in this sync is already in Lucem. Close this tab or run the Keystone flow again to export a different account.'
+              : keystoneNewAccounts.length === 1
+                ? 'Confirm adding this account. The label shows CIP-1852 path and derivation type.'
+                : 'Confirm which accounts to add (at least one). Uncheck any you do not want in Lucem.'
             : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device.'}
         </Text>
         <Box h={8} />
@@ -543,12 +685,19 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 <Checkbox
                   isDisabled={!!existing[rowKey]}
                   isChecked={!!(selected[rowKey] && !existing[rowKey])}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    if (isKeystone) {
+                      const checked = e.target.checked;
+                      const n = Object.keys(selected).filter(
+                        (s) => selected[s] && !existing[s]
+                      ).length;
+                      if (!checked && n <= 1) return;
+                    }
                     setSelected((s) => ({
                       ...s,
                       [rowKey]: e.target.checked,
-                    }))
-                  }
+                    }));
+                  }}
                   ml="auto"
                 />
               </Box>
@@ -558,8 +707,12 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Button
           isDisabled={
             isLoading ||
-            Object.keys(selected).filter((s) => selected[s] && !existing[s])
-              .length <= 0
+            (isKeystone
+              ? keystoneNewAccounts.length === 0 ||
+                Object.keys(selected).filter((s) => selected[s] && !existing[s])
+                  .length < 1
+              : Object.keys(selected).filter((s) => selected[s] && !existing[s])
+                  .length <= 0)
           }
           isLoading={isLoading}
           mt="auto"
@@ -573,7 +726,27 @@ const SelectAccounts = ({ data, onConfirm }) => {
             try {
               const { device, id, keystoneAccounts } = data;
               let accounts;
-              if (device === HW.ledger) {
+              if (device === HW.keystone) {
+                const validRowKeys = new Set(
+                  (keystoneAccounts || []).map((k) => k.rowKey)
+                );
+                const rkList = accountIndexes.filter((rk) => validRowKeys.has(rk));
+                if (rkList.length < 1) {
+                  throw new Error('Select at least one Keystone account');
+                }
+                accounts = rkList.map((rk) => {
+                  const k = keystoneAccounts.find((x) => x.rowKey === rk);
+                  if (!k) throw new Error('Missing Keystone account key');
+                  return {
+                    accountIndex: `${HW.keystone}-${id}-${k.account}${keystoneAccountStorageSuffix(k.profile)}`,
+                    publicKey: k.publicKey,
+                    name: formatKeystoneCardanoAccountLabel(
+                      k.account,
+                      k.profile
+                    ),
+                  };
+                });
+              } else if (device === HW.ledger) {
                 const appAda = await initHW({ device, id });
                 const ledgerKeys = await appAda.getExtendedPublicKeys({
                   paths: accountIndexes.map((index) => [
@@ -589,19 +762,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
                     name: `Ledger ${parseInt(accountIndexes[index], 10) + 1}`,
                   })
                 );
-              } else if (device === HW.keystone) {
-                accounts = accountIndexes.map((rk) => {
-                  const k = keystoneAccounts.find((x) => x.rowKey === rk);
-                  if (!k) throw new Error('Missing Keystone account key');
-                  return {
-                    accountIndex: `${HW.keystone}-${id}-${k.account}${keystoneAccountStorageSuffix(k.profile)}`,
-                    publicKey: k.publicKey,
-                    name: formatKeystoneCardanoAccountLabel(
-                      k.account,
-                      k.profile
-                    ),
-                  };
-                });
               }
               if (!accounts || accounts.length === 0) {
                 throw new Error('No accounts selected');

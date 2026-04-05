@@ -32,6 +32,7 @@ import Loader from '../../../api/loader';
 import { useStoreActions } from 'easy-peasy';
 import {
   buildKeystoneCardanoSignRequest,
+  KEYSTONE_SIGN_ANIMATED_QR_OPTIONS,
   parseKeystoneCardanoTxSignature,
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
@@ -203,8 +204,9 @@ const App = () => {
         {phase === Phase.showQr && urData.cbor && (
           <>
             <Text fontSize="md" textAlign="center" maxW="420px">
-              Scan this QR with your Keystone. Approve on the device, then tap
-              below and scan the signature QR from Keystone.
+              Scan this QR with your Keystone. The animation may run for a minute
+              or two while the full request is transferred; hold the device steady.
+              Approve on the device, then tap below and scan the signature QR.
             </Text>
             <Box
               bg="white"
@@ -216,7 +218,7 @@ const App = () => {
               <AnimatedQRCode
                 type={urData.type}
                 cbor={urData.cbor}
-                options={{ size: 240, capacity: 400, interval: 100 }}
+                options={KEYSTONE_SIGN_ANIMATED_QR_OPTIONS}
               />
             </Box>
             <Button colorScheme="cyan" onClick={() => setPhase(Phase.scan)}>

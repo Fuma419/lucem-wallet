@@ -44,6 +44,7 @@ import { URType } from '@keystonehq/keystone-sdk';
 import KeystoneSDK from '@keystonehq/keystone-sdk';
 import {
   buildKeystoneCardanoSignRequest,
+  KEYSTONE_SIGN_ANIMATED_QR_OPTIONS,
   parseKeystoneCardanoTxSignature,
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
@@ -137,14 +138,14 @@ const SignTxKeystoneInline = ({
       {phase === KPhase.show && urData.cbor && (
         <>
           <Text fontSize="sm" mb={3}>
-            Scan with Keystone, approve, then tap below and scan the signature
-            QR.
+            Scan with Keystone. The animated QR may take a minute or two; keep the
+            device aligned. Approve, then tap below and scan the signature QR.
           </Text>
           <Box bg="white" p={2} rounded="md" mx="auto" w="fit-content">
             <AnimatedQRCode
               type={urData.type}
               cbor={urData.cbor}
-              options={{ size: 200, capacity: 400, interval: 100 }}
+              options={KEYSTONE_SIGN_ANIMATED_QR_OPTIONS}
             />
           </Box>
           <Button

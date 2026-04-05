@@ -26,6 +26,23 @@ export const KEYSTONE_DERIVATION = {
   ledger: 'ledger',
 };
 
+/**
+ * Animated QR for Cardano **sign** requests: larger UR fragments + faster cycling
+ * shorten air-gap transfer vs @keystonehq/animated-qr defaults (400 / 100ms).
+ */
+export const KEYSTONE_SIGN_ANIMATED_QR_OPTIONS = Object.freeze({
+  size: 280,
+  capacity: 900,
+  interval: 72,
+});
+
+/**
+ * @keystonehq/keystone-sdk uses full tx CBOR in UR below this byte length; at/above
+ * it switches to CardanoSignTxHashRequest (smaller QR). Default SDK value is 2048,
+ * which keeps typical stake/register/delegate txs on the slow full-tx path.
+ */
+const KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES = 768;
+
 const LEDGER_DERIVATION_HINT =
   /ledger|bit\s*box|bitbox|lbx2|\blbx\b|ledger_live|ledger_legacy/i;
 /** Avoid matching generic “Cardano” in wallet names — that falsely implied standard. */
@@ -385,15 +402,17 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
     }
 
     /**
-     * Cardano standard xpub is Keystone's default export; Ledger/BitBox requires the
-     * user to switch address type on the device approval screen. Never guess Ledger
-     * from an unlabeled single key — that produced standard addresses with a Ledger label.
+     * Keystone often omits note/name on ADA sync URs. If there is exactly one row
+     * and no derivation hint, trust the Advanced option the user already matched on
+     * the device (Ledger vs standard).
      */
-    const onlyAmbiguousStandard =
-      forcedProfile === KEYSTONE_DERIVATION.standard &&
-      rows.length === 1 &&
-      rows[0].inferred == null;
-    if (onlyAmbiguousStandard) {
+    const onlyAmbiguousSingleRow =
+      rows.length === 1 && rows[0].inferred == null;
+    if (
+      onlyAmbiguousSingleRow &&
+      (forcedProfile === KEYSTONE_DERIVATION.standard ||
+        forcedProfile === KEYSTONE_DERIVATION.ledger)
+    ) {
       adaAccounts.push({
         account,
         publicKey: rows[0].publicKey,
@@ -403,15 +422,6 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
         name: formatKeystoneCardanoAccountLabel(account, forcedProfile),
       });
       continue;
-    }
-
-    if (
-      forcedProfile === KEYSTONE_DERIVATION.ledger &&
-      rows.some((r) => r.inferred == null)
-    ) {
-      throw new Error(
-        'This QR is not tagged as Ledger-compatible. On Keystone, when you approve the sync QR, switch ADA from the default (Cardano standard) to Ledger / BitBox — then export again. Lucem cannot infer Ledger keys without that device step.'
-      );
     }
 
     const wantLedger = forcedProfile === KEYSTONE_DERIVATION.ledger;
@@ -525,7 +535,9 @@ export async function buildKeystoneCardanoSignRequest({
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-  const sdk = new KeystoneSDK();
+  const sdk = new KeystoneSDK({
+    sizeLimit: { ada: KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES },
+  });
   const extraSigners = buildKeystoneExtraSigners(tx, account, hw, keyHashes);
   const ur = sdk.cardano.generateSignRequest({
     requestId,

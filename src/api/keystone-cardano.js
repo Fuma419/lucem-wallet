@@ -63,7 +63,11 @@ export function parseCip1852AccountIndexFromPath(path) {
  * Infer Ledger-compatible vs Cardano-standard export from Keystone UR metadata.
  * Firmware uses {@link AccountNote} strings on `note` (e.g. `account.ledger_live`).
  */
-export function inferKeystoneDerivationProfile(note, name) {
+/**
+ * Same as {@link inferKeystoneDerivationProfile} but returns `null` when the UR
+ * does not indicate Ledger vs Cardano-standard (so the UI choice can apply).
+ */
+export function inferKeystoneDerivationProfileOrNull(note, name) {
   const rawNote = keystoneTextField(note).trim();
   const rawName = keystoneTextField(name).trim();
   const text = `${rawNote} ${rawName}`.trim();
@@ -91,7 +95,13 @@ export function inferKeystoneDerivationProfile(note, name) {
   if (STANDARD_DERIVATION_HINT.test(text)) {
     return KEYSTONE_DERIVATION.standard;
   }
-  return KEYSTONE_DERIVATION.standard;
+  return null;
+}
+
+export function inferKeystoneDerivationProfile(note, name) {
+  return (
+    inferKeystoneDerivationProfileOrNull(note, name) ?? KEYSTONE_DERIVATION.standard
+  );
 }
 
 /** Storage suffix so account 0 Ledger vs standard can coexist */
@@ -319,7 +329,7 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
         'Keystone QR is missing chain code or public key (use Cardano account sync on the device).'
       );
     }
-    const inferred = inferKeystoneDerivationProfile(k.note, k.name);
+    const inferred = inferKeystoneDerivationProfileOrNull(k.note, k.name);
     rawAdaRows.push({
       account,
       publicKey: pub + chain,
@@ -348,7 +358,7 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
     const rows = byAccount.get(account);
     if (!forcedProfile) {
       for (const r of rows) {
-        const profile = r.inferred;
+        const profile = r.inferred ?? KEYSTONE_DERIVATION.standard;
         adaAccounts.push({
           account,
           publicKey: r.publicKey,
@@ -373,11 +383,13 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
       });
       continue;
     }
-    if (rows.length === 1) {
-      const r = rows[0];
+
+    const onlyAmbiguous =
+      rows.length === 1 && rows[0].inferred == null;
+    if (onlyAmbiguous) {
       adaAccounts.push({
         account,
-        publicKey: r.publicKey,
+        publicKey: rows[0].publicKey,
         cip1852Path: cip1852AccountPath(account),
         profile: forcedProfile,
         rowKey: `${account}-${forcedProfile}`,
@@ -385,10 +397,14 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
       });
       continue;
     }
+
     const wantLedger = forcedProfile === KEYSTONE_DERIVATION.ledger;
+    const got = rows
+      .map((r) => r.inferred ?? 'unspecified')
+      .filter((v, i, a) => a.indexOf(v) === i);
     throw new Error(
-      `Keystone sent several ADA keys for account ${account} but none match the derivation you chose in Lucem (${wantLedger ? 'Ledger-compatible' : 'Cardano standard'}). ` +
-        'Export again from Keystone with only that address type, or change the derivation in Lucem Advanced to match a key the device lists.'
+      `This Keystone QR does not include a ${wantLedger ? 'Ledger-compatible' : 'Cardano standard'} key for account ${account} (metadata says: ${got.join(', ')}). ` +
+        `You picked ${wantLedger ? 'Ledger-compatible' : 'Cardano standard'} in Lucem Advanced — export the matching address type on Keystone, or switch the derivation in Lucem to what the device actually exported.`
     );
   }
 

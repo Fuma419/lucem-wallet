@@ -520,9 +520,10 @@ const ConnectHW = ({ onConfirm }) => {
                 </Stack>
               </RadioGroup>
               <Text fontSize="xs" color="gray.500" mt={2} maxW="340px">
-                This must match the ADA address type you export on Keystone; otherwise
-                the account label may be wrong and addresses will not match Ledger-style
-                Cardano.
+                Must match the address type you export on Keystone (Ledger vs
+                standard use different keys at the same path). If a scan error says
+                the QR does not match your choice, switch this option to the other
+                type or re-export on the device so the QR tags match.
               </Text>
             </Box>
           </Collapse>

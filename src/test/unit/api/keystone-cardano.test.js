@@ -19,6 +19,7 @@ const {
   formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
   inferKeystoneDerivationProfile,
+  inferKeystoneDerivationProfileOrNull,
   parseCip1852AccountIndexFromPath,
   trimKeystoneConnectKeysToOne,
 } = require('../../../api/keystone-cardano');
@@ -57,6 +58,11 @@ describe('keystone-cardano', () => {
     expect(inferKeystoneDerivationProfile('', '')).toBe(
       KEYSTONE_DERIVATION.standard
     );
+  });
+
+  test('inferKeystoneDerivationProfileOrNull is null when UR has no hint', () => {
+    expect(inferKeystoneDerivationProfileOrNull('', '')).toBe(null);
+    expect(inferKeystoneDerivationProfileOrNull('', 'Cardano')).toBe(null);
   });
 
   test('formatKeystoneCardanoAccountLabel', () => {

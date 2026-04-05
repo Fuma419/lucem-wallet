@@ -384,9 +384,16 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
       continue;
     }
 
-    const onlyAmbiguous =
-      rows.length === 1 && rows[0].inferred == null;
-    if (onlyAmbiguous) {
+    /**
+     * Cardano standard xpub is Keystone's default export; Ledger/BitBox requires the
+     * user to switch address type on the device approval screen. Never guess Ledger
+     * from an unlabeled single key — that produced standard addresses with a Ledger label.
+     */
+    const onlyAmbiguousStandard =
+      forcedProfile === KEYSTONE_DERIVATION.standard &&
+      rows.length === 1 &&
+      rows[0].inferred == null;
+    if (onlyAmbiguousStandard) {
       adaAccounts.push({
         account,
         publicKey: rows[0].publicKey,
@@ -396,6 +403,15 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
         name: formatKeystoneCardanoAccountLabel(account, forcedProfile),
       });
       continue;
+    }
+
+    if (
+      forcedProfile === KEYSTONE_DERIVATION.ledger &&
+      rows.some((r) => r.inferred == null)
+    ) {
+      throw new Error(
+        'This QR is not tagged as Ledger-compatible. On Keystone, when you approve the sync QR, switch ADA from the default (Cardano standard) to Ledger / BitBox — then export again. Lucem cannot infer Ledger keys without that device step.'
+      );
     }
 
     const wantLedger = forcedProfile === KEYSTONE_DERIVATION.ledger;

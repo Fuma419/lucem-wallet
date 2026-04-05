@@ -246,6 +246,19 @@ const ConnectHW = ({ onConfirm }) => {
           ). Open the <b>scanner</b>, scan this QR, and approve. More accounts take longer
           on the device.
         </Text>
+        {keystoneDerivation === 'ledger' && (
+          <Text
+            fontSize="xs"
+            color="orange.300"
+            maxW="340px"
+            mt={3}
+            fontWeight="semibold"
+          >
+            Keystone defaults to Cardano standard on the approval screen. When
+            the device asks you to confirm, switch ADA to Ledger / BitBox — not
+            the default — or imported addresses will not match Ledger.
+          </Text>
+        )}
         <Box h={4} />
         <Box
           alignSelf="center"

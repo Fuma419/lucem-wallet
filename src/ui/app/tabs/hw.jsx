@@ -42,8 +42,7 @@ import {
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import {
-  KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX,
-  filterKeystoneKeysForRequestedAccount,
+  KEYSTONE_DERIVATION,
   formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
   keystoneAccountStorageSuffix,
@@ -157,12 +156,12 @@ const ConnectHW = ({ onConfirm }) => {
   const [error, setError] = React.useState('');
   const [keystoneStep, setKeystoneStep] = React.useState('pick');
   const [scanError, setScanError] = React.useState('');
-  /** CIP-1852 account index 0–23; must match the Cardano account selected on Keystone */
-  const [keystoneCip1852Index, setKeystoneCip1852Index] = React.useState(0);
+  /** Ledger-compatible vs Cardano standard — must match ADA setting on Keystone */
+  const [keystoneExportMode, setKeystoneExportMode] = React.useState('auto');
 
   const keyDerivationUr = React.useMemo(
-    () => generateCardanoKeystoneKeyDerivationUr({ accountIndex: keystoneCip1852Index }),
-    [keystoneCip1852Index]
+    () => generateCardanoKeystoneKeyDerivationUr(),
+    []
   );
 
   if (selected === HW.keystone && keystoneStep === 'showRequest') {
@@ -174,10 +173,10 @@ const ConnectHW = ({ onConfirm }) => {
         </Text>
         <Box h={4} />
         <Text fontSize="sm" maxW="340px">
-          On Keystone, select the <b>same Cardano account number</b> you chose below
-          (Ledger-compatible or Cardano standard as set on the device). Open the{' '}
-          <b>scanner</b> flow to connect a software wallet, scan this QR, and approve.
-          Only that single account is requested.
+          On Keystone, choose the <b>Cardano account</b> you want and the{' '}
+          <b>ADA export type</b> (Ledger-compatible vs Cardano standard) to match the
+          export mode below. Open the <b>scanner</b>, scan this QR, and approve — Lucem
+          imports whatever account you export from the device.
         </Text>
         <Box h={4} />
         <Box
@@ -191,7 +190,7 @@ const ConnectHW = ({ onConfirm }) => {
           <AnimatedQRCode
             type={keyDerivationUr.type}
             cbor={cborHex}
-            options={{ size: 220, capacity: 360, interval: 110 }}
+            options={{ size: 220, capacity: 520, interval: 110 }}
           />
         </Box>
         <Box h={4} />
@@ -248,15 +247,18 @@ const ConnectHW = ({ onConfirm }) => {
             handleScan={(data) => {
               try {
                 const { masterFingerprint, keys } =
-                  parseKeystoneCardanoConnectUr(data);
-                const only = filterKeystoneKeysForRequestedAccount(
-                  keys,
-                  keystoneCip1852Index
-                );
+                  parseKeystoneCardanoConnectUr(data, {
+                    forceExportProfile:
+                      keystoneExportMode === 'ledger'
+                        ? KEYSTONE_DERIVATION.ledger
+                        : keystoneExportMode === 'standard'
+                          ? KEYSTONE_DERIVATION.standard
+                          : undefined,
+                  });
                 onConfirm({
                   device: HW.keystone,
                   id: masterFingerprint,
-                  keystoneAccounts: only,
+                  keystoneAccounts: keys,
                 });
               } catch (e) {
                 setScanError(e.message || 'Could not read QR');
@@ -312,7 +314,7 @@ const ConnectHW = ({ onConfirm }) => {
           onClick={() => {
             setSelected(HW.keystone);
             setKeystoneStep('pick');
-            setKeystoneCip1852Index(0);
+            setKeystoneExportMode('auto');
             setError('');
             setScanError('');
           }}
@@ -350,32 +352,35 @@ const ConnectHW = ({ onConfirm }) => {
       {selected === HW.keystone && (
         <>
           <Text width="340px" fontSize="sm">
-            Air-gapped (no USB): choose <b>Ledger-compatible</b> or{' '}
-            <b>Cardano standard</b> for ADA on Keystone, then select the{' '}
-            <b>same account #</b> below and on the device.
+            Air-gapped (no USB): pick the <b>Cardano account on Keystone</b>; Lucem does
+            not ask for an account number. Set <b>ADA export type</b> below to match the
+            device (Ledger-compatible vs Cardano standard).
           </Text>
           <Box h={4} />
-          <Text fontSize="sm" fontWeight="semibold" alignSelf="flex-start" maxW="340px">
-            Cardano account index (CIP-1852, 0–23)
+          <Text
+            fontSize="sm"
+            fontWeight="semibold"
+            alignSelf="flex-start"
+            maxW="340px"
+          >
+            ADA export type (match Keystone)
           </Text>
           <Select
             mt={2}
             maxW="340px"
             size="sm"
-            value={keystoneCip1852Index}
-            onChange={(e) =>
-              setKeystoneCip1852Index(parseInt(e.target.value, 10))
-            }
+            value={keystoneExportMode}
+            onChange={(e) => setKeystoneExportMode(e.target.value)}
           >
-            {Array.from(
-              { length: KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX + 1 },
-              (_, i) => (
-                <option key={i} value={i}>
-                  Account {i} — m/1852&apos;/1815&apos;/{i}&apos;
-                </option>
-              )
-            )}
+            <option value="auto">Auto-detect from QR metadata</option>
+            <option value="ledger">Ledger-compatible (Ledger / BitBox)</option>
+            <option value="standard">Cardano standard (Icarus-style)</option>
           </Select>
+          <Text fontSize="xs" color="gray.500" maxW="340px" mt={2}>
+            If the imported label shows the wrong type, pick Ledger-compatible or
+            Cardano standard here — it must match the ADA derivation setting on the
+            device.
+          </Text>
         </>
       )}
       {selected === HW.ledger && (

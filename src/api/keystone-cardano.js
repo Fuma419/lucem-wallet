@@ -5,6 +5,7 @@
 import KeystoneSDK, {
   UR,
   URType,
+  AccountNote,
   Curve,
   DerivationAlgorithm,
   QRHardwareCallVersion,
@@ -25,13 +26,30 @@ export const KEYSTONE_DERIVATION = {
   ledger: 'ledger',
 };
 
-const LEDGER_DERIVATION_HINT = /ledger|bit\s*box|bitbox|lbx2|\blbx\b/i;
+const LEDGER_DERIVATION_HINT =
+  /ledger|bit\s*box|bitbox|lbx2|\blbx\b|ledger_live|ledger_legacy/i;
+/** Avoid matching generic “Cardano” in wallet names — that falsely implied standard. */
 const STANDARD_DERIVATION_HINT =
-  /icarus|yoroi|daedalus|eternl|typhon|nami|standard|cardano(?!\s*ledger)/i;
+  /\bicarus\b|\byoroi\b|\bdaedalus\b|\beternl\b|\btyphon\b|\bnami\b|account\.standard\b/i;
 
 export function normalizeKeystonePath(path) {
   if (!path || typeof path !== 'string') return '';
   return path.trim().replace(/^M\//, 'm/');
+}
+
+/** @returns {string} */
+function keystoneTextField(value) {
+  if (value == null || value === '') return '';
+  if (typeof value === 'string') return value;
+  if (Buffer.isBuffer(value)) return value.toString('utf8');
+  if (typeof value === 'object' && typeof value.toString === 'function') {
+    try {
+      return String(value.toString('utf8'));
+    } catch (_) {
+      return String(value);
+    }
+  }
+  return String(value);
 }
 
 /** @returns {number | null} CIP-1852 account index, or null if not a supported path */
@@ -42,11 +60,31 @@ export function parseCip1852AccountIndexFromPath(path) {
 }
 
 /**
- * Infer whether Keystone exported Ledger/BitBox-style keys vs Cardano-standard keys
- * from device-provided metadata (same idea as Eternl: follow the device setting).
+ * Infer Ledger-compatible vs Cardano-standard export from Keystone UR metadata.
+ * Firmware uses {@link AccountNote} strings on `note` (e.g. `account.ledger_live`).
  */
 export function inferKeystoneDerivationProfile(note, name) {
-  const text = `${note || ''} ${name || ''}`;
+  const rawNote = keystoneTextField(note).trim();
+  const rawName = keystoneTextField(name).trim();
+  const text = `${rawNote} ${rawName}`.trim();
+
+  if (
+    rawNote === AccountNote.LedgerLive ||
+    rawNote === AccountNote.LedgerLegacy
+  ) {
+    return KEYSTONE_DERIVATION.ledger;
+  }
+  if (rawNote === AccountNote.Standard) {
+    return KEYSTONE_DERIVATION.standard;
+  }
+
+  if (/account\.ledger(?:_live|_legacy)?\b/i.test(text)) {
+    return KEYSTONE_DERIVATION.ledger;
+  }
+  if (/account\.standard\b/i.test(text)) {
+    return KEYSTONE_DERIVATION.standard;
+  }
+
   if (LEDGER_DERIVATION_HINT.test(text)) {
     return KEYSTONE_DERIVATION.ledger;
   }
@@ -62,7 +100,7 @@ export function keystoneAccountStorageSuffix(profile) {
 }
 
 /**
- * Max CIP-1852 **account index** (0-based) allowed in the Keystone picker / QR.
+ * Max CIP-1852 **account index** (0-based) in the default multi-slot hardware-call QR.
  * Keystone supports `m/1852'/1815'/0'` … `m/1852'/1815'/23'` — indices **0–23** inclusive.
  */
 export const KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX = 23;
@@ -92,33 +130,46 @@ export function formatKeystoneCardanoAccountLabel(
 
 /**
  * QR the user shows to Keystone first (Hardware Call / key derivation).
- * Requests **one** CIP-1852 account path so Keystone only exports that account (match
- * the same account selected on the device before scanning).
- * @param {number} [accountIndex] — 0-based CIP-1852 account index (`0 … {@link KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}`).
+ * By default requests **every** CIP-1852 account slot (`m/1852'/1815'/0'…N'`) so the
+ * user picks the account **on Keystone**; the sync QR then contains only what they
+ * exported (typically one account).
+ * @param {object} [opts]
+ * @param {string} [opts.origin]
+ * @param {number} [opts.accountIndex] — If set, request a **single** path (tests / advanced).
+ *   Omit for device-driven export (all slots 0…{@link KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}).
  * @see https://dev.keyst.one/docs/integration-tutorial-advanced/hardware-call
  */
 export function generateCardanoKeystoneKeyDerivationUr({
   origin = 'Lucem',
-  accountIndex = 0,
+  accountIndex,
 } = {}) {
-  const i = Number(accountIndex);
-  if (
-    !Number.isInteger(i) ||
-    i < 0 ||
-    i > KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX
-  ) {
-    throw new Error(
-      `Invalid Keystone account index ${accountIndex}. Use 0–${KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}.`
-    );
+  const schemaForIndex = (i) => ({
+    path: cip1852AccountPath(i),
+    curve: Curve.ed25519,
+    algo: DerivationAlgorithm.bip32ed25519,
+    chainType: 'ADA',
+  });
+
+  let schemas;
+  if (accountIndex !== undefined && accountIndex !== null) {
+    const i = Number(accountIndex);
+    if (
+      !Number.isInteger(i) ||
+      i < 0 ||
+      i > KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX
+    ) {
+      throw new Error(
+        `Invalid Keystone account index ${accountIndex}. Use 0–${KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX}.`
+      );
+    }
+    schemas = [schemaForIndex(i)];
+  } else {
+    schemas = [];
+    for (let i = 0; i <= KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX; i++) {
+      schemas.push(schemaForIndex(i));
+    }
   }
-  const schemas = [
-    {
-      path: cip1852AccountPath(i),
-      curve: Curve.ed25519,
-      algo: DerivationAlgorithm.bip32ed25519,
-      chainType: 'ADA',
-    },
-  ];
+
   return KeystoneSDK.generateKeyDerivationCall({
     schemas,
     origin,
@@ -138,7 +189,7 @@ export function filterKeystoneKeysForRequestedAccount(
   if (filtered.length === 0) {
     throw new Error(
       `Keystone did not return account ${want} (${cip1852AccountPath(want)}). ` +
-        'Pick the same account number in Lucem as on Keystone, then export again.'
+        'Export that account again from Keystone.'
     );
   }
   return filtered;
@@ -150,9 +201,12 @@ export function urFromScan({ type, cbor }) {
 
 /**
  * Parse Keystone sync QR (crypto-multi-accounts or crypto-hdkey).
+ * @param {{ forceExportProfile?: KeystoneDerivationProfile }} [options]
+ *   When set, overrides UR metadata (use when Auto-detect is wrong for your firmware).
  * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string, cip1852Path: string, profile: KeystoneDerivationProfile, rowKey: string }> }}
  */
-export function parseKeystoneCardanoConnectUr(scan) {
+export function parseKeystoneCardanoConnectUr(scan, options = {}) {
+  const { forceExportProfile } = options;
   const sdk = new KeystoneSDK();
   const ur = urFromScan(scan);
   let masterFingerprint;
@@ -197,7 +251,11 @@ export function parseKeystoneCardanoConnectUr(scan) {
         'Keystone QR is missing chain code or public key (use Cardano account sync on the device).'
       );
     }
-    const profile = inferKeystoneDerivationProfile(k.note, k.name);
+    const profile =
+      forceExportProfile === KEYSTONE_DERIVATION.ledger ||
+      forceExportProfile === KEYSTONE_DERIVATION.standard
+        ? forceExportProfile
+        : inferKeystoneDerivationProfile(k.note, k.name);
     const rowKey = `${account}-${profile}`;
     adaAccounts.push({
       account,

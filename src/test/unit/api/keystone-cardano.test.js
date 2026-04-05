@@ -37,7 +37,19 @@ describe('keystone-cardano', () => {
     expect(inferKeystoneDerivationProfile('Ledger Live', '')).toBe(
       KEYSTONE_DERIVATION.ledger
     );
+    expect(inferKeystoneDerivationProfile('account.ledger_live', '')).toBe(
+      KEYSTONE_DERIVATION.ledger
+    );
+    expect(inferKeystoneDerivationProfile('account.ledger_legacy', '')).toBe(
+      KEYSTONE_DERIVATION.ledger
+    );
+    expect(inferKeystoneDerivationProfile('account.standard', '')).toBe(
+      KEYSTONE_DERIVATION.standard
+    );
     expect(inferKeystoneDerivationProfile('', 'Yoroi export')).toBe(
+      KEYSTONE_DERIVATION.standard
+    );
+    expect(inferKeystoneDerivationProfile('', 'Cardano wallet')).toBe(
       KEYSTONE_DERIVATION.standard
     );
     expect(inferKeystoneDerivationProfile('', '')).toBe(
@@ -57,12 +69,19 @@ describe('keystone-cardano', () => {
     );
   });
 
-  test('generateCardanoKeystoneKeyDerivationUr encodes requested account', () => {
+  test('generateCardanoKeystoneKeyDerivationUr encodes requested single account', () => {
     const ur = generateCardanoKeystoneKeyDerivationUr({ accountIndex: 4 });
     expect(ur.type).toBeTruthy();
     expect(Buffer.isBuffer(ur.cbor) || ur.cbor instanceof Uint8Array).toBe(
       true
     );
+  });
+
+  test('generateCardanoKeystoneKeyDerivationUr default includes all CIP-1852 slots', () => {
+    const all = generateCardanoKeystoneKeyDerivationUr();
+    const one = generateCardanoKeystoneKeyDerivationUr({ accountIndex: 0 });
+    expect(all.type).toBeTruthy();
+    expect(all.cbor.length).toBeGreaterThan(one.cbor.length);
   });
 
   test('generateCardanoKeystoneKeyDerivationUr rejects out-of-range index', () => {

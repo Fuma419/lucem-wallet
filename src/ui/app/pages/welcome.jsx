@@ -386,9 +386,8 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
           <ModalCloseButton />
           <ModalBody>
             <Text fontSize="sm">
-              Connect a Ledger via USB, or a Keystone in two steps: choose the
-              same Cardano account in Lucem and on the device, scan Lucem&apos;s QR,
-              then scan Keystone&apos;s QR{' '}
+              Connect a Ledger via USB, or a Keystone in two steps: pick the Cardano
+              account on the device, scan Lucem&apos;s QR, then scan Keystone&apos;s QR{' '}
               (camera required in the browser for step 2).
             </Text>
             <Box h="4" />

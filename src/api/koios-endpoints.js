@@ -300,6 +300,10 @@ export const KOIOS_REQUESTS = {
   getAddressInfo: (address) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_INFO.DETAILS, {
     body: { _addresses: [address] }
   }),
+
+  getAddressesInfo: (addresses) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_INFO.DETAILS, {
+    body: { _addresses: [...addresses] }
+  }),
   
   // Get address UTXOs
   getAddressUtxos: (address, extended = false) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_UTXOS.DETAILS, {

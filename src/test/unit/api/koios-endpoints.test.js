@@ -332,6 +332,15 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _addresses: ['test-address'] });
   });
 
+  test('getAddressesInfo should build correct request for multiple addresses', () => {
+    const addrs = ['addr1', 'addr2'];
+    const request = KOIOS_REQUESTS.getAddressesInfo(addrs);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/address_info');
+    expect(request.body).toEqual({ _addresses: ['addr1', 'addr2'] });
+    expect(addrs).toEqual(['addr1', 'addr2']);
+  });
+
   test('getAddressUtxos should build correct request with extended flag', () => {
     const request = KOIOS_REQUESTS.getAddressUtxos('test-address', true);
     expect(request.method).toBe('POST');

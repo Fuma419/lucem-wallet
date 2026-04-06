@@ -318,10 +318,18 @@ export const KOIOS_REQUESTS = {
   getAddressTxs: (address) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_TXS.DETAILS, {
     body: { _addresses: [address] }
   }),
+
+  getAddressesTxs: (addresses) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_TXS.DETAILS, {
+    body: { _addresses: [...addresses] }
+  }),
   
   // Get account info
   getAccountInfo: (stakeAddress) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_INFO.DETAILS, {
     body: { _stake_addresses: [stakeAddress] }
+  }),
+
+  getAccountsInfo: (stakeAddresses) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_INFO.DETAILS, {
+    body: { _stake_addresses: [...stakeAddresses] }
   }),
   
   // Get account transactions
@@ -341,6 +349,10 @@ export const KOIOS_REQUESTS = {
   // Get account UTXOs
   getAccountUtxos: (stakeAddress, extended = false) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_UTXOS.DETAILS, {
     body: { _stake_addresses: [stakeAddress], _extended: extended }
+  }),
+
+  getAccountsUtxos: (stakeAddresses, extended = false) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_UTXOS.DETAILS, {
+    body: { _stake_addresses: [...stakeAddresses], _extended: extended }
   }),
   
   // Get pool metadata

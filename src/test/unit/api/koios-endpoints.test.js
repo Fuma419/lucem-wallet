@@ -362,11 +362,25 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _addresses: ['test-address'] });
   });
 
+  test('getAddressesTxs should build correct request for multiple addresses', () => {
+    const request = KOIOS_REQUESTS.getAddressesTxs(['addr1', 'addr2']);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/address_txs');
+    expect(request.body).toEqual({ _addresses: ['addr1', 'addr2'] });
+  });
+
   test('getAccountInfo should build correct request', () => {
     const request = KOIOS_REQUESTS.getAccountInfo('test-stake-address');
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/account_info');
     expect(request.body).toEqual({ _stake_addresses: ['test-stake-address'] });
+  });
+
+  test('getAccountsInfo should build correct request for multiple stake addresses', () => {
+    const request = KOIOS_REQUESTS.getAccountsInfo(['stake1', 'stake2']);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/account_info');
+    expect(request.body).toEqual({ _stake_addresses: ['stake1', 'stake2'] });
   });
 
   test('getAccountTxs should build correct request', () => {
@@ -392,6 +406,13 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/account_utxos');
     expect(request.body).toEqual({ _stake_addresses: ['test-stake-address'], _extended: false });
+  });
+
+  test('getAccountsUtxos should build correct request for multiple stake addresses', () => {
+    const request = KOIOS_REQUESTS.getAccountsUtxos(['s1', 's2'], true);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/account_utxos');
+    expect(request.body).toEqual({ _stake_addresses: ['s1', 's2'], _extended: true });
   });
 
   test('getPoolMetadata should build correct request', () => {

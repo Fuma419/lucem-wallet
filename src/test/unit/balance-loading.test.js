@@ -132,6 +132,15 @@ describe('balance display quantity logic', () => {
     expect(computeDisplayQuantity(account)).toBe('4000000');
   });
 
+  test('should accept bigint lovelace and minAda from normalized scalars', () => {
+    const account = {
+      lovelace: 9000000n,
+      minAda: 1000000n,
+      collateral: null,
+    };
+    expect(computeDisplayQuantity(account)).toBe('8000000');
+  });
+
   test('should subtract collateral from balance', () => {
     const account = {
       lovelace: '10000000',

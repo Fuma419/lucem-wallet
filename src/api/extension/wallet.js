@@ -7,6 +7,18 @@ import { decodeTx, encodeTx, transformTx } from 'cardano-hw-interop-lib';
 const RETRIES = 5;
 
 /**
+ * Absolute slot for tx invalidHereafter (TTL). Uses numeric slot only — never `slot + n`
+ * when slot may be a string (JS would concatenate).
+ */
+function ttlSlotBound(protocolParameters) {
+  const base = Math.floor(Number(protocolParameters.slot));
+  if (!Number.isFinite(base) || base < 0) {
+    throw new Error('Invalid chain slot in protocol parameters');
+  }
+  return base + TX.invalid_hereafter;
+}
+
+/**
  * Assemble a signed transaction from an unsigned tx and a witness set.
  * CSL v15 only supports Transaction.new(body, witness_set, auxiliary_data?).
  * The old 4-argument form (…, true, auxiliary_data) passes boolean `true` as
@@ -25,10 +37,20 @@ export const assembleSignedTransaction = async (unsignedTx, witnessSet) => {
 
 export const initTx = async () => {
   try {
-    // Get latest block from Koios
-    const latest_block = await koiosRequestEnhanced('/blocks/latest');
-    console.log('Latest block response:', latest_block);
-    
+    const tipRaw = await koiosRequestEnhanced('/tip');
+    console.log('Koios /tip response:', tipRaw);
+    const tipRow =
+      Array.isArray(tipRaw) && tipRaw.length > 0 ? tipRaw[0] : tipRaw;
+    const rawSlot =
+      tipRow?.abs_slot ?? tipRow?.absolute_slot ?? tipRow?.slot;
+    if (rawSlot == null || rawSlot === '') {
+      throw new Error('Missing chain tip slot from Koios (/tip)');
+    }
+    const tipSlot = parseInt(String(rawSlot), 10);
+    if (!Number.isFinite(tipSlot) || tipSlot < 0) {
+      throw new Error('Invalid tip slot from Koios');
+    }
+
     // Get protocol parameters from Koios
     const p = await koiosRequestEnhanced('/epoch_params/latest');
     console.log('Protocol parameters response:', p);
@@ -46,10 +68,6 @@ export const initTx = async () => {
       throw new Error('Missing required protocol parameters: max_val_size or max_tx_size');
     }
 
-    if (!latest_block.slot) {
-      throw new Error('Missing required block information: slot');
-    }
-
     const protocolParams = {
     linearFee: {
       minFeeA: p.min_fee_a.toString(),
@@ -65,7 +83,7 @@ export const initTx = async () => {
     // might not be available for pre-conway networks; set to 0 in that case
     minFeeRefScriptCostPerByte: p.min_fee_ref_script_cost_per_byte || 0,
     maxTxSize: parseInt(p.max_tx_size),
-      slot: parseInt(latest_block.slot), // Now using converted slot
+      slot: tipSlot,
     collateralPercentage: parseInt(p.collateral_percent),
     maxCollateralInputs: parseInt(p.max_collateral_inputs),
   };
@@ -277,12 +295,11 @@ export const buildTx = async (
     // Set change address
     txBuilder.add_change_if_needed(Loader.Cardano.Address.from_bech32(account.paymentAddr));
 
-    // Set validity interval
-    const slot = Loader.Cardano.BigNum.from_str(protocolParameters.slot.toString());
+    // TTL only: do not set validity start. Koios tip can be ahead of the submit node;
+    // a lower bound at "now" yields OutsideValidityInterval / tx not yet valid.
     const invalidHereafter = Loader.Cardano.BigNum.from_str(
-      (parseInt(protocolParameters.slot) + TX.invalid_hereafter).toString()
+      String(ttlSlotBound(protocolParameters))
     );
-    txBuilder.set_validity_start_interval(slot);
     txBuilder.set_ttl(invalidHereafter);
 
     // Add auxiliary data if provided
@@ -404,12 +421,9 @@ export const delegationTx = async (
       )
     );
 
-    // Set validity interval
-    const slot = Loader.Cardano.BigNum.from_str(protocolParameters.slot.toString());
     const invalidHereafter = Loader.Cardano.BigNum.from_str(
-      (protocolParameters.slot + TX.invalid_hereafter).toString()
+      String(ttlSlotBound(protocolParameters))
     );
-    txBuilder.set_validity_start_interval(slot);
     txBuilder.set_ttl(invalidHereafter);
 
     // Set change address
@@ -462,12 +476,9 @@ export const withdrawalTx = async (account, delegation, protocolParameters, utxo
       );
     }
 
-    // Set validity interval
-    const slot = Loader.Cardano.BigNum.from_str(protocolParameters.slot.toString());
     const invalidHereafter = Loader.Cardano.BigNum.from_str(
-      (protocolParameters.slot + TX.invalid_hereafter).toString()
+      String(ttlSlotBound(protocolParameters))
     );
-    txBuilder.set_validity_start_interval(slot);
     txBuilder.set_ttl(invalidHereafter);
 
     // Add at least one input (required for valid transaction)
@@ -555,11 +566,7 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
         ).payment_key()
       );
 
-      txBuilder.set_ttl(
-        BigInt(
-          (protocolParameters.slot + TX.invalid_hereafter).toString()
-        )
-      );
+      txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
 
       const utxos = await getUtxos();
 

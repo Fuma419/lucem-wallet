@@ -67,15 +67,6 @@ async function koiosSubmitTx(base, txHex, apiKey) {
   }
 }
 
-/** Match `convertKoiosResponse` for preview/preprod list endpoints */
-function latestBlockFromKoios(blocksPayload) {
-  if (Array.isArray(blocksPayload) && blocksPayload.length > 0) {
-    const b = blocksPayload[0];
-    return { ...b, slot: b.abs_slot ?? b.slot };
-  }
-  return { ...blocksPayload, slot: blocksPayload.absolute_slot ?? blocksPayload.slot };
-}
-
 function latestEpochParamsFromKoios(paramsPayload) {
   if (Array.isArray(paramsPayload) && paramsPayload.length > 0) {
     return paramsPayload[0];
@@ -84,10 +75,11 @@ function latestEpochParamsFromKoios(paramsPayload) {
 }
 
 async function fetchProtocolSlot(base, apiKey) {
-  const raw = await koiosGet(base, '/blocks', apiKey);
-  const b = latestBlockFromKoios(raw);
-  if (b.slot == null) throw new Error('Koios blocks: missing slot');
-  return parseInt(String(b.slot), 10);
+  const raw = await koiosGet(base, '/tip', apiKey);
+  const row = Array.isArray(raw) && raw.length > 0 ? raw[0] : raw;
+  const s = row?.abs_slot ?? row?.absolute_slot ?? row?.slot;
+  if (s == null) throw new Error('Koios /tip: missing abs_slot');
+  return parseInt(String(s), 10);
 }
 
 async function fetchProtocolParams(base, apiKey) {
@@ -246,11 +238,11 @@ async function buildSignSubmitSelfTransfer(opts) {
 
   txBuilder.add_change_if_needed(address);
 
-  const slot = Cardano.BigNum.from_str(protocolParameters.slot.toString());
   const invalidHereafter = Cardano.BigNum.from_str(
-    (parseInt(protocolParameters.slot, 10) + TX.invalid_hereafter).toString()
+    String(
+      Math.floor(Number(protocolParameters.slot)) + TX.invalid_hereafter
+    )
   );
-  txBuilder.set_validity_start_interval(slot);
   txBuilder.set_ttl(invalidHereafter);
 
   const txBody = txBuilder.build();

@@ -92,5 +92,8 @@ describe('messaging constants', () => {
   test('EVENT types are defined', () => {
     expect(EVENT.networkChange).toBeDefined();
     expect(EVENT.accountChange).toBeDefined();
+    expect(EVENT.connect).toBe('connect');
+    expect(EVENT.disconnect).toBe('disconnect');
+    expect(EVENT.utxoChange).toBe('utxoChange');
   });
 });

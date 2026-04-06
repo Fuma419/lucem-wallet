@@ -130,10 +130,11 @@ export const TX = {
 export const EVENT = {
   accountChange: 'accountChange',
   networkChange: 'networkChange',
-  // TODO
-  // connect: 'connect',
-  // disconnect: 'disconnect',
-  // utxoChange: 'utxoChange',
+  /** dApp connection lifecycle (reserved for CIP-30-style listeners) */
+  connect: 'connect',
+  disconnect: 'disconnect',
+  /** Emitted when UTxO set may have changed (reserved; not all environments fire this) */
+  utxoChange: 'utxoChange',
 };
 
 export const ADA_HANDLE = {

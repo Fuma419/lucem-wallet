@@ -337,7 +337,9 @@ export const KOIOS_REQUESTS = {
   // Get asset info
   getAssetInfo: (asset) => buildKoiosRequest(KOIOS_ENDPOINTS.ASSETS.DETAILS, {
     pathParams: { asset }
-  })
+  }),
+
+  getEpochParamsLatest: () => buildKoiosRequest(KOIOS_ENDPOINTS.EPOCHS.LATEST_PARAMS),
 };
 
 /**

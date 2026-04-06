@@ -377,6 +377,12 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.method).toBe('GET');
     expect(request.endpoint).toBe('/assets/test-asset');
   });
+
+  test('getEpochParamsLatest should build correct request', () => {
+    const request = KOIOS_REQUESTS.getEpochParamsLatest();
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/epoch_params/latest');
+  });
 });
 
 describe('addressTxsIndicatesHistory', () => {

@@ -112,7 +112,7 @@ const App = () => {
       if (!txHex) {
         throw new Error('Sign session missing. Restart from the wallet.');
       }
-      const rawTx = Loader.Cardano.Transaction.from_cbor_bytes(
+      const rawTx = Loader.Cardano.Transaction.from_bytes(
         Buffer.from(txHex, 'hex')
       );
       const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(

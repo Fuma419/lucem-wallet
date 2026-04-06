@@ -605,7 +605,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
     await Loader.load();
     let filterValue;
     try {
-      filterValue = Loader.Cardano.Value.from_cbor_bytes(Buffer.from(amount, 'hex'));
+      filterValue = Loader.Cardano.Value.from_bytes(Buffer.from(amount, 'hex'));
     } catch (e) {
       throw APIError.InvalidRequest;
     }
@@ -1050,9 +1050,7 @@ export const verifyTx = async (tx) => {
   await Loader.load();
   const network = await getNetwork();
   try {
-    const parseTx = Loader.Cardano.Transaction.from_cbor_bytes(
-      Buffer.from(tx, 'hex')
-    );
+    const parseTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
     let networkId = parseTx.body().network_id()
       ? parseTx.body().network_id().network()
       : null;
@@ -1220,7 +1218,7 @@ export const signTx = async (
   const paymentKeyHash = paymentKey.to_public().hash().to_hex();
   const stakeKeyHash = stakeKey.to_public().hash().to_hex();
 
-  const rawTx = Loader.Cardano.Transaction.from_cbor_bytes(Buffer.from(tx, 'hex'));
+  const rawTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
 
   const txWitnessSet = Loader.Cardano.TransactionWitnessSet.new();
   const vkeyWitnesses = Loader.Cardano.VkeywitnessList.new();
@@ -1252,7 +1250,7 @@ export const signTxHW = async (
   partialSign = false
 ) => {
   await Loader.load();
-  const rawTx = Loader.Cardano.Transaction.from_cbor_bytes(Buffer.from(tx, 'hex'));
+  const rawTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
   const address = Loader.Cardano.Address.from_bech32(account.paymentAddr);
   const network = address.network_id();
   const keys = {

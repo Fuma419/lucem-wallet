@@ -855,7 +855,7 @@ const Send = () => {
         }}
         sign={async (password, hw) => {
           await Loader.load();
-          const txDes = Loader.Cardano.Transaction.from_cbor_bytes(
+          const txDes = Loader.Cardano.Transaction.from_bytes(
             Buffer.from(tx, 'hex')
           );
           if (hw) {

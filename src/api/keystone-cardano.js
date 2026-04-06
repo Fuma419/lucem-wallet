@@ -490,7 +490,7 @@ export async function buildKeystoneCardanoSignRequest({
   keyHashes,
 }) {
   await Loader.load();
-  const tx = Loader.Cardano.Transaction.from_cbor_bytes(Buffer.from(txHex, 'hex'));
+  const tx = Loader.Cardano.Transaction.from_bytes(Buffer.from(txHex, 'hex'));
   const inputs = tx.body().inputs();
   const xfp = hw.id;
   const paymentBase = `m/1852'/1815'/${hw.account}'/0`;

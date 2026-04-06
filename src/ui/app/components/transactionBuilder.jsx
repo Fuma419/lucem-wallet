@@ -346,12 +346,12 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_cbor_bytes()).toString('hex')}`
+                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
               );
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
-                txHex: Buffer.from(data.tx.to_cbor_bytes()).toString('hex'),
+                txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
                 keyHashes: [
                   data.account.paymentKeyHash,
                   data.account.stakeKeyHash,
@@ -557,12 +557,12 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_cbor_bytes()).toString('hex')}`
+                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
               );
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
-                txHex: Buffer.from(data.tx.to_cbor_bytes()).toString('hex'),
+                txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
                 keyHashes: [
                   data.account.paymentKeyHash,
                   data.account.stakeKeyHash,
@@ -670,12 +670,12 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_cbor_bytes()).toString('hex')}`
+                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
               );
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
-                txHex: Buffer.from(data.tx.to_cbor_bytes()).toString('hex'),
+                txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
                 keyHashes: [
                   data.account.paymentKeyHash,
                   data.account.stakeKeyHash,
@@ -794,12 +794,12 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_cbor_bytes()).toString('hex')}`
+                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
               );
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
-                txHex: Buffer.from(data.tx.to_cbor_bytes()).toString('hex'),
+                txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
                 keyHashes: [data.account.paymentKeyHash],
                 partialSign: false,
               });

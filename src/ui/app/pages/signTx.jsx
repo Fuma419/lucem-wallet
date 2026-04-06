@@ -108,7 +108,7 @@ const SignTxKeystoneInline = ({
       const wh = witnessSetHexFromKeystoneSignature(sig);
       if (!wh) throw new Error('Missing witness set');
       await Loader.load();
-      const rawTx = Loader.Cardano.Transaction.from_cbor_bytes(
+      const rawTx = Loader.Cardano.Transaction.from_bytes(
         Buffer.from(txHexRef.current, 'hex')
       );
       const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
@@ -995,7 +995,7 @@ const SignTx = ({ request, controller }) => {
         onConfirm={async (status, signedTx) => {
           if (status === true) {
             await controller.returnData({
-              data: Buffer.from(signedTx.to_cbor_bytes(), 'hex').toString('hex'),
+              data: Buffer.from(signedTx.to_bytes()).toString('hex'),
             });
           } else {
             await controller.returnData({ error: signedTx });
@@ -1021,9 +1021,7 @@ const SignTx = ({ request, controller }) => {
                 account={account}
                 onSuccess={(merged) => {
                   controller.returnData({
-                    data: Buffer.from(merged.to_cbor_bytes(), 'hex').toString(
-                      'hex'
-                    ),
+                    data: Buffer.from(merged.to_bytes()).toString('hex'),
                   });
                   window.close();
                 }}

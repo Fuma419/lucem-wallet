@@ -1538,7 +1538,7 @@ export class Data {
   /** Convert Cbor encoded data to PlutusData */
   static async from(data) {
     await Loader.load();
-    const plutusData = Loader.Cardano.PlutusData.from_cbor_bytes(
+    const plutusData = Loader.Cardano.PlutusData.from_bytes(
       Buffer.from(data, 'hex')
     );
     function deserialize(data) {

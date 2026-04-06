@@ -3,6 +3,7 @@ const {
   NETWORK_ID,
   NODE,
   ERROR,
+  TX,
   APIError,
   DataSignError,
   TxSendError,
@@ -52,6 +53,18 @@ describe('ERROR constants', () => {
   });
   test('onlyOneAccount is defined', () => {
     expect(ERROR.onlyOneAccount).toBeDefined();
+  });
+  test('transaction and submit-related errors are defined', () => {
+    expect(ERROR.txTooBig).toBeDefined();
+    expect(ERROR.txNotPossible).toBeDefined();
+    expect(ERROR.fullMempool).toBeDefined();
+    expect(ERROR.submit).toBeDefined();
+  });
+});
+
+describe('TX constants', () => {
+  test('invalid_hereafter is a positive slot window in seconds', () => {
+    expect(TX.invalid_hereafter).toBe(3600 * 6);
   });
 });
 

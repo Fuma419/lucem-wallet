@@ -348,6 +348,13 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _addresses: ['test-address'], _extended: true });
   });
 
+  test('getAddressesUtxos should build correct request for multiple addresses', () => {
+    const request = KOIOS_REQUESTS.getAddressesUtxos(['a1', 'a2'], false);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/address_utxos');
+    expect(request.body).toEqual({ _addresses: ['a1', 'a2'], _extended: false });
+  });
+
   test('getAddressTxs should build correct request', () => {
     const request = KOIOS_REQUESTS.getAddressTxs('test-address');
     expect(request.method).toBe('POST');

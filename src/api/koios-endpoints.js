@@ -310,6 +310,10 @@ export const KOIOS_REQUESTS = {
     body: { _addresses: [address], _extended: extended }
   }),
 
+  getAddressesUtxos: (addresses, extended = false) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_UTXOS.DETAILS, {
+    body: { _addresses: [...addresses], _extended: extended }
+  }),
+
   // Get transaction history for addresses (POST /address_txs)
   getAddressTxs: (address) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_TXS.DETAILS, {
     body: { _addresses: [address] }

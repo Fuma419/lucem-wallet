@@ -401,6 +401,12 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.method).toBe('GET');
     expect(request.endpoint).toBe('/tip');
   });
+
+  test('getNetworkGenesis should build correct request', () => {
+    const request = KOIOS_REQUESTS.getNetworkGenesis();
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/genesis');
+  });
 });
 
 describe('addressTxsIndicatesHistory', () => {

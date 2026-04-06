@@ -348,6 +348,8 @@ export const KOIOS_REQUESTS = {
   getEpochParamsLatest: () => buildKoiosRequest(KOIOS_ENDPOINTS.EPOCHS.LATEST_PARAMS),
 
   getNetworkTip: () => buildKoiosRequest(KOIOS_ENDPOINTS.NETWORK.TIP),
+
+  getNetworkGenesis: () => buildKoiosRequest(KOIOS_ENDPOINTS.NETWORK.GENESIS),
 };
 
 /**

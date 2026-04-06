@@ -359,6 +359,18 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.endpoint).toBe('/account_txs?_stake_address=test-stake-address&_after_block_height=1000');
   });
 
+  test('getAccountRewards should build correct request without epoch', () => {
+    const request = KOIOS_REQUESTS.getAccountRewards('test-stake-address');
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/account_rewards?_stake_address=test-stake-address');
+  });
+
+  test('getAccountRewards should build correct request with epoch', () => {
+    const request = KOIOS_REQUESTS.getAccountRewards('test-stake-address', 420);
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/account_rewards?_stake_address=test-stake-address&_epoch_no=420');
+  });
+
   test('getAccountUtxos should build correct request', () => {
     const request = KOIOS_REQUESTS.getAccountUtxos('test-stake-address', false);
     expect(request.method).toBe('POST');

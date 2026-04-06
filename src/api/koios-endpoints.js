@@ -323,6 +323,12 @@ export const KOIOS_REQUESTS = {
       _after_block_height: afterBlockHeight
     }
   }),
+
+  getAccountRewards: (stakeAddress, epochNo) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_REWARDS.DETAILS, {
+    queryParams: epochNo === undefined || epochNo === null
+      ? { _stake_address: stakeAddress }
+      : { _stake_address: stakeAddress, _epoch_no: epochNo }
+  }),
   
   // Get account UTXOs
   getAccountUtxos: (stakeAddress, extended = false) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_UTXOS.DETAILS, {

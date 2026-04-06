@@ -666,7 +666,7 @@ const SignTx = ({ request, controller }) => {
     const currentAccount = await getCurrentAccount();
     setAccount(currentAccount);
     let utxos = await getUtxos();
-    const tx = Loader.Cardano.Transaction.from_cbor_hex(request.data.tx);
+    const tx = Loader.Cardano.Transaction.from_hex(request.data.tx);
     setTx(request.data.tx);
     getFee(tx);
     await getValue(tx, utxos, currentAccount);

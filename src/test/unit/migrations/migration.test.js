@@ -41,5 +41,8 @@ beforeAll(async () => {
 });
 
 describe('no migration', () => {
-  test('no migration', () => {});
+  test('fixture seeds multiple account indices', async () => {
+    const accounts = await getStorage(STORAGE.accounts);
+    expect(Object.keys(accounts).length).toBeGreaterThanOrEqual(3);
+  });
 });

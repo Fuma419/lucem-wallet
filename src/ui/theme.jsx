@@ -249,10 +249,16 @@ const theme = extendTheme({
 
   styles: {
     global: {
+      html: {
+        bg: '#080808',
+        minHeight: '100%',
+        colorScheme: 'dark',
+      },
       body: {
         overflow: 'hidden',
         bg: '#080808', // Ensure the background is dark
         color: 'gray.100', // Ensure text is light-colored
+        minHeight: '100%',
       },
     },
   },

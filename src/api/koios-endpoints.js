@@ -300,6 +300,11 @@ export const KOIOS_REQUESTS = {
   getAddressUtxos: (address, extended = false) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_UTXOS.DETAILS, {
     body: { _addresses: [address], _extended: extended }
   }),
+
+  // Get transaction history for addresses (POST /address_txs)
+  getAddressTxs: (address) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_TXS.DETAILS, {
+    body: { _addresses: [address] }
+  }),
   
   // Get account info
   getAccountInfo: (stakeAddress) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_INFO.DETAILS, {
@@ -328,6 +333,18 @@ export const KOIOS_REQUESTS = {
   getAssetInfo: (asset) => buildKoiosRequest(KOIOS_ENDPOINTS.ASSETS.DETAILS, {
     pathParams: { asset }
   })
+};
+
+/**
+ * True when Koios /address_txs (or equivalent) response indicates at least one transaction.
+ * Koios returns a JSON array of rows; error payloads may be objects with `.error`.
+ */
+export const addressTxsIndicatesHistory = (payload) => {
+  if (payload == null) return false;
+  if (typeof payload === 'object' && !Array.isArray(payload) && payload.error) {
+    return false;
+  }
+  return Array.isArray(payload) && payload.length >= 1;
 };
 
 export default KOIOS_ENDPOINTS; 

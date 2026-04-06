@@ -1,4 +1,9 @@
-import { KOIOS_ENDPOINTS, buildKoiosRequest, KOIOS_REQUESTS } from '../../../api/koios-endpoints';
+import {
+  KOIOS_ENDPOINTS,
+  buildKoiosRequest,
+  KOIOS_REQUESTS,
+  addressTxsIndicatesHistory,
+} from '../../../api/koios-endpoints';
 
 describe('Koios Endpoints Library', () => {
   describe('KOIOS_ENDPOINTS structure', () => {
@@ -327,6 +332,13 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _addresses: ['test-address'], _extended: true });
   });
 
+  test('getAddressTxs should build correct request', () => {
+    const request = KOIOS_REQUESTS.getAddressTxs('test-address');
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/address_txs');
+    expect(request.body).toEqual({ _addresses: ['test-address'] });
+  });
+
   test('getAccountInfo should build correct request', () => {
     const request = KOIOS_REQUESTS.getAccountInfo('test-stake-address');
     expect(request.method).toBe('POST');
@@ -357,6 +369,22 @@ describe('KOIOS_REQUESTS helper functions', () => {
     const request = KOIOS_REQUESTS.getAssetInfo('test-asset');
     expect(request.method).toBe('GET');
     expect(request.endpoint).toBe('/assets/test-asset');
+  });
+});
+
+describe('addressTxsIndicatesHistory', () => {
+  test('false for null, undefined, empty array', () => {
+    expect(addressTxsIndicatesHistory(null)).toBe(false);
+    expect(addressTxsIndicatesHistory(undefined)).toBe(false);
+    expect(addressTxsIndicatesHistory([])).toBe(false);
+  });
+
+  test('false for error-shaped object', () => {
+    expect(addressTxsIndicatesHistory({ error: 'bad request' })).toBe(false);
+  });
+
+  test('true when at least one row', () => {
+    expect(addressTxsIndicatesHistory([{ tx_hash: 'abc' }])).toBe(true);
   });
 });
 
@@ -403,6 +431,14 @@ describe('Integration tests', () => {
     
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/address_info');
+    expect(request.body).toEqual({ _addresses: [address] });
+  });
+
+  test('should build realistic address_txs request', () => {
+    const address = 'addr1qy2jt0qpqz2z2z9zx5w4xemekkce7yderz53kjue53lpqv90lkfa9sgrfjuz6uvt4uqtrqhl2kj0a9lnr9ndzutx32gqleeckv';
+    const request = KOIOS_REQUESTS.getAddressTxs(address);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/address_txs');
     expect(request.body).toEqual({ _addresses: [address] });
   });
 

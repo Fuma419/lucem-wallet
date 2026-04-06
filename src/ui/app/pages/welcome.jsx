@@ -364,6 +364,7 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
   return (
     <>
       <Modal
+        className="modal-glow-cyan"
         size="xs"
         isOpen={isOpen}
         onClose={onClose}
@@ -371,21 +372,24 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
         blockScrollOnMount={false}
       >
         <ModalOverlay
-          style={{
-            backgroundColor: 'rgba(206, 250, 0, 0.12)',
-            backdropFilter: 'blur(5px)',
+          sx={{
+            bg: 'linear-gradient(rgba(0, 245, 255, 0.07), rgba(0, 245, 255, 0.07)), rgba(5, 15, 24, 0.93)',
+            backdropFilter: 'blur(10px)',
           }}
         />
         <ModalContent
-          className="modal-glow-yellow-green"
-          backgroundColor="#1a1a1a"
-          borderColor="rgba(206, 250, 0, 0.35)"
+          className="modal-glow-cyan lucem-hardware-welcome-modal"
+          bg="#050f18"
+          color="whiteAlpha.900"
           borderWidth="1px"
+          borderColor="rgba(0, 245, 255, 0.35)"
         >
-          <ModalHeader fontSize="md">Hardware wallet</ModalHeader>
-          <ModalCloseButton />
+          <ModalHeader fontSize="md" className="walletTitle" color="white">
+            Hardware wallet
+          </ModalHeader>
+          <ModalCloseButton color="whiteAlpha.700" />
           <ModalBody>
-            <Text fontSize="sm">
+            <Text fontSize="sm" color="whiteAlpha.800">
               Connect a Ledger via USB, or a Keystone in two steps: by default Lucem uses
               account 0 and Cardano standard derivation; use Advanced in the hardware tab
               for more accounts or Ledger-compatible keys. Scan Lucem&apos;s QR, then
@@ -394,17 +398,17 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
             <Box h="4" />
             <Box display="flex" alignItems="center" justifyContent="center">
               <Checkbox
-                colorScheme="green"
+                colorScheme="cyan"
                 onChange={(e) => setAccepted(e.target.checked)}
                 _focus={false}
               />
               <Box w="2" />
-              <Text fontWeight={600}>
+              <Text fontWeight={600} fontSize="sm" color="whiteAlpha.900">
                 I read and accepted the{' '}
                 <Link
                   onClick={() => termsRef.current.openModal()}
                   textDecoration="underline"
-                  color="green.400"
+                  color="cyan.300"
                 >
                   Terms of use
                 </Link>
@@ -412,7 +416,7 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => privacyPolicyRef.current.openModal()}
                   textDecoration="underline"
-                  color="green.400"
+                  color="cyan.300"
                 >
                   Privacy Policy
                 </Link>
@@ -420,11 +424,21 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
             </Box>
           </ModalBody>
           <ModalFooter>
-            <Button mr={3} variant="ghost" onClick={onClose}>
+            <Button
+              mr={3}
+              variant="ghost"
+              color="whiteAlpha.800"
+              _hover={{ bg: 'whiteAlpha.100' }}
+              onClick={onClose}
+            >
               Close
             </Button>
             <Button
-              className="button hw-wallet"
+              variant="unstyled"
+              className="button import-wallet"
+              display="inline-flex"
+              alignItems="center"
+              justifyContent="center"
               isDisabled={!accepted}
               onClick={() => createTab(TAB.hw)}
             >

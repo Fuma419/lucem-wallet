@@ -1,12 +1,15 @@
 // @ts-check
+const path = require('path');
 const { defineConfig, devices } = require('@playwright/test');
+
+const e2eServeConfig = path.join(__dirname, 'e2e', 'serve-e2e.json');
 
 /**
  * Layout regression tests for the popup UI. They need a production build and an unlocked wallet.
  *
  * Typical local run:
  *   npm run build:webpack
- *   LUCEM_E2E_SERVE=1 npm run test:e2e
+ *   npm run test:e2e
  *
  * Or serve `build/` yourself on 4179 and:
  *   LUCEM_E2E_SKIP_SERVE=1 npm run test:e2e
@@ -28,7 +31,8 @@ module.exports = defineConfig({
     process.env.LUCEM_E2E_SKIP_SERVE === '1'
       ? undefined
       : {
-          command: 'npx serve build -l 4179',
+          // cleanUrls: false — default serve 301 from *.html drops ?query (breaks createWalletTab bootstrap).
+          command: `npx serve build -l 4179 -c ${e2eServeConfig}`,
           url: 'http://127.0.0.1:4179',
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

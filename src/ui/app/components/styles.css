@@ -269,6 +269,16 @@ body {
   will-change: transform, box-shadow;
 }
 
+/* Welcome → Hardware wallet: solid panel so underlying buttons never read through */
+.chakra-modal__content.lucem-hardware-welcome-modal {
+  background-color: #050f18 !important;
+}
+.chakra-modal__content.lucem-hardware-welcome-modal .chakra-modal__header,
+.chakra-modal__content.lucem-hardware-welcome-modal .chakra-modal__body,
+.chakra-modal__content.lucem-hardware-welcome-modal .chakra-modal__footer {
+  background-color: transparent;
+}
+
 /* .modal-glow-cyan:hover {
   box-shadow: 0px 0px 25px rgba(0, 245, 255, 1);
   transform: translateY(-2px);

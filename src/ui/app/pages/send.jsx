@@ -815,7 +815,10 @@ const Send = () => {
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
                 txHex: tx,
-                keyHashes: [account.current.paymentKeyHash],
+                keyHashes: [
+                  account.current.paymentKeyHash,
+                  account.current.stakeKeyHash,
+                ],
                 partialSign: false,
               });
             }

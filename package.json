@@ -13,8 +13,11 @@
     "start": "node utils/webserver.js",
     "prettier": "prettier --write '**/*.{js,jsx,css,html}'",
     "test": "NODE_ENV=test jest",
+    "test:integration": "LUCEM_RUN_INTEGRATION=1 NODE_ENV=test jest src/test/integration --runInBand --testTimeout=180000",
     "test:e2e": "playwright test",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "test:screenshots": "LUCEM_SKIP_SERVE=1 npm run build:webpack && playwright test e2e/screenshots.spec.js",
+    "test:screenshots:only": "playwright test e2e/screenshots.spec.js"
   },
   "dependencies": {
     "@cardano-foundation/ledgerjs-hw-app-cardano": "^7.1.3",

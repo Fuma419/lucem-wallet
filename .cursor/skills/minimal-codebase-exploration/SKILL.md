@@ -15,6 +15,8 @@
 | WASM loader | `src/api/loader.js` |
 | Platform adapter | `src/platform/index.js` |
 | Jest config | `jest.config.js` |
+| Live Preview/Preprod send tests (opt-in) | `src/test/integration/` · `npm run test:integration` |
+| Playwright | `e2e/` · `playwright.config.js` |
 | Vercel config | `vercel.json` |
 
 ## Rules

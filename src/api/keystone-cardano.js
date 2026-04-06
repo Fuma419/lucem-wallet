@@ -512,12 +512,16 @@ export async function buildKeystoneCardanoSignRequest({
 
     const output = match.output();
     const addr = Loader.Cardano.Address.from_bytes(output.address().to_bytes());
-    const addrBech32 = addr.to_bech32();
-    if (addrBech32 !== account.paymentAddr) {
+    const expected = Loader.Cardano.Address.from_bech32(account.paymentAddr);
+    if (
+      Buffer.from(addr.to_bytes()).compare(Buffer.from(expected.to_bytes())) !==
+      0
+    ) {
       throw new Error(
         'This transaction spends from an address this wallet does not treat as its primary payment address.'
       );
     }
+    const addrBech32 = addr.to_bech32();
 
     const amount = output.amount().coin().to_str();
     keystoneUtxos.push({

@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import '../components/styles.css';
 import { HW, STORAGE, TAB } from '../../../config/config';
 import Main from '../../index';
 import { BrowserRouter as Router } from 'react-router-dom';
@@ -10,14 +11,10 @@ import { createRoot } from 'react-dom/client';
 import {
   Button,
   Box,
-  Flex,
-  useColorModeValue,
-  useColorMode,
   Image,
   Text,
   Checkbox,
   Icon,
-  Select,
   Collapse,
   Radio,
   RadioGroup,
@@ -28,9 +25,8 @@ import { Scrollbars } from '../components/scrollbar';
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 
 
-// assets
-import LogoOriginal from '../../../assets/img/logo.svg';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
+import backgroundCyanWebp from '../../../assets/img/background-cyan.webp';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
@@ -57,7 +53,6 @@ import {
   parseKeystoneCardanoConnectUr,
 } from '../../../api/keystone-cardano';
 import { MdUsb } from 'react-icons/md';
-import { Planet } from 'react-kawaii';
 import { ledgerUSBVendorId } from '@ledgerhq/devices';
 
 const VENDOR_IDS = {
@@ -77,9 +72,6 @@ function defaultKeystoneAccountChecks() {
 }
 
 const App = () => {
-  const Logo = useColorModeValue(LogoOriginal, LogoWhite);
-  const cardColor = useColorModeValue('blue.100', 'gray.900');
-  const backgroundColor = useColorModeValue('gray.200', 'inherit');
   const [tab, setTab] = React.useState(0);
   const data = React.useRef({
     device: '',
@@ -89,71 +81,84 @@ const App = () => {
 
   return (
     <Box
-      minH="100vh"
-      sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
       display="flex"
       flexDirection="column"
-      w="full"
-      background={backgroundColor}
+      alignItems="stretch"
+      width="100%"
+      minW="100%"
+      minH="100vh"
+      position="relative"
+      opacity={0.9}
       className="lucem-wallet-main-column"
+      backgroundColor="#050f18"
+      backgroundImage={`linear-gradient(165deg, rgba(6, 20, 36, 0.9) 0%, rgba(8, 52, 64, 0.82) 45%, rgba(5, 26, 42, 0.92) 100%), url(${backgroundCyanWebp})`}
+      backgroundSize="cover, cover"
+      backgroundPosition="center, center"
+      backgroundRepeat="no-repeat, no-repeat"
+      boxSizing="border-box"
+      sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <Flex
+      <Box
+        as="header"
+        width="100%"
         flexShrink={0}
-        align="center"
-        px={{ base: 4, md: 10 }}
+        display="flex"
+        justifyContent="flex-start"
         pt={{
           base: 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 10,
+          md: 8,
         }}
-        pb={4}
+        pb={{ base: 2, md: 2 }}
+        px={{ base: 4, md: 8 }}
       >
         <Image
           draggable={false}
-          src={Logo}
-          w={{ base: 'min(160px, 55vw)', md: '190px' }}
-          maxW="190px"
+          src={LogoWhite}
+          width={{ base: '72px', sm: '88px', md: '100px' }}
+          maxW="min(100px, 36vw)"
+          objectFit="contain"
           alt=""
         />
-      </Flex>
+      </Box>
 
       <Box
-        flex="1"
+        flex="1 1 auto"
         minH={0}
         display="flex"
-        justifyContent="center"
-        alignItems={{ base: 'stretch', md: 'center' }}
-        px={{ base: 4, md: 6 }}
-        pb="calc(1rem + env(safe-area-inset-bottom, 0px))"
-        py={{ base: 2, md: 4 }}
+        flexDirection="column"
+        alignItems="center"
+        justifyContent={{ base: 'flex-start', md: 'center' }}
+        width="100%"
+        px={{ base: 4, md: 8 }}
+        pb={{
+          base: 'max(1.5rem, env(safe-area-inset-bottom, 0px))',
+          md: 12,
+        }}
+        pt={{ base: 2, md: 0 }}
       >
         <Box
+          className="modal-glow-cyan create-wallet-modal lucem-modal-card"
           rounded="2xl"
           shadow="md"
           display="flex"
-          alignItems="stretch"
           flexDirection="column"
-          w="full"
-          maxW="460px"
+          alignItems="stretch"
+          justifyContent="flex-start"
+          width="100%"
+          maxW="560px"
+          mx="auto"
+          flex="1 1 auto"
           minH={0}
-          flex={{ base: '1 1 auto', md: '0 1 auto' }}
-          p={{ base: 6, md: 10 }}
-          background={cardColor}
-          fontSize="sm"
           overflow="hidden"
-          sx={{
-            maxHeight: 'min(34.375rem, calc(100dvh - 9rem))',
-            '@supports not (height: 100dvh)': {
-              maxHeight: 'min(34.375rem, calc(100vh - 9rem))',
-            },
-          }}
+          background="rgba(0, 0, 0, .85)"
+          color="whiteAlpha.900"
+          fontSize="md"
         >
           <Box
-            flex="1"
+            className="lucem-create-wallet-scroll"
+            p={{ base: 4, sm: 6, md: 10 }}
+            flex="1 1 auto"
             minH={0}
-            overflowY="auto"
-            overflowX="hidden"
-            pb={3}
-            sx={{ WebkitOverflowScrolling: 'touch' }}
           >
             {tab === 0 && (
               <ConnectHW
@@ -175,7 +180,6 @@ const App = () => {
 };
 
 const ConnectHW = ({ onConfirm }) => {
-  const { colorMode } = useColorMode();
   const [selected, setSelected] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -227,12 +231,24 @@ const ConnectHW = ({ onConfirm }) => {
   if (selected === HW.keystone && keystoneStep === 'showRequest') {
     const cborHex = Buffer.from(keyDerivationUr.cbor).toString('hex');
     return (
-      <>
-        <Text fontSize="x-large" fontWeight="semibold">
+      <Box
+        width="100%"
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+      >
+        <Text
+          className="walletTitle"
+          as="h2"
+          textAlign="center"
+          fontWeight="bold"
+          fontSize="xl"
+          width="100%"
+        >
           Step 1 — Keystone scans Lucem
         </Text>
         <Box h={4} />
-        <Text fontSize="sm" maxW="340px">
+        <Text fontSize="sm" maxW="340px" color="whiteAlpha.800" textAlign="center" mx="auto">
           This QR asks Keystone for{' '}
           <b>
             {keystoneRequestedIndices.length === 1
@@ -249,10 +265,12 @@ const ConnectHW = ({ onConfirm }) => {
         {keystoneDerivation === 'ledger' && (
           <Text
             fontSize="xs"
-            color="orange.300"
+            color="orange.200"
             maxW="340px"
             mt={3}
             fontWeight="semibold"
+            textAlign="center"
+            mx="auto"
           >
             Keystone defaults to Cardano standard on the approval screen. When
             the device asks you to confirm, switch ADA to Ledger / BitBox — not
@@ -279,14 +297,20 @@ const ConnectHW = ({ onConfirm }) => {
           />
         </Box>
         <Box h={4} />
-        <Text fontSize="sm" maxW="340px" color="gray.600">
+        <Text fontSize="sm" maxW="340px" color="whiteAlpha.650" textAlign="center" mx="auto">
           When Keystone shows its animated sync QR, tap Continue here and allow
           the webcam to scan it. To add another account later, open this flow
           again after choosing a different account on the device.
         </Text>
         <Button
+          type="button"
+          variant="unstyled"
+          className="button import-wallet"
           mt={4}
-          colorScheme="cyan"
+          alignSelf="center"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
             setScanError('');
@@ -298,6 +322,10 @@ const ConnectHW = ({ onConfirm }) => {
         <Button
           mt={2}
           variant="ghost"
+          alignSelf="center"
+          color="whiteAlpha.800"
+          _hover={{ bg: 'whiteAlpha.100' }}
+          _active={{ bg: 'whiteAlpha.200' }}
           onClick={() => {
             keystoneScanConsumedRef.current = false;
             setKeystoneStep('pick');
@@ -305,18 +333,30 @@ const ConnectHW = ({ onConfirm }) => {
         >
           Back
         </Button>
-      </>
+      </Box>
     );
   }
 
   if (selected === HW.keystone && keystoneStep === 'scanReply') {
     return (
-      <>
-        <Text fontSize="x-large" fontWeight="semibold">
+      <Box
+        width="100%"
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+      >
+        <Text
+          className="walletTitle"
+          as="h2"
+          textAlign="center"
+          fontWeight="bold"
+          fontSize="xl"
+          width="100%"
+        >
           Step 2 — Scan Keystone
         </Text>
         <Box h={4} />
-        <Text fontSize="sm" maxW="320px">
+        <Text fontSize="sm" maxW="320px" color="whiteAlpha.800" textAlign="center" mx="auto">
           Scan the animated QR on your Keystone screen. Allow the camera when
           the browser asks.
         </Text>
@@ -363,13 +403,17 @@ const ConnectHW = ({ onConfirm }) => {
           />
         </Box>
         {scanError && (
-          <Text fontSize="xs" color="red.300" mt={2}>
+          <Text fontSize="xs" color="red.200" mt={2} textAlign="center">
             {scanError}
           </Text>
         )}
         <Button
           mt={4}
           variant="ghost"
+          alignSelf="center"
+          color="whiteAlpha.800"
+          _hover={{ bg: 'whiteAlpha.100' }}
+          _active={{ bg: 'whiteAlpha.200' }}
           onClick={() => {
             setScanError('');
             keystoneScanConsumedRef.current = false;
@@ -378,34 +422,74 @@ const ConnectHW = ({ onConfirm }) => {
         >
           Back to Step 1
         </Button>
-      </>
+      </Box>
     );
   }
 
   return (
-    <>
-      <Text fontSize="x-large" fontWeight="semibold">
+    <Box
+      width="100%"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+    >
+      <Text
+        className="walletTitle"
+        as="h2"
+        textAlign="center"
+        fontWeight="bold"
+        fontSize="xl"
+        width="100%"
+      >
         Connect Hardware Wallet
       </Text>
       <Box h={6} />
-      <Text width="90%" maxWidth="300px" textAlign="center">
+      <Text
+        width="90%"
+        maxWidth="320px"
+        textAlign="center"
+        mx="auto"
+        fontSize="sm"
+        color="whiteAlpha.800"
+      >
         Choose <b>Keystone</b> (QR, air-gapped) or <b>Ledger</b> (USB).
       </Text>
       <Box h={8} />
-      <Box display="flex" alignItems="center" justifyContent="center">
+      <Box display="flex" alignItems="stretch" justifyContent="center" gap={4} flexWrap="wrap">
         <Box
+          as="button"
+          type="button"
           cursor="pointer"
           display="flex"
+          flexDirection="column"
           alignItems="center"
           justifyContent="center"
-          width="120px"
-          height="55px"
-          border="solid 1px"
+          gap={2}
+          minW="132px"
+          minH="108px"
+          px={3}
+          py={3}
           rounded="xl"
-          borderColor={selected === HW.keystone && 'cyan.400'}
-          borderWidth={selected === HW.keystone && '3px'}
-          p={4}
-          _hover={{ opacity: 0.85 }}
+          transition="box-shadow 0.2s, border-color 0.2s, background 0.2s"
+          border="solid 2px"
+          borderColor={
+            selected === HW.keystone ? 'cyan.200' : 'whiteAlpha.500'
+          }
+          bg={
+            selected === HW.keystone
+              ? 'rgba(0, 245, 255, 0.12)'
+              : 'rgba(255, 255, 255, 0.07)'
+          }
+          boxShadow={
+            selected === HW.keystone
+              ? '0 0 22px rgba(0, 245, 255, 0.35), inset 0 1px 0 rgba(255,255,255,0.12)'
+              : 'inset 0 1px 0 rgba(255,255,255,0.08)'
+          }
+          _hover={{
+            borderColor: 'cyan.200',
+            bg: 'rgba(0, 245, 255, 0.1)',
+            boxShadow: '0 0 18px rgba(0, 245, 255, 0.25)',
+          }}
           onClick={() => {
             setSelected(HW.keystone);
             setKeystoneStep('pick');
@@ -417,39 +501,86 @@ const ConnectHW = ({ onConfirm }) => {
             setScanError('');
           }}
         >
-          <Image
-            draggable={false}
-            src={KeystoneLogo}
-            filter={colorMode == 'dark' && 'invert(1)'}
-          />
+          <Box
+            bg="white"
+            rounded="lg"
+            px={3}
+            py={2}
+            boxShadow="0 2px 12px rgba(0,0,0,0.35)"
+          >
+            <Image draggable={false} src={KeystoneLogo} maxH="32px" objectFit="contain" />
+          </Box>
+          <Text fontSize="xs" fontWeight="bold" color="whiteAlpha.900" letterSpacing="wide">
+            KEYSTONE
+          </Text>
         </Box>
-        <Box w={5} />
         <Box
+          as="button"
+          type="button"
           cursor="pointer"
           display="flex"
+          flexDirection="column"
           alignItems="center"
           justifyContent="center"
-          width="120px"
-          height="55px"
-          border="solid 1px"
+          gap={2}
+          minW="132px"
+          minH="108px"
+          px={3}
+          py={3}
           rounded="xl"
-          borderColor={selected === HW.ledger && 'purple.400'}
-          borderWidth={selected === HW.ledger && '3px'}
-          p={1}
-          _hover={{ opacity: 0.8 }}
+          transition="box-shadow 0.2s, border-color 0.2s, background 0.2s"
+          border="solid 2px"
+          borderColor={
+            selected === HW.ledger ? 'purple.300' : 'whiteAlpha.500'
+          }
+          bg={
+            selected === HW.ledger
+              ? 'rgba(220, 27, 250, 0.12)'
+              : 'rgba(255, 255, 255, 0.07)'
+          }
+          boxShadow={
+            selected === HW.ledger
+              ? '0 0 22px rgba(220, 27, 250, 0.35), inset 0 1px 0 rgba(255,255,255,0.12)'
+              : 'inset 0 1px 0 rgba(255,255,255,0.08)'
+          }
+          _hover={{
+            borderColor: 'purple.300',
+            bg: 'rgba(220, 27, 250, 0.1)',
+            boxShadow: '0 0 18px rgba(220, 27, 250, 0.28)',
+          }}
           onClick={() => setSelected(HW.ledger)}
         >
-          <Image
-            draggable={false}
-            src={LedgerLogo}
-            filter={colorMode == 'dark' && 'invert(1)'}
-          />
+          <Box
+            bg="rgba(255,255,255,0.92)"
+            rounded="lg"
+            px={3}
+            py={2}
+            boxShadow="0 2px 12px rgba(0,0,0,0.35)"
+          >
+            <Image
+              draggable={false}
+              src={LedgerLogo}
+              maxH="32px"
+              objectFit="contain"
+            />
+          </Box>
+          <Text fontSize="xs" fontWeight="bold" color="whiteAlpha.900" letterSpacing="wide">
+            LEDGER
+          </Text>
         </Box>
       </Box>
       <Box h={10} />
       {selected === HW.keystone && (
-        <>
-          <Text width="90%" maxWidth="340px" fontSize="sm">
+        <Box
+          w="100%"
+          maxW="400px"
+          alignSelf="stretch"
+          mx="auto"
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+        >
+          <Text width="100%" fontSize="sm" color="whiteAlpha.800" textAlign="center">
             By default Lucem connects <b>account 0</b> using{' '}
             <b>Cardano standard</b> derivation (CIP-1852). Open{' '}
             <b>Advanced options</b> to request more accounts (at least one) or
@@ -460,7 +591,9 @@ const ConnectHW = ({ onConfirm }) => {
           <Button
             variant="ghost"
             size="sm"
-            alignSelf="flex-start"
+            alignSelf="center"
+            color="cyan.200"
+            _hover={{ bg: 'whiteAlpha.100' }}
             rightIcon={
               <ChevronDownIcon
                 transform={keystoneAdvancedOpen ? 'rotate(-180deg)' : undefined}
@@ -471,18 +604,19 @@ const ConnectHW = ({ onConfirm }) => {
           >
             Advanced options
           </Button>
-          <Collapse in={keystoneAdvancedOpen} animateOpacity>
+          <Collapse in={keystoneAdvancedOpen} animateOpacity style={{ width: '100%' }}>
             <Box
               mt={3}
               pl={1}
               borderLeftWidth="2px"
               borderColor="cyan.400"
               py={1}
+              w="100%"
             >
-              <Text fontSize="sm" fontWeight="semibold">
+              <Text fontSize="sm" fontWeight="semibold" color="whiteAlpha.900">
                 Accounts to request (at least one)
               </Text>
-              <Text fontSize="xs" color="gray.500" mt={1} maxW="340px">
+              <Text fontSize="xs" color="whiteAlpha.600" mt={1} maxW="340px">
                 Each checked account adds a derivation step on Keystone (more checks =
                 longer approval). Scroll the card to see all options and Continue below.
               </Text>
@@ -493,6 +627,8 @@ const ConnectHW = ({ onConfirm }) => {
                     <Checkbox
                       key={i}
                       size="sm"
+                      colorScheme="cyan"
+                      sx={{ '.chakra-checkbox__label': { color: 'whiteAlpha.850' } }}
                       isChecked={!!keystoneAccountChecks[i]}
                       onChange={(e) => {
                         const checked = e.target.checked;
@@ -511,7 +647,7 @@ const ConnectHW = ({ onConfirm }) => {
                   )
                 )}
               </Stack>
-              <Text fontSize="sm" fontWeight="semibold" mt={4}>
+              <Text fontSize="sm" fontWeight="semibold" mt={4} color="whiteAlpha.900">
                 ADA derivation (two supported paths)
               </Text>
               <RadioGroup
@@ -523,16 +659,16 @@ const ConnectHW = ({ onConfirm }) => {
                 mt={2}
                 pb={1}
               >
-                <Stack spacing={2}>
-                  <Radio value="standard" size="sm">
+                <Stack spacing={2} color="whiteAlpha.850">
+                  <Radio value="standard" size="sm" colorScheme="cyan">
                     Cardano standard (default)
                   </Radio>
-                  <Radio value="ledger" size="sm">
+                  <Radio value="ledger" size="sm" colorScheme="cyan">
                     Ledger-compatible (Ledger / BitBox)
                   </Radio>
                 </Stack>
               </RadioGroup>
-              <Text fontSize="xs" color="gray.500" mt={2} maxW="340px">
+              <Text fontSize="xs" color="whiteAlpha.600" mt={2} maxW="340px">
                 Must match the address type you export on Keystone (Ledger vs
                 standard use different keys at the same path). If a scan error says
                 the QR does not match your choice, switch this option to the other
@@ -540,20 +676,36 @@ const ConnectHW = ({ onConfirm }) => {
               </Text>
             </Box>
           </Collapse>
-        </>
+        </Box>
       )}
       {selected === HW.ledger && (
-        <Text width="90%" maxWidth="300px" textAlign="center">
+        <Text
+          width="90%"
+          maxWidth="320px"
+          textAlign="center"
+          mx="auto"
+          fontSize="sm"
+          color="whiteAlpha.800"
+        >
           {typeof navigator !== 'undefined' && navigator.usb
             ? 'Connect your Ledger device directly to your computer. Unlock the device and open the Cardano app. Then click Continue.'
             : 'WebUSB is not available in this browser. Please use a desktop browser (Chrome or Edge) to connect your Ledger device.'}
         </Text>
       )}
-      {selected === HW.ledger && <Icon as={MdUsb} boxSize={7} mt="6" />}
+      {selected === HW.ledger && (
+        <Icon as={MdUsb} boxSize={7} mt="6" color="cyan.200" alignSelf="center" />
+      )}
       <Button
+        type="button"
+        variant="unstyled"
+        className="button import-wallet"
         isDisabled={isLoading || !selected}
         isLoading={isLoading}
         mt={8}
+        alignSelf="center"
+        display="inline-flex"
+        alignItems="center"
+        justifyContent="center"
         rightIcon={<ChevronRightIcon />}
         onClick={async () => {
           setError('');
@@ -604,11 +756,11 @@ const ConnectHW = ({ onConfirm }) => {
       </Button>
 
       {error && (
-        <Text mt={3} fontSize="xs" color="red.300">
+        <Text mt={3} fontSize="xs" color="red.200" textAlign="center">
           {error}
         </Text>
       )}
-    </>
+    </Box>
   );
 };
 
@@ -698,12 +850,30 @@ const SelectAccounts = ({ data, onConfirm }) => {
 
   return (
     isInit && (
-      <>
-        <Text fontSize="x-large" fontWeight="semibold">
+      <Box
+        width="100%"
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+      >
+        <Text
+          className="walletTitle"
+          as="h2"
+          textAlign="center"
+          fontWeight="bold"
+          fontSize="xl"
+          width="100%"
+        >
           Select Accounts
         </Text>
         <Box h={6} />
-        <Text width="90%" maxWidth="300px" textAlign="center">
+        <Text
+          width="90%"
+          maxWidth="340px"
+          textAlign="center"
+          fontSize="sm"
+          color="whiteAlpha.800"
+        >
           {isKeystone
             ? keystoneNewAccounts.length === 0
               ? 'Every Cardano account in this sync is already in Lucem. Close this tab or run the Keystone flow again to export a different account.'
@@ -715,11 +885,14 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Box h={8} />
 
         <Box
-          width="80%"
+          width="85%"
+          maxW="380px"
           minH="160px"
           h="200px"
           rounded="md"
-          border="solid 1px"
+          border="1px solid"
+          borderColor="whiteAlpha.200"
+          bg="blackAlpha.400"
           sx={{ maxHeight: 'min(16.25rem, 42vh)' }}
         >
           <Scrollbars
@@ -738,7 +911,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 display="flex"
                 alignItems="center"
               >
-                <Box ml={6} fontWeight="bold" fontSize="sm" maxW="85%">
+                <Box ml={6} fontWeight="bold" fontSize="sm" maxW="85%" color="whiteAlpha.900">
                   {isKeystone
                     ? data.keystoneAccounts.find((x) => x.rowKey === rowKey)
                         ?.name ||
@@ -748,6 +921,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
                       }`}
                 </Box>
                 <Checkbox
+                  colorScheme="cyan"
                   isDisabled={!!existing[rowKey]}
                   isChecked={!!(selected[rowKey] && !existing[rowKey])}
                   onChange={(e) => {
@@ -770,11 +944,11 @@ const SelectAccounts = ({ data, onConfirm }) => {
           </Scrollbars>
         </Box>
         {needsKeystonePassword === true && (
-          <Box w="full" mt={4}>
-            <Text fontSize="sm" fontWeight="semibold" mb={1}>
+          <Box w="full" maxW="380px" mt={4}>
+            <Text fontSize="sm" fontWeight="semibold" mb={1} color="whiteAlpha.900">
               Set a wallet password for this browser
             </Text>
-            <Text fontSize="xs" color="gray.500" mb={2}>
+            <Text fontSize="xs" color="whiteAlpha.600" mb={2}>
               Used to protect Lucem on this device (reset wallet, change password,
               and any normal accounts you add later). This is not your Keystone
               PIN or recovery phrase.
@@ -784,6 +958,13 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 type="password"
                 size="sm"
                 rounded="md"
+                variant="filled"
+                bg="gray.800"
+                color="whiteAlpha.900"
+                borderColor="whiteAlpha.200"
+                _placeholder={{ color: 'whiteAlpha.400' }}
+                _hover={{ bg: 'gray.700' }}
+                focusBorderColor="cyan.400"
                 placeholder="Password (min 8 characters)"
                 value={localWalletPassword}
                 onChange={(e) => setLocalWalletPassword(e.target.value)}
@@ -793,6 +974,13 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 type="password"
                 size="sm"
                 rounded="md"
+                variant="filled"
+                bg="gray.800"
+                color="whiteAlpha.900"
+                borderColor="whiteAlpha.200"
+                _placeholder={{ color: 'whiteAlpha.400' }}
+                _hover={{ bg: 'gray.700' }}
+                focusBorderColor="cyan.400"
                 placeholder="Confirm password"
                 value={localWalletPasswordConfirm}
                 onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}
@@ -802,6 +990,12 @@ const SelectAccounts = ({ data, onConfirm }) => {
           </Box>
         )}
         <Button
+          type="button"
+          variant="unstyled"
+          className="button import-wallet"
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
           isDisabled={
             isLoading ||
             (isKeystone
@@ -815,6 +1009,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
           }
           isLoading={isLoading}
           mt={8}
+          alignSelf="center"
           rightIcon={<ChevronRightIcon />}
           onClick={async () => {
             setIsLoading(true);
@@ -883,36 +1078,58 @@ const SelectAccounts = ({ data, onConfirm }) => {
           Continue
         </Button>
         {error && (
-          <Text mt={3} fontSize="xs" color="red.300">
+          <Text mt={3} fontSize="xs" color="red.200" textAlign="center">
             {error}
           </Text>
         )}
         <TrezorWidget ref={trezorRef} />
-      </>
+      </Box>
     )
   );
 };
 
 const SuccessAndClose = () => {
   return (
-    <>
+    <Box
+      width="100%"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+    >
       <Text
-        mt={10}
-        fontSize="x-large"
-        fontWeight="semibold"
-        width={200}
+        className="walletTitle"
+        as="h2"
+        mt={6}
+        fontWeight="bold"
+        fontSize="xl"
+        width="100%"
         textAlign="center"
       >
         Successfully added accounts!
       </Text>
       <Box h={10} />
-      <Text width="90%" maxWidth="300px" textAlign="center">
+      <Text
+        width="90%"
+        maxWidth="320px"
+        textAlign="center"
+        fontSize="sm"
+        color="whiteAlpha.800"
+      >
         You can now close this tab and continue with the extension.
       </Text>
-      <Button mt={8} onClick={() => closeCurrentTab()}>
+      <Button
+        type="button"
+        variant="unstyled"
+        className="button import-wallet"
+        mt={8}
+        display="inline-flex"
+        alignItems="center"
+        justifyContent="center"
+        onClick={() => closeCurrentTab()}
+      >
         Close
       </Button>
-    </>
+    </Box>
   );
 };
 

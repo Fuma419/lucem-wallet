@@ -1,9 +1,12 @@
+const runIntegration = process.env.LUCEM_RUN_INTEGRATION === '1';
+
 module.exports = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/yoroi-frontend/',
     '/koios-artifacts/',
     '/e2e/',
+    ...(runIntegration ? [] : ['/src/test/integration/']),
   ],
   moduleNameMapper: {
     '@emurgo/cardano-serialization-lib-browser':

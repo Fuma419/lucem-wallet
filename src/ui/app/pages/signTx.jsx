@@ -48,6 +48,7 @@ import {
   parseKeystoneCardanoTxSignature,
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
+import { assembleSignedTransaction } from '../../../api/extension/wallet';
 
 const KPhase = { load: 'load', show: 'show', scan: 'scan' };
 
@@ -113,12 +114,7 @@ const SignTxKeystoneInline = ({
       const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
         Buffer.from(wh, 'hex')
       );
-      const merged = Loader.Cardano.Transaction.new(
-        rawTx.body(),
-        witnessSet,
-        true,
-        rawTx.auxiliary_data()
-      );
+      const merged = await assembleSignedTransaction(rawTx, witnessSet);
       onSuccess(merged);
     } catch (e) {
       setErr(e.message || 'Invalid signature QR');

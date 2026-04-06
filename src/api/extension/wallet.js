@@ -6,6 +6,23 @@ import { decodeTx, encodeTx, transformTx } from 'cardano-hw-interop-lib';
 
 const RETRIES = 5;
 
+/**
+ * Assemble a signed transaction from an unsigned tx and a witness set.
+ * CSL v15 only supports Transaction.new(body, witness_set, auxiliary_data?).
+ * The old 4-argument form (…, true, auxiliary_data) passes boolean `true` as
+ * auxiliary_data and throws "expected instance of AuxiliaryData".
+ */
+export const assembleSignedTransaction = async (unsignedTx, witnessSet) => {
+  await Loader.load();
+  const signed = Loader.Cardano.Transaction.new(
+    unsignedTx.body(),
+    witnessSet,
+    unsignedTx.auxiliary_data()
+  );
+  signed.set_is_valid(unsignedTx.is_valid());
+  return signed;
+};
+
 export const initTx = async () => {
   try {
     // Get latest block from Koios
@@ -300,12 +317,7 @@ export const signAndSubmit = async (
     password,
     accountIndex
   );
-  const transaction = Loader.Cardano.Transaction.new(
-    tx.body(),
-    witnessSet,
-    true,
-    tx.auxiliary_data()
-  );
+  const transaction = await assembleSignedTransaction(tx, witnessSet);
 
   const txHash = await submitTx(
     Buffer.from(transaction.to_bytes(), 'hex').toString('hex')
@@ -327,12 +339,7 @@ export const signAndSubmitHW = async (
     partialSign
   );
 
-  const transaction = Loader.Cardano.Transaction.new(
-    tx.body(),
-    witnessSet,
-    true,
-    tx.auxiliary_data()
-  );
+  const transaction = await assembleSignedTransaction(tx, witnessSet);
 
   try {
     const txHash = await submitTx(

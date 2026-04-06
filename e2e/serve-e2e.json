@@ -1,0 +1,8 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/", "destination": "/mainPopup.html" },
+    { "source": "/wallet", "destination": "/mainPopup.html" },
+    { "source": "/welcome", "destination": "/mainPopup.html" }
+  ]
+}

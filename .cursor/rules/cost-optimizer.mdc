@@ -8,7 +8,10 @@ alwaysApply: true
 - Default fastest model tier. Escalate only for: complex debug, architecture, crypto/security. Downgrade immediately after.
 - Concise outputs. Bullet lists over paragraphs. Omit unrequested boilerplate.
 - Targeted reads: `Grep`/`Glob` with filters, `offset`/`limit` for large files. Never `**/*`.
+- **Orientation:** `AGENTS.md` has an **Agent quick map**, Key commands (incl. `npm run test:integration`), and Preview/Preprod env table — read that before spelunking.
 - **Iteration**: validate only changed files. **Finalization**: run `NODE_ENV=test npx jest`, `npm run build`, ESLint once.
+- **Ship to `main` (agents):** When a **feature or bugfix is complete**, run the full gate — `NODE_ENV=test npx jest` and **`npm run build`** (webpack must succeed). If both pass, **`git push` the branch to `origin/main`** (commit first with a clear message; one logical change per commit unless the user asked to batch). Do not leave finished work un-pushed when the repo is clean and tests are green. If push is impossible (no auth / read-only), say so and stop after the gate.
+- **Terminal / long jobs (avoid “stuck”):** Do **not** pipe `npm run build`, `node utils/build.js`, or `jest` into `tail`/`head` — the pipeline waits for the producer to finish, progress is invisible, and tool timeouts background the shell while you see no output. Run the command **directly** (or `cmd > /tmp/log.txt 2>&1` then `tail` the file). Webpack often needs **10+ minutes** on cold CI-like boxes: pass a high `block_until_ms` (e.g. 600000) or run `NODE_ENV=test npx jest` and `npm run build:webpack` **sequentially** as two calls. After a command is backgrounded, read its terminal log file instead of waiting blindly.
 - One logical change per commit. Never modify `src/wasm/`.
 - All `chrome.*` calls must go through `src/platform/` adapter — never add direct chrome API in shared code.
 

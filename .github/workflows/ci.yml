@@ -30,6 +30,24 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+      - name: Headless UI screenshots
+        run: npm run test:screenshots:only
+      - name: Preview / Preprod send integration (skips if mnemonics unset)
+        run: npm run test:integration
+        env:
+          LUCEM_INTEGRATION_PREVIEW_MNEMONIC: ${{ secrets.LUCEM_INTEGRATION_PREVIEW_MNEMONIC }}
+          LUCEM_INTEGRATION_PREPROD_MNEMONIC: ${{ secrets.LUCEM_INTEGRATION_PREPROD_MNEMONIC }}
+          KOIOS_API_KEY_PREVIEW: ${{ secrets.KOIOS_API_KEY_PREVIEW }}
+          KOIOS_API_KEY_PREPROD: ${{ secrets.KOIOS_API_KEY_PREPROD }}
+      - name: Upload UI screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e/screenshots/output/
+          if-no-files-found: ignore
       - name: Upload build
         uses: actions/upload-artifact@v4
         with:

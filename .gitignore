@@ -8,6 +8,9 @@
 /playwright-report/
 /test-results/
 
+# Playwright screenshot pipeline (regenerated locally / CI artifacts)
+/e2e/screenshots/output/
+
 # production
 /build
 

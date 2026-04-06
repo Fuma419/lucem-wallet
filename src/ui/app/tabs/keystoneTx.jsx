@@ -3,23 +3,16 @@
  */
 
 import React from 'react';
+import '../components/styles.css';
 import { TAB } from '../../../config/config';
 import Main from '../../index';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
-import {
-  Box,
-  Button,
-  Flex,
-  Image,
-  Text,
-  useColorModeValue,
-  useToast,
-} from '@chakra-ui/react';
+import { Box, Button, Image, Text, useToast } from '@chakra-ui/react';
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
-import LogoOriginal from '../../../assets/img/logo.svg';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
+import backgroundCyanWebp from '../../../assets/img/background-cyan.webp';
 import {
   closeCurrentTab,
   getCurrentAccount,
@@ -29,6 +22,7 @@ import {
   takeKeystoneSignPayload,
 } from '../../../api/extension';
 import Loader from '../../../api/loader';
+import { assembleSignedTransaction } from '../../../api/extension/wallet';
 import { useStoreActions } from 'easy-peasy';
 import {
   buildKeystoneCardanoSignRequest,
@@ -46,8 +40,6 @@ const Phase = {
 };
 
 const App = () => {
-  const Logo = useColorModeValue(LogoOriginal, LogoWhite);
-  const backgroundColor = useColorModeValue('gray.200', 'inherit');
   const toast = useToast();
   const setRoute = useStoreActions(
     (actions) => actions.globalModel.routeStore.setRoute
@@ -126,12 +118,7 @@ const App = () => {
       const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
         Buffer.from(witnessHex, 'hex')
       );
-      const signed = Loader.Cardano.Transaction.new(
-        rawTx.body(),
-        witnessSet,
-        true,
-        rawTx.auxiliary_data()
-      );
+      const signed = await assembleSignedTransaction(rawTx, witnessSet);
       await submitTx(Buffer.from(signed.to_bytes(), 'hex').toString('hex'));
       toast({
         title: 'Transaction submitted',
@@ -168,100 +155,184 @@ const App = () => {
 
   return (
     <Box
-      minH="100vh"
-      sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
       display="flex"
       flexDirection="column"
-      w="full"
-      background={backgroundColor}
+      alignItems="stretch"
+      width="100%"
+      minW="100%"
+      minH="100vh"
+      position="relative"
+      opacity={0.9}
       className="lucem-wallet-main-column"
+      backgroundColor="#050f18"
+      backgroundImage={`linear-gradient(165deg, rgba(6, 20, 36, 0.9) 0%, rgba(8, 52, 64, 0.82) 45%, rgba(5, 26, 42, 0.92) 100%), url(${backgroundCyanWebp})`}
+      backgroundSize="cover, cover"
+      backgroundPosition="center, center"
+      backgroundRepeat="no-repeat, no-repeat"
+      boxSizing="border-box"
+      sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
       <Box
+        as="header"
+        width="100%"
         flexShrink={0}
-        px={4}
+        display="flex"
+        justifyContent="flex-start"
         pt={{
           base: 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 10,
+          md: 8,
         }}
+        pb={{ base: 2, md: 2 }}
+        px={{ base: 4, md: 8 }}
       >
-        <Image draggable={false} src={Logo} w="36px" h="auto" alt="" />
+        <Image
+          draggable={false}
+          src={LogoWhite}
+          width={{ base: '72px', sm: '88px', md: '100px' }}
+          maxW="min(100px, 36vw)"
+          objectFit="contain"
+          alt=""
+        />
       </Box>
-      <Flex
-        flex="1"
-        direction="column"
-        align="center"
-        justify="flex-start"
-        px={4}
-        pb="calc(1.5rem + env(safe-area-inset-bottom, 0px))"
-        gap={4}
-        overflowY="auto"
+      <Box
+        flex="1 1 auto"
+        minH={0}
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent={{ base: 'flex-start', md: 'center' }}
+        width="100%"
+        px={{ base: 4, md: 8 }}
+        pb={{
+          base: 'max(1.5rem, env(safe-area-inset-bottom, 0px))',
+          md: 12,
+        }}
+        pt={{ base: 2, md: 0 }}
       >
-        {phase === Phase.load && (
-          <Text fontSize="lg" mt={8}>
-            Preparing Keystone sign request…
-          </Text>
-        )}
-        {phase === Phase.showQr && urData.cbor && (
-          <>
-            <Text fontSize="md" textAlign="center" maxW="420px">
-              Scan this QR with your Keystone. The animation may run for a minute
-              or two while the full request is transferred; hold the device steady.
-              Approve on the device, then tap below and scan the signature QR.
-            </Text>
-            <Box
-              bg="white"
-              p={3}
-              rounded="lg"
-              boxShadow="md"
-              sx={{ '& video': { maxWidth: '100%' } }}
-            >
-              <AnimatedQRCode
-                type={urData.type}
-                cbor={urData.cbor}
-                options={KEYSTONE_SIGN_ANIMATED_QR_OPTIONS}
-              />
-            </Box>
-            <Button colorScheme="cyan" onClick={() => setPhase(Phase.scan)}>
-              Scan signature from Keystone
-            </Button>
-          </>
-        )}
-        {phase === Phase.scan && (
-          <>
-            <Text fontSize="sm" textAlign="center" maxW="420px">
-              Allow camera access if prompted. Scan the animated signature QR on
-              Keystone.
-            </Text>
-            <Box
-              w="full"
-              maxW="480px"
-              rounded="lg"
-              overflow="hidden"
-              bg="blackAlpha.800"
-            >
-              <AnimatedQRScanner
-                urTypes={[URType.CardanoSignature]}
-                handleScan={onSignatureScan}
-                handleError={(msg) => setError(msg)}
-                options={{ width: '100%', height: 280 }}
-              />
-            </Box>
-            <Button variant="ghost" onClick={() => setPhase(Phase.showQr)}>
-              Back to transaction QR
-            </Button>
-          </>
-        )}
-        {(phase === Phase.done || error) && (
-          <Text
-            fontSize="sm"
-            color={error ? 'red.300' : 'inherit'}
-            textAlign="center"
-            mt={4}
+        <Box
+          className="modal-glow-cyan create-wallet-modal lucem-modal-card"
+          rounded="2xl"
+          shadow="md"
+          display="flex"
+          flexDirection="column"
+          alignItems="stretch"
+          width="100%"
+          maxW="560px"
+          mx="auto"
+          flex="1 1 auto"
+          minH={0}
+          overflow="hidden"
+          background="rgba(0, 0, 0, .85)"
+          color="whiteAlpha.900"
+          fontSize="md"
+        >
+          <Box
+            className="lucem-create-wallet-scroll"
+            p={{ base: 4, sm: 6, md: 10 }}
+            flex="1 1 auto"
+            minH={0}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={4}
           >
-            {error || 'Done. You can close this tab.'}
-          </Text>
-        )}
-      </Flex>
+            {phase === Phase.load && (
+              <Text className="walletTitle" fontSize="lg" fontWeight="bold" mt={4} textAlign="center">
+                Preparing Keystone sign request…
+              </Text>
+            )}
+            {phase === Phase.showQr && urData.cbor && (
+              <>
+                <Text
+                  className="walletTitle"
+                  as="h2"
+                  fontWeight="bold"
+                  fontSize="xl"
+                  textAlign="center"
+                  width="100%"
+                >
+                  Sign with Keystone
+                </Text>
+                <Text fontSize="sm" textAlign="center" maxW="420px" color="whiteAlpha.800">
+                  Scan this QR with your Keystone. The animation may run for a minute
+                  or two while the full request is transferred; hold the device steady.
+                  Approve on the device, then tap below and scan the signature QR.
+                </Text>
+                <Box
+                  bg="white"
+                  p={3}
+                  rounded="lg"
+                  boxShadow="md"
+                  sx={{ '& video': { maxWidth: '100%' } }}
+                >
+                  <AnimatedQRCode
+                    type={urData.type}
+                    cbor={urData.cbor}
+                    options={KEYSTONE_SIGN_ANIMATED_QR_OPTIONS}
+                  />
+                </Box>
+                <Button
+                  type="button"
+                  className="button import-wallet"
+                  onClick={() => setPhase(Phase.scan)}
+                >
+                  Scan signature from Keystone
+                </Button>
+              </>
+            )}
+            {phase === Phase.scan && (
+              <>
+                <Text
+                  className="walletTitle"
+                  as="h2"
+                  fontWeight="bold"
+                  fontSize="xl"
+                  textAlign="center"
+                  width="100%"
+                >
+                  Scan signature QR
+                </Text>
+                <Text fontSize="sm" textAlign="center" maxW="420px" color="whiteAlpha.800">
+                  Allow camera access if prompted. Scan the animated signature QR on
+                  Keystone.
+                </Text>
+                <Box
+                  w="full"
+                  maxW="480px"
+                  rounded="lg"
+                  overflow="hidden"
+                  bg="blackAlpha.800"
+                >
+                  <AnimatedQRScanner
+                    urTypes={[URType.CardanoSignature]}
+                    handleScan={onSignatureScan}
+                    handleError={(msg) => setError(msg)}
+                    options={{ width: '100%', height: 280 }}
+                  />
+                </Box>
+                <Button
+                  variant="ghost"
+                  color="whiteAlpha.800"
+                  _hover={{ bg: 'whiteAlpha.100' }}
+                  onClick={() => setPhase(Phase.showQr)}
+                >
+                  Back to transaction QR
+                </Button>
+              </>
+            )}
+            {(phase === Phase.done || error) && (
+              <Text
+                fontSize="sm"
+                color={error ? 'red.200' : 'whiteAlpha.800'}
+                textAlign="center"
+                mt={4}
+              >
+                {error || 'Done. You can close this tab.'}
+              </Text>
+            )}
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 };

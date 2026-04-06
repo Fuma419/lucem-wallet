@@ -11,12 +11,30 @@ import { ChevronUpIcon } from '@chakra-ui/icons';
 const isMainPopup = window.document.querySelector(`#${POPUP.main}`);
 /** dApp approval popup (`internalPopup.html`); must use POPUP_WINDOW like main */
 const isInternalPopup = window.document.querySelector(`#${POPUP.internal}`);
-const isTab = window.document.querySelector(`#${TAB.hw}`);
+/** Full-page wallet HTML entries (not the 400px popup) — use full width; no gray scroll panel. */
+const isFullBleedWalletTab =
+  !!window.document.querySelector(`#${TAB.hw}`) ||
+  !!window.document.querySelector(`#${TAB.keystoneTx}`) ||
+  !!window.document.querySelector(`#${TAB.createWallet}`) ||
+  !!window.document.querySelector(`#${TAB.trezorTx}`);
 const isExtensionPopup =
   (isMainPopup || isInternalPopup) &&
   typeof chrome !== 'undefined' &&
   typeof chrome.runtime !== 'undefined' &&
   typeof chrome.runtime.id !== 'undefined';
+
+/** Scrollbars default view can look like a flat gray box over themed pages. */
+function lucemTransparentScrollView({ style, ...props }) {
+  return (
+    <div
+      {...props}
+      style={{
+        ...style,
+        backgroundColor: 'transparent',
+      }}
+    />
+  );
+}
 
 const Main = ({ children }) => {
   const [scroll, setScroll] = React.useState({ el: null, y: 0 });
@@ -26,7 +44,11 @@ const Main = ({ children }) => {
       'keydown',
       (e) => e.key === 'Escape' && e.preventDefault()
     );
-    if (navigator.userAgent.indexOf('Win') != -1 && !isMainPopup && !isTab) {
+    if (
+      navigator.userAgent.indexOf('Win') != -1 &&
+      !isMainPopup &&
+      !isFullBleedWalletTab
+    ) {
       const width =
         POPUP_WINDOW.width + (window.outerWidth - window.innerWidth);
       const height =
@@ -38,9 +60,10 @@ const Main = ({ children }) => {
     <Box
       width={isExtensionPopup ? POPUP_WINDOW.width + 'px' : '100%'}
       height={isExtensionPopup ? POPUP_WINDOW.height + 'px' : '100vh'}
-      maxW={isExtensionPopup ? undefined : '480px'}
+      maxW={isExtensionPopup || isFullBleedWalletTab ? undefined : '480px'}
       minW={0}
-      mx={isExtensionPopup ? undefined : 'auto'}
+      mx={isExtensionPopup || isFullBleedWalletTab ? undefined : 'auto'}
+      bg="transparent"
       sx={
         !isExtensionPopup
           ? {
@@ -56,6 +79,7 @@ const Main = ({ children }) => {
         <StoreProvider>
           <Scrollbars
             id="scroll"
+            renderView={lucemTransparentScrollView}
             style={
               isExtensionPopup
                 ? { width: '100vw', height: '100vh' }

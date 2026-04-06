@@ -1,20 +1,13 @@
 import React from 'react';
+import '../components/styles.css';
 import { TAB } from '../../../config/config';
 import Main from '../../index';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
-import {
-  Box,
-  Flex,
-  Image,
-  Text,
-  useColorModeValue,
-  useToast,
-} from '@chakra-ui/react';
+import { Box, Flex, Image, Text, useToast } from '@chakra-ui/react';
 
-// assets
-import LogoOriginal from '../../../assets/img/logo.svg';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
+import backgroundCyanWebp from '../../../assets/img/background-cyan.webp';
 import {
   closeCurrentTab,
   getCurrentAccount,
@@ -26,8 +19,6 @@ import Loader from '../../../api/loader';
 import { useStoreActions } from 'easy-peasy';
 
 const App = () => {
-  const Logo = useColorModeValue(LogoOriginal, LogoWhite);
-  const backgroundColor = useColorModeValue('gray.200', 'inherit');
   const toast = useToast();
 
   const setRoute = useStoreActions(
@@ -79,18 +70,30 @@ const App = () => {
       display="flex"
       flexDirection="column"
       w="full"
-      background={backgroundColor}
       className="lucem-wallet-main-column"
+      backgroundColor="#050f18"
+      backgroundImage={`linear-gradient(165deg, rgba(6, 20, 36, 0.9) 0%, rgba(8, 52, 64, 0.82) 45%, rgba(5, 26, 42, 0.92) 100%), url(${backgroundCyanWebp})`}
+      backgroundSize="cover, cover"
+      backgroundPosition="center, center"
+      backgroundRepeat="no-repeat, no-repeat"
     >
       <Box
         flexShrink={0}
-        px={4}
+        px={{ base: 4, md: 8 }}
         pt={{
           base: 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 10,
+          md: 8,
         }}
+        pb={2}
       >
-        <Image draggable={false} src={Logo} w="36px" h="auto" alt="" />
+        <Image
+          draggable={false}
+          src={LogoWhite}
+          width={{ base: '72px', sm: '88px', md: '100px' }}
+          maxW="min(100px, 36vw)"
+          objectFit="contain"
+          alt=""
+        />
       </Box>
       <Flex
         flex="1"
@@ -99,7 +102,24 @@ const App = () => {
         px={4}
         pb="calc(1.5rem + env(safe-area-inset-bottom, 0px))"
       >
-        <Text fontSize="lg">Waiting for Trezor...</Text>
+        <Box
+          className="modal-glow-cyan lucem-modal-card"
+          rounded="2xl"
+          px={8}
+          py={10}
+          background="rgba(0, 0, 0, 0.85)"
+          color="whiteAlpha.900"
+          maxW="420px"
+          mx="auto"
+        >
+          <Text className="walletTitle" fontSize="lg" fontWeight="bold" textAlign="center">
+            Waiting for Trezor…
+          </Text>
+          <Text fontSize="sm" color="whiteAlpha.700" textAlign="center" mt={3}>
+            Complete signing on your device. This tab will close when the transaction is
+            submitted.
+          </Text>
+        </Box>
       </Flex>
     </Box>
   );

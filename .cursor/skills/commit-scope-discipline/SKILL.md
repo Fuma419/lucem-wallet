@@ -7,5 +7,5 @@
 2. Review `git diff --stat` — if many files, verify each belongs to the batch.
 3. Imperative mood, ≤72 chars first line, optional body.
 4. Never commit: `build/`, `secrets.*.js` (except `secrets.testing.js`), `node_modules/`, `.vercel/`.
-5. Before push: `NODE_ENV=test npx jest`, then `npm run build` (and ESLint when touching many files).
-6. **After a finished feature or bugfix:** if jest + build are green, **push to `origin/main`** (unless the user’s workflow is PR-only — then push the branch and say so). See `AGENTS.md` → *Agent ship policy*.
+5. **Before push (required):** run `NODE_ENV=test npx jest` (full suite must pass), then `npm run build` (must succeed — same as CI). When many files changed, also run ESLint as in `AGENTS.md`.
+6. **After tests and build succeed:** **always** `git push origin main` before treating the task as finished (commit first if the change is not committed). Do not stop at green tests/build without pushing. Exceptions: the user explicitly asked not to push, or you are intentionally on a non-`main` branch for a PR-only flow — then push that branch and state that `main` was not updated. If push fails (auth, network), report it after the gates. See `AGENTS.md` → *Agent ship policy*.

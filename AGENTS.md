@@ -99,7 +99,7 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 
 ### CSL v15 API (common renames)
 
-`Credential.from_keyhash` · `encrypt`/`decrypt_with_password` · `Value.new(coin)` for ADA-only · `Value.new_with_assets(coin, multiasset)` when tokens matter · **`Transaction` / `Value` / `PlutusData` / UTxO: `from_bytes` / `to_bytes` (not `from_cbor_bytes` / `to_cbor_bytes`)** · hex over the wire: `Buffer.from(x.to_bytes()).toString('hex')` · `Bip32PublicKey.from_hex` · `NetworkInfo.testnet_preview` / `testnet_preprod` (not `testnet()`).
+`Credential.from_keyhash` · `encrypt`/`decrypt_with_password` · `Value.new(coin)` for ADA-only · `Value.new_with_assets(coin, multiasset)` when tokens matter · **`Transaction` / `Value` / `PlutusData` / UTxO: `from_bytes` / `to_bytes` (not `from_cbor_*`)** · CBOR as hex string: `Transaction.from_hex(hex)` · binary: `from_bytes(Buffer.from(hex, 'hex'))` · over the wire: `Buffer.from(x.to_bytes()).toString('hex')` · `Bip32PublicKey.from_hex` · `NetworkInfo.testnet_preview` / `testnet_preprod` (not `testnet()`).
 
 ### CI
 

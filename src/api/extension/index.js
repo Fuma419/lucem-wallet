@@ -43,7 +43,7 @@ import { isAddress } from 'web3-validator';
 import { milkomedaNetworks } from '@dcspark/milkomeda-constants';
 import { Cardano, Serialization } from '@cardano-sdk/core';
 import provider from '../../config/provider';
-import { KOIOS_REQUESTS } from '../koios-endpoints';
+import { KOIOS_REQUESTS, addressTxsIndicatesHistory } from '../koios-endpoints';
 import { bigIntLovelace, normalizeLovelaceScalar } from '../lovelace-scalar';
 
 const hasTaggedSets = (cbor) => {
@@ -2035,27 +2035,21 @@ export const createWallet = async (name, seedPhrase, password) => {
 
   const index = await createAccount(name, password);
 
-  // TEMPORARILY SKIP SUB-ACCOUNT CHECK DUE TO KOIOS API ISSUES
-  // TODO: Fix Koios API endpoint for transaction queries
-  /*
-  // Check for sub-accounts
+  // Discover additional used derivation indices via Koios POST /address_txs (legacy GET /addresses/.../txs was removed).
+  const MAX_SUB_ACCOUNT_SCAN = 20;
   let searchIndex = 1;
-  while (true) {
-    let { paymentKey, stakeKey } = await requestAccountKey(
-      password,
-      searchIndex
-    );
-    
-    // Generate the full address instead of just the key hash
+  while (searchIndex <= MAX_SUB_ACCOUNT_SCAN) {
+    let { paymentKey, stakeKey } = await requestAccountKey(password, searchIndex);
+
     const network = await getNetwork();
     const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
-    
+
     const baseAddress = Loader.Cardano.BaseAddress.new(
       networkId,
       Loader.Cardano.Credential.from_keyhash(paymentKey.to_public().hash()),
       Loader.Cardano.Credential.from_keyhash(stakeKey.to_public().hash())
     );
-    
+
     const fullAddress = baseAddress.to_address().to_bech32();
 
     paymentKey.free();
@@ -2064,25 +2058,23 @@ export const createWallet = async (name, seedPhrase, password) => {
     stakeKey = null;
 
     try {
-      const transactions = await koiosRequest(
-        `/addresses/${fullAddress}/txs`
-      );
-      if (transactions && !transactions.error && transactions.length >= 1)
+      const req = KOIOS_REQUESTS.getAddressTxs(fullAddress);
+      const transactions = await koiosRequest(req.endpoint, undefined, req.body);
+      if (addressTxsIndicatesHistory(transactions)) {
         await createAccount(`Account ${searchIndex}`, password, searchIndex);
-      else break;
+      } else {
+        break;
+      }
     } catch (error) {
-      // If we get a 404, it means no transactions exist for this address (new wallet)
-      // This is expected behavior for new wallets, so we break the loop
       if (error.message && error.message.includes('404')) {
         break;
       }
-      // For other errors, re-throw them
-      throw error;
+      console.warn('Sub-account scan stopped:', error.message);
+      break;
     }
-    
+
     searchIndex++;
   }
-  */
 
   password = null;
   await switchAccount(index);

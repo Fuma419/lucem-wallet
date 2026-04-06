@@ -498,6 +498,10 @@ describe('addressTxsIndicatesHistory', () => {
     expect(addressTxsIndicatesHistory({ error: 'bad request' })).toBe(false);
   });
 
+  test('false for plain object without error key', () => {
+    expect(addressTxsIndicatesHistory({})).toBe(false);
+  });
+
   test('true when at least one row', () => {
     expect(addressTxsIndicatesHistory([{ tx_hash: 'abc' }])).toBe(true);
   });

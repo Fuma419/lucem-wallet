@@ -119,4 +119,9 @@ describe('test linkToSrc', () => {
     expect(convertedArray).toEqual(normalString);
     expect(convertedArray).toEqual(convertedString);
   });
+  test('expect non-string non-array metadata props return null', () => {
+    expect(convertMetadataPropToString(null)).toBeNull();
+    expect(convertMetadataPropToString(42)).toBeNull();
+    expect(convertMetadataPropToString({ a: 1 })).toBeNull();
+  });
 });

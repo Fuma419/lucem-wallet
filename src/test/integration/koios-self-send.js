@@ -48,6 +48,25 @@ async function koiosPost(base, path, body, apiKey) {
   return json;
 }
 
+/** Koios v1: POST /submittx with application/cbor body (not /tx/submit JSON). */
+async function koiosSubmitTx(base, txHex, apiKey) {
+  const h = { ...authHeaders(apiKey), 'Content-Type': 'application/cbor' };
+  const r = await fetch(`${base}/submittx`, {
+    method: 'POST',
+    headers: h,
+    body: Buffer.from(txHex, 'hex'),
+  });
+  const text = await r.text();
+  if (!r.ok) {
+    throw new Error(`Koios POST /submittx ${r.status}: ${text.slice(0, 800)}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 /** Match `convertKoiosResponse` for preview/preprod list endpoints */
 function latestBlockFromKoios(blocksPayload) {
   if (Array.isArray(blocksPayload) && blocksPayload.length > 0) {
@@ -252,7 +271,7 @@ async function buildSignSubmitSelfTransfer(opts) {
   signed.set_is_valid(unsigned.is_valid());
 
   const txHex = Buffer.from(signed.to_bytes()).toString('hex');
-  const submitRes = await koiosPost(baseUrl, '/tx/submit', { tx: txHex }, apiKey);
+  const submitRes = await koiosSubmitTx(baseUrl, txHex, apiKey);
   if (typeof submitRes === 'string') return submitRes;
   if (submitRes && typeof submitRes === 'object' && submitRes.tx_hash) {
     return submitRes.tx_hash;

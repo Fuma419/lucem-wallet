@@ -131,6 +131,69 @@ export async function koiosRequest(endpoint, headers, body, signal) {
   return result;
 }
 
+/**
+ * Submit a signed transaction via Koios REST v1 (POST /submittx, application/cbor).
+ * @param {string} txHex - Serialized transaction as hex (no 0x prefix)
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<string>} Transaction id (hex), per Koios 202 JSON body
+ */
+export async function koiosSubmitTransaction(txHex, signal) {
+  const network = await getNetwork();
+  const networkKey = network.name || network.id;
+  const baseUrl = getKoiosBaseUrl(networkKey);
+  const fullUrl = `${baseUrl}/submittx`;
+
+  const getEnvVar = (key) => {
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env[key];
+    }
+    return null;
+  };
+
+  const apiKey = getEnvVar(`KOIOS_API_KEY_${networkKey.toUpperCase()}`);
+  const requestHeaders = {
+    Accept: 'application/json',
+    'Content-Type': 'application/cbor',
+    'Cache-Control': 'no-cache',
+  };
+  if (apiKey && apiKey !== 'your-koios-api-key-here') {
+    requestHeaders.Authorization = `Bearer ${apiKey}`;
+  }
+
+  const rawResult = await fetch(fullUrl, {
+    method: 'POST',
+    headers: requestHeaders,
+    body: Buffer.from(txHex, 'hex'),
+    signal,
+  });
+
+  const text = await rawResult.text();
+  if (!rawResult.ok) {
+    let detail = text.trim();
+    try {
+      const j = JSON.parse(text);
+      detail =
+        (typeof j === 'string' ? j : null) ||
+        j.message ||
+        j.error ||
+        JSON.stringify(j);
+    } catch {
+      /* keep text */
+    }
+    throw new Error(
+      `Koios API error: ${rawResult.status} ${rawResult.statusText}${
+        detail ? ` — ${String(detail).slice(0, 500)}` : ''
+      }`
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
 // Update blockfrostRequest to use Koios (for backward compatibility)
 export async function blockfrostRequest(endpoint, headers, body, signal) {
   // Map Blockfrost endpoints to Koios equivalents

@@ -11,7 +11,6 @@ import {
   STORAGE,
   TAB,
   TARGET,
-  TxSendError,
   TxSignError,
 } from '../../config/config';
 import { POPUP_WINDOW } from '../../config/config';
@@ -25,6 +24,7 @@ import { initTx } from './wallet';
 import {
   koiosRequest,
   koiosRequestEnhanced,
+  koiosSubmitTransaction,
   networkNameToId,
   utxoFromJson,
   assetsToValue,
@@ -1393,18 +1393,7 @@ export const submitTx = async (tx) => {
   }
   
   try {
-    // Third argument is the POST JSON body; do not nest under headers (was sending GET with no tx).
-    const result = await koiosRequestEnhanced(`/tx/submit`, {}, { tx: txHex });
-    
-    if (result.error) {
-      if (result.status_code === 400)
-        throw { ...TxSendError.Failure, message: result.message };
-      else if (result.status_code === 500) throw APIError.InternalError;
-      else if (result.status_code === 429) throw TxSendError.Refused;
-      else if (result.status_code === 425) throw ERROR.fullMempool;
-      else throw APIError.InvalidRequest;
-    }
-    return result;
+    return await koiosSubmitTransaction(txHex);
   } catch (error) {
     console.error('Koios transaction submission error:', error);
     throw new Error(`Transaction submission failed: ${error.message}`);

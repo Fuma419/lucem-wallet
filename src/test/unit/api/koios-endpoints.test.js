@@ -383,6 +383,12 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.method).toBe('GET');
     expect(request.endpoint).toBe('/epoch_params/latest');
   });
+
+  test('getNetworkTip should build correct request', () => {
+    const request = KOIOS_REQUESTS.getNetworkTip();
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/tip');
+  });
 });
 
 describe('addressTxsIndicatesHistory', () => {

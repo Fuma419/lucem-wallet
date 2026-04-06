@@ -2,6 +2,7 @@ const {
   STORAGE,
   NETWORK_ID,
   NODE,
+  METHOD,
   ERROR,
   TX,
   APIError,
@@ -32,6 +33,15 @@ describe('NETWORK_ID', () => {
     expect(NETWORK_ID.testnet).toBe('testnet');
     expect(NETWORK_ID.preview).toBe('preview');
     expect(NETWORK_ID.preprod).toBe('preprod');
+  });
+});
+
+describe('METHOD', () => {
+  test('dApp bridge method names are non-empty strings', () => {
+    Object.values(METHOD).forEach((v) => {
+      expect(typeof v).toBe('string');
+      expect(v.length).toBeGreaterThan(0);
+    });
   });
 });
 

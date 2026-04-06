@@ -1393,10 +1393,8 @@ export const submitTx = async (tx) => {
   }
   
   try {
-    const result = await koiosRequestEnhanced(
-      `/tx/submit`,
-      { method: 'POST', body: { tx: txHex } }
-    );
+    // Third argument is the POST JSON body; do not nest under headers (was sending GET with no tx).
+    const result = await koiosRequestEnhanced(`/tx/submit`, {}, { tx: txHex });
     
     if (result.error) {
       if (result.status_code === 400)

@@ -22,6 +22,17 @@ describe('platform/index.js - runtime detection', () => {
     expect(platform.icons).toBeDefined();
   });
 
+  test('selects extension adapter when chrome.runtime.id is empty string', () => {
+    global.chrome = {
+      runtime: { id: '' },
+      storage: { local: { get: jest.fn(), set: jest.fn(), remove: jest.fn(), clear: jest.fn() } },
+      tabs: { create: jest.fn(), query: jest.fn(), sendMessage: jest.fn() },
+      windows: { create: jest.fn(), getLastFocused: jest.fn(), update: jest.fn() },
+    };
+    const platform = require('../../../platform').default;
+    expect(platform.storage).toBeDefined();
+  });
+
   test('selects web adapter when chrome.runtime.id is undefined', () => {
     global.chrome = undefined;
     const platform = require('../../../platform').default;

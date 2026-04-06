@@ -407,6 +407,12 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.method).toBe('GET');
     expect(request.endpoint).toBe('/genesis');
   });
+
+  test('getNetworkTotals should build correct request', () => {
+    const request = KOIOS_REQUESTS.getNetworkTotals(300);
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/totals?_epoch_no=300');
+  });
 });
 
 describe('addressTxsIndicatesHistory', () => {

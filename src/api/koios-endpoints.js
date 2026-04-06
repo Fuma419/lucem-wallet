@@ -350,6 +350,10 @@ export const KOIOS_REQUESTS = {
   getNetworkTip: () => buildKoiosRequest(KOIOS_ENDPOINTS.NETWORK.TIP),
 
   getNetworkGenesis: () => buildKoiosRequest(KOIOS_ENDPOINTS.NETWORK.GENESIS),
+
+  getNetworkTotals: (epochNo) => buildKoiosRequest(KOIOS_ENDPOINTS.NETWORK.TOTALS, {
+    queryParams: { _epoch_no: epochNo }
+  }),
 };
 
 /**

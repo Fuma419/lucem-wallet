@@ -44,6 +44,22 @@ describe('webpage/eventRegistring', () => {
 
       expect(mockFn).not.toHaveBeenCalled();
     });
+
+    test('invokes every callback registered for the same event', () => {
+      const mockFn1 = jest.fn();
+      const mockFn2 = jest.fn();
+      const detail = { x: 1 };
+
+      on('shared', mockFn1);
+      on('shared', mockFn2);
+
+      window.dispatchEvent(makeEvent('shared', detail));
+
+      expect(mockFn1).toHaveBeenCalledTimes(1);
+      expect(mockFn2).toHaveBeenCalledTimes(1);
+      expect(mockFn1).toHaveBeenCalledWith(detail);
+      expect(mockFn2).toHaveBeenCalledWith(detail);
+    });
   });
 
   describe('of', () => {

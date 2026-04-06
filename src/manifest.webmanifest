@@ -4,8 +4,8 @@
   "description": "A Cardano wallet for the web",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#080808",
-  "theme_color": "#080808",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
   "icons": [
     {
       "src": "/assets/img/icon-dark-48.png",

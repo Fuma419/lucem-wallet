@@ -286,46 +286,6 @@ describe('mobile layout - no hardcoded overflow widths', () => {
   });
 });
 
-describe('iOS PWA / Safari — dark document shell (status bar band)', () => {
-  test('mainPopup.html uses viewport-fit=cover and dark html/body/root paint', () => {
-    const src = fs.readFileSync(
-      path.join(__dirname, '../../pages/Popup/mainPopup.html'),
-      'utf8'
-    );
-    expect(src).toMatch(/viewport-fit=cover/);
-    expect(src).toMatch(/color-scheme:\s*dark/);
-    expect(src).toMatch(/#080808/);
-    expect(src).toMatch(/#mainPopup/);
-  });
-
-  test('internalPopup.html uses viewport-fit=cover and dark shell', () => {
-    const src = fs.readFileSync(
-      path.join(__dirname, '../../pages/Popup/internalPopup.html'),
-      'utf8'
-    );
-    expect(src).toMatch(/viewport-fit=cover/);
-    expect(src).toMatch(/#080808/);
-  });
-
-  test('index.jsx root shell Box fills with same dark background as theme body', () => {
-    const src = fs.readFileSync(
-      path.join(__dirname, '../../ui/index.jsx'),
-      'utf8'
-    );
-    expect(src).toMatch(/bg="#080808"/);
-  });
-
-  test('styles.css sets html/body dark for first paint', () => {
-    const src = fs.readFileSync(
-      path.join(__dirname, '../../ui/app/components/styles.css'),
-      'utf8'
-    );
-    expect(src).toMatch(/^html\s*\{/m);
-    expect(src).toMatch(/color-scheme:\s*dark/);
-    expect(src).toMatch(/#080808/);
-  });
-});
-
 describe('mobile layout - UnitDisplay handles zero correctly', () => {
   test('UnitDisplay should render "0" when quantity is 0, not "..."', () => {
     const unitDisplaySrc = fs.readFileSync(

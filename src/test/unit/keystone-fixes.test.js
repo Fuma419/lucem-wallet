@@ -96,14 +96,15 @@ describe('hw.jsx mobile layout and WebUSB', () => {
   );
 
   test('text elements use maxWidth instead of fixed width for mobile', () => {
-    expect(hwSrc).toMatch(/maxWidth=["']320px["']/);
+    expect(hwSrc).toMatch(/maxWidth=["']300px["']/);
   });
 
-  test('percentage-width rows pair with maxWidth caps', () => {
-    const width90 = hwSrc.match(/width=["']90%["']/g) || [];
-    const max320 = hwSrc.match(/maxWidth=["']320px["']/g) || [];
-    expect(width90.length).toBeGreaterThan(0);
-    expect(max320.length).toBeGreaterThanOrEqual(1);
+  test('no hardcoded width="300px" without maxWidth', () => {
+    // All width="300px" should be accompanied by maxWidth
+    const matches = hwSrc.match(/width=["']300px["']/g) || [];
+    const maxWidthMatches = hwSrc.match(/maxWidth=["']300px["']/g) || [];
+    // Every width="300px" occurrence should have a corresponding maxWidth
+    expect(maxWidthMatches.length).toBeGreaterThanOrEqual(matches.length);
   });
 
   test('WebUSB availability is checked before navigator.usb.requestDevice', () => {

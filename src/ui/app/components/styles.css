@@ -17,19 +17,9 @@ body::-webkit-scrollbar {
   display: none;
 }
 
-html {
-  background-color: #080808;
-  color-scheme: dark;
-  /* iPhone Safari / PWA: avoid white band above content in dark mode */
-  min-height: 100%;
-  min-height: -webkit-fill-available;
-}
-
 body {
-  background-color: #080808;
+  background-color: #1a1a2e;
   -webkit-tap-highlight-color: transparent;
-  min-height: 100%;
-  min-height: -webkit-fill-available;
 }
 
 /*

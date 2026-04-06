@@ -41,7 +41,6 @@ const Main = ({ children }) => {
       maxW={isExtensionPopup ? undefined : '480px'}
       minW={0}
       mx={isExtensionPopup ? undefined : 'auto'}
-      bg="#080808"
       sx={
         !isExtensionPopup
           ? {

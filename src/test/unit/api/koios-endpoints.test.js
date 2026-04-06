@@ -318,6 +318,13 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _tx_hashes: ['test-tx-hash'] });
   });
 
+  test('getTxStatus should build correct request', () => {
+    const request = KOIOS_REQUESTS.getTxStatus('test-tx-hash');
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/tx_status');
+    expect(request.body).toEqual({ _tx_hashes: ['test-tx-hash'] });
+  });
+
   test('getAddressInfo should build correct request', () => {
     const request = KOIOS_REQUESTS.getAddressInfo('test-address');
     expect(request.method).toBe('POST');

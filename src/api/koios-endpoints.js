@@ -290,6 +290,11 @@ export const KOIOS_REQUESTS = {
   getTxMetadata: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_METADATA.DETAILS, {
     body: { _tx_hashes: [txHash] }
   }),
+
+  // Get transaction confirmation status
+  getTxStatus: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_STATUS.DETAILS, {
+    body: { _tx_hashes: [txHash] }
+  }),
   
   // Get address info
   getAddressInfo: (address) => buildKoiosRequest(KOIOS_ENDPOINTS.ADDRESS_INFO.DETAILS, {

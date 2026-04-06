@@ -289,15 +289,27 @@ export const KOIOS_REQUESTS = {
   getTxUtxos: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_UTXOS.DETAILS, {
     body: { _tx_hashes: [txHash] }
   }),
+
+  getTxUtxosMany: (txHashes) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_UTXOS.DETAILS, {
+    body: { ...KOIOS_ENDPOINTS.TX_UTXOS.DETAILS.body, _tx_hashes: [...txHashes] }
+  }),
   
   // Get transaction metadata
   getTxMetadata: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_METADATA.DETAILS, {
     body: { _tx_hashes: [txHash] }
   }),
 
+  getTxMetadatas: (txHashes) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_METADATA.DETAILS, {
+    body: { ...KOIOS_ENDPOINTS.TX_METADATA.DETAILS.body, _tx_hashes: [...txHashes] }
+  }),
+
   // Get transaction confirmation status
   getTxStatus: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_STATUS.DETAILS, {
     body: { _tx_hashes: [txHash] }
+  }),
+
+  getTxStatuses: (txHashes) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_STATUS.DETAILS, {
+    body: { ...KOIOS_ENDPOINTS.TX_STATUS.DETAILS.body, _tx_hashes: [...txHashes] }
   }),
   
   // Get address info

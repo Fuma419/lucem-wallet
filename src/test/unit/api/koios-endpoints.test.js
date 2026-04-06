@@ -319,6 +319,13 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _tx_hashes: ['test-tx-hash'] });
   });
 
+  test('getTxUtxosMany should build correct request for multiple hashes', () => {
+    const request = KOIOS_REQUESTS.getTxUtxosMany(['t1', 't2']);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/tx_utxos');
+    expect(request.body._tx_hashes).toEqual(['t1', 't2']);
+  });
+
   test('getTxMetadata should build correct request', () => {
     const request = KOIOS_REQUESTS.getTxMetadata('test-tx-hash');
     expect(request.method).toBe('POST');
@@ -326,11 +333,25 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _tx_hashes: ['test-tx-hash'] });
   });
 
+  test('getTxMetadatas should build correct request for multiple hashes', () => {
+    const request = KOIOS_REQUESTS.getTxMetadatas(['a', 'b']);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/tx_metadata');
+    expect(request.body._tx_hashes).toEqual(['a', 'b']);
+  });
+
   test('getTxStatus should build correct request', () => {
     const request = KOIOS_REQUESTS.getTxStatus('test-tx-hash');
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/tx_status');
     expect(request.body).toEqual({ _tx_hashes: ['test-tx-hash'] });
+  });
+
+  test('getTxStatuses should build correct request for multiple hashes', () => {
+    const request = KOIOS_REQUESTS.getTxStatuses(['x', 'y']);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/tx_status');
+    expect(request.body._tx_hashes).toEqual(['x', 'y']);
   });
 
   test('getAddressInfo should build correct request', () => {

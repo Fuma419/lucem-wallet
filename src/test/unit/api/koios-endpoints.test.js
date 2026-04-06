@@ -304,6 +304,14 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _tx_hashes: ['test-tx-hash'] });
   });
 
+  test('getTxInfos should preserve default flags and set multiple hashes', () => {
+    const request = KOIOS_REQUESTS.getTxInfos(['h1', 'h2']);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/tx_info');
+    expect(request.body._tx_hashes).toEqual(['h1', 'h2']);
+    expect(request.body._inputs).toBe(false);
+  });
+
   test('getTxUtxos should build correct request', () => {
     const request = KOIOS_REQUESTS.getTxUtxos('test-tx-hash');
     expect(request.method).toBe('POST');

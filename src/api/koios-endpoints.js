@@ -280,6 +280,10 @@ export const KOIOS_REQUESTS = {
   getTxInfo: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_INFO.DETAILS, {
     body: { _tx_hashes: [txHash] }
   }),
+
+  getTxInfos: (txHashes) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_INFO.DETAILS, {
+    body: { ...KOIOS_ENDPOINTS.TX_INFO.DETAILS.body, _tx_hashes: [...txHashes] }
+  }),
   
   // Get transaction UTXOs
   getTxUtxos: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_UTXOS.DETAILS, {

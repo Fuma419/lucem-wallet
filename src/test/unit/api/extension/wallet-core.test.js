@@ -640,4 +640,9 @@ describe('resetStorage (storage-level)', () => {
     const accounts = await getStorage(STORAGE.accounts);
     expect(accounts).toBeFalsy();
   });
+
+  test('after clear, encrypted root key is gone', async () => {
+    global.chrome.storage.local.clear();
+    expect(await getStorage(STORAGE.encryptedKey)).toBeUndefined();
+  });
 });

@@ -13,6 +13,19 @@ import KeystoneSDK, {
 import Loader from './loader';
 
 /**
+ * Transaction input index: CSL v15 returns a plain number; older bindings used BigNum with to_str().
+ * @param {{ index(): unknown }} input
+ */
+function transactionInputIndex(input) {
+  const idx = input.index();
+  if (typeof idx === 'number' && Number.isFinite(idx)) return idx;
+  if (idx != null && typeof idx.to_str === 'function') {
+    return parseInt(idx.to_str(), 10);
+  }
+  return parseInt(String(idx), 10);
+}
+
+/**
  * CIP-1852 account node or deeper (payment/stake leaf). Keystone may report either
  * depending on firmware / export mode; the account index is always the third step.
  */
@@ -499,11 +512,11 @@ export async function buildKeystoneCardanoSignRequest({
   for (let i = 0; i < inputs.len(); i++) {
     const inp = inputs.get(i);
     const txHash = Buffer.from(inp.transaction_id().to_bytes()).toString('hex');
-    const idx = parseInt(inp.index().to_str(), 10);
+    const idx = transactionInputIndex(inp);
 
     const match = utxos.find((u) => {
       const h = Buffer.from(u.input().transaction_id().to_bytes()).toString('hex');
-      const ix = parseInt(u.input().index().to_str(), 10);
+      const ix = transactionInputIndex(u.input());
       return h === txHash && ix === idx;
     });
     if (!match) {

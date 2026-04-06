@@ -15,7 +15,7 @@ import {
   ModalOverlay,
 } from '@chakra-ui/react';
 import React from 'react';
-import { MdUsb } from 'react-icons/md';
+import { MdQrCode2, MdUsb } from 'react-icons/md';
 import { indexToHw, initHW, isHW } from '../../../api/extension';
 import { ERROR, HW } from '../../../config/config';
 
@@ -58,9 +58,12 @@ const ConfirmModal = React.forwardRef(
       openModal(accountIndex) {
         if (isHW(accountIndex)) {
           const parsed = indexToHw(accountIndex);
-          if (parsed.device === HW.keystone && typeof onHwKeystone === 'function') {
+          if (
+            parsed.device === HW.keystone &&
+            typeof onHwKeystone === 'function'
+          ) {
             setHw(parsed);
-            onHwKeystone(parsed);
+            void Promise.resolve(onHwKeystone(parsed));
             return;
           }
           setHw(parsed);
@@ -280,23 +283,28 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                 width="70%"
                 color="white"
               >
-                <Icon as={MdUsb} boxSize={5} mr={2} />
-                <Box fontSize="sm">
-                  {!waitReady
-                    ? `Waiting for ${
-                        hw.device === HW.ledger
-                          ? 'Ledger'
-                          : hw.device === HW.keystone
-                            ? 'Keystone'
-                            : 'Trezor'
-                      }`
-                    : `Connect ${
-                        hw.device === HW.ledger
-                          ? 'Ledger'
-                          : hw.device === HW.keystone
-                            ? 'Keystone'
-                            : 'Trezor'
-                      }`}
+                <Icon
+                  as={hw.device === HW.keystone ? MdQrCode2 : MdUsb}
+                  boxSize={5}
+                  mr={2}
+                />
+                <Box fontSize="sm" textAlign="center" px={1}>
+                  {hw.device === HW.keystone ? (
+                    !waitReady ? (
+                      <>Opening Keystone signing (QR)…</>
+                    ) : (
+                      <>
+                        Keystone uses <b>QR only</b> (no USB). Tap Confirm to open
+                        the signing tab.
+                      </>
+                    )
+                  ) : !waitReady ? (
+                    `Waiting for ${
+                      hw.device === HW.ledger ? 'Ledger' : 'Trezor'
+                    }`
+                  ) : (
+                    `Connect ${hw.device === HW.ledger ? 'Ledger' : 'Trezor'}`
+                  )}
                 </Box>
               </Box>
               {error && (

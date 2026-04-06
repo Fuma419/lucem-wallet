@@ -10,6 +10,8 @@ import {
   getCurrentAccount,
   getNetwork,
   getUtxos,
+  indexToHw,
+  isHW,
   isValidAddress,
   toUnit,
   updateRecentSentToAddress,
@@ -175,6 +177,41 @@ const Send = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const ref = React.useRef();
+
+  const startKeystoneQrSign = React.useCallback(async () => {
+    if (!tx) {
+      toast({
+        title: 'No transaction to sign',
+        status: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+    const acc = account.current;
+    if (!acc?.paymentKeyHash) return;
+    try {
+      await openKeystoneSignTxTab({
+        txHex: tx,
+        keyHashes: [acc.paymentKeyHash, acc.stakeKeyHash],
+        partialSign: false,
+      });
+      toast({
+        title: 'Keystone signing (QR)',
+        description:
+          'A tab opened for QR signing. Complete it on your Keystone; nothing is submitted until you finish there.',
+        status: 'info',
+        duration: 8000,
+        isClosable: true,
+      });
+    } catch (e) {
+      toast({
+        title: 'Could not open Keystone signing',
+        description: e?.message || String(e),
+        status: 'error',
+        duration: 5000,
+      });
+    }
+  }, [tx, toast]);
   const [isLoading, setIsLoading] = React.useState(true);
   const focus = React.useRef(false);
   const background = useColorModeValue('yellow.500', 'yellow.500');
@@ -694,7 +731,16 @@ const Send = () => {
                 isDisabled={!tx || !address.result || fee.error}
                 colorScheme="gray"
                 onClick={() => {
-                  ref.current.openModal(account.current.index);
+                  const idx = account.current?.index;
+                  if (
+                    idx != null &&
+                    isHW(idx) &&
+                    indexToHw(idx).device === HW.keystone
+                  ) {
+                    void startKeystoneQrSign();
+                    return;
+                  }
+                  ref.current?.openModal(idx);
                 }}
               >
                 {fee.error ? fee.error : 'Send'}
@@ -803,6 +849,10 @@ const Send = () => {
           </Box>
         }
         ref={ref}
+        onHwKeystone={async () => {
+          await startKeystoneQrSign();
+          ref.current?.closeModal();
+        }}
         sign={async (password, hw) => {
           await Loader.load();
           const txDes = Loader.Cardano.Transaction.from_cbor_bytes(

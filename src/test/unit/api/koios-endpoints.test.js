@@ -396,6 +396,12 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.endpoint).toBe('/epoch_params/latest');
   });
 
+  test('getEpochParams should build correct request', () => {
+    const request = KOIOS_REQUESTS.getEpochParams(250);
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/epoch_params/250');
+  });
+
   test('getNetworkTip should build correct request', () => {
     const request = KOIOS_REQUESTS.getNetworkTip();
     expect(request.method).toBe('GET');

@@ -89,7 +89,7 @@ describe('web adapter storage.clear()', () => {
 
 // ── 4. HW tab mobile layout ─────────────────────────────────────────
 
-describe('hw.jsx mobile layout and WebUSB', () => {
+describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
   const hwSrc = fs.readFileSync(
     path.join(__dirname, '../../ui/app/tabs/hw.jsx'),
     'utf8'
@@ -106,13 +106,14 @@ describe('hw.jsx mobile layout and WebUSB', () => {
     expect(max320.length).toBeGreaterThanOrEqual(1);
   });
 
-  test('WebUSB availability is checked before navigator.usb.requestDevice', () => {
-    expect(hwSrc).toMatch(/!navigator\.usb/);
-    expect(hwSrc).toMatch(/WebUSB is not (available|supported)/);
+  test('Web Bluetooth is used for Ledger (requestDevice + service UUIDs)', () => {
+    expect(hwSrc).toMatch(/navigator\.bluetooth/);
+    expect(hwSrc).toMatch(/getBluetoothServiceUuids/);
+    expect(hwSrc).toMatch(/requestDevice/);
   });
 
-  test('VENDOR_IDS check uses Array.isArray guard', () => {
-    expect(hwSrc).toMatch(/Array\.isArray\(VENDOR_IDS/);
+  test('Ledger BLE options helper is defined', () => {
+    expect(hwSrc).toMatch(/ledgerBleRequestOptions/);
   });
 
   test('Keystone typo "Keysone" is not present', () => {

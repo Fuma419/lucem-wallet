@@ -270,11 +270,20 @@ describe('isHW', () => {
 });
 
 describe('indexToHw', () => {
-  test('parses ledger account index', () => {
-    const hw = indexToHw('ledger-abc123-2');
+  test('parses ledger account index (legacy short numeric id)', () => {
+    const hw = indexToHw('ledger-4117-2');
     expect(hw.device).toBe('ledger');
-    expect(hw.id).toBe('abc123');
+    expect(hw.id).toBe('4117');
     expect(hw.account).toBe(2);
+  });
+
+  test('parses ledger account index (Bluetooth id as hex utf-8)', () => {
+    const oid = 'opaque-ble-device-id';
+    const hex = Buffer.from(oid, 'utf8').toString('hex');
+    const hw = indexToHw(`ledger-${hex}-0`);
+    expect(hw.device).toBe('ledger');
+    expect(hw.id).toBe(oid);
+    expect(hw.account).toBe(0);
   });
 
   test('parses trezor account index', () => {

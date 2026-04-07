@@ -56,13 +56,15 @@ import {
   keystoneAccountStorageSuffix,
   parseKeystoneCardanoConnectUr,
 } from '../../../api/keystone-cardano';
-import { MdUsb } from 'react-icons/md';
-import { ledgerUSBVendorId } from '@ledgerhq/devices';
+import { MdBluetooth } from 'react-icons/md';
+import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 
-const VENDOR_IDS = {
-  ledger: [ledgerUSBVendorId],
-  trezor: [0x534c, 0x1209], // Model T HID 0x534c and others 0x1209 - taken from https://github.com/vacuumlabs/trezor-suite/blob/develop/packages/transport/src/constants.ts#L13-L21
-  keystone: 'keystone',
+const ledgerBleRequestOptions = () => {
+  const uuids = getBluetoothServiceUuids();
+  return {
+    filters: uuids.map((uuid) => ({ services: [uuid] })),
+    optionalServices: uuids,
+  };
 };
 
 /** Matches welcome “Hardware wallet” `.button.hw-wallet` (lime #cefa00). */
@@ -503,7 +505,7 @@ const ConnectHW = ({ onConfirm }) => {
         fontSize="sm"
         color="whiteAlpha.800"
       >
-        Choose <b>Keystone</b> (QR, air-gapped) or <b>Ledger</b> (USB).
+        Choose <b>Keystone</b> (QR, air-gapped) or <b>Ledger</b> (Bluetooth).
       </Text>
       <Box h={8} />
       <Box display="flex" alignItems="stretch" justifyContent="center" gap={4} flexWrap="wrap">
@@ -775,14 +777,14 @@ const ConnectHW = ({ onConfirm }) => {
           fontSize="sm"
           color="whiteAlpha.800"
         >
-          {typeof navigator !== 'undefined' && navigator.usb
-            ? 'Connect your Ledger device directly to your computer. Unlock the device and open the Cardano app. Then click Continue.'
-            : 'WebUSB is not available in this browser. Please use a desktop browser (Chrome or Edge) to connect your Ledger device.'}
+          {typeof navigator !== 'undefined' && navigator.bluetooth
+            ? 'Use a Bluetooth-capable Ledger (Nano X, Flex, Stax, etc.). Unlock it, enable Bluetooth on the device, open the Cardano app, then tap Continue and pick your Ledger in the browser dialog.'
+            : 'Web Bluetooth is not available here. Use Chrome or Edge on desktop or the Lucem web app over HTTPS, with Bluetooth enabled. Note: some extension pages cannot use Web Bluetooth — open the hardware wallet flow in a normal browser tab if pairing fails.'}
         </Text>
       )}
       {selected === HW.ledger && (
         <Icon
-          as={MdUsb}
+          as={MdBluetooth}
           boxSize={7}
           mt="6"
           color={HW_LIME}
@@ -814,34 +816,51 @@ const ConnectHW = ({ onConfirm }) => {
           }
           setIsLoading(true);
           try {
-            if (!navigator.usb) {
-              setError('WebUSB is not supported in this browser. Use Chrome or Edge on desktop.');
+            if (!navigator.bluetooth) {
+              setError(
+                'Web Bluetooth is not supported in this browser or context.'
+              );
               setIsLoading(false);
               return;
             }
-            const device = await navigator.usb.requestDevice({
-              filters: [],
-            });
-            if (
-              !Array.isArray(VENDOR_IDS[selected]) ||
-              !VENDOR_IDS[selected].some(
-                (vendorId) => vendorId === device.vendorId
-              )
-            ) {
-              setError('Device is not a Ledger');
+            let bleDevice;
+            try {
+              bleDevice = await navigator.bluetooth.requestDevice(
+                ledgerBleRequestOptions()
+              );
+            } catch (e) {
+              if (e && e.name === 'NotFoundError') {
+                setError('No device selected or pairing was cancelled.');
+              } else {
+                setError(
+                  e && e.message
+                    ? String(e.message)
+                    : 'Could not open Bluetooth device picker.'
+                );
+              }
               setIsLoading(false);
               return;
             }
             try {
-              await initHW({ device: selected, id: device.productId });
+              await initHW({
+                device: selected,
+                id: bleDevice.id,
+                bleDevice,
+              });
             } catch (e) {
-              setError('Cardano app not opened');
+              setError(
+                e && e.message
+                  ? String(e.message)
+                  : 'Cardano app not opened or Bluetooth connection failed.'
+              );
               setIsLoading(false);
               return;
             }
-            onConfirm({ device: selected, id: device.productId });
+            onConfirm({ device: selected, id: bleDevice.id });
           } catch (e) {
-            setError('Device not found');
+            setError(
+              e && e.message ? String(e.message) : 'Bluetooth setup failed.'
+            );
           }
           setIsLoading(false);
         }}
@@ -1163,9 +1182,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
                     HARDENED + parseInt(index, 10),
                   ]),
                 });
+                const idHex = Buffer.from(String(id), 'utf8').toString('hex');
                 accounts = ledgerKeys.map(
                   ({ publicKeyHex, chainCodeHex }, index) => ({
-                    accountIndex: `${HW.ledger}-${id}-${accountIndexes[index]}`,
+                    accountIndex: `${HW.ledger}-${idHex}-${accountIndexes[index]}`,
                     publicKey: publicKeyHex + chainCodeHex,
                     name: `Ledger ${parseInt(accountIndexes[index], 10) + 1}`,
                   })

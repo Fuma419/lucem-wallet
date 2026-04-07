@@ -36,7 +36,7 @@ import {
   toAssetUnit,
   Data,
 } from '../util';
-import TransportWebUSB from '@ledgerhq/hw-transport-webusb';
+import TransportWebBLE from '@ledgerhq/hw-transport-web-ble';
 import Ada, { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { isAddress } from 'web3-validator';
@@ -1848,6 +1848,33 @@ export const indexToHw = (accountIndex) => {
       keystoneDerivation: parts[3].slice(1),
     };
   }
+  if (device === HW.ledger) {
+    const account = parseInt(parts[parts.length - 1], 10);
+    if (parts.length === 3 && /^\d{1,6}$/.test(parts[1])) {
+      return { device, id: parts[1], account };
+    }
+    const idHex = parts.slice(1, -1).join('');
+    if (
+      /^[0-9a-fA-F]+$/i.test(idHex) &&
+      idHex.length % 2 === 0 &&
+      idHex.length > 0
+    ) {
+      try {
+        return {
+          device,
+          id: Buffer.from(idHex, 'hex').toString('utf8'),
+          account,
+        };
+      } catch (e) {
+        /* fall through */
+      }
+    }
+    return {
+      device,
+      id: parts.slice(1, -1).join('-'),
+      account,
+    };
+  }
   return {
     device,
     id,
@@ -1888,21 +1915,23 @@ export const isHW = (accountIndex) =>
     accountIndex.startsWith(HW.trezor) ||
     accountIndex.startsWith(HW.ledger));
 
-export const initHW = async ({ device, id }) => {
+export const initHW = async ({ device, id, bleDevice }) => {
   if (device == HW.ledger) {
-    const foundDevice = await new Promise((res, rej) =>
-      navigator.usb
-        .getDevices()
-        .then((devices) =>
-          res(
-            devices.find(
-              (device) =>
-                device.productId == id && device.manufacturerName === 'Ledger'
-            )
-          )
-        )
-    );
-    const transport = await TransportWebUSB.open(foundDevice);
+    const bluetooth =
+      typeof navigator !== 'undefined' ? navigator.bluetooth : undefined;
+    if (!bluetooth) {
+      throw new Error(
+        'Web Bluetooth is not available. Use Chrome or Edge over HTTPS (or localhost), enable Bluetooth, and use a Bluetooth-capable Ledger (e.g. Nano X, Flex, Stax). Extension pages may not support Web Bluetooth — try the Lucem web app if connection fails.'
+      );
+    }
+    let transport;
+    if (bleDevice && bleDevice.gatt) {
+      transport = await TransportWebBLE.open(bleDevice);
+    } else if (id != null && String(id) !== '') {
+      transport = await TransportWebBLE.open(String(id));
+    } else {
+      throw new Error('Missing Ledger Bluetooth device');
+    }
     const appAda = new Ada(transport);
     await appAda.getVersion(); // check if Ledger has Cardano app opened
     return appAda;

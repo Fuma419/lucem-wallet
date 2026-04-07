@@ -30,7 +30,7 @@ import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 
 
 import LogoWhite from '../../../assets/img/bannerBlack.png';
-import backgroundCyanWebp from '../../../assets/img/background-cyan.webp';
+import backgroundGreenWebp from '../../../assets/img/background-green.webp';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
@@ -65,17 +65,37 @@ const VENDOR_IDS = {
   keystone: 'keystone',
 };
 
-/** Cyan-tinted controls on dark glass panels (matches HW tab hero / modal). */
+/** Matches welcome “Hardware wallet” `.button.hw-wallet` (lime #cefa00). */
+const HW_LIME = '#cefa00';
+const HW_ACCENT = {
+  border: 'rgba(206, 250, 0, 0.92)',
+  borderMuted: 'rgba(206, 250, 0, 0.48)',
+  bgSelected: 'rgba(204, 250, 0, 0.14)',
+  bgHover: 'rgba(206, 250, 0, 0.12)',
+  glow:
+    '0 0 22px rgba(206, 250, 0, 0.38), inset 0 1px 0 rgba(255,255,255,0.12)',
+  glowHover: '0 0 18px rgba(206, 250, 0, 0.32)',
+  inset: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+  panelBorder: 'rgba(206, 250, 0, 0.38)',
+  panelGlow:
+    '0 0 22px rgba(206, 250, 0, 0.14), inset 0 1px 0 rgba(255,255,255,0.06)',
+  panelBg:
+    'linear-gradient(165deg, rgba(18, 32, 10, 0.94) 0%, rgba(8, 22, 12, 0.92) 100%)',
+  inputBorder: 'rgba(206, 250, 0, 0.32)',
+  inputFocusRing: '0 0 0 1px rgba(206, 250, 0, 0.55)',
+};
+
+/** Lime-accented controls on dark panels (aligned with welcome HW button). */
 const hwPanelCheckboxSx = {
   '.chakra-checkbox__control': {
     borderColor: 'rgba(255,255,255,0.38)',
     bg: 'rgba(0,0,0,0.35)',
     _checked: {
-      bg: 'cyan.400',
-      borderColor: 'cyan.200',
+      bg: HW_LIME,
+      borderColor: HW_LIME,
       color: 'gray.900',
     },
-    _hover: { borderColor: 'cyan.300' },
+    _hover: { borderColor: 'rgba(206, 250, 0, 0.65)' },
   },
 };
 
@@ -84,11 +104,11 @@ const hwPanelRadioSx = {
     borderColor: 'rgba(255,255,255,0.38)',
     bg: 'rgba(0,0,0,0.3)',
     _checked: {
-      bg: 'cyan.400',
-      borderColor: 'cyan.200',
+      bg: HW_LIME,
+      borderColor: HW_LIME,
       color: 'gray.900',
     },
-    _hover: { borderColor: 'cyan.300' },
+    _hover: { borderColor: 'rgba(206, 250, 0, 0.65)' },
   },
 };
 
@@ -122,7 +142,7 @@ const App = () => {
       opacity={0.9}
       className="lucem-wallet-main-column"
       backgroundColor="#050f18"
-      backgroundImage={`linear-gradient(165deg, rgba(6, 20, 36, 0.9) 0%, rgba(8, 52, 64, 0.82) 45%, rgba(5, 26, 42, 0.92) 100%), url(${backgroundCyanWebp})`}
+      backgroundImage={`linear-gradient(165deg, rgba(12, 28, 10, 0.9) 0%, rgba(8, 38, 18, 0.84) 45%, rgba(6, 22, 12, 0.92) 100%), url(${backgroundGreenWebp})`}
       backgroundSize="cover, cover"
       backgroundPosition="center, center"
       backgroundRepeat="no-repeat, no-repeat"
@@ -168,7 +188,7 @@ const App = () => {
         pt={{ base: 2, md: 0 }}
       >
         <Box
-          className="modal-glow-cyan create-wallet-modal lucem-modal-card"
+          className="modal-glow-yellow-green create-wallet-modal lucem-modal-card"
           rounded="2xl"
           shadow="md"
           display="flex"
@@ -336,7 +356,7 @@ const ConnectHW = ({ onConfirm }) => {
         <Button
           type="button"
           variant="unstyled"
-          className="button import-wallet"
+          className="button hw-wallet hw-tab-cta"
           mt={4}
           alignSelf="center"
           display="inline-flex"
@@ -504,22 +524,20 @@ const ConnectHW = ({ onConfirm }) => {
           transition="box-shadow 0.2s, border-color 0.2s, background 0.2s"
           border="solid 2px"
           borderColor={
-            selected === HW.keystone ? 'cyan.200' : 'whiteAlpha.500'
+            selected === HW.keystone ? HW_ACCENT.border : 'whiteAlpha.500'
           }
           bg={
             selected === HW.keystone
-              ? 'rgba(0, 245, 255, 0.12)'
+              ? HW_ACCENT.bgSelected
               : 'rgba(255, 255, 255, 0.07)'
           }
           boxShadow={
-            selected === HW.keystone
-              ? '0 0 22px rgba(0, 245, 255, 0.35), inset 0 1px 0 rgba(255,255,255,0.12)'
-              : 'inset 0 1px 0 rgba(255,255,255,0.08)'
+            selected === HW.keystone ? HW_ACCENT.glow : HW_ACCENT.inset
           }
           _hover={{
-            borderColor: 'cyan.200',
-            bg: 'rgba(0, 245, 255, 0.1)',
-            boxShadow: '0 0 18px rgba(0, 245, 255, 0.25)',
+            borderColor: HW_ACCENT.border,
+            bg: HW_ACCENT.bgHover,
+            boxShadow: HW_ACCENT.glowHover,
           }}
           onClick={() => {
             setSelected(HW.keystone);
@@ -562,36 +580,42 @@ const ConnectHW = ({ onConfirm }) => {
           transition="box-shadow 0.2s, border-color 0.2s, background 0.2s"
           border="solid 2px"
           borderColor={
-            selected === HW.ledger ? 'purple.300' : 'whiteAlpha.500'
+            selected === HW.ledger ? HW_ACCENT.border : 'whiteAlpha.500'
           }
           bg={
             selected === HW.ledger
-              ? 'rgba(220, 27, 250, 0.12)'
+              ? HW_ACCENT.bgSelected
               : 'rgba(255, 255, 255, 0.07)'
           }
           boxShadow={
-            selected === HW.ledger
-              ? '0 0 22px rgba(220, 27, 250, 0.35), inset 0 1px 0 rgba(255,255,255,0.12)'
-              : 'inset 0 1px 0 rgba(255,255,255,0.08)'
+            selected === HW.ledger ? HW_ACCENT.glow : HW_ACCENT.inset
           }
           _hover={{
-            borderColor: 'purple.300',
-            bg: 'rgba(220, 27, 250, 0.1)',
-            boxShadow: '0 0 18px rgba(220, 27, 250, 0.28)',
+            borderColor: HW_ACCENT.border,
+            bg: HW_ACCENT.bgHover,
+            boxShadow: HW_ACCENT.glowHover,
           }}
           onClick={() => setSelected(HW.ledger)}
         >
           <Box
-            bg="rgba(255,255,255,0.92)"
+            bg="rgba(255,255,255,0.95)"
             rounded="lg"
             px={3}
             py={2}
+            minH="44px"
+            minW="120px"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
             boxShadow="0 2px 12px rgba(0,0,0,0.35)"
           >
             <Image
               draggable={false}
               src={LedgerLogo}
-              maxH="32px"
+              alt="Ledger"
+              w="112px"
+              h="30px"
+              maxW="100%"
               objectFit="contain"
             />
           </Box>
@@ -627,14 +651,14 @@ const ConnectHW = ({ onConfirm }) => {
             maxW="400px"
             mx="auto"
             w="100%"
-            borderColor="rgba(0, 232, 255, 0.45)"
+            borderColor={HW_ACCENT.borderMuted}
             color="whiteAlpha.900"
-            bg="rgba(0, 245, 255, 0.07)"
+            bg="rgba(204, 250, 0, 0.08)"
             _hover={{
-              bg: 'rgba(0, 245, 255, 0.14)',
-              borderColor: 'cyan.300',
+              bg: 'rgba(206, 250, 0, 0.16)',
+              borderColor: HW_ACCENT.border,
             }}
-            _active={{ bg: 'rgba(0, 245, 255, 0.2)' }}
+            _active={{ bg: 'rgba(206, 250, 0, 0.22)' }}
             rightIcon={
               <ChevronDownIcon
                 transform={keystoneAdvancedOpen ? 'rotate(-180deg)' : undefined}
@@ -652,10 +676,10 @@ const ConnectHW = ({ onConfirm }) => {
               rounded="xl"
               px={{ base: 3, sm: 4 }}
               py={4}
-              bg="linear-gradient(165deg, rgba(6, 32, 48, 0.94) 0%, rgba(4, 18, 32, 0.9) 100%)"
+              bg={HW_ACCENT.panelBg}
               borderWidth="1px"
-              borderColor="rgba(0, 232, 255, 0.35)"
-              boxShadow="0 0 28px rgba(0, 245, 255, 0.12), inset 0 1px 0 rgba(255,255,255,0.06)"
+              borderColor={HW_ACCENT.panelBorder}
+              boxShadow={HW_ACCENT.panelGlow}
               backdropFilter="blur(10px)"
             >
               <Text fontSize="sm" fontWeight="semibold" color="whiteAlpha.900">
@@ -672,7 +696,7 @@ const ConnectHW = ({ onConfirm }) => {
                     <Checkbox
                       key={i}
                       size="sm"
-                      colorScheme="cyan"
+                      colorScheme="yellow"
                       sx={{
                         ...hwPanelCheckboxSx,
                         '.chakra-checkbox__label': { color: 'whiteAlpha.850' },
@@ -711,7 +735,7 @@ const ConnectHW = ({ onConfirm }) => {
                   <Radio
                     value="standard"
                     size="sm"
-                    colorScheme="cyan"
+                    colorScheme="yellow"
                     sx={{
                       ...hwPanelRadioSx,
                       '.chakra-radio__label': { color: 'whiteAlpha.850' },
@@ -722,7 +746,7 @@ const ConnectHW = ({ onConfirm }) => {
                   <Radio
                     value="ledger"
                     size="sm"
-                    colorScheme="cyan"
+                    colorScheme="yellow"
                     sx={{
                       ...hwPanelRadioSx,
                       '.chakra-radio__label': { color: 'whiteAlpha.850' },
@@ -757,12 +781,18 @@ const ConnectHW = ({ onConfirm }) => {
         </Text>
       )}
       {selected === HW.ledger && (
-        <Icon as={MdUsb} boxSize={7} mt="6" color="cyan.200" alignSelf="center" />
+        <Icon
+          as={MdUsb}
+          boxSize={7}
+          mt="6"
+          color={HW_LIME}
+          alignSelf="center"
+        />
       )}
       <Button
         type="button"
         variant="unstyled"
-        className="button import-wallet"
+        className="button hw-wallet hw-tab-cta"
         isDisabled={isLoading || !selected}
         isLoading={isLoading}
         mt={8}
@@ -955,9 +985,9 @@ const SelectAccounts = ({ data, onConfirm }) => {
           h="200px"
           rounded="xl"
           border="1px solid"
-          borderColor="rgba(0, 232, 255, 0.32)"
-          bg="linear-gradient(180deg, rgba(6, 28, 42, 0.9) 0%, rgba(4, 16, 28, 0.92) 100%)"
-          boxShadow="0 0 22px rgba(0, 245, 255, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)"
+          borderColor={HW_ACCENT.panelBorder}
+          bg="linear-gradient(180deg, rgba(14, 28, 10, 0.92) 0%, rgba(6, 18, 10, 0.94) 100%)"
+          boxShadow={HW_ACCENT.panelGlow}
           sx={{ maxHeight: 'min(16.25rem, 42vh)' }}
         >
           <Scrollbars
@@ -987,7 +1017,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
                       }`}
                 </Box>
                 <Checkbox
-                  colorScheme="cyan"
+                  colorScheme="yellow"
                   sx={{
                     ...hwPanelCheckboxSx,
                     '.chakra-checkbox__label': { color: 'whiteAlpha.850' },
@@ -1032,12 +1062,15 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 bg="rgba(4, 22, 34, 0.95)"
                 color="whiteAlpha.900"
                 borderWidth="1px"
-                borderColor="rgba(0, 232, 255, 0.28)"
+                borderColor={HW_ACCENT.inputBorder}
                 _placeholder={{ color: 'whiteAlpha.400' }}
-                _hover={{ bg: 'rgba(6, 30, 46, 0.95)', borderColor: 'cyan.400' }}
+                _hover={{
+                  bg: 'rgba(10, 24, 10, 0.96)',
+                  borderColor: 'rgba(206, 250, 0, 0.55)',
+                }}
                 _focusVisible={{
-                  borderColor: 'cyan.300',
-                  boxShadow: '0 0 0 1px rgba(0, 245, 255, 0.45)',
+                  borderColor: HW_LIME,
+                  boxShadow: HW_ACCENT.inputFocusRing,
                 }}
                 placeholder="Password (min 8 characters)"
                 value={localWalletPassword}
@@ -1052,12 +1085,15 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 bg="rgba(4, 22, 34, 0.95)"
                 color="whiteAlpha.900"
                 borderWidth="1px"
-                borderColor="rgba(0, 232, 255, 0.28)"
+                borderColor={HW_ACCENT.inputBorder}
                 _placeholder={{ color: 'whiteAlpha.400' }}
-                _hover={{ bg: 'rgba(6, 30, 46, 0.95)', borderColor: 'cyan.400' }}
+                _hover={{
+                  bg: 'rgba(10, 24, 10, 0.96)',
+                  borderColor: 'rgba(206, 250, 0, 0.55)',
+                }}
                 _focusVisible={{
-                  borderColor: 'cyan.300',
-                  boxShadow: '0 0 0 1px rgba(0, 245, 255, 0.45)',
+                  borderColor: HW_LIME,
+                  boxShadow: HW_ACCENT.inputFocusRing,
                 }}
                 placeholder="Confirm password"
                 value={localWalletPasswordConfirm}
@@ -1070,7 +1106,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Button
           type="button"
           variant="unstyled"
-          className="button import-wallet"
+          className="button hw-wallet hw-tab-cta"
           display="inline-flex"
           alignItems="center"
           justifyContent="center"
@@ -1198,7 +1234,7 @@ const SuccessAndClose = () => {
       <Button
         type="button"
         variant="unstyled"
-        className="button import-wallet"
+        className="button hw-wallet hw-tab-cta"
         mt={8}
         display="inline-flex"
         alignItems="center"

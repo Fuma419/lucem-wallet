@@ -212,6 +212,17 @@ body {
   box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
 }
 
+/* Hardware wallet tab: wider CTAs so uppercase labels fit (e.g. Continue, long Keystone strings). */
+.button.hw-tab-cta {
+  box-sizing: border-box;
+  min-width: min(96vw, 340px);
+  max-width: 96vw;
+  padding: 12px 28px;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+}
+
 /* Glowing Modal Styles */
 .chakra-modal__content.modal-glow-purple, .modal-glow-purple {
   font-size: 16px;

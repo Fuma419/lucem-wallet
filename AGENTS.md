@@ -80,14 +80,14 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 | Build | `npm run build` |
 | Dev server | `npm start` (localhost:3000) |
 | Test (unit, no live chain) | `NODE_ENV=test npx jest` |
-| Integration (Preview/Preprod send; optional secrets) | `npm run test:integration` |
+| Integration (Preprod live self-send; local `.env`) | `npm run test:integration` |
 | Playwright (needs `build/`) | `npm run test:screenshots:only` or `npm run test:e2e` |
 | Lint | `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx` |
 | Deploy web | `vercel deploy --prod --token $VERCEL_TOKEN --scope my-team-5c660a1c --yes` |
 
 **Preprod send integration tests** (`src/test/integration/send-transaction-preview-preprod.integration.test.js`): not run by default Jest. They call Koios **Preprod** and submit a small **tADA self-transfer** from **account 0** (CIP-1852), using only **ADA-only** UTxOs. Mnemonic is **BIP-39: space-separated words, whole phrase in double quotes** in `.env` — see **`.env.example`**. `npm run test:integration` loads `.env` via `dotenv`.
 
-**GitHub Actions** runs `npm run test:integration` on every push/PR to `main` and passes `secrets.LUCEM_INTEGRATION_PREPROD_MNEMONIC`. Set that secret on the repo (BIP-39 phrase, no quotes in the Actions UI). Pushes to `main` on this repo **fail** the job if it is missing. Fork PRs use `continue-on-error` on that step so missing secrets do not block merges. Optional: `KOIOS_API_KEY_PREPROD`.
+**GitHub Actions** does not run live Preprod integration by default (`ci.yml` has a commented template if you enable it later with repo secrets). Local runs use `.env` only.
 
 | Variable | Purpose |
 |----------|---------|
@@ -105,7 +105,7 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 
 ### CI
 
-GitHub Actions (`ci.yml`) runs on PRs/pushes to `main`: `npm ci` → generate secrets → `npm run build` (Jest unit + webpack) → Playwright screenshots → `npm run test:integration` (Preprod self-send; requires `LUCEM_INTEGRATION_PREPROD_MNEMONIC` repo secret) → upload `build` and `e2e-screenshots` artifacts. Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
+GitHub Actions (`ci.yml`) runs on PRs/pushes to `main`: `npm ci` → generate secrets → `npm run build` (Jest unit + webpack) → Playwright screenshots → upload `build` and `e2e-screenshots` artifacts. (Optional Preprod Koios send: see commented step in `ci.yml`.) Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
 
 ### Testing the extension
 

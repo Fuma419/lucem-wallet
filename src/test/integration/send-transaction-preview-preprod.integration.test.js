@@ -16,11 +16,11 @@ const {
 /**
  * Preprod only: live Koios self-transfer from account 0 (CIP-1852), ADA-only UTxOs.
  *
- * Local: `npm run test:integration` (skips live tests if mnemonic unset).
- * GitHub Actions: requires repo secret `LUCEM_INTEGRATION_PREPROD_MNEMONIC` or the job fails.
+ * Run locally: `npm run test:integration` with `.env` (see `.env.example`). Live tests skip if mnemonic unset.
+ * To run on GitHub Actions later, add a workflow step + repo secrets; see commented block in `ci.yml`.
  *
  * Env:
- *   LUCEM_INTEGRATION_PREPROD_MNEMONIC — required on CI
+ *   LUCEM_INTEGRATION_PREPROD_MNEMONIC
  *   KOIOS_API_KEY_PREPROD — optional Bearer
  *   LUCEM_INTEGRATION_SEND_LOVELACE — default 3000000
  *   LUCEM_INTEGRATION_POLL_TX=1 — poll /tx_status after submit
@@ -35,8 +35,6 @@ const shouldPollTx = () => process.env.LUCEM_INTEGRATION_POLL_TX === '1';
 
 const TX_HASH_RE = /^[a-f0-9]{64}$/i;
 
-const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
-
 function preprodMnemonic() {
   return (process.env.LUCEM_INTEGRATION_PREPROD_MNEMONIC || '').trim();
 }
@@ -45,15 +43,6 @@ function preprodApiKey() {
   const v = process.env.KOIOS_API_KEY_PREPROD;
   return v && v !== 'your-koios-api-key-here' ? v : undefined;
 }
-
-describe('Preprod — CI configuration', () => {
-  test('GitHub Actions must define LUCEM_INTEGRATION_PREPROD_MNEMONIC', () => {
-    if (!isGithubActions) return;
-    const phrase = preprodMnemonic();
-    expect(phrase).toBeTruthy();
-    expect(validateMnemonic(phrase)).toBe(true);
-  });
-});
 
 const phrase = preprodMnemonic();
 const describeLive = phrase && validateMnemonic(phrase) ? describe : describe.skip;

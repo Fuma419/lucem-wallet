@@ -34,12 +34,12 @@ jobs:
         run: npx playwright install chromium --with-deps
       - name: Headless UI screenshots
         run: npm run test:screenshots:only
-      - name: Preprod send integration (requires LUCEM_INTEGRATION_PREPROD_MNEMONIC secret)
-        continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
-        run: npm run test:integration
-        env:
-          LUCEM_INTEGRATION_PREPROD_MNEMONIC: ${{ secrets.LUCEM_INTEGRATION_PREPROD_MNEMONIC }}
-          KOIOS_API_KEY_PREPROD: ${{ secrets.KOIOS_API_KEY_PREPROD }}
+      # Optional live Preprod send: uncomment and add repo secrets LUCEM_INTEGRATION_PREPROD_MNEMONIC (+ KOIOS_API_KEY_PREPROD if needed).
+      # - name: Preprod send integration
+      #   run: npm run test:integration
+      #   env:
+      #     LUCEM_INTEGRATION_PREPROD_MNEMONIC: ${{ secrets.LUCEM_INTEGRATION_PREPROD_MNEMONIC }}
+      #     KOIOS_API_KEY_PREPROD: ${{ secrets.KOIOS_API_KEY_PREPROD }}
       - name: Upload UI screenshots
         uses: actions/upload-artifact@v4
         if: always()

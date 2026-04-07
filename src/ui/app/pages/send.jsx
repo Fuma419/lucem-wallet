@@ -514,7 +514,7 @@ const Send = () => {
                 <IconButton
                   rounded="md"
                   onClick={() => {
-                    navigate(-1);
+                    navigate('/wallet', { replace: true });
                   }}
                   variant="ghost"
                   icon={<ChevronLeftIcon boxSize="6" />}
@@ -937,7 +937,7 @@ const Send = () => {
             });
           ref.current.closeModal();
           setTimeout(() => {
-            navigate(-1);
+            navigate('/wallet', { replace: true });
           }, 200);
         }}
       />

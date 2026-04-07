@@ -6,6 +6,7 @@ import React from 'react';
 import '../components/styles.css';
 import { TAB } from '../../../config/config';
 import Main from '../../index';
+import PreventHistoryBack from '../components/PreventHistoryBack';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
 import { Box, Button, Image, Text, useToast } from '@chakra-ui/react';
@@ -343,7 +344,10 @@ const root = createRoot(
 root.render(
   <Main>
     <Router>
-      <App />
+      <>
+        <PreventHistoryBack />
+        <App />
+      </>
     </Router>
   </Main>
 );

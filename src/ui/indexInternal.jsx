@@ -16,6 +16,7 @@ import NoWallet from './app/pages/noWallet';
 import SignData from './app/pages/signData';
 import SignTx from './app/pages/signTx';
 import Main from './index';
+import PreventHistoryBack from './app/components/PreventHistoryBack';
 
 const App = () => {
   const controller = Messaging.createInternalController();
@@ -48,6 +49,7 @@ const App = () => {
     </Box>
   ) : (
     <div style={{ overflowX: 'hidden' }}>
+      <PreventHistoryBack />
       <Routes>
         <Route
           path="/signData"

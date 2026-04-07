@@ -21,6 +21,7 @@ import Settings from './app/pages/settings';
 import Send from './app/pages/send';
 import { useStoreActions, useStoreState } from 'easy-peasy';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
+import PreventHistoryBack from './app/components/PreventHistoryBack';
 
 /**
  * OS / browser back gestures (e.g. iOS swipe-back) restore a prior history entry such as
@@ -136,6 +137,7 @@ const App = () => {
     </Box>
   ) : (
     <div style={{ overflowX: 'hidden' }}>
+      <PreventHistoryBack />
       <Routes>
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/settings/*" element={<Settings />} />

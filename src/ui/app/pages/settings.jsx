@@ -147,7 +147,7 @@ const Settings = () => {
               onClick={async () => {
                 const hasWallet = await hasStoredAccounts();
                 if (hasWallet) {
-                  navigate(-1);
+                  navigate('/wallet', { replace: true });
                 } else {
                   navigate('/welcome', { replace: true });
                 }

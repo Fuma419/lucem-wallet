@@ -25,6 +25,7 @@ import { createRoot } from 'react-dom/client';
 import Theme from '../../theme';
 import { TAB } from '../../../config/config';
 import platform from '../../../platform';
+import PreventHistoryBack from '../components/PreventHistoryBack';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
 
 /** Two-column seed UI: tighter on phones, standard on tablet/desktop. */
@@ -1014,7 +1015,10 @@ const root = createRoot(window.document.querySelector(`#${TAB.createWallet}`));
 root.render(
   <CreateWalletShell>
     <Router>
-      <App />
+      <>
+        <PreventHistoryBack />
+        <App />
+      </>
     </Router>
   </CreateWalletShell>
 );

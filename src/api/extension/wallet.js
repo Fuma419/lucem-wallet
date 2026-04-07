@@ -18,6 +18,26 @@ function ttlSlotBound(protocolParameters) {
   return base + TX.invalid_hereafter;
 }
 
+/** Current chain tip absolute slot from Koios (GET /tip). */
+async function loadKoiosTipSlot() {
+  const tipRaw = await koiosRequestEnhanced('/tip');
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Koios /tip response:', tipRaw);
+  }
+  const tipRow =
+    Array.isArray(tipRaw) && tipRaw.length > 0 ? tipRaw[0] : tipRaw;
+  const rawSlot =
+    tipRow?.abs_slot ?? tipRow?.absolute_slot ?? tipRow?.slot;
+  if (rawSlot == null || rawSlot === '') {
+    throw new Error('Missing chain tip slot from Koios (/tip)');
+  }
+  const tipSlot = parseInt(String(rawSlot), 10);
+  if (!Number.isFinite(tipSlot) || tipSlot < 0) {
+    throw new Error('Invalid tip slot from Koios');
+  }
+  return tipSlot;
+}
+
 /**
  * Assemble a signed transaction from an unsigned tx and a witness set.
  * CSL v15 only supports Transaction.new(body, witness_set, auxiliary_data?).
@@ -37,19 +57,7 @@ export const assembleSignedTransaction = async (unsignedTx, witnessSet) => {
 
 export const initTx = async () => {
   try {
-    const tipRaw = await koiosRequestEnhanced('/tip');
-    console.log('Koios /tip response:', tipRaw);
-    const tipRow =
-      Array.isArray(tipRaw) && tipRaw.length > 0 ? tipRaw[0] : tipRaw;
-    const rawSlot =
-      tipRow?.abs_slot ?? tipRow?.absolute_slot ?? tipRow?.slot;
-    if (rawSlot == null || rawSlot === '') {
-      throw new Error('Missing chain tip slot from Koios (/tip)');
-    }
-    const tipSlot = parseInt(String(rawSlot), 10);
-    if (!Number.isFinite(tipSlot) || tipSlot < 0) {
-      throw new Error('Invalid tip slot from Koios');
-    }
+    const tipSlot = await loadKoiosTipSlot();
 
     // Get protocol parameters from Koios
     const p = await koiosRequestEnhanced('/epoch_params/latest');
@@ -138,22 +146,25 @@ export const buildTx = async (
       throw new Error('Invalid protocol parameters: maxValSize or maxTxSize is missing');
     }
 
-    if (!protocolParameters.slot) {
-      throw new Error('Invalid protocol parameters: slot is missing');
-    }
+    // Send screen reuses txInfo.protocolParameters from in-memory store and skips initTx();
+    // stale slot → TTL in the past → OutsideValidityInterval on submit.
+    const params = {
+      ...protocolParameters,
+      slot: await loadKoiosTipSlot(),
+    };
 
     // Debug logging for protocol parameters
-    console.log('Protocol parameters received in buildTx:', protocolParameters);
-    console.log('linearFee object:', protocolParameters.linearFee);
-    console.log('linearFee type:', typeof protocolParameters.linearFee);
-    console.log('minFeeA value:', protocolParameters.linearFee?.minFeeA);
-    console.log('minFeeA type:', typeof protocolParameters.linearFee?.minFeeA);
-    console.log('minFeeB value:', protocolParameters.linearFee?.minFeeB);
-    console.log('minFeeB type:', typeof protocolParameters.linearFee?.minFeeB);
-    console.log('poolDeposit value:', protocolParameters.poolDeposit);
-    console.log('poolDeposit type:', typeof protocolParameters.poolDeposit);
-    console.log('keyDeposit value:', protocolParameters.keyDeposit);
-    console.log('coinsPerUtxoWord value:', protocolParameters.coinsPerUtxoWord);
+    console.log('Protocol parameters received in buildTx:', params);
+    console.log('linearFee object:', params.linearFee);
+    console.log('linearFee type:', typeof params.linearFee);
+    console.log('minFeeA value:', params.linearFee?.minFeeA);
+    console.log('minFeeA type:', typeof params.linearFee?.minFeeA);
+    console.log('minFeeB value:', params.linearFee?.minFeeB);
+    console.log('minFeeB type:', typeof params.linearFee?.minFeeB);
+    console.log('poolDeposit value:', params.poolDeposit);
+    console.log('poolDeposit type:', typeof params.poolDeposit);
+    console.log('keyDeposit value:', params.keyDeposit);
+    console.log('coinsPerUtxoWord value:', params.coinsPerUtxoWord);
     
     // Debug Cardano library loading
     console.log('Loader.Cardano:', Loader.Cardano);
@@ -183,11 +194,11 @@ export const buildTx = async (
     console.log('Loader.Cardano.Int.from_str:', Loader.Cardano?.Int?.from_str);
     
     // Debug the specific values being converted
-    console.log('Converting minFeeA:', protocolParameters.linearFee.minFeeA, 'type:', typeof protocolParameters.linearFee.minFeeA);
-    console.log('Converting minFeeB:', protocolParameters.linearFee.minFeeB, 'type:', typeof protocolParameters.linearFee.minFeeB);
-    console.log('Converting poolDeposit:', protocolParameters.poolDeposit, 'type:', typeof protocolParameters.poolDeposit);
-    console.log('Converting keyDeposit:', protocolParameters.keyDeposit, 'type:', typeof protocolParameters.keyDeposit);
-    console.log('Converting coinsPerUtxoWord:', protocolParameters.coinsPerUtxoWord, 'type:', typeof protocolParameters.coinsPerUtxoWord);
+    console.log('Converting minFeeA:', params.linearFee.minFeeA, 'type:', typeof params.linearFee.minFeeA);
+    console.log('Converting minFeeB:', params.linearFee.minFeeB, 'type:', typeof params.linearFee.minFeeB);
+    console.log('Converting poolDeposit:', params.poolDeposit, 'type:', typeof params.poolDeposit);
+    console.log('Converting keyDeposit:', params.keyDeposit, 'type:', typeof params.keyDeposit);
+    console.log('Converting coinsPerUtxoWord:', params.coinsPerUtxoWord, 'type:', typeof params.coinsPerUtxoWord);
     
     // Test Int.from_str to see what it returns
     const testInt = Loader.Cardano.Int.from_str('44');
@@ -239,15 +250,15 @@ export const buildTx = async (
       Loader.Cardano.TransactionBuilderConfigBuilder.new()
         .fee_algo(
           Loader.Cardano.LinearFee.new(
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-            Loader.Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
+            Loader.Cardano.BigNum.from_str(params.linearFee.minFeeA),
+            Loader.Cardano.BigNum.from_str(params.linearFee.minFeeB)
           )
         )
-        .pool_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-        .key_deposit(Loader.Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-        .coins_per_utxo_byte(Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-        .max_value_size(parseInt(protocolParameters.maxValSize))
-        .max_tx_size(parseInt(protocolParameters.maxTxSize))
+        .pool_deposit(Loader.Cardano.BigNum.from_str(params.poolDeposit))
+        .key_deposit(Loader.Cardano.BigNum.from_str(params.keyDeposit))
+        .coins_per_utxo_byte(Loader.Cardano.BigNum.from_str(params.coinsPerUtxoWord))
+        .max_value_size(parseInt(params.maxValSize))
+        .max_tx_size(parseInt(params.maxTxSize))
         .prefer_pure_change(true)
         .build()
     );
@@ -298,7 +309,7 @@ export const buildTx = async (
     // TTL only: do not set validity start. Koios tip can be ahead of the submit node;
     // a lower bound at "now" yields OutsideValidityInterval / tx not yet valid.
     const invalidHereafter = Loader.Cardano.BigNum.from_str(
-      String(ttlSlotBound(protocolParameters))
+      String(ttlSlotBound(params))
     );
     txBuilder.set_ttl(invalidHereafter);
 

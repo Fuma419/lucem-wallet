@@ -22,6 +22,60 @@ import Send from './app/pages/send';
 import { useStoreActions, useStoreState } from 'easy-peasy';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
 
+/**
+ * OS / browser back gestures (e.g. iOS swipe-back) restore a prior history entry such as
+ * `/wallet` even when storage was cleared or `replace` was used elsewhere. Re-verify before
+ * rendering the wallet shell.
+ */
+function WalletEntryGate({ children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [allowed, setAllowed] = React.useState(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setAllowed(null);
+    hasStoredAccounts().then((ok) => {
+      if (cancelled) return;
+      if (!ok) {
+        navigate('/welcome', { replace: true });
+        setAllowed(false);
+      } else {
+        setAllowed(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, location.key, navigate]);
+
+  React.useEffect(() => {
+    const onPageShow = (e) => {
+      if (!e.persisted) return;
+      hasStoredAccounts().then((ok) => {
+        if (!ok) navigate('/welcome', { replace: true });
+      });
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [navigate]);
+
+  if (allowed !== true) {
+    return (
+      <Box
+        minH="40vh"
+        width="full"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Spinner color="yellow" speed="0.65s" />
+      </Box>
+    );
+  }
+  return children;
+}
+
 /** Do not replay these after login — they override /wallet and send users to onboarding or shell URLs. */
 function shouldReplayPersistedRoute(route) {
   if (!route || route === '/wallet') return false;
@@ -89,9 +143,11 @@ const App = () => {
         <Route
           path="*"
           element={
-            <TermsAndPrivacyProvider>
-              <Wallet />
-            </TermsAndPrivacyProvider>
+            <WalletEntryGate>
+              <TermsAndPrivacyProvider>
+                <Wallet />
+              </TermsAndPrivacyProvider>
+            </WalletEntryGate>
           }
         />
       </Routes>

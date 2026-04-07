@@ -93,6 +93,7 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 | `LUCEM_INTEGRATION_PREPROD_MNEMONIC` | Same for Preprod |
 | `KOIOS_API_KEY_PREVIEW` / `KOIOS_API_KEY_PREPROD` | Optional Bearer token for Koios |
 | `LUCEM_INTEGRATION_SEND_LOVELACE` | Optional amount (default `3000000`) |
+| `LUCEM_INTEGRATION_POLL_TX=1` | After submit, poll Koios `/tx_status` until visible (optional) |
 | `LUCEM_RUN_INTEGRATION=1` | Set automatically by `npm run test:integration` |
 
 `npm start` runs webpack-dev-server on `http://localhost:3000`. It writes built files to `build/` on disk. For extension testing, load the `build/` directory as an unpacked extension. For web testing, visit `http://localhost:3000/mainPopup.html` directly.

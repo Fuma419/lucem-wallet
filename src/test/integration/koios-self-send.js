@@ -163,16 +163,74 @@ async function fetchUtxosForAddress(base, bech32, apiKey) {
 
 function utxoToCsl(output, bech32) {
   const addr = Cardano.Address.from_bech32(bech32);
-  const ix = output.output_index ?? 0;
+  const ix = Number.parseInt(
+    String(output.output_index ?? output.tx_index ?? 0),
+    10
+  );
+  if (!Number.isFinite(ix) || ix < 0) {
+    throw new Error(`Invalid UTxO index for ${output.tx_hash}`);
+  }
   const lovelace = output.amount.find((a) => a.unit === 'lovelace');
   const coin = Cardano.BigNum.from_str(lovelace ? String(lovelace.quantity) : '0');
   const value = Cardano.Value.new(coin);
   return Cardano.TransactionUnspentOutput.new(
     Cardano.TransactionInput.new(
       Cardano.TransactionHash.from_bytes(Buffer.from(output.tx_hash, 'hex')),
-      Cardano.BigNum.from_str(String(ix))
+      ix
     ),
     Cardano.TransactionOutput.new(addr, value)
+  );
+}
+
+/** Koios /submittx returns JSON string (tx id) or wrapped object. */
+function normalizeSubmitTxHash(submitRes) {
+  if (typeof submitRes === 'string') {
+    return submitRes.trim().replace(/^"+|"+$/g, '');
+  }
+  if (submitRes && typeof submitRes === 'object') {
+    if (typeof submitRes.tx_hash === 'string') return submitRes.tx_hash.trim();
+    if (typeof submitRes.hash === 'string') return submitRes.hash.trim();
+  }
+  throw new Error(`Unexpected submit response: ${JSON.stringify(submitRes).slice(0, 200)}`);
+}
+
+/**
+ * Poll Koios until tx appears in tx_status (optionally with confirmations).
+ * @param {{ baseUrl: string, apiKey?: string, txHash: string, maxAttempts?: number, delayMs?: number, minConfirmations?: number }} opts
+ */
+async function waitForTxStatus(opts) {
+  const {
+    baseUrl,
+    apiKey,
+    txHash,
+    maxAttempts = 25,
+    delayMs = 2000,
+    minConfirmations = 0,
+  } = opts;
+  const h = normalizeSubmitTxHash(txHash).toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(h)) {
+    throw new Error(`Invalid tx hash for polling: ${h}`);
+  }
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const rows = await koiosPost(
+      baseUrl,
+      '/tx_status',
+      { _tx_hashes: [h] },
+      apiKey
+    );
+    const row = Array.isArray(rows)
+      ? rows.find(
+          (r) => (r.tx_hash || '').toLowerCase().replace(/^"+|"+$/g, '') === h
+        )
+      : null;
+    if (row && row.num_confirmations != null) {
+      const n = Number(row.num_confirmations);
+      if (n >= minConfirmations) return row;
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  throw new Error(
+    `Tx ${h} not visible in Koios /tx_status after ${maxAttempts} attempts`
   );
 }
 
@@ -264,15 +322,13 @@ async function buildSignSubmitSelfTransfer(opts) {
 
   const txHex = Buffer.from(signed.to_bytes()).toString('hex');
   const submitRes = await koiosSubmitTx(baseUrl, txHex, apiKey);
-  if (typeof submitRes === 'string') return submitRes;
-  if (submitRes && typeof submitRes === 'object' && submitRes.tx_hash) {
-    return submitRes.tx_hash;
-  }
-  return JSON.stringify(submitRes);
+  return normalizeSubmitTxHash(submitRes);
 }
 
 module.exports = {
   buildSignSubmitSelfTransfer,
   deriveAccount0Address,
   fetchProtocolParams,
+  normalizeSubmitTxHash,
+  waitForTxStatus,
 };

@@ -1,0 +1,10 @@
+---
+description: Cardano SDK outputs must become Emurgo CSL Transaction before signing/HW
+alwaysApply: true
+---
+
+# Cardano SDK → CSL bridge (mandatory)
+
+- If `@cardano-sdk/*` or any non-CSL builder assembles transactions, **always convert to Emurgo CSL** (`@emurgo/cardano-serialization-lib-*`) **before** any path that signs or encodes for devices.
+- **Do not** pass SDK-native transaction objects into `signTx`, `signTxHW`, `txToLedger`, `txToTrezor`, or Keystone UR builders — those expect **CSL `Transaction`** and/or **canonical tx CBOR** loaded via `Transaction.from_bytes`.
+- Prefer the shared helper `src/api/sdk-to-csl.js` (`cslTransactionFromTxBytes` / `cslTransactionFromTxHex`) when wiring new SDK-based construction so the boundary stays obvious in code review.

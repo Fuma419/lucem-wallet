@@ -143,22 +143,32 @@ function deriveAccount0Address(mnemonicPhrase) {
 }
 
 async function fetchUtxosForAddress(base, bech32, apiKey) {
-  const rows = await koiosPost(base, '/address_info', { _addresses: [bech32] }, apiKey);
-  if (!rows || rows.error || !rows[0]) {
+  // Prefer /address_utxos (utxo_infos): includes tx_index and optional is_spent.
+  // address_info.utxo_set uses tx_index, not output_index — mapping wrong indices breaks inputs.
+  const rows = await koiosPost(
+    base,
+    '/address_utxos',
+    { _addresses: [bech32], _extended: true },
+    apiKey
+  );
+  if (!Array.isArray(rows) || rows.length === 0) {
     return [];
   }
-  const utxoSet = rows[0].utxo_set || [];
-  return utxoSet.map((utxo) => ({
-    tx_hash: utxo.tx_hash,
-    output_index: utxo.output_index,
-    amount: [
-      { unit: 'lovelace', quantity: utxo.value || '0' },
-      ...(utxo.asset_list || []).map((a) => ({
-        unit: a.policy_id + a.asset_name,
-        quantity: a.quantity || '0',
-      })),
-    ],
-  }));
+  const ix = (u) =>
+    u.tx_index != null ? u.tx_index : u.output_index;
+  return rows
+    .filter((u) => (u.address == null || u.address === bech32) && u.is_spent !== true)
+    .map((utxo) => ({
+      tx_hash: utxo.tx_hash,
+      output_index: ix(utxo),
+      amount: [
+        { unit: 'lovelace', quantity: String(utxo.value ?? '0') },
+        ...(utxo.asset_list || []).map((a) => ({
+          unit: a.policy_id + a.asset_name,
+          quantity: a.quantity || '0',
+        })),
+      ],
+    }));
 }
 
 function utxoToCsl(output, bech32) {
@@ -263,24 +273,20 @@ async function buildSignSubmitSelfTransfer(opts) {
   const utxoCollection = Cardano.TransactionUnspentOutputs.new();
   for (const u of utxos) utxoCollection.add(u);
 
-  const txBuilder = Cardano.TransactionBuilder.new(
-    Cardano.TransactionBuilderConfigBuilder.new()
-      .fee_algo(
-        Cardano.LinearFee.new(
-          Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-          Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
-        )
-      )
-      .pool_deposit(Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-      .key_deposit(Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-      .coins_per_utxo_byte(Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-      .max_value_size(parseInt(protocolParameters.maxValSize, 10))
-      .max_tx_size(parseInt(protocolParameters.maxTxSize, 10))
-      .prefer_pure_change(true)
-      .build()
+  const linearFee = Cardano.LinearFee.new(
+    Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
+    Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
   );
 
-  txBuilder.add_inputs_from(utxoCollection);
+  const txConfig = Cardano.TransactionBuilderConfigBuilder.new()
+    .fee_algo(linearFee)
+    .pool_deposit(Cardano.BigNum.from_str(protocolParameters.poolDeposit))
+    .key_deposit(Cardano.BigNum.from_str(protocolParameters.keyDeposit))
+    .coins_per_utxo_byte(Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
+    .max_value_size(parseInt(protocolParameters.maxValSize, 10))
+    .max_tx_size(parseInt(protocolParameters.maxTxSize, 10))
+    .prefer_pure_change(true)
+    .build();
 
   const outputs = Cardano.TransactionOutputs.new();
   outputs.add(
@@ -290,35 +296,58 @@ async function buildSignSubmitSelfTransfer(opts) {
     )
   );
 
-  for (let i = 0; i < outputs.len(); i += 1) {
-    txBuilder.add_output(outputs.get(i));
-  }
-
-  txBuilder.add_change_if_needed(address);
-
   const invalidHereafter = Cardano.BigNum.from_str(
     String(
       Math.floor(Number(protocolParameters.slot)) + TX.invalid_hereafter
     )
   );
-  txBuilder.set_ttl(invalidHereafter);
 
-  const txBody = txBuilder.build();
-  const emptyWitness = Cardano.TransactionWitnessSet.new();
-  const unsigned = Cardano.Transaction.new(txBody, emptyWitness, undefined);
+  /** Ledger-accurate min fee vs builder estimate can differ slightly; align with min_fee(signed). */
+  let explicitFee = null;
+  let signed;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const txBuilder = Cardano.TransactionBuilder.new(txConfig);
+    txBuilder.add_inputs_from(
+      utxoCollection,
+      Cardano.CoinSelectionStrategyCIP2.LargestFirst
+    );
+    for (let i = 0; i < outputs.len(); i += 1) {
+      txBuilder.add_output(outputs.get(i));
+    }
+    txBuilder.add_required_signer(paymentKey.to_public().hash());
+    if (explicitFee != null) {
+      txBuilder.set_fee(explicitFee);
+    }
+    txBuilder.add_change_if_needed(address);
+    txBuilder.set_ttl_bignum(invalidHereafter);
 
-  const txHash = Cardano.hash_transaction(unsigned.body());
-  const vkeys = Cardano.VkeywitnessList.new();
-  vkeys.add(Cardano.make_vkey_witness(txHash, paymentKey));
-  const witnessSet = Cardano.TransactionWitnessSet.new();
-  witnessSet.set_vkeywitnesses(vkeys);
+    const txBody = txBuilder.build();
+    const emptyWitness = Cardano.TransactionWitnessSet.new();
+    const unsigned = Cardano.Transaction.new(txBody, emptyWitness, undefined);
 
-  const signed = Cardano.Transaction.new(
-    unsigned.body(),
-    witnessSet,
-    unsigned.auxiliary_data()
-  );
-  signed.set_is_valid(unsigned.is_valid());
+    const bodyBytes = unsigned.body().to_bytes();
+    const fixedBody = Cardano.FixedTransactionBody.from_bytes(bodyBytes);
+    const txHash = fixedBody.tx_hash();
+    if (typeof fixedBody.free === 'function') fixedBody.free();
+
+    const vkeys = Cardano.Vkeywitnesses.new();
+    vkeys.add(Cardano.make_vkey_witness(txHash, paymentKey));
+    const witnessSet = Cardano.TransactionWitnessSet.new();
+    witnessSet.set_vkeys(vkeys);
+
+    signed = Cardano.Transaction.new(
+      unsigned.body(),
+      witnessSet,
+      unsigned.auxiliary_data()
+    );
+    signed.set_is_valid(unsigned.is_valid());
+
+    const required = Cardano.min_fee(signed, linearFee);
+    if (txBody.fee().compare(required) >= 0) {
+      break;
+    }
+    explicitFee = required;
+  }
 
   const txHex = Buffer.from(signed.to_bytes()).toString('hex');
   const submitRes = await koiosSubmitTx(baseUrl, txHex, apiKey);

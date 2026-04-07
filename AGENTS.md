@@ -151,15 +151,15 @@ Jest uses `@emurgo/cardano-serialization-lib-nodejs` mapping and `testPathIgnore
 - **During iteration:** validate only changed files (single-file lint, single test suite).
 - **Before commit:** run repo-wide gates once: `NODE_ENV=test npx jest`, `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx`, `npm run build`.
 
-### Agent ship policy (push to `main`)
+### Agent ship policy (commit + push — default, not optional)
 
-When an agent **finishes** a feature or bugfix (code ready, not a draft):
+Agents must **not** wait for the user to say “commit” or “push.” If you **changed the repo**, treat **commit + push** as part of the same workflow as tests and build.
 
 1. Run **`NODE_ENV=test npx jest`** (full unit suite).
-2. Run **`npm run build`** so webpack compiles (same as CI).
-3. If both succeed, **commit** with a clear message, then **`git push origin main`** (or push the current branch if your workflow uses PRs — default here is **direct push to `main`** when the working tree is intended to land on main).
+2. Run **`npm run build`** (matches CI: Jest + webpack).
+3. If both succeed, **`git commit`** with a clear message, then **`git push`** to **`origin`** — **`main`** when you are on `main`; otherwise push the current branch (and note if a PR is required).
 
-Do not stop after tests alone if the build fails; fix or revert until `npm run build` passes. If credentials forbid push, report that after the gate.
+Do not stop with a green build and uncommitted changes. If push is impossible (auth, read-only), say so **after** the gate. Skip commit/push only when the user explicitly asked not to, or the turn involved **no** file edits (Q&A only).
 
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.

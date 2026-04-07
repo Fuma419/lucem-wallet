@@ -1486,36 +1486,69 @@ export const requestAccountKey = async (password, accountIndex) => {
   };
 };
 
-/** Remove easy-peasy and other browser-only caches so wiped state is consistent. */
+/** Remove easy-peasy, asset cache, and session data so wiped state is consistent. */
 const clearBrowserWalletCaches = () => {
-  if (typeof window === 'undefined' || !window.localStorage) return;
+  if (typeof window === 'undefined') return;
   try {
-    window.localStorage.removeItem(LOCAL_STORAGE.assets);
-    const keys = Object.keys(window.localStorage);
-    keys.forEach((k) => {
-      if (k.startsWith('[EasyPeasyStore]')) {
-        window.localStorage.removeItem(k);
-      }
-    });
+    if (window.localStorage) {
+      window.localStorage.removeItem(LOCAL_STORAGE.assets);
+      Object.keys(window.localStorage).forEach((k) => {
+        if (k.startsWith('[EasyPeasyStore]')) {
+          window.localStorage.removeItem(k);
+        }
+      });
+    }
   } catch (_) {
     /* ignore quota / private mode */
   }
+  try {
+    if (window.sessionStorage) {
+      window.sessionStorage.clear();
+    }
+  } catch (_) {
+    /* ignore */
+  }
 };
 
-export const resetStorage = async (password) => {
-  await requestAccountKey(password, 0);
+/** PWA / web build uses IndexedDB `lucem-wallet`; extension may have none (harmless delete). */
+const clearIndexedDbWalletDb = () =>
+  new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined') {
+      resolve();
+      return;
+    }
+    try {
+      const req = indexedDB.deleteDatabase('lucem-wallet');
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+      req.onblocked = () => resolve();
+    } catch (_) {
+      resolve();
+    }
+  });
+
+async function wipeAllLocalWalletData() {
   await platform.storage.clear();
   clearBrowserWalletCaches();
+  await clearIndexedDbWalletDb();
+}
+
+/**
+ * Password-verified wipe (same end state as erase). Kept for API / tests; prefer
+ * `eraseLocalWalletData` from settings when the user may have lost the password.
+ */
+export const resetStorage = async (password) => {
+  await requestAccountKey(password, 0);
+  await wipeAllLocalWalletData();
   return true;
 };
 
 /**
- * Clears all wallet data from extension / IndexedDB without verifying the spending password.
- * Call only from UI that requires an explicit typed confirmation (see settings).
+ * Clears all Lucem data on this device (extension storage or web IDB + browser caches).
+ * Call only from UI that requires explicit confirmation (typed phrase + checkbox).
  */
 export const eraseLocalWalletData = async () => {
-  await platform.storage.clear();
-  clearBrowserWalletCaches();
+  await wipeAllLocalWalletData();
   return true;
 };
 

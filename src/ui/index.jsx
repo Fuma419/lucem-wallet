@@ -1,6 +1,9 @@
 import React from 'react';
 import { POPUP, POPUP_WINDOW, TAB } from '../config/config';
-import { Scrollbars } from './app/components/scrollbar';
+import {
+  Scrollbars,
+  lucemTransparentScrollView,
+} from './app/components/scrollbar';
 import './app/components/styles.css';
 import Theme from './theme';
 import StoreProvider from './store';
@@ -22,19 +25,6 @@ const isExtensionPopup =
   typeof chrome !== 'undefined' &&
   typeof chrome.runtime !== 'undefined' &&
   typeof chrome.runtime.id !== 'undefined';
-
-/** Scrollbars default view can look like a flat gray box over themed pages. */
-function lucemTransparentScrollView({ style, ...props }) {
-  return (
-    <div
-      {...props}
-      style={{
-        ...style,
-        backgroundColor: 'transparent',
-      }}
-    />
-  );
-}
 
 const Main = ({ children }) => {
   const [scroll, setScroll] = React.useState({ el: null, y: 0 });

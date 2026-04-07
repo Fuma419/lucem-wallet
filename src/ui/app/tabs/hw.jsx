@@ -21,7 +21,10 @@ import {
   Stack,
   Input,
 } from '@chakra-ui/react';
-import { Scrollbars } from '../components/scrollbar';
+import {
+  Scrollbars,
+  lucemTransparentScrollView,
+} from '../components/scrollbar';
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 
 
@@ -59,6 +62,33 @@ const VENDOR_IDS = {
   ledger: [ledgerUSBVendorId],
   trezor: [0x534c, 0x1209], // Model T HID 0x534c and others 0x1209 - taken from https://github.com/vacuumlabs/trezor-suite/blob/develop/packages/transport/src/constants.ts#L13-L21
   keystone: 'keystone',
+};
+
+/** Cyan-tinted controls on dark glass panels (matches HW tab hero / modal). */
+const hwPanelCheckboxSx = {
+  '.chakra-checkbox__control': {
+    borderColor: 'rgba(255,255,255,0.38)',
+    bg: 'rgba(0,0,0,0.35)',
+    _checked: {
+      bg: 'cyan.400',
+      borderColor: 'cyan.200',
+      color: 'gray.900',
+    },
+    _hover: { borderColor: 'cyan.300' },
+  },
+};
+
+const hwPanelRadioSx = {
+  '.chakra-radio__control': {
+    borderColor: 'rgba(255,255,255,0.38)',
+    bg: 'rgba(0,0,0,0.3)',
+    _checked: {
+      bg: 'cyan.400',
+      borderColor: 'cyan.200',
+      color: 'gray.900',
+    },
+    _hover: { borderColor: 'cyan.300' },
+  },
 };
 
 /** CIP-1852 account checkboxes: only account 0 on by default (Cardano standard path). */
@@ -589,11 +619,21 @@ const ConnectHW = ({ onConfirm }) => {
           </Text>
           <Box h={4} />
           <Button
-            variant="ghost"
+            type="button"
+            variant="outline"
             size="sm"
-            alignSelf="center"
-            color="cyan.200"
-            _hover={{ bg: 'whiteAlpha.100' }}
+            alignSelf="stretch"
+            maxW="400px"
+            mx="auto"
+            w="100%"
+            borderColor="rgba(0, 232, 255, 0.45)"
+            color="whiteAlpha.900"
+            bg="rgba(0, 245, 255, 0.07)"
+            _hover={{
+              bg: 'rgba(0, 245, 255, 0.14)',
+              borderColor: 'cyan.300',
+            }}
+            _active={{ bg: 'rgba(0, 245, 255, 0.2)' }}
             rightIcon={
               <ChevronDownIcon
                 transform={keystoneAdvancedOpen ? 'rotate(-180deg)' : undefined}
@@ -607,16 +647,20 @@ const ConnectHW = ({ onConfirm }) => {
           <Collapse in={keystoneAdvancedOpen} animateOpacity style={{ width: '100%' }}>
             <Box
               mt={3}
-              pl={1}
-              borderLeftWidth="2px"
-              borderColor="cyan.400"
-              py={1}
               w="100%"
+              rounded="xl"
+              px={{ base: 3, sm: 4 }}
+              py={4}
+              bg="linear-gradient(165deg, rgba(6, 32, 48, 0.94) 0%, rgba(4, 18, 32, 0.9) 100%)"
+              borderWidth="1px"
+              borderColor="rgba(0, 232, 255, 0.35)"
+              boxShadow="0 0 28px rgba(0, 245, 255, 0.12), inset 0 1px 0 rgba(255,255,255,0.06)"
+              backdropFilter="blur(10px)"
             >
               <Text fontSize="sm" fontWeight="semibold" color="whiteAlpha.900">
                 Accounts to request (at least one)
               </Text>
-              <Text fontSize="xs" color="whiteAlpha.600" mt={1} maxW="340px">
+              <Text fontSize="xs" color="whiteAlpha.650" mt={1} maxW="340px">
                 Each checked account adds a derivation step on Keystone (more checks =
                 longer approval). Scroll the card to see all options and Continue below.
               </Text>
@@ -628,7 +672,10 @@ const ConnectHW = ({ onConfirm }) => {
                       key={i}
                       size="sm"
                       colorScheme="cyan"
-                      sx={{ '.chakra-checkbox__label': { color: 'whiteAlpha.850' } }}
+                      sx={{
+                        ...hwPanelCheckboxSx,
+                        '.chakra-checkbox__label': { color: 'whiteAlpha.850' },
+                      }}
                       isChecked={!!keystoneAccountChecks[i]}
                       onChange={(e) => {
                         const checked = e.target.checked;
@@ -660,15 +707,31 @@ const ConnectHW = ({ onConfirm }) => {
                 pb={1}
               >
                 <Stack spacing={2} color="whiteAlpha.850">
-                  <Radio value="standard" size="sm" colorScheme="cyan">
+                  <Radio
+                    value="standard"
+                    size="sm"
+                    colorScheme="cyan"
+                    sx={{
+                      ...hwPanelRadioSx,
+                      '.chakra-radio__label': { color: 'whiteAlpha.850' },
+                    }}
+                  >
                     Cardano standard (default)
                   </Radio>
-                  <Radio value="ledger" size="sm" colorScheme="cyan">
+                  <Radio
+                    value="ledger"
+                    size="sm"
+                    colorScheme="cyan"
+                    sx={{
+                      ...hwPanelRadioSx,
+                      '.chakra-radio__label': { color: 'whiteAlpha.850' },
+                    }}
+                  >
                     Ledger-compatible (Ledger / BitBox)
                   </Radio>
                 </Stack>
               </RadioGroup>
-              <Text fontSize="xs" color="whiteAlpha.600" mt={2} maxW="340px">
+              <Text fontSize="xs" color="whiteAlpha.650" mt={2} maxW="340px">
                 Must match the address type you export on Keystone (Ledger vs
                 standard use different keys at the same path). If a scan error says
                 the QR does not match your choice, switch this option to the other
@@ -889,13 +952,15 @@ const SelectAccounts = ({ data, onConfirm }) => {
           maxW="380px"
           minH="160px"
           h="200px"
-          rounded="md"
+          rounded="xl"
           border="1px solid"
-          borderColor="whiteAlpha.200"
-          bg="blackAlpha.400"
+          borderColor="rgba(0, 232, 255, 0.32)"
+          bg="linear-gradient(180deg, rgba(6, 28, 42, 0.9) 0%, rgba(4, 16, 28, 0.92) 100%)"
+          boxShadow="0 0 22px rgba(0, 245, 255, 0.1), inset 0 1px 0 rgba(255,255,255,0.05)"
           sx={{ maxHeight: 'min(16.25rem, 42vh)' }}
         >
           <Scrollbars
+            renderView={lucemTransparentScrollView}
             style={{
               width: '100%',
               height: '100%',
@@ -922,6 +987,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 </Box>
                 <Checkbox
                   colorScheme="cyan"
+                  sx={{
+                    ...hwPanelCheckboxSx,
+                    '.chakra-checkbox__label': { color: 'whiteAlpha.850' },
+                  }}
                   isDisabled={!!existing[rowKey]}
                   isChecked={!!(selected[rowKey] && !existing[rowKey])}
                   onChange={(e) => {
@@ -959,12 +1028,16 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 size="sm"
                 rounded="md"
                 variant="filled"
-                bg="gray.800"
+                bg="rgba(4, 22, 34, 0.95)"
                 color="whiteAlpha.900"
-                borderColor="whiteAlpha.200"
+                borderWidth="1px"
+                borderColor="rgba(0, 232, 255, 0.28)"
                 _placeholder={{ color: 'whiteAlpha.400' }}
-                _hover={{ bg: 'gray.700' }}
-                focusBorderColor="cyan.400"
+                _hover={{ bg: 'rgba(6, 30, 46, 0.95)', borderColor: 'cyan.400' }}
+                _focusVisible={{
+                  borderColor: 'cyan.300',
+                  boxShadow: '0 0 0 1px rgba(0, 245, 255, 0.45)',
+                }}
                 placeholder="Password (min 8 characters)"
                 value={localWalletPassword}
                 onChange={(e) => setLocalWalletPassword(e.target.value)}
@@ -975,12 +1048,16 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 size="sm"
                 rounded="md"
                 variant="filled"
-                bg="gray.800"
+                bg="rgba(4, 22, 34, 0.95)"
                 color="whiteAlpha.900"
-                borderColor="whiteAlpha.200"
+                borderWidth="1px"
+                borderColor="rgba(0, 232, 255, 0.28)"
                 _placeholder={{ color: 'whiteAlpha.400' }}
-                _hover={{ bg: 'gray.700' }}
-                focusBorderColor="cyan.400"
+                _hover={{ bg: 'rgba(6, 30, 46, 0.95)', borderColor: 'cyan.400' }}
+                _focusVisible={{
+                  borderColor: 'cyan.300',
+                  boxShadow: '0 0 0 1px rgba(0, 245, 255, 0.45)',
+                }}
                 placeholder="Confirm password"
                 value={localWalletPasswordConfirm}
                 onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}

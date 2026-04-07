@@ -116,6 +116,14 @@ const extensionAdapter = {
       return Promise.resolve(true);
     },
 
+    /** After full data wipe: reload entry HTML so SPA path is not stuck on /settings/… */
+    reloadToWalletBootstrap: () => {
+      if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
+        window.location.replace(chrome.runtime.getURL('mainPopup.html'));
+      }
+      return Promise.resolve(true);
+    },
+
     getCurrentWebpage: () =>
       new Promise((res) => {
         chrome.tabs.query(

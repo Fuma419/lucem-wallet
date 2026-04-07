@@ -41,7 +41,7 @@ const App = () => {
   const init = async () => {
     const hasWallet = await hasStoredAccounts();
     if (hasWallet) {
-      navigate('/wallet');
+      navigate('/wallet', { replace: true });
       if (shouldReplayPersistedRoute(route)) {
         route
           .slice(1)
@@ -55,7 +55,7 @@ const App = () => {
         setRoute('/wallet');
       }
     } else {
-      navigate('/welcome');
+      navigate('/welcome', { replace: true });
     }
     setIsLoading(false);
   };

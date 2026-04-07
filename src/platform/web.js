@@ -103,6 +103,14 @@ const webAdapter = {
       return Promise.resolve(true);
     },
 
+    /** After full data wipe: land on /welcome (rewrites to mainPopup.html) without stacked SPA paths */
+    reloadToWalletBootstrap: () => {
+      if (typeof window !== 'undefined') {
+        window.location.replace(`${window.location.origin}/welcome`);
+      }
+      return Promise.resolve(true);
+    },
+
     getCurrentWebpage: async () => ({
       url: window.location.origin,
       favicon: null,

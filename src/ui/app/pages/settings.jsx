@@ -37,6 +37,7 @@ import {
   getNetwork,
   getStorage,
   getWhitelisted,
+  hasStoredAccounts,
   removeWhitelisted,
   eraseLocalWalletData,
   setAccountAvatar,
@@ -143,7 +144,14 @@ const Settings = () => {
           leadingSlot={
             <IconButton
               rounded="md"
-              onClick={() => navigate(-1)}
+              onClick={async () => {
+                const hasWallet = await hasStoredAccounts();
+                if (hasWallet) {
+                  navigate(-1);
+                } else {
+                  navigate('/welcome', { replace: true });
+                }
+              }}
               variant="ghost"
               icon={<ChevronLeftIcon boxSize="6" />}
               aria-label="Go back"
@@ -453,7 +461,7 @@ const GeneralSettings = ({ accountRef }) => {
                     duration: 2000,
                   });
                   window.setTimeout(() => {
-                    window.location.reload();
+                    platform.navigation.reloadToWalletBootstrap();
                   }, 250);
                 } catch (e) {
                   toast({

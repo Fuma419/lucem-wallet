@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { Box, Flex, Image, Text, useToast } from '@chakra-ui/react';
 
 import LogoWhite from '../../../assets/img/bannerBlack.png';
-import backgroundCyanWebp from '../../../assets/img/background-cyan.webp';
+import backgroundPurpleWebp from '../../../assets/img/background-purple.webp';
 import {
   closeCurrentTab,
   getCurrentAccount,
@@ -73,7 +73,7 @@ const App = () => {
       w="full"
       className="lucem-wallet-main-column"
       backgroundColor="#050f18"
-      backgroundImage={`linear-gradient(165deg, rgba(6, 20, 36, 0.9) 0%, rgba(8, 52, 64, 0.82) 45%, rgba(5, 26, 42, 0.92) 100%), url(${backgroundCyanWebp})`}
+      backgroundImage={`linear-gradient(165deg, rgba(32, 5, 55, 0.9) 0%, rgba(20, 8, 32, 0.84) 45%, rgba(8, 6, 16, 0.92) 100%), url(${backgroundPurpleWebp})`}
       backgroundSize="cover, cover"
       backgroundPosition="center, center"
       backgroundRepeat="no-repeat, no-repeat"
@@ -104,7 +104,7 @@ const App = () => {
         pb="calc(1.5rem + env(safe-area-inset-bottom, 0px))"
       >
         <Box
-          className="modal-glow-cyan lucem-modal-card"
+          className="modal-glow-purple lucem-modal-card"
           rounded="2xl"
           px={8}
           py={10}

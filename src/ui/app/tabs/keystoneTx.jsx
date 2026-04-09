@@ -13,7 +13,7 @@ import { Box, Button, Image, Text, useToast } from '@chakra-ui/react';
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
-import backgroundCyanWebp from '../../../assets/img/background-cyan.webp';
+import backgroundPurpleWebp from '../../../assets/img/background-purple.webp';
 import {
   closeCurrentTab,
   getCurrentAccount,
@@ -166,7 +166,7 @@ const App = () => {
       opacity={0.9}
       className="lucem-wallet-main-column"
       backgroundColor="#050f18"
-      backgroundImage={`linear-gradient(165deg, rgba(6, 20, 36, 0.9) 0%, rgba(8, 52, 64, 0.82) 45%, rgba(5, 26, 42, 0.92) 100%), url(${backgroundCyanWebp})`}
+      backgroundImage={`linear-gradient(165deg, rgba(32, 5, 55, 0.9) 0%, rgba(20, 8, 32, 0.84) 45%, rgba(8, 6, 16, 0.92) 100%), url(${backgroundPurpleWebp})`}
       backgroundSize="cover, cover"
       backgroundPosition="center, center"
       backgroundRepeat="no-repeat, no-repeat"
@@ -211,7 +211,7 @@ const App = () => {
         pt={{ base: 2, md: 0 }}
       >
         <Box
-          className="modal-glow-cyan create-wallet-modal lucem-modal-card"
+          className="modal-glow-purple create-wallet-modal lucem-modal-card"
           rounded="2xl"
           shadow="md"
           display="flex"
@@ -272,9 +272,9 @@ const App = () => {
                     options={KEYSTONE_SIGN_ANIMATED_QR_OPTIONS}
                   />
                 </Box>
-                <Button
+            <Button
                   type="button"
-                  className="button import-wallet"
+              className="button new-wallet"
                   onClick={() => setPhase(Phase.scan)}
                 >
                   Scan signature from Keystone

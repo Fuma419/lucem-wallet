@@ -522,7 +522,7 @@ const ConnectHW = ({ onConfirm }) => {
           justifyContent="center"
           gap={2}
           w="160px"
-          h="140px"
+          h="108px"
           px={3}
           py={3}
           rounded="xl"
@@ -569,9 +569,6 @@ const ConnectHW = ({ onConfirm }) => {
           >
             <Image draggable={false} src={KeystoneLogo} maxH="32px" objectFit="contain" />
           </Box>
-          <Text fontSize="xs" fontWeight="bold" color="whiteAlpha.900" letterSpacing="wide">
-            KEYSTONE
-          </Text>
         </Box>
         <Box
           as="button"
@@ -583,7 +580,7 @@ const ConnectHW = ({ onConfirm }) => {
           justifyContent="center"
           gap={2}
           w="160px"
-          h="140px"
+          h="108px"
           px={3}
           py={3}
           rounded="xl"
@@ -629,9 +626,6 @@ const ConnectHW = ({ onConfirm }) => {
               objectFit="contain"
             />
           </Box>
-          <Text fontSize="xs" fontWeight="bold" color="whiteAlpha.900" letterSpacing="wide">
-            LEDGER
-          </Text>
         </Box>
       </Box>
       <Box h={10} />

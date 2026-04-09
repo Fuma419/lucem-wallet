@@ -96,6 +96,7 @@ import { GoHistory } from "react-icons/go";
 import { GiToken, GiUsbKey } from 'react-icons/gi';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
+import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
 import Logo from '../../../assets/img/logo.png';
@@ -132,8 +133,10 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
-  const avatarBg = 'gray.900';
-  const panelBg = 'black';
+  const avatarBg = useColorModeValue('yellow.100', 'gray.900');
+  const panelBg = useColorModeValue('yellow.100', 'black');
+  const receiveButton = useColorModeValue('yellow.100', 'cyan.700');
+  const sendButton = useColorModeValue('yellow.500', 'yellow.600');
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -651,7 +654,8 @@ const Wallet = () => {
             <PopoverTrigger>
               <Button
                 data-testid="wallet-receive"
-                className="button new-wallet"
+                className="button hw-wallet"
+                background={receiveButton}
                 rightIcon={<Icon as={BsArrowDownRight} />}
                 size="sm"
                 rounded="lg"
@@ -744,8 +748,9 @@ const Wallet = () => {
               onClick={() => {
                 navigate('/send');
               }}
-              className="button new-wallet"
+              className="button import-wallet"
               size="sm"
+              background={sendButton}
               rounded="lg"
               rightIcon={<Icon as={BsArrowUpRight} />}
               shadow="md"

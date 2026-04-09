@@ -364,7 +364,7 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
   return (
     <>
       <Modal
-        className="modal-glow-purple"
+        className="modal-glow-yellow-green"
         size="xs"
         isOpen={isOpen}
         onClose={onClose}
@@ -373,16 +373,16 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
       >
         <ModalOverlay
           sx={{
-            bg: 'linear-gradient(rgba(220, 27, 250, 0.07), rgba(220, 27, 250, 0.07)), rgba(5, 15, 24, 0.93)',
+            bg: 'linear-gradient(rgba(206, 250, 0, 0.07), rgba(206, 250, 0, 0.07)), rgba(5, 15, 24, 0.93)',
             backdropFilter: 'blur(10px)',
           }}
         />
         <ModalContent
-          className="modal-glow-purple lucem-hardware-welcome-modal"
+          className="modal-glow-yellow-green lucem-hardware-welcome-modal"
           bg="#050f18"
           color="whiteAlpha.900"
           borderWidth="1px"
-          borderColor="rgba(220, 27, 250, 0.35)"
+          borderColor="rgba(206, 250, 0, 0.35)"
         >
           <ModalHeader fontSize="md" className="walletTitle" color="white">
             Hardware wallet
@@ -398,7 +398,7 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
             <Box h="4" />
             <Box display="flex" alignItems="center" justifyContent="center">
               <Checkbox
-                colorScheme="purple"
+                colorScheme="yellow"
                 onChange={(e) => setAccepted(e.target.checked)}
                 _focus={false}
               />
@@ -408,7 +408,7 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => termsRef.current.openModal()}
                   textDecoration="underline"
-                  color="purple.300"
+                  color="yellow.300"
                 >
                   Terms of use
                 </Link>
@@ -416,7 +416,7 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
                 <Link
                   onClick={() => privacyPolicyRef.current.openModal()}
                   textDecoration="underline"
-                  color="purple.300"
+                  color="yellow.300"
                 >
                   Privacy Policy
                 </Link>
@@ -435,7 +435,7 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
             </Button>
             <Button
               variant="unstyled"
-              className="button new-wallet"
+              className="button hw-wallet"
               display="inline-flex"
               alignItems="center"
               justifyContent="center"

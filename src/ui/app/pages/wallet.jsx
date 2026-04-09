@@ -320,12 +320,51 @@ const Wallet = () => {
             </Box>
           </Flex>
 
+          {/* Lower left delegation — respect safe area on notched devices */}
+          {state.delegation && (
+            <Box
+              data-testid="wallet-delegation"
+              zIndex={2}
+              position="fixed"
+              bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
+              left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              {state.delegation.active ? (
+                <DelegationPopover
+                  account={state.account}
+                  delegation={state.delegation}
+                >
+                  {state.delegation.ticker ||
+                    state.delegation.poolId.slice(-9)}
+                </DelegationPopover>
+              ) : (
+                <Button
+                  onClick={() => {
+                    builderRef.current.initDelegation(
+                      state.account,
+                      state.delegation
+                    );
+                  }}
+                  variant="solid"
+                  size="sm"
+                  rounded="lg"
+                  shadow="md"
+                >
+                  Delegate
+                </Button>
+              )}
+            </Box>
+          )}
+
           {/* Lower right settings — respect safe area on notched devices */}
           <Box
             zIndex={2}
             position="fixed"
-            bottom="calc(env(safe-area-inset-bottom, 0px) + 1rem)"
-            right="calc(env(safe-area-inset-right, 0px) + 1rem)"
+            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
+            right="calc(env(safe-area-inset-right, 0px) + 1.5rem)"
           >
             <Menu
               isOpen={menu}
@@ -705,43 +744,6 @@ const Wallet = () => {
               </PopoverContent>
             </Portal>
           </Popover>
-
-            {state.delegation && (
-              <Box
-                data-testid="wallet-delegation"
-                flex="0 1 auto"
-                minW={0}
-                maxW={{ base: '9rem', sm: '11rem' }}
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-              >
-                {state.delegation.active ? (
-                  <DelegationPopover
-                    account={state.account}
-                    delegation={state.delegation}
-                  >
-                    {state.delegation.ticker ||
-                      state.delegation.poolId.slice(-9)}
-                  </DelegationPopover>
-                ) : (
-                  <Button
-                    onClick={() => {
-                      builderRef.current.initDelegation(
-                        state.account,
-                        state.delegation
-                      );
-                    }}
-                    variant="solid"
-                    size="sm"
-                    rounded="lg"
-                    flexShrink={0}
-                  >
-                    Delegate
-                  </Button>
-                )}
-              </Box>
-            )}
 
             <Button
               data-testid="wallet-send"

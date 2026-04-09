@@ -500,17 +500,6 @@ const ConnectHW = ({ onConfirm }) => {
         Connect Hardware Wallet
       </Text>
       <Box h={6} />
-      <Text
-        width="90%"
-        maxWidth="320px"
-        textAlign="center"
-        mx="auto"
-        fontSize="sm"
-        color="whiteAlpha.800"
-      >
-        Choose <b>Keystone</b> (QR, air-gapped) or <b>Ledger</b> (Bluetooth).
-      </Text>
-      <Box h={8} />
       <Box display="flex" alignItems="stretch" justifyContent="center" gap={4} flexWrap="wrap">
         <Box
           as="button"

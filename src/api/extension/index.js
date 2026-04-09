@@ -2047,7 +2047,7 @@ export const getMilkomedaData = async (ethAddress) => {
 };
 
 
-export const createWallet = async (name, seedPhrase, password) => {
+export const createWallet = async (name, seedPhrase, password, explicitAccounts = [0]) => {
   await Loader.load();
 
   // Check and clear any leftover state from a previous failed attempt
@@ -2080,11 +2080,16 @@ export const createWallet = async (name, seedPhrase, password) => {
     [STORAGE.currency]: 'usd',
   });
 
-  const index = await createAccount(name, password);
+  const index = await createAccount(name, password, explicitAccounts[0]);
+
+  // Create additional explicitly selected accounts
+  for (let i = 1; i < explicitAccounts.length; i++) {
+    await createAccount(`Account ${explicitAccounts[i]}`, password, explicitAccounts[i]);
+  }
 
   // Discover additional used derivation indices via Koios POST /address_txs (legacy GET /addresses/.../txs was removed).
   const MAX_SUB_ACCOUNT_SCAN = 20;
-  let searchIndex = 1;
+  let searchIndex = Math.max(...explicitAccounts) + 1;
   while (searchIndex <= MAX_SUB_ACCOUNT_SCAN) {
     let { paymentKey, stakeKey } = await requestAccountKey(password, searchIndex);
 

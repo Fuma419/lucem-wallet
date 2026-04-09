@@ -502,10 +502,10 @@ const Wallet = () => {
                 <MenuItem
                   icon={<AddIcon />}
                   onClick={() => {
-                    newAccountRef.current.openModal();
+                    navigate('/welcome');
                   }}
                 >
-                  New Account
+                  New Wallet
                 </MenuItem>
                 {state.account &&
                   state.accounts &&

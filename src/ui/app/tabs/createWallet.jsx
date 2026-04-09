@@ -12,6 +12,7 @@ import {
   InputRightElement,
   Image,
   Textarea,
+  Collapse,
 } from '@chakra-ui/react';
 import {
   HashRouter as Router,
@@ -20,7 +21,7 @@ import {
   useNavigate,
   useLocation,
 } from 'react-router-dom';
-import { ChevronRightIcon } from '@chakra-ui/icons';
+import { ChevronRightIcon, ChevronDownIcon } from '@chakra-ui/icons';
 import { createRoot } from 'react-dom/client';
 import Theme from '../../theme';
 import { TAB } from '../../../config/config';
@@ -721,6 +722,8 @@ const MakeAccount = ({ colorTheme }) => {
   const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
   colorTheme = colorTheme || stateColorTheme || 'purple';
   const [isDone, setIsDone] = React.useState(false);
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
+  const [selectedAccounts, setSelectedAccounts] = React.useState([0]);
 
   const readPasswords = React.useCallback(() => {
     const pw = passwordRef.current?.value ?? '';
@@ -748,7 +751,7 @@ const MakeAccount = ({ colorTheme }) => {
 
   const { pw, cf } = readPasswords();
   const canSubmit =
-    Boolean(state.name && pw.length >= 8 && pw === cf);
+    Boolean(state.name && pw.length >= 8 && pw === cf) && selectedAccounts.length >= 1;
 
   const submitCreate = async () => {
     const { pw: p, cf: c } = readPasswords();
@@ -763,7 +766,7 @@ const MakeAccount = ({ colorTheme }) => {
       const { createWallet: createWalletApi } = await import(
         '../../../api/extension'
       );
-      await createWalletApi(state.name, mnemonic, p);
+      await createWalletApi(state.name, mnemonic, p, selectedAccounts);
       setIsDone(true);
     } catch (e) {
       console.error('Wallet creation failed:', e);
@@ -938,6 +941,60 @@ const MakeAccount = ({ colorTheme }) => {
                 Password doesn&apos;t match
               </Text>
             )}
+          </Box>
+
+          <Box>
+            <Button
+              variant="unstyled"
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              w="100%"
+              color="whiteAlpha.900"
+              _hover={{ color: `${colorTheme}.300` }}
+              onClick={() => setAdvancedOpen(!advancedOpen)}
+              fontSize="sm"
+            >
+              Advanced options
+              <ChevronDownIcon
+                transform={advancedOpen ? 'rotate(-180deg)' : undefined}
+                transition="transform 0.2s"
+              />
+            </Button>
+            <Collapse in={advancedOpen}>
+              <Box
+                mt={2}
+                p={4}
+                rounded="lg"
+                bg="whiteAlpha.100"
+                borderWidth="1px"
+                borderColor="whiteAlpha.300"
+              >
+                <Text fontSize="xs" color="whiteAlpha.700" mb={3} textAlign="left">
+                  Select which accounts to create. Account 0 is always created.
+                </Text>
+                <Stack spacing={2} align="start">
+                  {[0, 1, 2, 3, 4, 5].map((idx) => (
+                    <Checkbox
+                      key={idx}
+                      size="sm"
+                      colorScheme={colorTheme}
+                      isChecked={selectedAccounts.includes(idx)}
+                      isDisabled={idx === 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedAccounts((prev) => [...prev, idx].sort());
+                        } else {
+                          setSelectedAccounts((prev) => prev.filter((i) => i !== idx));
+                        }
+                      }}
+                    >
+                      Account {idx}
+                    </Checkbox>
+                  ))}
+                </Stack>
+              </Box>
+            </Collapse>
           </Box>
 
           {error && (

@@ -135,3 +135,17 @@ test('eraseLocalWalletData clears all local data', async () => {
   const store = await getStorage();
   expect(store).toEqual({});
 });
+
+test('createWallet with explicit accounts', async () => {
+  await eraseLocalWalletData();
+  const seed =
+    'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
+  const name = 'Wallet 1';
+  const password = 'password123';
+  await createWallet(name, seed, password, [0, 2, 4]);
+  const store = await getStorage();
+  expect(Object.keys(store.accounts).length).toBe(3);
+  expect(store.accounts[0].name).toBe('Wallet 1');
+  expect(store.accounts[2].name).toBe('Account 2');
+  expect(store.accounts[4].name).toBe('Account 4');
+});

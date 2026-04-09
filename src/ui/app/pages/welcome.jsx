@@ -24,7 +24,8 @@ import BannerDark from '../../../assets/img/bannerBlack.png'; // Directly using 
 import TermsOfUse from '../components/termsOfUse';
 import PrivacyPolicy from '../components/privacyPolicy';
 import { ViewIcon, WarningTwoIcon } from '@chakra-ui/icons';
-import { createTab } from '../../../api/extension';
+import { createTab, hasStoredAccounts } from '../../../api/extension';
+import { useNavigate } from 'react-router-dom';
 import { TAB } from '../../../config/config';
 import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
 
@@ -32,6 +33,12 @@ const Welcome = () => {
   const refWallet = React.useRef();
   const refImport = React.useRef();
   const refHw = React.useRef();
+  const navigate = useNavigate();
+  const [hasWallet, setHasWallet] = React.useState(false);
+
+  React.useEffect(() => {
+    hasStoredAccounts().then(setHasWallet);
+  }, []);
 
   return (
     <>
@@ -74,6 +81,19 @@ const Welcome = () => {
           <Box height="6" />
           <Text className="message">Let&apos;s setup a wallet</Text>
           <Box height="6" />
+          {hasWallet && (
+            <>
+              <Button
+                className="button new-wallet"
+                onClick={() => {
+                  navigate('/wallet');
+                }}
+              >
+                Wallet
+              </Button>
+              <Box height="6" />
+            </>
+          )}
           <Button
             className="button new-wallet"
             onClick={() => {

@@ -358,7 +358,10 @@ const ConnectHW = ({ onConfirm }) => {
         <Button
           type="button"
           variant="unstyled"
-          className="button hw-wallet hw-tab-cta"
+          className="button hw-wallet"
+          w="100%"
+          maxW="300px"
+          minH="44px"
           mt={4}
           alignSelf="center"
           display="inline-flex"
@@ -370,7 +373,7 @@ const ConnectHW = ({ onConfirm }) => {
             setKeystoneStep('scanReply');
           }}
         >
-          Continue to scan Keystone QR
+          Scan Keystone QR
         </Button>
         <Button
           mt={2}
@@ -518,8 +521,8 @@ const ConnectHW = ({ onConfirm }) => {
           alignItems="center"
           justifyContent="center"
           gap={2}
-          minW="132px"
-          minH="108px"
+          w="160px"
+          h="140px"
           px={3}
           py={3}
           rounded="xl"
@@ -557,6 +560,11 @@ const ConnectHW = ({ onConfirm }) => {
             rounded="lg"
             px={3}
             py={2}
+            minH="44px"
+            minW="120px"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
             boxShadow="0 2px 12px rgba(0,0,0,0.35)"
           >
             <Image draggable={false} src={KeystoneLogo} maxH="32px" objectFit="contain" />
@@ -574,8 +582,8 @@ const ConnectHW = ({ onConfirm }) => {
           alignItems="center"
           justifyContent="center"
           gap={2}
-          minW="132px"
-          minH="108px"
+          w="160px"
+          h="140px"
           px={3}
           py={3}
           rounded="xl"
@@ -794,7 +802,10 @@ const ConnectHW = ({ onConfirm }) => {
       <Button
         type="button"
         variant="unstyled"
-        className="button hw-wallet hw-tab-cta"
+        className="button hw-wallet"
+        w="100%"
+        maxW="300px"
+        minH="44px"
         isDisabled={isLoading || !selected}
         isLoading={isLoading}
         mt={8}
@@ -1125,7 +1136,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
         <Button
           type="button"
           variant="unstyled"
-          className="button hw-wallet hw-tab-cta"
+          className="button hw-wallet"
+        w="100%"
+        maxW="300px"
+        minH="44px"
           display="inline-flex"
           alignItems="center"
           justifyContent="center"
@@ -1254,7 +1268,10 @@ const SuccessAndClose = () => {
       <Button
         type="button"
         variant="unstyled"
-        className="button hw-wallet hw-tab-cta"
+        className="button hw-wallet"
+        w="100%"
+        maxW="300px"
+        minH="44px"
         mt={8}
         display="inline-flex"
         alignItems="center"

@@ -423,13 +423,13 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
               </Text>
             </Box>
           </ModalBody>
-          <ModalFooter>
+          <ModalFooter justifyContent="center" gap={4} pb={4}>
             <Button
-              mr={3}
               variant="ghost"
               color="whiteAlpha.800"
               _hover={{ bg: 'whiteAlpha.100' }}
               onClick={onClose}
+              minW="120px"
             >
               Close
             </Button>
@@ -441,6 +441,8 @@ const HardwareWalletModal = React.forwardRef((props, ref) => {
               justifyContent="center"
               isDisabled={!accepted}
               onClick={() => createTab(TAB.hw)}
+              minW="160px"
+              px={8}
             >
               Continue
             </Button>

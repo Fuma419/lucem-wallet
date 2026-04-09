@@ -200,7 +200,7 @@ const App = () => {
           width="100%"
           maxW="560px"
           mx="auto"
-          flex="1 1 auto"
+          flex="0 1 auto"
           minH={0}
           overflow="hidden"
           background="rgba(0, 0, 0, .85)"

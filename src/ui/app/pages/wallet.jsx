@@ -159,7 +159,7 @@ const Wallet = () => {
   const panelBg = useColorModeValue('yellow.100', 'black');
   const receiveButton = useColorModeValue('yellow.100', 'cyan.700');
   const sendButton = useColorModeValue('yellow.500', 'yellow.600');
-  const networkButtonBg = useColorModeValue('gray.200', 'gray.700');
+  const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -193,6 +193,7 @@ const Wallet = () => {
     }, 10000);
 
   const getData = async (forceUpdate) => {
+    setIsFetching(true);
     const currentIndex = await getCurrentAccountIndex();
     const accounts = await getAccounts();
     const { avatar, name, index, paymentAddr } = accounts[currentIndex];
@@ -262,6 +263,7 @@ const Wallet = () => {
       network,
       delegation,
     }));
+    setIsFetching(false);
   };
 
   React.useEffect(() => {
@@ -272,6 +274,7 @@ const Wallet = () => {
       txInterval = checkTransactions();
       accountChangeHandler = onAccountChange(() => getData());
     }).catch((e) => {
+      setIsFetching(false);
       console.error('Failed to load account data:', e);
       if (!isMounted.current) return;
       getAccounts().then((accounts) => {
@@ -395,8 +398,7 @@ const Wallet = () => {
           >
             <Button
               w="120px"
-              className="button"
-              background={networkButtonBg}
+              className={`button network-${settings.network.id} ${isFetching ? 'is-loading' : ''}`}
               size="sm"
               rounded="lg"
               shadow="md"

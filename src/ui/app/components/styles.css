@@ -291,3 +291,32 @@ body {
   box-shadow: 0px 0px 25px rgba(0, 245, 255, 1);
   transform: translateY(-2px);
 } */
+
+/* Disable landscape mode app-wide for mobile devices */
+@media screen and (max-device-width: 900px) and (orientation: landscape) {
+  body::before {
+    content: "Please rotate your device to portrait mode.";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000000;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow', sans-serif;
+    font-size: 1.25rem;
+    text-align: center;
+    z-index: 999999;
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+  
+  /* Hide the main UI so users cannot interact with it in landscape */
+  body > div {
+    display: none !important;
+  }
+}
+

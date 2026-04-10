@@ -85,11 +85,11 @@ import AssetsViewer from '../components/assetsViewer';
 import HistoryViewer from '../components/historyViewer';
 import Copy from '../components/copy';
 import About from '../components/about';
-import { useStoreState } from 'easy-peasy';
+import { useStoreState, useStoreActions } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
 import { currencyToSymbol, fromAssetUnit } from '../../../api/util';
 import TransactionBuilder from '../components/transactionBuilder';
-import { NETWORK_ID, TAB, STORAGE } from '../../../config/config';
+import { NETWORK_ID, TAB, STORAGE, NODE } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
@@ -357,6 +357,96 @@ const Wallet = () => {
               )}
             </Box>
           )}
+
+          {/* Network Switcher — center aligned */}
+          <Box
+            zIndex={2}
+            position="fixed"
+            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
+            left="50%"
+            transform="translateX(-50%)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Button
+              w="120px"
+              className={`button network-${settings.network.id}`}
+              size="sm"
+              rounded="lg"
+              shadow="md"
+              flexShrink={0}
+              onClick={toggleNetwork}
+            >
+              {settings.network.id === NETWORK_ID.mainnet
+                ? 'Mainnet'
+                : settings.network.id === NETWORK_ID.preprod
+                ? 'Preprod'
+                : settings.network.id === NETWORK_ID.preview
+                ? 'Preview'
+                : 'Testnet'}
+            </Button>
+          </Box>
+
+          {/* Network Switcher — center aligned */}
+          <Box
+            zIndex={2}
+            position="fixed"
+            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
+            left="50%"
+            transform="translateX(-50%)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Button
+              w="120px"
+              className={`button network-${settings.network.id}`}
+              size="sm"
+              rounded="lg"
+              shadow="md"
+              flexShrink={0}
+              onClick={toggleNetwork}
+            >
+              {settings.network.id === NETWORK_ID.mainnet
+                ? 'Mainnet'
+                : settings.network.id === NETWORK_ID.preprod
+                ? 'Preprod'
+                : settings.network.id === NETWORK_ID.preview
+                ? 'Preview'
+                : 'Testnet'}
+            </Button>
+          </Box>
+
+          {/* Network Switcher — center aligned */}
+          <Box
+            zIndex={2}
+            position="fixed"
+            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
+            left="50%"
+            transform="translateX(-50%)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Button
+              w="120px"
+              className={`button network-${settings.network.id}`}
+              size="sm"
+              rounded="lg"
+              shadow="md"
+              flexShrink={0}
+              onClick={toggleNetwork}
+            >
+              {settings.network.id === NETWORK_ID.mainnet
+                ? 'Mainnet'
+                : settings.network.id === NETWORK_ID.preprod
+                ? 'Preprod'
+                : settings.network.id === NETWORK_ID.preview
+                ? 'Preview'
+                : 'Testnet'}
+            </Button>
+          </Box>
 
           {/* Lower right settings — respect safe area on notched devices */}
           <Box

@@ -174,34 +174,6 @@ const StoreInit = ({ children }) => {
           {children}
           {info && info.length ? <UpgradeModal info={info} ref={refB} /> : ''}
           {/* Settings Overlay */}
-          {settings.network.id !== NETWORK_ID.mainnet && (
-            <Box
-              position="fixed"              // 'fixed' positions it relative to the viewport
-              bottom="3"                    // Position it 3 units from the bottom of the viewport
-              left="3"                      // Keep it 3 units from the left
-              display="flex"
-              alignItems="center"
-              justifyContent="center"        // Changed from "bottom" to "center" for proper alignment
-              fontWeight="semibold"
-              color="purple.500"
-            >
-
-              <InfoOutlineIcon />
-              <Box width="1" />
-              <Text>
-                {(() => {
-                  switch (settings.network.id) {
-                    case NETWORK_ID.testnet:
-                      return 'Testnet';
-                    case NETWORK_ID.preview:
-                      return 'Preview';
-                    case NETWORK_ID.preprod:
-                      return 'Preprod';
-                  }
-                })()}
-              </Text>
-            </Box>
-          )}
         </>
       )}
     </>

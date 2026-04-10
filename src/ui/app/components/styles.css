@@ -350,3 +350,64 @@ body {
   }
 }
 
+/* Network Switcher Buttons */
+.button.network-mainnet {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 255, 255, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(255, 255, 255, 1);
+  box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.75);
+  color: white;
+}
+
+.button.network-mainnet:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 255, 255, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(255, 255, 255, 0.9);
+}
+
+.button.network-preprod {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(220, 27, 250, 1);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+  color: white;
+}
+
+.button.network-preprod:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9);
+}
+
+.button.network-preview {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(0, 122, 255, 1);
+  box-shadow: 0px 0px 15px rgba(0, 122, 255, 0.75);
+  color: white;
+}
+
+.button.network-preview:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9);
+}
+
+.button.network-testnet {
+  font-family: 'Barlow', sans-serif;
+  opacity: .85;
+  letter-spacing: 2px;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(100, 100, 100, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(100, 100, 100, 1);
+  box-shadow: 0px 0px 15px rgba(100, 100, 100, 0.75);
+  color: white;
+}
+
+.button.network-testnet:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(100, 100, 100, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(100, 100, 100, 0.9);
+}
+

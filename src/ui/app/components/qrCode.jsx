@@ -6,8 +6,8 @@ import { getNetwork } from '../../../api/extension';  // Assuming you have this 
 
 // Initialize QRCodeStyling
 const qrCode = new QRCodeStyling({
-  width: 240,
-  height: 240,
+  width: 336,
+  height: 336,
   image: Ada,
   dotsOptions: {
     color: '#ffffff', // This will be updated dynamically
@@ -83,12 +83,18 @@ const QrCode = ({ value }) => {
   const qrCodeUrl = `${networkUrl}/address/${value}`; // Create the dynamic URL
 
   return (
-    <Link href={qrCodeUrl} isExternal target="_blank" rel="noopener noreferrer">
+    <Link href={qrCodeUrl} isExternal target="_blank" rel="noopener noreferrer" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
       <Box
-      background={theme.colors.cyan[600]}
-      className='modal-glow-cyan'
-      borderRadius="lg"  // Adds rounded corners to the outer container
+        background={theme.colors.cyan[600]}
+        className='modal-glow-cyan'
+        borderRadius="lg"  // Adds rounded corners to the outer container
         ref={ref}
+        width="100%"
+        maxWidth="3.5in"
+        sx={{
+          '& canvas': { width: '100% !important', height: 'auto !important', display: 'block' },
+          '& svg': { width: '100% !important', height: 'auto !important', display: 'block' }
+        }}
       />
     </Link>
   );

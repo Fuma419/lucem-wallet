@@ -682,7 +682,7 @@ const Wallet = () => {
             justifyContent="center"
             alignItems="center"
             alignContent="center"
-            gap={{ base: 2, sm: 3, md: 4 }}
+            gap={{ base: 8, sm: 12, md: 16 }}
             w="full"
             maxW="100%"
             px={{ base: 2, md: 3 }}
@@ -707,10 +707,11 @@ const Wallet = () => {
               </Button>
             </PopoverTrigger>
             <Portal>
-              <PopoverContent width="70">
+              <PopoverContent width="calc(3.5in + 2rem)" maxWidth="95vw">
                 <PopoverArrow />
                 <PopoverBody
                   mt="5"
+                  p="4"
                   alignItems="center"
                   justifyContent="center"
                   display="flex"

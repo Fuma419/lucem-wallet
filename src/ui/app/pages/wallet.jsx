@@ -709,7 +709,7 @@ const Wallet = () => {
               </Button>
               </PopoverTrigger>
             <Portal>
-              <PopoverContent width="calc(3.5in + 2rem)" maxWidth="95vw">
+              <PopoverContent width="calc(100vw - 2rem)" maxWidth="calc(3.5in + 2rem)">
                 <PopoverArrow />
                 <PopoverBody
                   mt="5"
@@ -721,7 +721,7 @@ const Wallet = () => {
                   textAlign="center"
                 >
                   <>
-                    <Box>
+                    <Box width="100%" display="flex" justifyContent="center">
                       <QrCode value={info.paymentAddr} />
                     </Box>
                     <Box height="4" />

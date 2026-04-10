@@ -38,6 +38,21 @@ const Welcome = () => {
 
   React.useEffect(() => {
     hasStoredAccounts().then(setHasWallet);
+
+    // Dynamically set the theme-color for the dynamic island / notch to match the welcome screen's background (#121212)
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    const originalColor = metaThemeColor ? metaThemeColor.getAttribute('content') : null;
+    
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', '#121212');
+    }
+
+    return () => {
+      // Revert to original theme color when leaving the welcome screen
+      if (metaThemeColor && originalColor) {
+        metaThemeColor.setAttribute('content', originalColor);
+      }
+    };
   }, []);
 
   return (

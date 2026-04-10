@@ -375,18 +375,18 @@ const Wallet = () => {
                 as={Button}
                 onClick={() => setMenu(true)}
                 className="button settings"
-                size="sm"
                 background="purple.500"
-                rounded="lg"
+                rounded="full"
                 shadow="md"
-                w="35px"
-                h="35px"
+                boxSize={{ base: '12', sm: '13', md: '14' }}
+                minW={{ base: '12', sm: '13', md: '14' }}
+                minH={{ base: '12', sm: '13', md: '14' }}
                 p={0}
                 display="flex"
                 alignItems="center"
                 justifyContent="center"
               >
-                <SettingsIcon boxSize={4}/>
+                <SettingsIcon boxSize={6} />
               </MenuButton>
               <MenuList fontSize="md">
                 <MenuGroup title="Accounts">
@@ -689,8 +689,9 @@ const Wallet = () => {
             py={{ base: 3, md: 4 }}
             flexShrink={0}
           >
-          <Popover>
-            <PopoverTrigger>
+          <Box flex={1} display="flex" justifyContent="flex-end">
+            <Popover>
+              <PopoverTrigger>
               <Button
                 data-testid="wallet-receive"
                 className="button hw-wallet"
@@ -745,7 +746,9 @@ const Wallet = () => {
               </PopoverContent>
             </Portal>
           </Popover>
+          </Box>
 
+          <Box flex={1} display="flex" justifyContent="flex-start">
             <Button
               data-testid="wallet-send"
               onClick={() => {
@@ -761,6 +764,7 @@ const Wallet = () => {
             >
               Send
             </Button>
+          </Box>
           </Flex>
         </Box>
         <Box height="8" />

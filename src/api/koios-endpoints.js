@@ -175,6 +175,20 @@ export const KOIOS_ENDPOINTS = {
 
   // ===== POOL ENDPOINTS =====
   POOLS: {
+    // GET /pool_list - Get list of pools
+    LIST: {
+      method: 'GET',
+      endpoint: '/pool_list',
+      queryParams: ['pool_status', 'limit', 'offset'],
+      example: '/pool_list?pool_status=registered'
+    },
+    // POST /pool_info - Get pool info
+    INFO: {
+      method: 'POST',
+      endpoint: '/pool_info',
+      body: { _pool_bech32_ids: [] },
+      example: '/pool_info'
+    },
     // GET /pools/{pool_id}/metadata - Get pool metadata
     METADATA: {
       method: 'GET',
@@ -371,6 +385,16 @@ export const KOIOS_REQUESTS = {
     body: { _stake_addresses: [...stakeAddresses], _extended: extended }
   }),
   
+  // Get pool list
+  getPoolList: () => buildKoiosRequest(KOIOS_ENDPOINTS.POOLS.LIST, {
+    queryParams: { pool_status: 'registered' }
+  }),
+
+  // Get pool info
+  getPoolInfo: (poolIds) => buildKoiosRequest(KOIOS_ENDPOINTS.POOLS.INFO, {
+    body: { _pool_bech32_ids: poolIds }
+  }),
+
   // Get pool metadata
   getPoolMetadata: (poolId) => buildKoiosRequest(KOIOS_ENDPOINTS.POOLS.METADATA, {
     pathParams: { pool_id: poolId }

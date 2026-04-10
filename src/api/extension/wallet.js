@@ -163,58 +163,105 @@ export const delegationTx = async (
   protocolParameters,
   poolKeyHash
 ) => {
-  try {
-    await Loader.load();
+  await Loader.load();
 
-    const txBuilder = Loader.Cardano.TransactionBuilder.new(
-      createCslTransactionBuilderConfig(Loader.Cardano, protocolParameters)
-    );
+  let isTxBuilt = false;
+  let selectionRetries = RETRIES;
 
-    // Add stake registration if not active
-    if (!delegation.active) {
+  while (!isTxBuilt && selectionRetries > 0) {
+    try {
+      const txBuilderConfig = Loader.Cardano.TransactionBuilderConfigBuilder.new()
+        .coins_per_utxo_byte(
+          BigInt(protocolParameters.coinsPerUtxoWord)
+        )
+        .fee_algo(
+          Loader.Cardano.LinearFee.new(
+            BigInt(protocolParameters.linearFee.minFeeA),
+            BigInt(protocolParameters.linearFee.minFeeB),
+            BigInt(protocolParameters.minFeeRefScriptCostPerByte)
+          )
+        )
+        .key_deposit(BigInt(protocolParameters.keyDeposit))
+        .pool_deposit(
+          BigInt(protocolParameters.poolDeposit)
+        )
+        .max_tx_size(protocolParameters.maxTxSize)
+        .max_value_size(protocolParameters.maxValSize)
+        .ex_unit_prices(Loader.Cardano.ExUnitPrices.new(Loader.Cardano.Rational.new(0n, 1n), Loader.Cardano.Rational.new(0n, 1n)))
+        .collateral_percentage(protocolParameters.collateralPercentage)
+        .max_collateral_inputs(protocolParameters.maxCollateralInputs)
+        .build();
+
+      const txBuilder = Loader.Cardano.TransactionBuilder.new(txBuilderConfig);
+
+      // Add stake registration if not active
+      if (!delegation.active) {
+        txBuilder.add_cert(
+          Loader.Cardano.SingleCertificateBuilder.new(
+            Loader.Cardano.Certificate.new_stake_registration(
+              Loader.Cardano.StakeRegistration.new(
+                Loader.Cardano.Credential.from_keyhash(
+                  Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
+                )
+              )
+            )
+          ).payment_key()
+        );
+      }
+
+      // Add delegation certificate
       const stakeCredential = Loader.Cardano.Credential.from_keyhash(
         Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
       );
-      txBuilder.add_certificate(
-        Loader.Cardano.Address.from_bech32(account.paymentAddr),
-        Loader.Cardano.Certificate.new_stake_registration(
-          Loader.Cardano.StakeRegistration.new(stakeCredential)
+      const poolId = Loader.Cardano.PoolId.from_bytes(Buffer.from(poolKeyHash, 'hex'));
+      
+      txBuilder.add_cert(
+        Loader.Cardano.SingleCertificateBuilder.new(
+          Loader.Cardano.Certificate.new_stake_delegation(
+            Loader.Cardano.StakeDelegation.new(stakeCredential, poolId)
+          )
+        ).payment_key()
+      );
+
+      txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
+
+      const utxos = await getUtxos();
+      const changeAddress = Loader.Cardano.Address.from_bech32(account.paymentAddr);
+
+      // We need to add one output for input selection to work.
+      txBuilder.add_output(
+        Loader.Cardano.TransactionOutput.new(
+          changeAddress,
+          Loader.Cardano.Value.new(
+            Loader.Cardano.BigNum.from_str(String(protocolParameters.minUtxo))
+          )
         )
       );
+
+      utxos.forEach((utxo) => {
+        const input = Loader.Cardano.SingleInputBuilder
+          .from_transaction_unspent_output(utxo)
+          .payment_key();
+        txBuilder.add_utxo(input);
+      });
+
+      txBuilder.select_utxos(Loader.Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset);
+      txBuilder.add_change_if_needed(changeAddress, false);
+
+      return toCanonicalTransactionCip21(
+        Loader.Cardano,
+        txBuilder
+          .build(Loader.Cardano.ChangeSelectionAlgo.Default, changeAddress)
+          .build_unchecked()
+      );
+    } catch (e) {
+      console.error('Error building delegation transaction:', e);
+      if (selectionRetries > 0) {
+        --selectionRetries;
+        continue;
+      }
+      throw e;
     }
-
-    // Add delegation certificate
-    const stakeCredential = Loader.Cardano.Credential.from_keyhash(
-      Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
-    );
-    const poolId = Loader.Cardano.PoolId.from_bytes(Buffer.from(poolKeyHash, 'hex'));
-    
-    txBuilder.add_certificate(
-      Loader.Cardano.Address.from_bech32(account.paymentAddr),
-      Loader.Cardano.Certificate.new_stake_delegation(
-        Loader.Cardano.StakeDelegation.new(stakeCredential, poolId)
-      )
-    );
-
-    const invalidHereafter = Loader.Cardano.BigNum.from_str(
-      String(ttlSlotBound(protocolParameters))
-    );
-    txBuilder.set_ttl_bignum(invalidHereafter);
-
-    // Set change address
-    txBuilder.add_change_if_needed(Loader.Cardano.Address.from_bech32(account.paymentAddr));
-
-    // Build the transaction
-    const txBody = txBuilder.build();
-    const tx = Loader.Cardano.Transaction.new(
-      txBody,
-      Loader.Cardano.TransactionWitnessSet.new()
-    );
-
-    return toCanonicalTransactionCip21(Loader.Cardano, tx);
-  } catch (e) {
-    console.error('Error building delegation transaction:', e);
-    throw e;
   }
 };
 

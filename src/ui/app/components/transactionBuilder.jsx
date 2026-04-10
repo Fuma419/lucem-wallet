@@ -9,6 +9,7 @@ import {
   undelegateTx,
 } from '../../../api/extension/wallet';
 import ConfirmModal from './confirmModal';
+import PoolSearch from './poolSearch';
 import UnitDisplay from './unitDisplay';
 import {
   Box,
@@ -149,19 +150,21 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
   const collateralRef = React.useRef();
   const accountIndex = React.useRef();
 
-  const prepareDelegationTx = async () => {
-    if (data.pool.id === '') return;
+  const prepareDelegationTx = async (overrideId = null) => {
+    const targetId = overrideId || data.pool.id;
+    if (!targetId) return;
 
     setData((d) => ({
       ...d,
       pool: {
         ...d.pool,
+        id: targetId,
         state: PoolStates.LOADING,
       },
     }));
 
     try {
-      const metadata = await getPoolMetadata(data.pool.id).catch(() => {
+      const metadata = await getPoolMetadata(targetId).catch(() => {
         throw new Error('Stake pool not found');
       });
 
@@ -413,105 +416,25 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             flexDirection="column"
 
           >
-            <Text fontSize="sm">
-              Support Lucem wallet's continued development by delegating with HODLR and enjoy the lowest fees on Cardano [Press 'Verify' twice]. Otherwise paste the ID of your prefered Pool{' '}
+            <Text fontSize="sm" textAlign="center" mb={2}>
+              Search for a stake pool by ticker or pool ID to delegate your funds.
             </Text>
-            <Box h="6" />
-            <Tooltip
-              label={poolTooltipMessage(data.pool)}
-              placement="top"
-              isOpen={data.pool.showTooltip}
-            >
-              <InputGroup size="md">
-                <Input
-                  variant="filled"
-                  h={8}
-                  pr={poolHasTicker(data.pool) ? '2rem' : '4.5rem'}
-                  pl={'0.5rem'}
-                  type="text"
-                  fontSize="14px"
-                  color={
-                    data.pool.state === PoolStates.DONE ? '#A3AEBE' : undefined
-                  }
-                  value={data.pool.id}
-                  onChange={(e) => {
-                    setData((s) => ({
-                      ...s,
-                      pool: {
-                        ...s.pool,
-                        id: e.target.value,
-                        state: PoolStates.EDITING,
-                      },
-                    }));
-                  }}
-                  placeholder={networkUrl}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (data.pool.id === '') {
-                        setData((s) => ({
-                          ...s,
-                          pool: {
-                            ...s.pool,
-                            id: networkUrl,
-                          },
-                        }));
-                      }
-                      prepareDelegationTx();
-                    }
-                  }}
-                  onMouseEnter={() => {
-                    setData((s) => ({
-                      ...s,
-                      pool: {
-                        ...s.pool,
-                        showTooltip: s.pool.state === PoolStates.DONE,
-                      },
-                    }));
-                  }}
-                  onMouseLeave={() => {
-                    setData((s) => ({
-                      ...s,
-                      pool: {
-                        ...s.pool,
-                        showTooltip: false,
-                      },
-                    }));
-                  }}
-                />
-                <InputRightElement {...poolRightElementStyle(data.pool)}>
-                  {data.pool.state === PoolStates.EDITING && (
-                    <Button
-                      h={6}
-                      size="sm"
-                      color="black"
-                      background="yellow.700"
-                      disabled={data.pool.isLoading}
-                      isLoading={data.pool.isLoading}
-                      onClick={() => {
-                        if (data.pool.id === '') {
-                          setData((s) => ({
-                            ...s,
-                            pool: {
-                              ...s.pool,
-                              id: networkUrl,
-                            },
-                          }));
-                        }
-                        prepareDelegationTx();
-                      }}
-                    >
-                      Verify
-                    </Button>
-                  )}
-                  {data.pool.state === PoolStates.DONE && (
-                    <CheckIcon color="yellow.700" />
-                  )}
-                  {data.pool.state === PoolStates.ERROR && (
-                    <WarningIcon color="red.300" />
-                  )}
-                </InputRightElement>
-              </InputGroup>
-            </Tooltip>
+            <PoolSearch
+              selectedPoolId={data.pool.id}
+              onSelect={(poolId) => {
+                if (poolId) {
+                  setData((s) => ({
+                    ...s,
+                    pool: {
+                      ...s.pool,
+                      id: poolId,
+                      state: PoolStates.EDITING,
+                    },
+                  }));
+                  prepareDelegationTx(poolId);
+                }
+              }}
+            />
             {error ? (
               <Box textAlign="center" mb="4" color="red.300" mt="4">
                 {error}

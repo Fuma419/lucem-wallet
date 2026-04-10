@@ -366,8 +366,6 @@ body {
 }
 
 .button.network-mainnet.is-loading {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 255, 255, .5), rgba(0, 0, 0, .5));
-  border: thin solid rgba(255, 255, 255, 1);
   box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.75);
 }
 
@@ -386,8 +384,6 @@ body {
 }
 
 .button.network-preprod.is-loading {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, .5), rgba(0, 0, 0, .5));
-  border: thin solid rgba(220, 27, 250, 1);
   box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
 }
 
@@ -406,8 +402,6 @@ body {
 }
 
 .button.network-preview.is-loading {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, .5), rgba(0, 0, 0, .5));
-  border: thin solid rgba(0, 122, 255, 1);
   box-shadow: 0px 0px 15px rgba(0, 122, 255, 0.75);
 }
 
@@ -426,8 +420,6 @@ body {
 }
 
 .button.network-testnet.is-loading {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(100, 100, 100, .5), rgba(0, 0, 0, .5));
-  border: thin solid rgba(100, 100, 100, 1);
   box-shadow: 0px 0px 15px rgba(100, 100, 100, 0.75);
 }
 

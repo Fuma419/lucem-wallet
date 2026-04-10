@@ -82,6 +82,25 @@ const Welcome = () => {
             alt=""
           />
         </Box>
+        {hasWallet && (
+          <Flex
+            flex="1"
+            minH={0}
+            direction="column"
+            align="center"
+            justify="center"
+            px={4}
+          >
+            <Button
+              className="button enter-wallet"
+              onClick={() => {
+                navigate('/wallet');
+              }}
+            >
+              Enter
+            </Button>
+          </Flex>
+        )}
         <Flex
           flex="1"
           minH={0}
@@ -92,19 +111,6 @@ const Welcome = () => {
           py={6}
           overflowY="auto"
         >
-          {hasWallet && (
-            <>
-              <Button
-                className="button enter-wallet"
-                onClick={() => {
-                  navigate('/wallet');
-                }}
-              >
-                Enter
-              </Button>
-              <Box height="6" />
-            </>
-          )}
           <Text className="message">Wallet Setup</Text>
           <Box height="6" />
           <Button

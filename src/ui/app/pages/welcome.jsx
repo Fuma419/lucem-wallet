@@ -92,8 +92,6 @@ const Welcome = () => {
           py={6}
           overflowY="auto"
         >
-          <Text className="message">Let&apos;s setup a wallet</Text>
-          <Box height="6" />
           {hasWallet && (
             <>
               <Button
@@ -107,6 +105,8 @@ const Welcome = () => {
               <Box height="6" />
             </>
           )}
+          <Text className="message">Wallet Setup</Text>
+          <Box height="6" />
           <Button
             className="button new-wallet"
             onClick={() => {

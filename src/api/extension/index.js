@@ -180,25 +180,16 @@ export const searchPools = async (query) => {
   if (!query) return [];
   const searchLower = query.toLowerCase();
   
-  // First, fetch the full list of pools to find matching tickers/IDs
-  const listRequest = KOIOS_REQUESTS.getPoolList();
-  const poolList = await koiosRequest(listRequest.endpoint);
+  // Use Koios PostgREST filtering for server-side search
+  const listEndpoint = `/pool_list?pool_status=eq.registered&or=(ticker.ilike.*${searchLower}*,pool_id_bech32.ilike.*${searchLower}*)&limit=20`;
+  const poolList = await koiosRequest(listEndpoint);
   
-  if (!poolList || poolList.error || !Array.isArray(poolList)) {
+  if (!poolList || poolList.error || !Array.isArray(poolList) || poolList.length === 0) {
     return [];
   }
   
-  // Find up to 20 matches based on ticker or pool ID
-  const matches = poolList.filter(pool => {
-    if (pool.pool_id_bech32 && pool.pool_id_bech32.toLowerCase().includes(searchLower)) return true;
-    if (pool.ticker && pool.ticker.toLowerCase().includes(searchLower)) return true;
-    return false;
-  }).slice(0, 20);
-  
-  if (matches.length === 0) return [];
-  
   // Get detailed info for the matches
-  const poolIds = matches.map(m => m.pool_id_bech32);
+  const poolIds = poolList.map(m => m.pool_id_bech32);
   const infoRequest = KOIOS_REQUESTS.getPoolInfo(poolIds);
   const detailedPools = await koiosRequest(infoRequest.endpoint, {}, infoRequest.body);
   

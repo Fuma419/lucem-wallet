@@ -133,6 +133,24 @@ const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
+  const setSettings = useStoreActions((actions) => actions.settings.setSettings);
+
+  const toggleNetwork = () => {
+    let nextId = NETWORK_ID.mainnet;
+    if (settings.network.id === NETWORK_ID.mainnet) nextId = NETWORK_ID.preprod;
+    else if (settings.network.id === NETWORK_ID.preprod) nextId = NETWORK_ID.preview;
+    else if (settings.network.id === NETWORK_ID.preview) nextId = NETWORK_ID.mainnet;
+    else nextId = NETWORK_ID.mainnet;
+    
+    setSettings({
+      ...settings,
+      network: {
+        ...settings.network,
+        id: nextId,
+        node: NODE[nextId],
+      },
+    });
+  };
   const avatarBg = useColorModeValue('yellow.100', 'gray.900');
   const panelBg = useColorModeValue('yellow.100', 'black');
   const receiveButton = useColorModeValue('yellow.100', 'cyan.700');

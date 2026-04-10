@@ -93,7 +93,7 @@ import { NETWORK_ID, TAB, STORAGE } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
-import { GiToken, GiUsbKey } from 'react-icons/gi';
+import { GiToken } from 'react-icons/gi';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorModeValue } from '@chakra-ui/react';
@@ -523,14 +523,6 @@ const Wallet = () => {
                       Delete Account
                     </MenuItem>
                   )}
-                <MenuItem
-                  icon={<Icon as={GiUsbKey} w={3} h={3} />}
-                  onClick={() => {
-                    createTab(TAB.hw);
-                  }}
-                >
-                  Connect Hardware Wallet
-                </MenuItem>
                 <MenuDivider />
                 <MenuItem
                   icon={<Icon as={FaRegFileCode} w={3} h={3} />}

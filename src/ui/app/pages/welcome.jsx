@@ -84,12 +84,12 @@ const Welcome = () => {
           {hasWallet && (
             <>
               <Button
-                className="button new-wallet"
+                className="button enter-wallet"
                 onClick={() => {
                   navigate('/wallet');
                 }}
               >
-                Wallet
+                Enter
               </Button>
               <Box height="6" />
             </>

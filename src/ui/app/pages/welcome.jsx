@@ -77,8 +77,6 @@ const Welcome = () => {
           py={6}
           overflowY="auto"
         >
-          <Text className="welcome">Greetings</Text>
-          <Box height="6" />
           <Text className="message">Let&apos;s setup a wallet</Text>
           <Box height="6" />
           {hasWallet && (

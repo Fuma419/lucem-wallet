@@ -849,7 +849,7 @@ const Wallet = () => {
   );
 };
 
-const NewAccountModal = React.forwardRef((props, ref) => {
+const DeleteAccountModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = React.useState(false);
   const cancelRef = React.useRef();

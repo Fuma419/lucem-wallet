@@ -16,3 +16,7 @@ global.chrome.storage.local.clear = (callback) => {
   global.mockStore = {};
   if (typeof callback === 'function') callback();
 };
+
+const { TextEncoder, TextDecoder } = require('util');
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;

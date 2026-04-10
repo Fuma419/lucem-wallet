@@ -369,11 +369,11 @@ const Wallet = () => {
             <Menu
               isOpen={menu}
               autoSelect={false}
+              onOpen={() => setMenu(true)}
               onClose={() => setMenu(false)}
             >
               <MenuButton
                 as={Button}
-                onClick={() => setMenu(true)}
                 className="button settings"
                 background="purple.500"
                 rounded="full"
@@ -693,6 +693,7 @@ const Wallet = () => {
             <Popover>
               <PopoverTrigger>
               <Button
+                w="120px"
                 data-testid="wallet-receive"
                 className="button hw-wallet"
                 background={receiveButton}
@@ -706,7 +707,7 @@ const Wallet = () => {
               >
                 Receive
               </Button>
-            </PopoverTrigger>
+              </PopoverTrigger>
             <Portal>
               <PopoverContent width="calc(3.5in + 2rem)" maxWidth="95vw">
                 <PopoverArrow />
@@ -750,6 +751,7 @@ const Wallet = () => {
 
           <Box flex={1} display="flex" justifyContent="flex-start">
             <Button
+              w="120px"
               data-testid="wallet-send"
               onClick={() => {
                 navigate('/send');

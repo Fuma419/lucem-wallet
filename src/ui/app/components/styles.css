@@ -74,9 +74,19 @@ body {
   padding: 1rem 1.125rem 1.125rem;
   border-radius: 12px;
   background: rgba(8, 8, 8, 0.96);
+}
+
+.lucem-create-account-panel.lucem-create-account-panel-purple {
   border: 1px solid rgba(220, 27, 250, 0.35);
   box-shadow:
     0 0 28px rgba(220, 27, 250, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.lucem-create-account-panel.lucem-create-account-panel-cyan {
+  border: 1px solid rgba(0, 245, 255, 0.35);
+  box-shadow:
+    0 0 28px rgba(0, 245, 255, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 

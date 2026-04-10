@@ -794,7 +794,7 @@ const MakeAccount = ({ colorTheme }) => {
     <SuccessAndClose flow={flow} />
   ) : (
     <Box textAlign="center" display="flex" alignItems="center" justifyContent="center" width="100%">
-      <Box className="lucem-create-account-panel">
+      <Box className={`lucem-create-account-panel lucem-create-account-panel-${colorTheme}`}>
         <Text className="walletTitle" fontWeight="bold" fontSize="md" letterSpacing="wide">
           Create Account
         </Text>

@@ -150,11 +150,16 @@ const Wallet = () => {
         node: NODE[nextId],
       },
     });
+
+    setTimeout(() => {
+      getData();
+    }, 100);
   };
   const avatarBg = useColorModeValue('yellow.100', 'gray.900');
   const panelBg = useColorModeValue('yellow.100', 'black');
   const receiveButton = useColorModeValue('yellow.100', 'cyan.700');
   const sendButton = useColorModeValue('yellow.500', 'yellow.600');
+  const networkButtonBg = useColorModeValue('gray.200', 'gray.700');
   const [state, setState] = React.useState({
     account: null,
     accounts: null,
@@ -377,35 +382,6 @@ const Wallet = () => {
           )}
 
           {/* Network Switcher — center aligned */}
-          <Box
-            zIndex={2}
-            position="fixed"
-            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-            left="50%"
-            transform="translateX(-50%)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Button
-              w="120px"
-              className={`button network-${settings.network.id}`}
-              size="sm"
-              rounded="lg"
-              shadow="md"
-              flexShrink={0}
-              onClick={toggleNetwork}
-            >
-              {settings.network.id === NETWORK_ID.mainnet
-                ? 'Mainnet'
-                : settings.network.id === NETWORK_ID.preprod
-                ? 'Preprod'
-                : settings.network.id === NETWORK_ID.preview
-                ? 'Preview'
-                : 'Testnet'}
-            </Button>
-          </Box>
-
           {/* Network Switcher — center aligned */}
           <Box
             zIndex={2}
@@ -419,37 +395,8 @@ const Wallet = () => {
           >
             <Button
               w="120px"
-              className={`button network-${settings.network.id}`}
-              size="sm"
-              rounded="lg"
-              shadow="md"
-              flexShrink={0}
-              onClick={toggleNetwork}
-            >
-              {settings.network.id === NETWORK_ID.mainnet
-                ? 'Mainnet'
-                : settings.network.id === NETWORK_ID.preprod
-                ? 'Preprod'
-                : settings.network.id === NETWORK_ID.preview
-                ? 'Preview'
-                : 'Testnet'}
-            </Button>
-          </Box>
-
-          {/* Network Switcher — center aligned */}
-          <Box
-            zIndex={2}
-            position="fixed"
-            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-            left="50%"
-            transform="translateX(-50%)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Button
-              w="120px"
-              className={`button network-${settings.network.id}`}
+              className="button"
+              background={networkButtonBg}
               size="sm"
               rounded="lg"
               shadow="md"

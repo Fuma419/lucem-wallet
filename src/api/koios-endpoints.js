@@ -188,12 +188,6 @@ export const KOIOS_ENDPOINTS = {
       endpoint: '/pool_info',
       body: { _pool_bech32_ids: [] },
       example: '/pool_info'
-    },
-    // GET /pools/{pool_id}/metadata - Get pool metadata
-    METADATA: {
-      method: 'GET',
-      endpoint: '/pools/{pool_id}/metadata',
-      example: '/pools/pool155efqn9xpcf73pphkk88cmlkdwx4ulkg606tne970qswczg3asc/metadata'
     }
   },
 
@@ -393,11 +387,6 @@ export const KOIOS_REQUESTS = {
   // Get pool info
   getPoolInfo: (poolIds) => buildKoiosRequest(KOIOS_ENDPOINTS.POOLS.INFO, {
     body: { _pool_bech32_ids: poolIds }
-  }),
-
-  // Get pool metadata
-  getPoolMetadata: (poolId) => buildKoiosRequest(KOIOS_ENDPOINTS.POOLS.METADATA, {
-    pathParams: { pool_id: poolId }
   }),
   
   // Get asset info

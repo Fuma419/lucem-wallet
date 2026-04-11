@@ -187,12 +187,6 @@ describe('Koios Endpoints Library', () => {
       expect(endpoint.method).toBe('GET');
       expect(endpoint.endpoint).toBe('/assets/{asset}');
     });
-
-    test('POOLS.METADATA should be configured correctly', () => {
-      const endpoint = KOIOS_ENDPOINTS.POOLS.METADATA;
-      expect(endpoint.method).toBe('GET');
-      expect(endpoint.endpoint).toBe('/pools/{pool_id}/metadata');
-    });
   });
 
   describe('NETWORK and EPOCH endpoints', () => {
@@ -442,12 +436,6 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/account_utxos');
     expect(request.body).toEqual({ _stake_addresses: ['s1', 's2'], _extended: true });
-  });
-
-  test('getPoolMetadata should build correct request', () => {
-    const request = KOIOS_REQUESTS.getPoolMetadata('test-pool-id');
-    expect(request.method).toBe('GET');
-    expect(request.endpoint).toBe('/pools/test-pool-id/metadata');
   });
 
   test('getAssetInfo should build correct request', () => {

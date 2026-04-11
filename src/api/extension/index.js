@@ -141,10 +141,12 @@ export const getDelegation = async () => {
   
   if (!stake || stake.error || !stake[0] || !stake[0].pool_id) return {};
   
-  const poolRequest = KOIOS_REQUESTS.getPoolMetadata(stake[0].pool_id);
-  const delegation = await koiosRequest(poolRequest.endpoint);
+  const poolRequest = KOIOS_REQUESTS.getPoolInfo([stake[0].pool_id]);
+  const poolResponse = await koiosRequest(poolRequest.endpoint, {}, poolRequest.body);
   
-  if (!delegation || delegation.error) return {};
+  if (!poolResponse || poolResponse.error || !Array.isArray(poolResponse) || poolResponse.length === 0) return {};
+  const delegation = poolResponse[0].meta_json || {};
+  
   return {
     active: stake[0].active,
     rewards: stake[0].withdrawable_amount,
@@ -161,18 +163,21 @@ export const getPoolMetadata = async (poolId) => {
     throw new Error('poolId argument not provided');
   }
 
-  const request = KOIOS_REQUESTS.getPoolMetadata(poolId);
-  const delegation = await koiosRequest(request.endpoint);
+  const request = KOIOS_REQUESTS.getPoolInfo([poolId]);
+  const response = await koiosRequest(request.endpoint, {}, request.body);
 
-  if (delegation.error) {
-    throw new Error(delegation.message);
+  if (!response || response.error || !Array.isArray(response) || response.length === 0) {
+    throw new Error(response?.message || 'Stake pool not found');
   }
 
+  const poolData = response[0];
+  const metaJson = poolData.meta_json || {};
+
   return {
-    ticker: delegation.ticker,
-    name: delegation.name,
+    ticker: metaJson.ticker,
+    name: metaJson.name,
     id: poolId,
-    hex: delegation.hex,
+    hex: poolData.pool_id_hex,
   };
 };
 

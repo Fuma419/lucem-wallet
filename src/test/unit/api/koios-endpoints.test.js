@@ -25,6 +25,7 @@ describe('Koios Endpoints Library', () => {
       expect(KOIOS_ENDPOINTS).toHaveProperty('POOLS');
       expect(KOIOS_ENDPOINTS).toHaveProperty('NETWORK');
       expect(KOIOS_ENDPOINTS).toHaveProperty('EPOCHS');
+      expect(KOIOS_ENDPOINTS).toHaveProperty('GOVERNANCE');
     });
 
     test('each endpoint should have required properties', () => {
@@ -555,5 +556,16 @@ describe('Integration tests', () => {
     
     expect(request.method).toBe('GET');
     expect(request.endpoint).toBe('/account_txs?_stake_address=stake1u8fvlns8kzw5rl08uns7g35atul8k43unpcyd8we8juwuhcc27rzl&_after_block_height=0');
+  });
+
+  test('should build realistic governance request', () => {
+    const request = KOIOS_REQUESTS.getProposalList();
+    expect(request.method).toBe('GET');
+    expect(request.endpoint).toBe('/proposal_list');
+
+    const drepRequest = KOIOS_REQUESTS.getDrepInfo(['drep1...']);
+    expect(drepRequest.method).toBe('POST');
+    expect(drepRequest.endpoint).toBe('/drep_info');
+    expect(drepRequest.body).toEqual({ _drep_ids: ['drep1...'] });
   });
 }); 

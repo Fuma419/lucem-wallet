@@ -19,6 +19,7 @@ import Wallet from './app/pages/wallet';
 import { hasStoredAccounts } from '../api/extension';
 import Settings from './app/pages/settings';
 import Send from './app/pages/send';
+import Governance from './app/pages/governance';
 import { useStoreActions, useStoreState } from 'easy-peasy';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
 import PreventHistoryBack from './app/components/PreventHistoryBack';
@@ -142,6 +143,13 @@ const App = () => {
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/settings/*" element={<Settings />} />
         <Route path="/send" element={<Send />} />
+        <Route path="/governance" element={
+          <WalletEntryGate>
+            <TermsAndPrivacyProvider>
+              <Governance />
+            </TermsAndPrivacyProvider>
+          </WalletEntryGate>
+        } />
         <Route
           path="*"
           element={

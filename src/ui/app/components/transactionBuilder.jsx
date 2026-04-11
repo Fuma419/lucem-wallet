@@ -164,7 +164,8 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     }));
 
     try {
-      const metadata = await getPoolMetadata(targetId).catch(() => {
+      const metadata = await getPoolMetadata(targetId).catch((err) => {
+        console.error('getPoolMetadata failed:', err);
         throw new Error('Stake pool not found');
       });
 

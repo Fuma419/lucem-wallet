@@ -232,6 +232,33 @@ export const KOIOS_ENDPOINTS = {
       queryParams: ['select', 'epoch_no', 'epoch_slot', 'min_fee_a', 'min_fee_b', 'max_block_size', 'max_tx_size', 'max_bh_size', 'key_deposit', 'pool_deposit', 'max_epoch', 'optimal_pool_count', 'influence', 'monetary_expand_rate', 'treasury_growth_rate', 'decentralisation', 'entropy', 'protocol_major', 'protocol_minor', 'min_utxo', 'min_pool_cost', 'nonce', 'cost_model', 'price_mem', 'price_step', 'max_tx_ex_mem', 'max_tx_ex_steps', 'max_block_ex_mem', 'max_block_ex_steps', 'max_val_size', 'collateral_percent', 'max_collateral_inputs', 'coins_per_utxo_word', 'coins_per_utxo_size'],
       example: '/epoch_params/250'
     }
+  },
+
+  // ===== GOVERNANCE ENDPOINTS =====
+  GOVERNANCE: {
+    DREP_LIST: {
+      method: 'GET',
+      endpoint: '/drep_list'
+    },
+    DREP_INFO: {
+      method: 'POST',
+      endpoint: '/drep_info',
+      body: { _drep_ids: [] }
+    },
+    DREP_METADATA: {
+      method: 'POST',
+      endpoint: '/drep_metadata',
+      body: { _drep_ids: [] }
+    },
+    PROPOSAL_LIST: {
+      method: 'GET',
+      endpoint: '/proposal_list'
+    },
+    PROPOSAL_VOTES: {
+      method: 'POST',
+      endpoint: '/proposal_votes',
+      body: { _proposal_ids: [] }
+    }
   }
 };
 
@@ -407,6 +434,23 @@ export const KOIOS_REQUESTS = {
   getNetworkTotals: (epochNo) => buildKoiosRequest(KOIOS_ENDPOINTS.NETWORK.TOTALS, {
     queryParams: { _epoch_no: epochNo }
   }),
+
+  // ===== GOVERNANCE REQUESTS =====
+  getDrepList: () => buildKoiosRequest(KOIOS_ENDPOINTS.GOVERNANCE.DREP_LIST),
+  
+  getDrepInfo: (drepIds) => buildKoiosRequest(KOIOS_ENDPOINTS.GOVERNANCE.DREP_INFO, {
+    body: { _drep_ids: drepIds }
+  }),
+  
+  getDrepMetadata: (drepIds) => buildKoiosRequest(KOIOS_ENDPOINTS.GOVERNANCE.DREP_METADATA, {
+    body: { _drep_ids: drepIds }
+  }),
+  
+  getProposalList: () => buildKoiosRequest(KOIOS_ENDPOINTS.GOVERNANCE.PROPOSAL_LIST),
+  
+  getProposalVotes: (proposalIds) => buildKoiosRequest(KOIOS_ENDPOINTS.GOVERNANCE.PROPOSAL_VOTES, {
+    body: { _proposal_ids: proposalIds }
+  })
 };
 
 /**

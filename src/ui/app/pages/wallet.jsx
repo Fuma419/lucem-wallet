@@ -354,9 +354,23 @@ const Wallet = () => {
               bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
               left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"
               display="flex"
+              flexDirection="column"
               alignItems="center"
               justifyContent="center"
+              gap={2}
             >
+              <Button
+                onClick={() => navigate('/governance')}
+                variant="solid"
+                size="sm"
+                rounded="lg"
+                shadow="md"
+                bg="purple.500"
+                color="white"
+                _hover={{ bg: "purple.600" }}
+              >
+                Vote
+              </Button>
               {state.delegation.active ? (
                 <DelegationPopover
                   account={state.account}

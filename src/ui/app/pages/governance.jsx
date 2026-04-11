@@ -13,16 +13,13 @@ import {
   Spinner,
 } from '@chakra-ui/react';
 import { ChevronLeftIcon } from '@chakra-ui/icons';
-import { useStoreState } from 'easy-peasy';
 
 import {
   getCurrentAccount,
   getDelegation,
-  koiosRequestEnhanced,
-  getNetwork,
 } from '../../../api/extension';
-import { initTx, voteDelegationTx, signAndSubmit } from '../../../api/extension/wallet';
-import { ERROR } from '../../../config/config';
+import { koiosRequestEnhanced } from '../../../api/util';
+import { initTx, voteDelegationTx } from '../../../api/extension/wallet';
 
 const Governance = () => {
   const navigate = useNavigate();
@@ -31,11 +28,6 @@ const Governance = () => {
   const [loading, setLoading] = useState(false);
   const [proposals, setProposals] = useState([]);
   const [fetchingProposals, setFetchingProposals] = useState(true);
-
-  const { account, delegation } = useStoreState((state) => ({
-    account: state.globalModel.accountStore.account,
-    delegation: state.globalModel.accountStore.delegation,
-  }));
 
   useEffect(() => {
     fetchProposals();
@@ -62,12 +54,8 @@ const Governance = () => {
       const currentDelegation = await getDelegation(currentAccount.rewardAddr);
       const params = await initTx();
       
-      const tx = await voteDelegationTx(currentAccount, currentDelegation, params, type, hash);
-      
-      // In a real app, this would trigger the password prompt or HW signing via a modal
-      // For this demo, we'll assume a soft-wallet flow where password could be prompted, 
-      // but without the full ConfirmModal it will just show success.
-      // We'll throw ERROR.submit to simulate missing password step to avoid actually sending unsigned txs
+      await voteDelegationTx(currentAccount, currentDelegation, params, type, hash);
+
       toast({
         title: 'Transaction Built',
         description: 'Vote Delegation Transaction built successfully! (Signing step requires ConfirmModal)',
@@ -149,7 +137,9 @@ const Governance = () => {
                 {proposals.map((prop, idx) => (
                   <Box key={idx} p={3} borderWidth={1} rounded="md">
                     <Text fontWeight="bold">Proposal {prop.proposal_id.slice(0, 8)}...</Text>
-                    <Text fontSize="sm" color="gray.600">Type: {prop.type}</Text>
+                    <Text fontSize="sm" color="gray.600">
+                      Type: {prop.proposal_type || prop.type || '—'}
+                    </Text>
                     <Button size="sm" mt={2} colorScheme="teal" isDisabled>Vote (Coming Soon)</Button>
                   </Box>
                 ))}

@@ -1955,13 +1955,25 @@ export const isHW = (accountIndex) =>
     accountIndex.startsWith(HW.trezor) ||
     accountIndex.startsWith(HW.ledger));
 
+const isIosBrowserWithoutWebBluetooth = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPod|iPad/i.test(ua)) return true;
+  if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) {
+    return true;
+  }
+  return false;
+};
+
 export const initHW = async ({ device, id, bleDevice }) => {
   if (device == HW.ledger) {
     const bluetooth =
       typeof navigator !== 'undefined' ? navigator.bluetooth : undefined;
     if (!bluetooth) {
       throw new Error(
-        'Web Bluetooth is not available. Use Chrome or Edge over HTTPS (or localhost), enable Bluetooth, and use a Bluetooth-capable Ledger (e.g. Nano X, Flex, Stax). Extension pages may not support Web Bluetooth — try the Lucem web app if connection fails.'
+        isIosBrowserWithoutWebBluetooth()
+          ? 'Ledger Bluetooth is not supported on iPhone or iPad — iOS browsers do not expose Web Bluetooth. Use Lucem on a desktop or laptop with Chrome or Edge and a Bluetooth Ledger, or use Keystone with QR on this device.'
+          : 'Web Bluetooth is not available. Use Chrome or Edge over HTTPS (or localhost), enable Bluetooth, and use a Bluetooth-capable Ledger (e.g. Nano X, Flex, Stax). Extension pages may not support Web Bluetooth — try the Lucem web app if connection fails.'
       );
     }
     let transport;

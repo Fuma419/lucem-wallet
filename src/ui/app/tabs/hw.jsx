@@ -67,6 +67,38 @@ const ledgerBleRequestOptions = () => {
   };
 };
 
+/**
+ * iPhone/iPad browsers (Safari and Chrome-on-iOS, which uses WebKit) do not expose
+ * Web Bluetooth to websites, so Ledger BLE pairing from Lucem cannot work on iOS.
+ */
+const isIosLikeWithoutWebBluetooth = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPod/i.test(ua)) return true;
+  if (/iPad/i.test(ua)) return true;
+  if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) {
+    return true;
+  }
+  return false;
+};
+
+const ledgerBluetoothHelpText = () => {
+  if (isIosLikeWithoutWebBluetooth()) {
+    return 'Ledger over Bluetooth is not supported on iPhone or iPad: no iOS browser exposes Web Bluetooth to websites (this also applies to Chrome on iPhone). Use Lucem in Chrome or Edge on a Mac or Windows PC with a Bluetooth Ledger (Nano X, Flex, Stax), or connect via USB on desktop. On this device, use Keystone with QR codes instead.';
+  }
+  if (typeof navigator !== 'undefined' && navigator.bluetooth) {
+    return 'Use a Bluetooth-capable Ledger (Nano X, Flex, Stax, etc.). Unlock it, enable Bluetooth on the device, open the Cardano app, then tap Continue and pick your Ledger in the browser dialog.';
+  }
+  return 'Web Bluetooth is not available here. Use Chrome or Edge on desktop or the Lucem web app over HTTPS, with Bluetooth enabled. Note: some extension pages cannot use Web Bluetooth — open the hardware wallet flow in a normal browser tab if pairing fails.';
+};
+
+const ledgerBluetoothUnavailableMessage = () => {
+  if (isIosLikeWithoutWebBluetooth()) {
+    return 'Ledger Bluetooth is not available on iOS. Use Lucem on a desktop or laptop (Chrome or Edge) with a Bluetooth Ledger, or choose Keystone for QR-based setup on this phone.';
+  }
+  return 'Web Bluetooth is not supported in this browser or context. Use Chrome or Edge on a computer with Bluetooth enabled, avoid in-app browsers, or open Lucem in a normal tab.';
+};
+
 /** Matches welcome “Hardware wallet” `.button.hw-wallet` (lime #cefa00). */
 const HW_LIME = '#cefa00';
 const HW_ACCENT = {
@@ -768,9 +800,7 @@ const ConnectHW = ({ onConfirm }) => {
           fontSize="sm"
           color="whiteAlpha.800"
         >
-          {typeof navigator !== 'undefined' && navigator.bluetooth
-            ? 'Use a Bluetooth-capable Ledger (Nano X, Flex, Stax, etc.). Unlock it, enable Bluetooth on the device, open the Cardano app, then tap Continue and pick your Ledger in the browser dialog.'
-            : 'Web Bluetooth is not available here. Use Chrome or Edge on desktop or the Lucem web app over HTTPS, with Bluetooth enabled. Note: some extension pages cannot use Web Bluetooth — open the hardware wallet flow in a normal browser tab if pairing fails.'}
+          {ledgerBluetoothHelpText()}
         </Text>
       )}
       {selected === HW.ledger && (
@@ -789,7 +819,11 @@ const ConnectHW = ({ onConfirm }) => {
         w="100%"
         maxW="300px"
         minH="44px"
-        isDisabled={isLoading || !selected}
+        isDisabled={
+          isLoading ||
+          !selected ||
+          (selected === HW.ledger && isIosLikeWithoutWebBluetooth())
+        }
         isLoading={isLoading}
         mt={8}
         alignSelf="center"
@@ -810,10 +844,8 @@ const ConnectHW = ({ onConfirm }) => {
           }
           setIsLoading(true);
           try {
-            if (!navigator.bluetooth) {
-              setError(
-                'Web Bluetooth is not supported in this browser or context.'
-              );
+            if (isIosLikeWithoutWebBluetooth() || !navigator.bluetooth) {
+              setError(ledgerBluetoothUnavailableMessage());
               setIsLoading(false);
               return;
             }

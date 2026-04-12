@@ -21,13 +21,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          pr_number="$(gh pr list --head "$BRANCH_NAME" --base main --json number --jq '.[0].number')"
+          pr_number="$(gh pr list --repo "$REPO" --head "$BRANCH_NAME" --base main --json number --jq '.[0].number')"
 
           if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
             gh pr create \
+              --repo "$REPO" \
               --base main \
               --head "$BRANCH_NAME" \
               --title "chore(agent): merge ${BRANCH_NAME}" \
@@ -36,7 +38,7 @@ jobs:
               This PR was opened automatically from an agent branch.
               Merge manually after required checks pass."
 
-            pr_number="$(gh pr list --head "$BRANCH_NAME" --base main --json number --jq '.[0].number')"
+            pr_number="$(gh pr list --repo "$REPO" --head "$BRANCH_NAME" --base main --json number --jq '.[0].number')"
           fi
 
           if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then

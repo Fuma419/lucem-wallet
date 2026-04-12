@@ -64,7 +64,7 @@ jobs:
         run: npx playwright install chromium
 
       - name: Headless UI screenshots
-        run: npm run test:screenshots:only
+        run: npx playwright test e2e/screenshots.spec.js --retries=1
 
       - name: Upload UI screenshots
         uses: actions/upload-artifact@v4

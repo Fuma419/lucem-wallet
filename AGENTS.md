@@ -155,16 +155,17 @@ Jest uses `@emurgo/cardano-serialization-lib-nodejs` mapping and `testPathIgnore
 - **During iteration:** validate only changed files (single-file lint, single test suite).
 - **Before commit:** run repo-wide gates once: `NODE_ENV=test npx jest`, `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx`, `npm run build`.
 
-### Agent ship policy (branch-gated, auto-merge)
+### Agent ship policy (PR, auto-merge, fix until merged)
 
-1. Create or continue a branch named **`agent/<topic>`**.
-2. Run **`NODE_ENV=test npx jest`**.
-3. Run **`npm run build:webpack`** (fast local parity for CI heavy stage).
-4. Commit and push to `origin/agent/<topic>` (never directly to `main`).
-5. Workflow **`Agent Auto PR`** opens/updates the PR to `main` and enables auto-merge.
-6. Merge completes automatically only after required checks pass and branch rules allow it.
+Same policy as **`.cursor/rules/git-push-policy.mdc`** (always-on). Summary:
 
-Do not bypass CI by pushing directly to `main`.
+1. **Branch** from up-to-date `main`: prefer **`agent/<topic>`**, or `fix/<issue>` / `feat/<topic>`.
+2. Run **`NODE_ENV=test npx jest`** and **`npm run build:webpack`** (local parity for CI) before push.
+3. **Commit and push** to `origin` on that branch only (never directly to `main`).
+4. **Open a PR** to `main` (`gh pr create` or confirm **`Agent Auto PR`** created/updated it). Do not treat the task as finished until a PR exists.
+5. **Wait for CI** and **auto-merge**; if merge does not complete, fix failing checks, resolve reviews, fix conflicts, and push again until merged.
+
+**Definition of done:** changes are **merged to `main`**, not only pushed to a branch.
 
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.

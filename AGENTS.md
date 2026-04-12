@@ -167,6 +167,10 @@ Same policy as **`.cursor/rules/git-push-policy.mdc`** (always-on). Summary:
 
 **Definition of done:** changes are **merged to `main`**, not only pushed to a branch.
 
+### GitHub token helper
+
+Every agent shell loads `GH_TOKEN` from `~/.config/agent-secrets/github_pat` via the shared loader in `~/.bashrc`/`~/.profile`. Run `set-gh-token` once to store a fine-grained PAT; future shells automatically see it, and you only need to rerun `set-gh-token` when rotating tokens (`clear-gh-token` removes it).
+
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.
 - Never modify generated WASM files in `src/wasm/`.

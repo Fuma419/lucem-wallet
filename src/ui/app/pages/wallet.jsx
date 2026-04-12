@@ -6,12 +6,10 @@ import {
   deleteAccount,
   displayUnit,
   getAccounts,
-  getCurrentAccount,
   getCurrentAccountIndex,
   getDelegation,
   getNativeAccounts,
   getNetwork,
-  getTransactions,
   isHW,
   switchAccount,
   updateAccount,
@@ -21,7 +19,6 @@ import { bigIntLovelace } from '../../../api/lovelace-scalar';
 import {
   BsArrowDownRight,
   BsArrowUpRight,
-  BsClockHistory,
 } from 'react-icons/bs';
 import {
   Button,
@@ -170,6 +167,7 @@ const Wallet = () => {
   const [menu, setMenu] = React.useState(false);
   const aboutRef = React.useRef();
   const deletAccountRef = React.useRef();
+  const refreshTimeoutRef = React.useRef(null);
   const [info, setInfo] = React.useState({
     avatar: '',
     name: '',
@@ -179,20 +177,7 @@ const Wallet = () => {
   const builderRef = React.useRef();
   const fiatPrice = React.useRef(0);
 
-  const checkTransactions = () =>
-    setInterval(async () => {
-      const currentAccount = await getCurrentAccount();
-      const transactions = await getTransactions();
-      const network = await getNetwork();
-      if (
-        transactions.length > 0 &&
-        currentAccount[network.id].lastUpdate !== transactions[0].txHash
-      ) {
-        await getData();
-      }
-    }, 10000);
-
-  const getData = async (forceUpdate) => {
+  const getData = async ({ forceUpdate = false, skipUpdate = false } = {}) => {
     setIsFetching(true);
     const currentIndex = await getCurrentAccountIndex();
     const accounts = await getAccounts();
@@ -204,7 +189,9 @@ const Wallet = () => {
       account: null,
       delegation: null,
     }));
-    await updateAccount(forceUpdate);
+    if (!skipUpdate) {
+      await updateAccount(forceUpdate);
+    }
     const allAccounts = await getAccounts();
     const currentAccount = allAccounts[currentIndex];
     const totalAda = bigIntLovelace(currentAccount.lovelace);
@@ -266,13 +253,20 @@ const Wallet = () => {
     setIsFetching(false);
   };
 
+  const schedulePostTxRefresh = (delayMs = 30000) => {
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    refreshTimeoutRef.current = setTimeout(() => {
+      getData({ forceUpdate: true });
+    }, delayMs);
+  };
+
   React.useEffect(() => {
     let accountChangeHandler;
-    let txInterval;
     getData().then(() => {
       if (!isMounted.current) return;
-      txInterval = checkTransactions();
-      accountChangeHandler = onAccountChange(() => getData());
+      accountChangeHandler = onAccountChange(() => getData({ skipUpdate: true }));
     }).catch((e) => {
       setIsFetching(false);
       console.error('Failed to load account data:', e);
@@ -290,7 +284,9 @@ const Wallet = () => {
       }).catch(() => {});
     });
     return () => {
-      clearInterval(txInterval);
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       accountChangeHandler && accountChangeHandler.remove();
     };
   }, []);
@@ -879,7 +875,7 @@ const Wallet = () => {
                     ? undefined
                     : (state.account.nft ?? [])
                 }
-                onUpdateAvatar={() => getData()}
+                onUpdateAvatar={() => getData({ skipUpdate: true })}
               />
             </TabPanel>
             <TabPanel>
@@ -905,7 +901,7 @@ const Wallet = () => {
       />
       <TransactionBuilder
         ref={builderRef}
-        onConfirm={(forceUpdate) => getData(forceUpdate)}
+        onConfirm={() => schedulePostTxRefresh()}
       />
       <About ref={aboutRef} />
     </>

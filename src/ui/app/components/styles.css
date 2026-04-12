@@ -359,10 +359,13 @@ body {
   border: thin solid rgba(255, 255, 255, 0.5);
   color: white;
   transition: all 0.3s ease;
+  box-shadow: none;
 }
 
 .button.network-mainnet:hover {
   background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+  transform: none;
 }
 
 .button.network-preprod {
@@ -373,10 +376,13 @@ body {
   border: thin solid rgba(220, 27, 250, 0.5);
   color: white;
   transition: all 0.3s ease;
+  box-shadow: none;
 }
 
 .button.network-preprod:hover {
   background: rgba(220, 27, 250, 0.2);
+  box-shadow: none;
+  transform: none;
 }
 
 .button.network-preview {
@@ -387,10 +393,13 @@ body {
   border: thin solid rgba(0, 122, 255, 0.5);
   color: white;
   transition: all 0.3s ease;
+  box-shadow: none;
 }
 
 .button.network-preview:hover {
   background: rgba(0, 122, 255, 0.2);
+  box-shadow: none;
+  transform: none;
 }
 
 .button.network-testnet {
@@ -401,9 +410,12 @@ body {
   border: thin solid rgba(100, 100, 100, 0.5);
   color: white;
   transition: all 0.3s ease;
+  box-shadow: none;
 }
 
 .button.network-testnet:hover {
   background: rgba(100, 100, 100, 0.2);
+  box-shadow: none;
+  transform: none;
 }
 

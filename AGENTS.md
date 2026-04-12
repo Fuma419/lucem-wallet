@@ -111,7 +111,7 @@ GitHub Actions (`ci.yml`) runs on PRs/pushes to `main` with two gates:
 - **Quick checks (GitHub-hosted):** `npm ci` → `npm run test`
 - **Heavy checks (self-hosted Linux):** `npm ci` → `npm run build:webpack` → Playwright screenshots → upload `build` and `e2e-screenshots` artifacts
 
-Use this with `agent-auto-pr.yml` so agent branches auto-open PRs. Merge manually only after required checks pass. Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
+Use this with `agent-auto-pr.yml` so agent branches auto-open PRs and enable auto-merge after checks. Owner-authored PRs can auto-merge; external/public PRs still follow required review checks. Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
 
 ### Testing the extension
 
@@ -161,8 +161,8 @@ Jest uses `@emurgo/cardano-serialization-lib-nodejs` mapping and `testPathIgnore
 2. Run **`NODE_ENV=test npx jest`**.
 3. Run **`npm run build:webpack`** (fast local parity for CI heavy stage).
 4. Commit and push to `origin/agent/<topic>` (never directly to `main`).
-5. Workflow **`Agent Open PR`** opens/updates the PR to `main`.
-6. Merge manually after required checks pass.
+5. Workflow **`Agent Auto PR`** opens/updates the PR to `main` and enables auto-merge.
+6. Merge completes automatically only after required checks pass and branch rules allow it.
 
 Do not bypass CI by pushing directly to `main`.
 

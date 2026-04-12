@@ -1,4 +1,4 @@
-name: Agent Open PR
+name: Agent Auto PR
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - "agent/**"
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 concurrency:
@@ -17,7 +17,7 @@ jobs:
   open-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Create or update PR
+      - name: Create or update PR and enable auto-merge
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH_NAME: ${{ github.ref_name }}
@@ -36,7 +36,7 @@ jobs:
               --body "Automated PR from \`${BRANCH_NAME}\`.
 
               This PR was opened automatically from an agent branch.
-              Merge manually after required checks pass."
+              Auto-merge is enabled and will complete after required checks pass."
 
             pr_number="$(gh pr list --repo "$REPO" --head "$BRANCH_NAME" --base main --json number --jq '.[0].number')"
           fi
@@ -45,3 +45,6 @@ jobs:
             echo "Failed to create or find PR for branch: $BRANCH_NAME"
             exit 1
           fi
+
+          # Auto-merge waits for required checks and branch protection rules.
+          gh pr merge --repo "$REPO" "$pr_number" --auto --squash --delete-branch || true

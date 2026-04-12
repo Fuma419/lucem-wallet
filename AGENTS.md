@@ -107,7 +107,11 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 
 ### CI
 
-GitHub Actions (`ci.yml`) runs on PRs/pushes to `main`: `npm ci` → generate secrets → `npm run build` (Jest unit + webpack) → Playwright screenshots → upload `build` and `e2e-screenshots` artifacts. (Optional Preprod Koios send: see commented step in `ci.yml`.) Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
+GitHub Actions (`ci.yml`) runs on PRs/pushes to `main` with two gates:
+- **Quick checks (GitHub-hosted):** `npm ci` → `npm run test`
+- **Heavy checks (self-hosted Linux):** `npm ci` → `npm run build:webpack` → Playwright screenshots → upload `build` and `e2e-screenshots` artifacts
+
+Use this with `agent-auto-pr.yml` so agent branches auto-open PRs and enable auto-merge after checks. Owner-authored PRs can auto-merge; external/public PRs still follow required review checks. Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
 
 ### Testing the extension
 
@@ -151,15 +155,17 @@ Jest uses `@emurgo/cardano-serialization-lib-nodejs` mapping and `testPathIgnore
 - **During iteration:** validate only changed files (single-file lint, single test suite).
 - **Before commit:** run repo-wide gates once: `NODE_ENV=test npx jest`, `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx`, `npm run build`.
 
-### Agent ship policy (commit + push — default, not optional)
+### Agent ship policy (PR, auto-merge, fix until merged)
 
-Agents must **not** wait for the user to say “commit” or “push.” If you **changed the repo**, treat **commit + push** as part of the same workflow as tests and build.
+Same policy as **`.cursor/rules/git-push-policy.mdc`** (always-on). Summary:
 
-1. Run **`NODE_ENV=test npx jest`** (full unit suite).
-2. Run **`npm run build`** (matches CI: Jest + webpack).
-3. If both succeed, **`git commit`** with a clear message, then **`git push`** to **`origin`** — **`main`** when you are on `main`; otherwise push the current branch (and note if a PR is required).
+1. **Branch** from up-to-date `main`: prefer **`agent/<topic>`**, or `fix/<issue>` / `feat/<topic>`.
+2. Run **`NODE_ENV=test npx jest`** and **`npm run build:webpack`** (local parity for CI) before push.
+3. **Commit and push** to `origin` on that branch only (never directly to `main`).
+4. **Open a PR** to `main` (`gh pr create` or confirm **`Agent Auto PR`** created/updated it). Do not treat the task as finished until a PR exists.
+5. **Wait for CI** and **auto-merge**; if merge does not complete, fix failing checks, resolve reviews, fix conflicts, and push again until merged.
 
-Do not stop with a green build and uncommitted changes. If push is impossible (auth, read-only), say so **after** the gate. Skip commit/push only when the user explicitly asked not to, or the turn involved **no** file edits (Q&A only).
+**Definition of done:** changes are **merged to `main`**, not only pushed to a branch.
 
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.

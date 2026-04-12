@@ -1,0 +1,17 @@
+---
+description: Always use a PR, wait for auto-merge, fix until merged
+alwaysApply: true
+---
+
+# Git / PR policy
+
+Do **not** push work directly to `main`.
+
+1. **Branch** from up-to-date `main`: prefer `agent/<topic>` (matches **Agent Auto PR**), or `fix/<issue>` / `feat/<topic>`.
+2. **Commit and push** to `origin` on that branch only.
+3. **Open a PR** to `main` (e.g. `gh pr create`). Do not treat the task as finished until a PR exists. For `agent/*` branches, confirm the **Agent Auto PR** workflow created or updated the PR.
+4. **Wait for CI**: required checks from **CI** must complete; monitor the PR **Checks** tab or `gh pr checks` when your token can read them.
+5. **Auto-merge**: enable or keep **auto-merge** when the repo allows it; wait for the PR to land on `main`.
+6. **If auto-merge does not complete**: push fixes for failing checks, resolve review comments, rebase or merge `main` to fix conflicts, then re-verify until merged (or the user stops the task).
+
+**Definition of done:** changes are **merged to `main`**, not only pushed to a branch.

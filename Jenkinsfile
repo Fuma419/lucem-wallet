@@ -71,6 +71,7 @@ pipeline {
           set -e
           export PATH="${NODE20_DIR}/bin:${PATH}"
           npm run test:e2e:install --if-present
+          npm run build:webpack --if-present
           npm run test:e2e --if-present
         '''
       }

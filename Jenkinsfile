@@ -45,12 +45,33 @@ pipeline {
       }
     }
 
-    stage('Test') {
+    stage('Unit tests') {
       steps {
         sh '''
           set -e
           export PATH="${NODE20_DIR}/bin:${PATH}"
           npm test
+        '''
+      }
+    }
+
+    stage('Integration tests') {
+      steps {
+        sh '''
+          set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
+          npm run test:integration --if-present
+        '''
+      }
+    }
+
+    stage('Functional tests') {
+      steps {
+        sh '''
+          set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
+          npm run test:e2e:install --if-present
+          npm run test:e2e --if-present
         '''
       }
     }

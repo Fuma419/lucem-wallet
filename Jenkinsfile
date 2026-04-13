@@ -13,13 +13,31 @@ pipeline {
 
   environment {
     CI = 'true'
+    NODE20_DIR = "${HOME}/.local/node-v20.20.2-linux-x64"
   }
 
   stages {
+    stage('Bootstrap Node 20') {
+      steps {
+        sh '''
+          set -e
+          if [ ! -x "${NODE20_DIR}/bin/node" ]; then
+            mkdir -p "${HOME}/.local"
+            curl -fsSL "https://nodejs.org/dist/v20.20.2/node-v20.20.2-linux-x64.tar.xz" -o /tmp/node-v20.20.2-linux-x64.tar.xz
+            tar -xJf /tmp/node-v20.20.2-linux-x64.tar.xz -C "${HOME}/.local"
+          fi
+          export PATH="${NODE20_DIR}/bin:${PATH}"
+          node -v
+          npm -v
+        '''
+      }
+    }
+
     stage('Install') {
       steps {
         sh '''
           set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
           node -v
           npm -v
           npm ci
@@ -31,6 +49,7 @@ pipeline {
       steps {
         sh '''
           set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
           npm test
         '''
       }
@@ -40,6 +59,7 @@ pipeline {
       steps {
         sh '''
           set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
           npm run build
         '''
       }

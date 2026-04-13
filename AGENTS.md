@@ -111,7 +111,19 @@ GitHub Actions (`ci.yml`) runs on PRs/pushes to `main` with two gates:
 - **Quick checks (GitHub-hosted):** `npm ci` → `npm run test`
 - **Heavy checks (self-hosted Linux):** `npm ci` → `npm run build:webpack` → Playwright screenshots → upload `build` and `e2e-screenshots` artifacts
 
-Use this with `agent-auto-pr.yml` so agent branches auto-open PRs and enable auto-merge after checks. Owner-authored PRs can auto-merge; external/public PRs still follow required review checks. Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
+Use this with `agent-auto-pr.yml` so agent branches auto-open PRs and enable auto-merge after checks. **GitHub settings** (below) must match that intent: agents push as your GitHub user, so rules like “approval from someone other than the last pusher” block auto-merge until you change protection or add a bypass.
+
+#### GitHub: trust your own PRs, still review outsiders
+
+Agents authenticate as **you** (or your PAT), so GitHub treats their commits like yours. To avoid review friction on **your** PRs while keeping **external** contributors under review:
+
+1. Prefer **repository rulesets** (Settings → Code and automation → **Rules** → **Rulesets**), targeting `main` (or a `release` branch if that is what you protect).
+2. Enable **Require a pull request before merging** and set **required approvals** to what you want for **everyone who is not on the bypass list** (often **1**).
+3. Under **Bypass list**, add **your user** (and only accounts you fully trust to merge without extra review). Use bypass mode **For pull requests only** if you want to keep the PR + CI audit trail while skipping the “extra human approval” and the “not the last pusher” deadlock. Do **not** add casual collaborators to the bypass list.
+4. If you still use **classic branch protection** on the same ref, either align it with the ruleset or remove duplicate rules — two layers can both block merges.
+5. If you stay on **classic** protection only: turn off **Require approval from someone other than the person who last pushed** (wording varies). That alone fixes solo owner + agent pushes when you are okay with your own approval counting; it does **not** by itself require reviews only for forks — for that, use rulesets + a narrow bypass list as above.
+
+Confirm which git branch Vercel Production is tied to in project settings (`release` vs `main`).
 
 ### Testing the extension
 

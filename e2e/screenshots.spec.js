@@ -51,7 +51,7 @@ test.describe('capture static entry UIs', () => {
   test('01 welcome', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/welcome', { waitUntil: 'domcontentloaded' });
-    await page.getByText('Greetings').waitFor({ state: 'visible', timeout: 60_000 });
+    await page.getByText('Wallet Setup').waitFor({ state: 'visible', timeout: 60_000 });
     await waitFonts(page);
     await shot(page, '01-welcome');
   });
@@ -59,7 +59,7 @@ test.describe('capture static entry UIs', () => {
   test('01b welcome — hardware wallet modal', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/welcome', { waitUntil: 'domcontentloaded' });
-    await page.getByText('Greetings').waitFor({ state: 'visible', timeout: 60_000 });
+    await page.getByText('Wallet Setup').waitFor({ state: 'visible', timeout: 60_000 });
     await page.getByRole('button', { name: /hardware wallet/i }).click();
     await page.getByRole('dialog').getByText('Hardware wallet').waitFor({
       state: 'visible',

@@ -1,5 +1,8 @@
 // lucem-wallet CI pipeline.
 // Runs on PR refs (PR-*) and mainline branches discovered by Jenkins multibranch config.
+//
+// Build / integration / E2E need the same variables as local `.env` (Koios keys, pool IDs, etc.).
+// Provide them as Jenkins credential ID `lucem-wallet-dotenv` (Secret file). See jenkins-deployment INSTALL.md.
 
 pipeline {
   agent { label 'lucem-wallet' }
@@ -57,32 +60,47 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh '''
-          set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
-          npm run build
-        '''
+        withCredentials([file(credentialsId: 'lucem-wallet-dotenv', variable: 'LUCEM_ENV_FILE')]) {
+          sh '''
+            set -e
+            export PATH="${NODE20_DIR}/bin:${PATH}"
+            set -a
+            . "${LUCEM_ENV_FILE}"
+            set +a
+            npm run build
+          '''
+        }
       }
     }
 
     stage('Integration tests') {
       steps {
-        sh '''
-          set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
-          npm run test:integration --if-present
-        '''
+        withCredentials([file(credentialsId: 'lucem-wallet-dotenv', variable: 'LUCEM_ENV_FILE')]) {
+          sh '''
+            set -e
+            export PATH="${NODE20_DIR}/bin:${PATH}"
+            set -a
+            . "${LUCEM_ENV_FILE}"
+            set +a
+            npm run test:integration --if-present
+          '''
+        }
       }
     }
 
     stage('Functional tests') {
       steps {
-        sh '''
-          set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
-          npm run test:e2e:install --if-present
-          npm run test:e2e --if-present
-        '''
+        withCredentials([file(credentialsId: 'lucem-wallet-dotenv', variable: 'LUCEM_ENV_FILE')]) {
+          sh '''
+            set -e
+            export PATH="${NODE20_DIR}/bin:${PATH}"
+            set -a
+            . "${LUCEM_ENV_FILE}"
+            set +a
+            npm run test:e2e:install --if-present
+            npm run test:e2e --if-present
+          '''
+        }
       }
     }
   }

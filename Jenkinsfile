@@ -55,6 +55,16 @@ pipeline {
       }
     }
 
+    stage('Build') {
+      steps {
+        sh '''
+          set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
+          npm run build
+        '''
+      }
+    }
+
     stage('Integration tests') {
       steps {
         sh '''
@@ -71,18 +81,7 @@ pipeline {
           set -e
           export PATH="${NODE20_DIR}/bin:${PATH}"
           npm run test:e2e:install --if-present
-          npm run build:webpack --if-present
           npm run test:e2e --if-present
-        '''
-      }
-    }
-
-    stage('Build') {
-      steps {
-        sh '''
-          set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
-          npm run build
         '''
       }
     }

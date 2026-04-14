@@ -64,6 +64,8 @@ pipeline {
           sh '''
             set -e
             export PATH="${NODE20_DIR}/bin:${PATH}"
+            # Jenkins runs sh with xtrace; disable before sourcing secrets.
+            set +x
             set -a
             . "${LUCEM_ENV_FILE}"
             set +a
@@ -79,6 +81,7 @@ pipeline {
           sh '''
             set -e
             export PATH="${NODE20_DIR}/bin:${PATH}"
+            set +x
             set -a
             . "${LUCEM_ENV_FILE}"
             set +a
@@ -94,6 +97,7 @@ pipeline {
           sh '''
             set -e
             export PATH="${NODE20_DIR}/bin:${PATH}"
+            set +x
             set -a
             . "${LUCEM_ENV_FILE}"
             set +a

@@ -46,6 +46,7 @@ import {
   InputRightElement,
   InputLeftElement,
   Spinner,
+  Checkbox,
   Tooltip,
   useColorModeValue,
   useToast,
@@ -93,7 +94,7 @@ let timer = null;
 
 const initialState = {
   fee: { fee: '0' },
-  value: { ada: '', assets: [], personalAda: '', minAda: '0' },
+  value: { ada: '', assets: [], personalAda: '', minAda: '0', sendAll: false },
   address: { result: '', display: '' },
   message: '',
   tx: null,
@@ -215,9 +216,48 @@ const Send = () => {
   const [isLoading, setIsLoading] = React.useState(true);
   const focus = React.useRef(false);
   const background = useColorModeValue('yellow.500', 'yellow.500');
+  const [sendAllRiskAccepted, setSendAllRiskAccepted] = React.useState(false);
 
   const network = React.useRef();
   const assetsModalRef = React.useRef();
+
+  const setSendAllMode = (enabled) => {
+    if (enabled) {
+      const allAssets = (txInfo.balance.assets || []).map((asset) => ({
+        ...asset,
+        input: asset.quantity,
+      }));
+      assets.current = {};
+      allAssets.forEach((asset) => {
+        assets.current[asset.unit] = { ...asset };
+      });
+
+      const maxAdaDisplay = displayUnit(txInfo.balance.lovelace || '0').toString();
+      triggerTxUpdate(() =>
+        setValue({
+          ...value,
+          sendAll: true,
+          ada: maxAdaDisplay,
+          personalAda: maxAdaDisplay,
+          assets: allAssets,
+        })
+      );
+      setSendAllRiskAccepted(false);
+      return;
+    }
+
+    assets.current = {};
+    triggerTxUpdate(() =>
+      setValue({
+        ...value,
+        sendAll: false,
+        ada: '',
+        personalAda: '',
+        assets: [],
+      })
+    );
+    setSendAllRiskAccepted(false);
+  };
 
   const prepareTx = async (count, data) => {
     if (!isMounted.current) return;
@@ -235,17 +275,22 @@ const Send = () => {
     const _address = data.address;
     const _message = data.message;
     const protocolParameters = data.protocolParameters;
-    if (!_value.ada && _value.assets.length <= 0) {
+    const sendAllMode = Boolean(_value.sendAll);
+    const hasAmount = Boolean(_value.ada) || _value.assets.length > 0;
+
+    if (!sendAllMode && !hasAmount) {
       setFee({ fee: '0' });
       setTx(null);
       return;
     }
+
     if (
       _address.error ||
       !_address.result ||
-      (!_value.ada && _value.assets.length <= 0) ||
+      (!sendAllMode && !hasAmount) ||
       (_address.isM1 &&
-        BigInt(toUnit(_value.ada)) <
+        !sendAllMode &&
+        BigInt(toUnit(_value.ada || '0')) <
           BigInt(_address.ada.minLovelace) +
             BigInt(_address.ada.fromADAFeeLovelace))
     ) {
@@ -263,87 +308,69 @@ const Send = () => {
         amount: [
           {
             unit: 'lovelace',
-            quantity: toUnit(_value.ada || '10000000'),
+            quantity: sendAllMode
+              ? String(txInfo.balance.lovelace || '0')
+              : toUnit(_value.ada || '10000000'),
           },
         ],
       };
 
       for (const asset of _value.assets) {
-        if (
-          !asset.input ||
-          BigInt(toUnit(asset.input, asset.decimals) || '0') < 1
-        ) {
+        const quantity = sendAllMode
+          ? String(asset.quantity || '0')
+          : toUnit(asset.input, asset.decimals);
+
+        if (!sendAllMode && (!asset.input || BigInt(quantity || '0') < 1)) {
           setFee({ error: 'Asset quantity not set' });
           return;
         }
+
+        if (BigInt(quantity || '0') < 1) continue;
+
         output.amount.push({
           unit: asset.unit,
-          quantity: toUnit(asset.input, asset.decimals),
+          quantity,
         });
       }
 
-      console.log('_address.result:', _address.result);
       const addressBytes = await isValidAddress(_address.result);
-      console.log('addressBytes:', addressBytes, 'type:', typeof addressBytes);
-      
-      let checkOutput, address, value;
-      try {
-        address = Loader.Cardano.Address.from_bytes(new Uint8Array(addressBytes));
-        console.log('Address created successfully');
-        
-        value = await assetsToValue(output.amount);
-        console.log('Value created successfully');
-        
-        checkOutput = Loader.Cardano.TransactionOutput.new(address, value);
-        console.log('TransactionOutput created successfully');
-      } catch (error) {
-        console.error('Error in TransactionOutput creation:', error);
-        throw error;
-      }
+      const address = Loader.Cardano.Address.from_bytes(new Uint8Array(addressBytes));
+      let outputValue = await assetsToValue(output.amount);
+      const checkOutput = Loader.Cardano.TransactionOutput.new(address, outputValue);
 
       const minAda = await minAdaRequired(
         checkOutput,
         protocolParameters.coinsPerUtxoWord
       );
 
-      if (BigInt(minAda) <= BigInt(toUnit(_value.personalAda || '0'))) {
-        const displayAda = parseFloat(
-          _value.personalAda.replace(/[,\s]/g, '')
-        ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
-        output.amount[0].quantity = toUnit(_value.personalAda || '0');
-        !focus.current && setValue({ ..._value, ada: displayAda });
-      } else if (_value.assets.length > 0) {
-        output.amount[0].quantity = minAda;
-        const minAdaDisplay = parseFloat(
-          displayUnit(minAda).toString().replace(/[,\s]/g, '')
-        ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
-        setValue({
-          ..._value,
-          ada: minAdaDisplay,
-        });
+      if (!sendAllMode) {
+        if (BigInt(minAda) <= BigInt(toUnit(_value.personalAda || '0'))) {
+          const displayAda = parseFloat(
+            _value.personalAda.replace(/[,\s]/g, '')
+          ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
+          output.amount[0].quantity = toUnit(_value.personalAda || '0');
+          !focus.current && setValue({ ..._value, ada: displayAda });
+        } else if (_value.assets.length > 0) {
+          output.amount[0].quantity = minAda;
+          const minAdaDisplay = parseFloat(
+            displayUnit(minAda).toString().replace(/[,\s]/g, '')
+          ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
+          setValue({
+            ..._value,
+            ada: minAdaDisplay,
+          });
+        }
       }
 
       if (BigInt(minAda) > BigInt(output.amount[0].quantity || '0')) {
-        setFee({ error: 'Transaction not possible' });
+        setFee({
+          error: sendAllMode
+            ? 'Not enough ADA to move all selected assets'
+            : 'Transaction not possible',
+        });
         return;
       }
 
-      // Let's see what's actually available in the Emurgo library
-      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('Output')));
-      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('List')));
-      
-      // Try to find the correct way to create a list of outputs
-      const outputKeys = Object.keys(Loader.Cardano).filter(key => key.includes('Output'));
-      console.log('Output-related keys:', outputKeys);
-      
-      // Create outputs using the correct Emurgo library class
-      const outputs = Loader.Cardano.TransactionOutputs.new();
-      outputs.add(Loader.Cardano.TransactionOutput.new(address, value));
-      console.log('Outputs created:', outputs);
-
-      // Check what's available for auxiliary data
-      console.log('All Loader.Cardano keys:', Object.keys(Loader.Cardano).filter(key => key.includes('Auxiliary') || key.includes('Metadata')));
-      
       const auxiliaryData = Loader.Cardano.AuxiliaryData.new();
       const generalMetadata = Loader.Cardano.GeneralTransactionMetadata.new();
 
@@ -372,15 +399,61 @@ const Send = () => {
         auxiliaryData.add_metadata(generalMetadata);
       }
 
-      const tx = await buildTx(
-        account.current,
-        utxos.current,
-        outputs,
-        protocolParameters,
-        auxiliaryData.metadata() ? auxiliaryData : null
-      );
+      const optionalAuxiliaryData = auxiliaryData.metadata() ? auxiliaryData : null;
+
+      const buildTxForOutput = async (amount) => {
+        const valueForOutput = await assetsToValue(amount);
+        const outputs = Loader.Cardano.TransactionOutputs.new();
+        outputs.add(Loader.Cardano.TransactionOutput.new(address, valueForOutput));
+        return buildTx(
+          account.current,
+          utxos.current,
+          outputs,
+          protocolParameters,
+          optionalAuxiliaryData
+        );
+      };
+
+      if (sendAllMode) {
+        const totalLovelace = BigInt(txInfo.balance.lovelace || '0');
+        let candidateLovelace = totalLovelace;
+        let finalTx = null;
+        const candidateStep = 500000n;
+
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          if (candidateLovelace < BigInt(minAda)) {
+            throw new Error('Send all output dropped below minimum ADA');
+          }
+
+          output.amount[0].quantity = candidateLovelace.toString();
+          try {
+            const candidateTx = await buildTxForOutput(output.amount);
+            finalTx = candidateTx;
+
+            const feeLovelace = BigInt(candidateTx.body().fee().toString());
+            const nextCandidate = totalLovelace - feeLovelace;
+            if (nextCandidate <= 0n || nextCandidate === candidateLovelace) break;
+            candidateLovelace = nextCandidate;
+          } catch (error) {
+            candidateLovelace -= candidateStep;
+          }
+        }
+
+        if (!finalTx) throw new Error('Failed to build send all transaction');
+        const sendAllDisplay = displayUnit(output.amount[0].quantity).toString();
+        setValue({
+          ..._value,
+          ada: sendAllDisplay,
+          personalAda: sendAllDisplay,
+        });
+        setFee({ fee: finalTx.body().fee().toString() });
+        setTx(Buffer.from(finalTx.to_bytes()).toString('hex'));
+        return;
+      }
+
+      const tx = await buildTxForOutput(output.amount);
       setFee({ fee: tx.body().fee().toString() });
-              setTx(Buffer.from(tx.to_bytes()).toString('hex'));
+      setTx(Buffer.from(tx.to_bytes()).toString('hex'));
     } catch (e) {
       console.warn(e);
       setFee({ error: 'Transaction not possible' });
@@ -475,6 +548,14 @@ const Send = () => {
       resetState();
     };
   }, []);
+
+  const confirmAssets = value.assets.map((asset) => ({
+    ...asset,
+    quantity: value.sendAll
+      ? String(asset.quantity || '0')
+      : toUnit(asset.input, asset.decimals),
+  }));
+
   return (
     <>
       <Box
@@ -566,6 +647,22 @@ const Send = () => {
               )}
 
               <Box height="5" />
+              <Flex width="96%" justifyContent="space-between" alignItems="center">
+                <Text fontSize="xs" opacity={0.8}>
+                  Amount
+                </Text>
+                <Button
+                  data-testid="send-all-toggle"
+                  size="xs"
+                  colorScheme={value.sendAll ? 'red' : 'gray'}
+                  variant={value.sendAll ? 'solid' : 'outline'}
+                  isDisabled={isLoading}
+                  onClick={() => setSendAllMode(!value.sendAll)}
+                >
+                  {value.sendAll ? 'Disable send all' : 'Send all'}
+                </Button>
+              </Flex>
+              <Box height="2" />
               <Stack
                 direction="row"
                 alignItems="center"
@@ -611,8 +708,9 @@ const Send = () => {
                       );
                     }}
                     variant="filled"
-                    isDisabled={isLoading}
+                    isDisabled={isLoading || value.sendAll}
                     isInvalid={
+                      !value.sendAll &&
                       value.ada &&
                       (BigInt(toUnit(value.ada)) <
                         BigInt(txInfo.protocolParameters.minUtxo) ||
@@ -630,8 +728,36 @@ const Send = () => {
                   assets={txInfo.balance.assets}
                   setValue={setValue}
                   value={value}
+                  isSendAll={value.sendAll}
                 />
               </Stack>
+              {value.sendAll && (
+                <Box
+                  data-testid="send-all-warning"
+                  mt={3}
+                  width="96%"
+                  borderWidth="1px"
+                  borderColor="red.300"
+                  bg="red.900"
+                  rounded="md"
+                  px={3}
+                  py={2}
+                >
+                  <Text fontSize="xs" color="red.100" mb={2}>
+                    Send all attempts to transfer every spendable ADA and token from this account. Transactions are irreversible and a wrong address can permanently lose funds.
+                  </Text>
+                  <Checkbox
+                    size="sm"
+                    colorScheme="red"
+                    isChecked={sendAllRiskAccepted}
+                    onChange={(e) => setSendAllRiskAccepted(e.target.checked)}
+                  >
+                    <Text fontSize="xs" color="red.100">
+                      I understand this is a high-risk action
+                    </Text>
+                  </Checkbox>
+                </Box>
+              )}
               <Box height="4" />
               <Box
                 width={'96%'}
@@ -658,49 +784,66 @@ const Send = () => {
               <Box
                 w="full"
                 sx={{
-                  height: 'min(200px, 35vh)',
+                  height: value.sendAll ? 'auto' : 'min(200px, 35vh)',
                   '@supports (height: 100dvh)': {
-                    height: 'min(200px, 32dvh)',
+                    height: value.sendAll ? 'auto' : 'min(200px, 32dvh)',
                   },
                 }}
               >
-              <Scrollbars
-                style={{
-                  width: '100%',
-                  height: '100%',
-                }}
-              >
-                <Box
-                  display="flex"
-                  width="full"
-                  flexWrap="wrap"
-                  paddingRight="2"
-                >
-                  {value.assets.map((asset, index) => (
-                    <Box key={index}>
-                      <AssetBadge
-                        onRemove={() => {
-                          removeAsset(asset);
-                        }}
-                        onLoad={(decimals) => {
-                          if (!assets.current[asset.unit]) return;
-                          assets.current[asset.unit].decimals = decimals;
-                        }}
-                        onInput={async (val) => {
-                          if (!assets.current[asset.unit]) return;
-                          assets.current[asset.unit].input = val;
-                          const v = value;
-                          v.assets = objectToArray(assets.current);
-                          triggerTxUpdate(() =>
-                            setValue({ ...v, assets: v.assets })
-                          );
-                        }}
-                        asset={asset}
-                      />
+                {value.sendAll ? (
+                  <Box
+                    mt={1}
+                    width="96%"
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                    rounded="md"
+                    px={3}
+                    py={2}
+                    fontSize="xs"
+                    opacity={0.9}
+                  >
+                    Sending all wallet assets ({value.assets.length} token
+                    {value.assets.length === 1 ? '' : 's'}) to the destination.
+                  </Box>
+                ) : (
+                  <Scrollbars
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  >
+                    <Box
+                      display="flex"
+                      width="full"
+                      flexWrap="wrap"
+                      paddingRight="2"
+                    >
+                      {value.assets.map((asset, index) => (
+                        <Box key={index}>
+                          <AssetBadge
+                            onRemove={() => {
+                              removeAsset(asset);
+                            }}
+                            onLoad={(decimals) => {
+                              if (!assets.current[asset.unit]) return;
+                              assets.current[asset.unit].decimals = decimals;
+                            }}
+                            onInput={async (val) => {
+                              if (!assets.current[asset.unit]) return;
+                              assets.current[asset.unit].input = val;
+                              const v = value;
+                              v.assets = objectToArray(assets.current);
+                              triggerTxUpdate(() =>
+                                setValue({ ...v, assets: v.assets })
+                              );
+                            }}
+                            asset={asset}
+                          />
+                        </Box>
+                      ))}
                     </Box>
-                  ))}
-                </Box>
-              </Scrollbars>
+                  </Scrollbars>
+                )}
               </Box>
             </Box>
             </Box>
@@ -728,7 +871,12 @@ const Send = () => {
                 width={{ base: '90%', md: '366px' }}
                 maxWidth="366px"
                 height={'50px'}
-                isDisabled={!tx || !address.result || fee.error}
+                isDisabled={
+                  !tx ||
+                  !address.result ||
+                  fee.error ||
+                  (value.sendAll && !sendAllRiskAccepted)
+                }
                 colorScheme="gray"
                 onClick={() => {
                   const idx = account.current?.index;
@@ -764,38 +912,51 @@ const Send = () => {
               fontSize="2xl"
               fontWeight="medium"
               hide
-              quantity={toUnit(value.ada, 6)}
+              quantity={toUnit(value.ada || '0', 6)}
               decimals={6}
               symbol={'₳'}
             />
-            {value.assets.length > 0 && (
+            {confirmAssets.length > 0 && (
               <Button
                 mt={1}
                 size={'xs'}
                 onClick={() =>
                   assetsModalRef.current.openModal({
                     userInput: true,
-                    assets: value.assets.map((asset) => ({
-                      ...asset,
-                      quantity: toUnit(asset.input, asset.decimals),
-                    })),
+                    assets: confirmAssets,
                     background: 'red.400',
                     color: 'white',
                     title: (
                       <Box>
                         Sending{' '}
                         <Box as={'span'} color={'red.400'}>
-                          {value.assets.length}
+                          {confirmAssets.length}
                         </Box>{' '}
-                        {value.assets.length == 1 ? 'asset' : 'assets'}
+                        {confirmAssets.length == 1 ? 'asset' : 'assets'}
                       </Box>
                     ),
                   })
                 }
               >
-                + {value.assets.length}{' '}
-                {value.assets.length > 1 ? 'Assets' : 'Asset'}
+                + {confirmAssets.length}{' '}
+                {confirmAssets.length > 1 ? 'Assets' : 'Asset'}
               </Button>
+            )}
+            {value.sendAll && (
+              <Box
+                mt={3}
+                rounded="md"
+                borderWidth="1px"
+                borderColor="red.300"
+                bg="red.900"
+                px={3}
+                py={2}
+                width="full"
+              >
+                <Text fontSize="xs" color="red.100" textAlign="center">
+                  Send all is enabled. This transaction attempts to empty the account except for network fees and cannot be undone.
+                </Text>
+              </Box>
             )}
             <Box h={3} />
             <Box fontSize={'sm'}>to</Box>
@@ -1249,7 +1410,7 @@ const CustomScrollbarsVirtualList = React.forwardRef((props, ref) => (
   <CustomScrollbars {...props} forwardedRef={ref} />
 ));
 
-const AssetsSelector = ({ assets, addAssets, value }) => {
+const AssetsSelector = ({ assets, addAssets, value, isSendAll }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [search, setSearch] = React.useState('');
   const select = React.useRef(false);
@@ -1275,7 +1436,7 @@ const AssetsSelector = ({ assets, addAssets, value }) => {
     <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose}>
       <PopoverTrigger>
         <Button
-                          isDisabled={!assets || assets.length < 1}
+          isDisabled={isSendAll || !assets || assets.length < 1}
           flex={1}
           size="sm"
         >

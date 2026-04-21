@@ -25,6 +25,34 @@ const firstString = (...values) => {
   return '';
 };
 
+const isLikelyHexHash = (value, minimumLength = 32) =>
+  typeof value === 'string' &&
+  value.trim().length >= minimumLength &&
+  /^[0-9a-f]+$/i.test(value.trim());
+
+const humanizeSlug = (value) => {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const titleFromUrl = (value) => {
+  if (typeof value !== 'string' || !value.trim()) return '';
+
+  try {
+    const parsed = new URL(value);
+    const pathSegments = parsed.pathname.split('/').filter(Boolean);
+    const tailSegment = decodeURIComponent(pathSegments[pathSegments.length - 1] || '');
+    const fromPath = humanizeSlug(tailSegment);
+    if (fromPath && !isLikelyHexHash(fromPath)) return fromPath;
+    return parsed.hostname.replace(/^www\./i, '');
+  } catch {
+    return '';
+  }
+};
+
 const toStatus = (entry) => {
   if (entry == null || typeof entry !== 'object') return 'unknown';
   if (typeof entry.status === 'string' && entry.status.trim()) {
@@ -92,24 +120,32 @@ const normalizeProposal = (proposal, index) => {
     proposal.gov_action_type,
     proposal.type
   );
-  const title = firstString(
-    proposal.title,
-    proposal.metadata?.title,
-    proposal.anchor?.url,
-    proposal.anchor_url,
-    id
-  );
-  const summary = firstString(
-    proposal.description,
-    proposal.metadata?.abstract,
-    proposal.anchor?.hash,
-    proposal.anchor_hash
-  );
   const url = firstString(
     proposal.url,
     proposal.anchor?.url,
     proposal.anchor_url,
     proposal.metadata_url
+  );
+  const titleCandidate = firstString(
+    proposal.title,
+    proposal.metadata?.title,
+    proposal.metadata?.name
+  );
+  const derivedUrlTitle = titleFromUrl(url);
+  const title = firstString(
+    titleCandidate,
+    isLikelyHexHash(derivedUrlTitle) ? '' : derivedUrlTitle,
+    id
+  );
+  const summary = firstString(
+    proposal.description,
+    proposal.metadata?.abstract,
+    proposal.metadata?.summary
+  );
+  const anchorHash = firstString(
+    proposal.anchor?.hash,
+    proposal.anchor_hash,
+    proposal.metadata_hash
   );
   const submittedEpoch =
     proposal.proposed_in_epoch ??
@@ -126,6 +162,7 @@ const normalizeProposal = (proposal, index) => {
     title,
     summary,
     url,
+    anchorHash,
     submittedEpoch,
     expiresAfterEpoch,
   };

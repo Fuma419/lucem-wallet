@@ -15,6 +15,7 @@ import {
   Badge,
   Tooltip,
   Link,
+  SimpleGrid,
 } from '@chakra-ui/react';
 import { ChevronLeftIcon, RepeatIcon } from '@chakra-ui/icons';
 import { useStoreState } from 'easy-peasy';
@@ -51,6 +52,56 @@ const voteLabel = (type) => {
   return 'DRep Key Hash';
 };
 
+const toReadableLabel = (value) => {
+  if (!value || typeof value !== 'string') return 'Unknown';
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const proposalStatusColor = (status) => {
+  const normalized = typeof status === 'string' ? status.toLowerCase() : '';
+  if (normalized === 'active' || normalized === 'voting') return 'green';
+  if (normalized === 'ratified' || normalized === 'enacted') return 'blue';
+  if (normalized === 'expired') return 'gray';
+  if (normalized === 'rejected' || normalized === 'dropped') return 'red';
+  return 'purple';
+};
+
+const proposalTypeColor = (type) => {
+  const normalized = typeof type === 'string' ? type.toLowerCase() : '';
+  if (normalized.includes('treasury')) return 'yellow';
+  if (normalized.includes('no confidence')) return 'red';
+  if (
+    normalized.includes('protocol') ||
+    normalized.includes('parameter') ||
+    normalized.includes('hard fork')
+  ) {
+    return 'blue';
+  }
+  if (normalized.includes('constitution') || normalized.includes('committee')) {
+    return 'teal';
+  }
+  if (normalized.includes('info')) return 'gray';
+  return 'purple';
+};
+
+const formatEpoch = (value) => {
+  if (value === null || value === undefined || value === '') return 'Not available';
+  return `Epoch ${value}`;
+};
+
+const toEpochSortValue = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
+};
+
+const shouldCollapseSummary = (value) =>
+  typeof value === 'string' && value.trim().length > 220;
+
 const Governance = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -78,6 +129,24 @@ const Governance = () => {
     voteType: '',
     targetDrep: '',
   });
+  const [expandedProposalIds, setExpandedProposalIds] = React.useState({});
+
+  const sortedProposals = React.useMemo(() => {
+    const statusPriority = {
+      active: 0,
+      voting: 0,
+      ratified: 1,
+      enacted: 2,
+      expired: 3,
+    };
+
+    return [...governanceState.proposals].sort((left, right) => {
+      const leftRank = statusPriority[left.status] ?? 4;
+      const rightRank = statusPriority[right.status] ?? 4;
+      if (leftRank !== rightRank) return leftRank - rightRank;
+      return toEpochSortValue(left.expiresAfterEpoch) - toEpochSortValue(right.expiresAfterEpoch);
+    });
+  }, [governanceState.proposals]);
 
   const loadGovernance = React.useCallback(
     async (signal) => {
@@ -95,6 +164,7 @@ const Governance = () => {
         });
         if (signal?.aborted) return;
 
+        setExpandedProposalIds({});
         setGovernanceState({
           source: result.source,
           fallbackReason: result.fallbackReason || '',
@@ -105,6 +175,7 @@ const Governance = () => {
         });
       } catch (error) {
         if (signal?.aborted) return;
+        setExpandedProposalIds({});
         setGovernanceState({
           source: '',
           fallbackReason: '',
@@ -179,6 +250,32 @@ const Governance = () => {
       return;
     }
     await prepareVoteDelegation('key_hash', keyHashHex);
+  };
+
+  const toggleProposalSummary = (proposalId) => {
+    setExpandedProposalIds((previous) => ({
+      ...previous,
+      [proposalId]: !previous[proposalId],
+    }));
+  };
+
+  const copyProposalId = async (proposalId) => {
+    if (!proposalId) return;
+    try {
+      await navigator.clipboard.writeText(proposalId);
+      toast({
+        title: 'Proposal ID copied',
+        status: 'success',
+        duration: 2000,
+      });
+    } catch {
+      toast({
+        title: 'Could not copy proposal ID',
+        description: 'Clipboard access is unavailable in this context.',
+        status: 'warning',
+        duration: 2500,
+      });
+    }
   };
 
   return (
@@ -339,6 +436,25 @@ const Governance = () => {
               <Heading size="sm" color="white" mb={3}>
                 Active Governance Proposals
               </Heading>
+              <Text fontSize="xs" color="gray.400" mb={3}>
+                Proposal cards highlight action type, status, voting window, and abstract so you
+                can scan decisions quickly before opening full details.
+              </Text>
+              <Link
+                color="cyan.300"
+                fontSize="xs"
+                display="inline-block"
+                mb={4}
+                onClick={() =>
+                  window.open(
+                    'https://developers.cardano.org/docs/governance/cardano-governance/governance-actions/',
+                    '_blank',
+                    'noopener,noreferrer'
+                  )
+                }
+              >
+                Learn governance action types
+              </Link>
 
               {governanceState.isLoading ? (
                 <Flex justify="center" py={8}>
@@ -348,54 +464,111 @@ const Governance = () => {
                 <Text color="red.300" fontSize="sm">
                   {governanceState.error}
                 </Text>
-              ) : governanceState.proposals.length > 0 ? (
+              ) : sortedProposals.length > 0 ? (
                 <VStack spacing={3} align="stretch">
-                  {governanceState.proposals.map((proposal) => (
-                    <Box
-                      key={proposal.id}
-                      p={3}
-                      rounded="md"
-                      border="1px solid rgba(255, 255, 255, 0.12)"
-                      bg="rgba(255, 255, 255, 0.03)"
-                    >
-                      <HStack spacing={2} mb={1}>
-                        <Badge colorScheme="purple">{proposal.type}</Badge>
-                        <Badge colorScheme={proposal.status === 'active' ? 'green' : 'gray'}>
-                          {proposal.status}
-                        </Badge>
-                      </HStack>
-                      <Text color="white" fontWeight="bold" fontSize="sm" mb={1}>
-                        {proposal.title}
-                      </Text>
-                      <Text color="gray.400" fontSize="xs" mb={1}>
-                        {truncateMiddle(proposal.id, 14, 10)}
-                      </Text>
-                      {proposal.summary && (
-                        <Text color="gray.300" fontSize="sm" mb={2}>
-                          {proposal.summary}
+                  {sortedProposals.map((proposal) => {
+                    const hasSummary = Boolean(proposal.summary);
+                    const summaryExpanded = Boolean(expandedProposalIds[proposal.id]);
+                    const canToggleSummary = shouldCollapseSummary(proposal.summary);
+
+                    return (
+                      <Box
+                        key={proposal.id}
+                        p={3}
+                        rounded="md"
+                        border="1px solid rgba(255, 255, 255, 0.12)"
+                        bg="rgba(255, 255, 255, 0.03)"
+                      >
+                        <Flex align="start" justify="space-between" gap={2} mb={1}>
+                          <HStack spacing={2} flexWrap="wrap">
+                            <Badge colorScheme={proposalTypeColor(proposal.type)}>
+                              {toReadableLabel(proposal.type)}
+                            </Badge>
+                            <Badge colorScheme={proposalStatusColor(proposal.status)}>
+                              {toReadableLabel(proposal.status)}
+                            </Badge>
+                          </HStack>
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            color="gray.300"
+                            onClick={() => void copyProposalId(proposal.id)}
+                          >
+                            Copy ID
+                          </Button>
+                        </Flex>
+
+                        <Text color="white" fontWeight="bold" fontSize="sm" mb={1}>
+                          {proposal.title}
                         </Text>
-                      )}
-                      <HStack spacing={3} color="gray.400" fontSize="xs">
-                        {proposal.submittedEpoch !== null && proposal.submittedEpoch !== undefined && (
-                          <Text>Submitted epoch: {proposal.submittedEpoch}</Text>
+                        <Text color="gray.400" fontSize="xs" mb={2}>
+                          {truncateMiddle(proposal.id, 14, 10)}
+                        </Text>
+
+                        {hasSummary ? (
+                          <>
+                            <Text
+                              color="gray.300"
+                              fontSize="sm"
+                              mb={1}
+                              noOfLines={summaryExpanded ? undefined : 4}
+                            >
+                              {proposal.summary}
+                            </Text>
+                            {canToggleSummary && (
+                              <Button
+                                size="xs"
+                                variant="link"
+                                colorScheme="cyan"
+                                onClick={() => toggleProposalSummary(proposal.id)}
+                              >
+                                {summaryExpanded ? 'Show less' : 'Read full abstract'}
+                              </Button>
+                            )}
+                          </>
+                        ) : (
+                          <Text color="gray.500" fontSize="sm" mb={1}>
+                            No abstract provided by the selected governance API.
+                          </Text>
                         )}
-                        {proposal.expiresAfterEpoch !== null && proposal.expiresAfterEpoch !== undefined && (
-                          <Text>Expires epoch: {proposal.expiresAfterEpoch}</Text>
-                        )}
-                      </HStack>
-                      {proposal.url && (
-                        <Link
+
+                        <SimpleGrid
+                          columns={{ base: 1, md: 2 }}
+                          spacing={1}
                           mt={2}
-                          display="inline-block"
-                          color="cyan.300"
+                          color="gray.400"
                           fontSize="xs"
-                          onClick={() => window.open(proposal.url)}
                         >
-                          Read proposal anchor
-                        </Link>
-                      )}
-                    </Box>
-                  ))}
+                          <Text>Submitted: {formatEpoch(proposal.submittedEpoch)}</Text>
+                          <Text>Voting closes: {formatEpoch(proposal.expiresAfterEpoch)}</Text>
+                        </SimpleGrid>
+
+                        {proposal.anchorHash ? (
+                          <Text color="gray.500" fontSize="xs" mt={1}>
+                            Anchor hash: {truncateMiddle(proposal.anchorHash, 14, 10)}
+                          </Text>
+                        ) : null}
+
+                        {proposal.url ? (
+                          <Link
+                            mt={2}
+                            display="inline-block"
+                            color="cyan.300"
+                            fontSize="xs"
+                            onClick={() =>
+                              window.open(proposal.url, '_blank', 'noopener,noreferrer')
+                            }
+                          >
+                            Open proposal details
+                          </Link>
+                        ) : (
+                          <Text color="gray.500" fontSize="xs" mt={2}>
+                            No proposal anchor URL available.
+                          </Text>
+                        )}
+                      </Box>
+                    );
+                  })}
                 </VStack>
               ) : (
                 <Text color="gray.300" fontSize="sm">

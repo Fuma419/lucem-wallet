@@ -109,6 +109,35 @@ describe('governance API service', () => {
     expect(result.proposals[0].id).toBe('fallback-proposal');
   });
 
+  test('normalizes proposal fields for clean UI rendering', async () => {
+    koiosRequestEnhanced
+      .mockResolvedValueOnce([
+        {
+          proposal_id: 'proposal-clean',
+          proposal_type: 'treasury_withdrawal',
+          anchor_url: 'https://example.org/governance-actions/treasury-withdrawal',
+          anchor_hash: 'f'.repeat(64),
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const result = await fetchGovernanceOverview('mainnet', {
+      proposalLimit: 2,
+      drepLimit: 1,
+    });
+
+    expect(result.source).toBe('koios');
+    expect(result.proposals[0]).toEqual(
+      expect.objectContaining({
+        id: 'proposal-clean',
+        type: 'treasury_withdrawal',
+        title: 'treasury withdrawal',
+        summary: '',
+        anchorHash: 'f'.repeat(64),
+      })
+    );
+  });
+
   test('utility helpers sanitize key hash and detect placeholder keys', () => {
     expect(normalizeDrepKeyHash(`prefix-${'A'.repeat(56)}-suffix`)).toBe(
       'a'.repeat(56)

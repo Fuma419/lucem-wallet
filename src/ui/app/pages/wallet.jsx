@@ -415,7 +415,7 @@ const Wallet = () => {
               className={`button network-${settings.network.id} ${isFetching ? 'is-loading' : ''}`}
               size="sm"
               rounded="lg"
-              shadow="md"
+              shadow="none"
               flexShrink={0}
               onClick={toggleNetwork}
             >

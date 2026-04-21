@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -11,146 +11,503 @@ import {
   useToast,
   IconButton,
   Spinner,
+  HStack,
+  Badge,
+  Tooltip,
+  Link,
 } from '@chakra-ui/react';
-import { ChevronLeftIcon } from '@chakra-ui/icons';
+import { ChevronLeftIcon, RepeatIcon } from '@chakra-ui/icons';
+import { useStoreState } from 'easy-peasy';
 
+import ConfirmModal from '../components/confirmModal';
+import UnitDisplay from '../components/unitDisplay';
 import {
+  createTab,
   getCurrentAccount,
   getDelegation,
+  openKeystoneSignTxTab,
 } from '../../../api/extension';
-import { koiosRequestEnhanced } from '../../../api/util';
-import { initTx, voteDelegationTx } from '../../../api/extension/wallet';
+import {
+  initTx,
+  signAndSubmit,
+  signAndSubmitHW,
+  voteDelegationTx,
+} from '../../../api/extension/wallet';
+import { fetchGovernanceOverview, normalizeDrepKeyHash } from '../../../api/governance';
+import { ERROR, HW, TAB } from '../../../config/config';
+
+const sourceBadgeColor = (source) =>
+  source === 'blockfrost' ? 'green' : 'purple';
+
+const truncateMiddle = (value, head = 12, tail = 8) => {
+  if (!value || typeof value !== 'string') return '';
+  if (value.length <= head + tail + 3) return value;
+  return `${value.slice(0, head)}...${value.slice(-tail)}`;
+};
+
+const voteLabel = (type) => {
+  if (type === 'always_abstain') return 'Always Abstain';
+  if (type === 'always_no_confidence') return 'Always No Confidence';
+  return 'DRep Key Hash';
+};
 
 const Governance = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const [drepId, setDrepId] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [proposals, setProposals] = useState([]);
-  const [fetchingProposals, setFetchingProposals] = useState(true);
+  const confirmRef = React.useRef();
+  const settings = useStoreState((state) => state.settings.settings);
 
-  useEffect(() => {
-    fetchProposals();
-  }, []);
+  const networkId = settings?.network?.id || 'mainnet';
+  const adaSymbol = settings?.adaSymbol || (networkId === 'mainnet' ? '₳' : 't₳');
 
-  const fetchProposals = async () => {
-    setFetchingProposals(true);
-    try {
-      const data = await koiosRequestEnhanced('/proposal_list');
-      if (Array.isArray(data)) {
-        setProposals(data.slice(0, 10)); // Just top 10 for demo
+  const [drepIdInput, setDrepIdInput] = React.useState('');
+  const [isBuildingTx, setIsBuildingTx] = React.useState(false);
+  const [governanceState, setGovernanceState] = React.useState({
+    source: '',
+    fallbackReason: '',
+    proposals: [],
+    dreps: [],
+    isLoading: true,
+    error: '',
+  });
+  const [voteTxState, setVoteTxState] = React.useState({
+    tx: null,
+    fee: '',
+    account: null,
+    ready: false,
+    voteType: '',
+    targetDrep: '',
+  });
+
+  const loadGovernance = React.useCallback(
+    async (signal) => {
+      setGovernanceState((previous) => ({
+        ...previous,
+        isLoading: true,
+        error: '',
+      }));
+
+      try {
+        const result = await fetchGovernanceOverview(networkId, {
+          proposalLimit: 16,
+          drepLimit: 16,
+          signal,
+        });
+        if (signal?.aborted) return;
+
+        setGovernanceState({
+          source: result.source,
+          fallbackReason: result.fallbackReason || '',
+          proposals: result.proposals,
+          dreps: result.dreps,
+          isLoading: false,
+          error: '',
+        });
+      } catch (error) {
+        if (signal?.aborted) return;
+        setGovernanceState({
+          source: '',
+          fallbackReason: '',
+          proposals: [],
+          dreps: [],
+          isLoading: false,
+          error: error.message || 'Unable to load governance data',
+        });
       }
-    } catch (e) {
-      console.error('Failed to fetch proposals', e);
+    },
+    [networkId]
+  );
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    void loadGovernance(controller.signal);
+    return () => controller.abort();
+  }, [loadGovernance]);
+
+  const prepareVoteDelegation = async (voteType, keyHashHex = '') => {
+    setIsBuildingTx(true);
+
+    try {
+      const currentAccount = await getCurrentAccount();
+      if (!currentAccount?.paymentKeyHash || !currentAccount?.stakeKeyHash) {
+        throw new Error('Current account is missing signing key hashes');
+      }
+
+      const currentDelegation = await getDelegation();
+      const protocolParameters = await initTx();
+      const tx = await voteDelegationTx(
+        currentAccount,
+        currentDelegation || {},
+        protocolParameters,
+        voteType,
+        keyHashHex
+      );
+
+      setVoteTxState({
+        tx,
+        fee: tx.body().fee().toString(),
+        account: currentAccount,
+        ready: true,
+        voteType,
+        targetDrep: keyHashHex,
+      });
+
+      confirmRef.current?.openModal(currentAccount.index);
+    } catch (error) {
+      toast({
+        title: 'Unable to build vote delegation',
+        description: error.message || 'Transaction preparation failed',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
     } finally {
-      setFetchingProposals(false);
+      setIsBuildingTx(false);
     }
   };
 
-  const handleVoteDelegation = async (type, hash = '') => {
-    setLoading(true);
-    try {
-      const currentAccount = await getCurrentAccount();
-      const currentDelegation = await getDelegation(currentAccount.rewardAddr);
-      const params = await initTx();
-      
-      await voteDelegationTx(currentAccount, currentDelegation, params, type, hash);
-
+  const handleCustomDrepDelegation = async () => {
+    const keyHashHex = normalizeDrepKeyHash(drepIdInput);
+    if (!keyHashHex) {
       toast({
-        title: 'Transaction Built',
-        description: 'Vote Delegation Transaction built successfully! (Signing step requires ConfirmModal)',
-        status: 'info',
-        duration: 3000,
+        title: 'Invalid DRep key hash',
+        description: 'Expected a 56-character hex key hash',
+        status: 'warning',
+        duration: 3500,
         isClosable: true,
       });
-
-    } catch (e) {
-      toast({
-        title: 'Error',
-        description: e.message || 'Failed to delegate',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setLoading(false);
+      return;
     }
+    await prepareVoteDelegation('key_hash', keyHashHex);
   };
 
   return (
-    <Flex direction="column" minH="100vh" bg="gray.50">
-      <Flex align="center" p={4} bg="white" shadow="sm">
-        <IconButton
-          icon={<ChevronLeftIcon />}
-          onClick={() => navigate('/wallet')}
-          variant="ghost"
-          aria-label="Back"
-        />
-        <Heading size="md" ml={2}>Voting Portal</Heading>
-      </Flex>
+    <>
+      <Box
+        minH="100vh"
+        sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
+        bg="black"
+      >
+        <Box className="lucem-wallet-main-column" px={{ base: 3, md: 4 }} pb={6}>
+          <Flex
+            align="center"
+            justify="space-between"
+            pt="calc(env(safe-area-inset-top, 0px) + 1rem)"
+            pb={4}
+          >
+            <HStack spacing={2}>
+              <IconButton
+                icon={<ChevronLeftIcon />}
+                onClick={() => navigate('/wallet')}
+                variant="ghost"
+                aria-label="Back"
+                color="white"
+              />
+              <Heading size="md" color="white">
+                Voting
+              </Heading>
+            </HStack>
+            <HStack spacing={2}>
+              {governanceState.source ? (
+                <Tooltip label={governanceState.fallbackReason || ''} hasArrow>
+                  <Badge colorScheme={sourceBadgeColor(governanceState.source)}>
+                    {governanceState.source === 'blockfrost'
+                      ? 'Blockfrost'
+                      : 'Koios fallback'}
+                  </Badge>
+                </Tooltip>
+              ) : null}
+              <Badge colorScheme="cyan">{networkId}</Badge>
+            </HStack>
+          </Flex>
 
-      <Box p={4}>
-        <VStack spacing={6} align="stretch">
-          <Box bg="white" p={4} rounded="md" shadow="sm">
-            <Heading size="sm" mb={4}>Delegate to DRep</Heading>
-            <VStack spacing={3}>
-              <Button 
-                w="full" 
-                colorScheme="blue" 
-                isLoading={loading}
-                onClick={() => handleVoteDelegation('always_abstain')}
-              >
-                Delegate to Abstain
-              </Button>
-              <Button 
-                w="full" 
-                colorScheme="orange" 
-                isLoading={loading}
-                onClick={() => handleVoteDelegation('always_no_confidence')}
-              >
-                Delegate to No Confidence
-              </Button>
-              <Flex w="full" gap={2}>
-                <Input 
-                  placeholder="DRep Key Hash (Hex)" 
-                  value={drepId} 
-                  onChange={(e) => setDrepId(e.target.value)}
-                />
-                <Button 
-                  colorScheme="purple" 
-                  isLoading={loading}
-                  onClick={() => handleVoteDelegation('key_hash', drepId)}
-                  isDisabled={!drepId}
+          <VStack spacing={4} align="stretch">
+            <Box
+              bg="rgba(16, 16, 20, 0.95)"
+              border="1px solid rgba(140, 140, 180, 0.35)"
+              rounded="xl"
+              p={4}
+            >
+              <Flex align="center" justify="space-between" mb={3}>
+                <Heading size="sm" color="white">
+                  Delegate Voting Power
+                </Heading>
+                <Button
+                  size="xs"
+                  leftIcon={<RepeatIcon />}
+                  variant="ghost"
+                  color="gray.300"
+                  onClick={() => void loadGovernance()}
+                  isLoading={governanceState.isLoading}
                 >
-                  Delegate
+                  Refresh
                 </Button>
               </Flex>
-            </VStack>
-          </Box>
 
-          <Box bg="white" p={4} rounded="md" shadow="sm">
-            <Heading size="sm" mb={4}>Active Proposals</Heading>
-            {fetchingProposals ? (
-              <Flex justify="center" p={4}><Spinner /></Flex>
-            ) : proposals.length > 0 ? (
-              <VStack spacing={3} align="stretch">
-                {proposals.map((prop, idx) => (
-                  <Box key={idx} p={3} borderWidth={1} rounded="md">
-                    <Text fontWeight="bold">Proposal {prop.proposal_id.slice(0, 8)}...</Text>
-                    <Text fontSize="sm" color="gray.600">
-                      Type: {prop.proposal_type || prop.type || '—'}
-                    </Text>
-                    <Button size="sm" mt={2} colorScheme="teal" isDisabled>Vote (Coming Soon)</Button>
-                  </Box>
-                ))}
+              <Text fontSize="sm" color="gray.300" mb={3}>
+                Build and sign an on-chain vote delegation certificate for this wallet.
+              </Text>
+
+              <VStack spacing={2} align="stretch">
+                <Button
+                  size="sm"
+                  colorScheme="blue"
+                  onClick={() => void prepareVoteDelegation('always_abstain')}
+                  isLoading={isBuildingTx}
+                >
+                  Delegate to Always Abstain
+                </Button>
+                <Button
+                  size="sm"
+                  colorScheme="orange"
+                  onClick={() => void prepareVoteDelegation('always_no_confidence')}
+                  isLoading={isBuildingTx}
+                >
+                  Delegate to Always No Confidence
+                </Button>
+                <Flex gap={2}>
+                  <Input
+                    placeholder="DRep key hash (56 hex chars)"
+                    value={drepIdInput}
+                    onChange={(event) => setDrepIdInput(event.target.value)}
+                    size="sm"
+                    bg="rgba(255, 255, 255, 0.05)"
+                    borderColor="whiteAlpha.300"
+                    color="white"
+                    _placeholder={{ color: 'gray.400' }}
+                  />
+                  <Button
+                    size="sm"
+                    colorScheme="purple"
+                    onClick={() => void handleCustomDrepDelegation()}
+                    isDisabled={!drepIdInput.trim()}
+                    isLoading={isBuildingTx}
+                  >
+                    Delegate
+                  </Button>
+                </Flex>
               </VStack>
-            ) : (
-              <Text>No active proposals found.</Text>
-            )}
-          </Box>
-        </VStack>
+
+              {governanceState.dreps.length > 0 && (
+                <Box mt={4}>
+                  <Text fontSize="xs" color="gray.400" mb={2}>
+                    Quick pick from top DReps
+                  </Text>
+                  <VStack spacing={2} align="stretch">
+                    {governanceState.dreps.slice(0, 5).map((drep) => (
+                      <Flex
+                        key={drep.id}
+                        p={2}
+                        rounded="md"
+                        bg="rgba(255, 255, 255, 0.04)"
+                        border="1px solid rgba(255, 255, 255, 0.08)"
+                        align="center"
+                        justify="space-between"
+                      >
+                        <Box minW={0} mr={2}>
+                          <Text color="white" fontSize="sm" isTruncated>
+                            {drep.name || truncateMiddle(drep.id)}
+                          </Text>
+                          <Text color="gray.400" fontSize="xs">
+                            {truncateMiddle(drep.id)} {drep.votingPower ? `| ${drep.votingPower} lovelace` : ''}
+                          </Text>
+                        </Box>
+                        <Button
+                          size="xs"
+                          colorScheme="purple"
+                          onClick={() => {
+                            setDrepIdInput(drep.keyHashHex);
+                            void prepareVoteDelegation('key_hash', drep.keyHashHex);
+                          }}
+                          isDisabled={!drep.keyHashHex}
+                        >
+                          Use
+                        </Button>
+                      </Flex>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+            </Box>
+
+            <Box
+              bg="rgba(16, 16, 20, 0.95)"
+              border="1px solid rgba(140, 140, 180, 0.35)"
+              rounded="xl"
+              p={4}
+            >
+              <Heading size="sm" color="white" mb={3}>
+                Active Governance Proposals
+              </Heading>
+
+              {governanceState.isLoading ? (
+                <Flex justify="center" py={8}>
+                  <Spinner />
+                </Flex>
+              ) : governanceState.error ? (
+                <Text color="red.300" fontSize="sm">
+                  {governanceState.error}
+                </Text>
+              ) : governanceState.proposals.length > 0 ? (
+                <VStack spacing={3} align="stretch">
+                  {governanceState.proposals.map((proposal) => (
+                    <Box
+                      key={proposal.id}
+                      p={3}
+                      rounded="md"
+                      border="1px solid rgba(255, 255, 255, 0.12)"
+                      bg="rgba(255, 255, 255, 0.03)"
+                    >
+                      <HStack spacing={2} mb={1}>
+                        <Badge colorScheme="purple">{proposal.type}</Badge>
+                        <Badge colorScheme={proposal.status === 'active' ? 'green' : 'gray'}>
+                          {proposal.status}
+                        </Badge>
+                      </HStack>
+                      <Text color="white" fontWeight="bold" fontSize="sm" mb={1}>
+                        {proposal.title}
+                      </Text>
+                      <Text color="gray.400" fontSize="xs" mb={1}>
+                        {truncateMiddle(proposal.id, 14, 10)}
+                      </Text>
+                      {proposal.summary && (
+                        <Text color="gray.300" fontSize="sm" mb={2}>
+                          {proposal.summary}
+                        </Text>
+                      )}
+                      <HStack spacing={3} color="gray.400" fontSize="xs">
+                        {proposal.submittedEpoch !== null && proposal.submittedEpoch !== undefined && (
+                          <Text>Submitted epoch: {proposal.submittedEpoch}</Text>
+                        )}
+                        {proposal.expiresAfterEpoch !== null && proposal.expiresAfterEpoch !== undefined && (
+                          <Text>Expires epoch: {proposal.expiresAfterEpoch}</Text>
+                        )}
+                      </HStack>
+                      {proposal.url && (
+                        <Link
+                          mt={2}
+                          display="inline-block"
+                          color="cyan.300"
+                          fontSize="xs"
+                          onClick={() => window.open(proposal.url)}
+                        >
+                          Read proposal anchor
+                        </Link>
+                      )}
+                    </Box>
+                  ))}
+                </VStack>
+              ) : (
+                <Text color="gray.300" fontSize="sm">
+                  No proposals returned by the current network API.
+                </Text>
+              )}
+            </Box>
+          </VStack>
+        </Box>
       </Box>
-    </Flex>
+
+      <ConfirmModal
+        ref={confirmRef}
+        ready={voteTxState.ready}
+        title="Confirm Vote Delegation"
+        sign={async (password, hw) => {
+          const txHex = Buffer.from(voteTxState.tx.to_bytes()).toString('hex');
+          const keyHashes = [
+            voteTxState.account.paymentKeyHash,
+            voteTxState.account.stakeKeyHash,
+          ];
+
+          if (hw) {
+            if (hw.device === HW.trezor) {
+              return createTab(TAB.trezorTx, `?tx=${txHex}`);
+            }
+            if (hw.device === HW.keystone) {
+              return openKeystoneSignTxTab({
+                txHex,
+                keyHashes,
+                partialSign: false,
+              });
+            }
+            return signAndSubmitHW(voteTxState.tx, {
+              keyHashes,
+              account: voteTxState.account,
+              hw,
+            });
+          }
+
+          return signAndSubmit(
+            voteTxState.tx,
+            {
+              keyHashes,
+              accountIndex: voteTxState.account.index,
+            },
+            password
+          );
+        }}
+        onConfirm={(status, result) => {
+          if (status === true) {
+            toast({
+              title: 'Vote delegation submitted',
+              description: 'Your governance delegation transaction was sent.',
+              status: 'success',
+              duration: 4500,
+            });
+          } else if (result === ERROR.fullMempool) {
+            toast({
+              title: 'Transaction failed',
+              description: 'Mempool is full, please retry in a moment.',
+              status: 'error',
+              duration: 3500,
+            });
+          } else {
+            toast({
+              title: 'Transaction failed',
+              description: 'Unable to submit vote delegation transaction.',
+              status: 'error',
+              duration: 3500,
+            });
+          }
+          confirmRef.current?.closeModal();
+          setVoteTxState({
+            tx: null,
+            fee: '',
+            account: null,
+            ready: false,
+            voteType: '',
+            targetDrep: '',
+          });
+        }}
+        info={
+          <Box
+            width="100%"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            flexDirection="column"
+          >
+            <Text fontSize="sm" mb={2} textAlign="center">
+              Delegation target: {voteLabel(voteTxState.voteType)}
+            </Text>
+            {voteTxState.targetDrep ? (
+              <Text fontSize="xs" color="gray.500" mb={2}>
+                {voteTxState.targetDrep}
+              </Text>
+            ) : null}
+            <HStack spacing={1}>
+              <Text fontWeight="bold" fontSize="sm">
+                Fee:
+              </Text>
+              <UnitDisplay
+                quantity={voteTxState.fee}
+                decimals={6}
+                symbol={adaSymbol}
+              />
+            </HStack>
+          </Box>
+        }
+      />
+    </>
   );
 };
 

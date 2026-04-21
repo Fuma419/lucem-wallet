@@ -1,4 +1,4 @@
-name: Test and Build
+name: CI
 
 on:
   pull_request:
@@ -7,39 +7,65 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and test
+  quick:
+    name: Quick checks (unit tests)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+
       - name: Install dependencies
         run: npm ci
-      - name: Generates Secrets File
-        run: |
-          echo "export default { PROJECT_ID_MAINNET: '${{ secrets.PROJECT_ID_MAINNET  }}', PROJECT_ID_PREVIEW: '${{ secrets.PROJECT_ID_PREVIEW  }}', PROJECT_ID_PREPROD: '${{ secrets.PROJECT_ID_PREPROD  }}', POSTHOG_API_KEY:'${{ secrets.POSTHOG_API_KEY }}', POSTHOG_PROJECT_ID: '${{ secrets.POSTHOG_PROJECT_ID }}', LACE_EXTENSION_ID: '${{ secrets.LACE_EXTENSION_ID }}'};" > secrets.production.js
-      - name: Build
-        run: npm run build
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+
+      - name: Unit tests
+        run: npm run test
+
+  heavy:
+    name: Build + UI screenshots (self-hosted)
+    needs: quick
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build:webpack
+
       - name: Install Playwright Chromium
-        run: npx playwright install chromium --with-deps
+        run: npx playwright install chromium
+
       - name: Headless UI screenshots
-        run: npm run test:screenshots:only
-      # Optional live Preprod send: uncomment and add repo secrets LUCEM_INTEGRATION_PREPROD_MNEMONIC (+ KOIOS_API_KEY_PREPROD if needed).
-      # - name: Preprod send integration
-      #   run: npm run test:integration
-      #   env:
-      #     LUCEM_INTEGRATION_PREPROD_MNEMONIC: ${{ secrets.LUCEM_INTEGRATION_PREPROD_MNEMONIC }}
-      #     KOIOS_API_KEY_PREPROD: ${{ secrets.KOIOS_API_KEY_PREPROD }}
+        run: npx playwright test e2e/screenshots.spec.js --retries=1
+
       - name: Upload UI screenshots
         uses: actions/upload-artifact@v4
         if: always()
@@ -47,8 +73,13 @@ jobs:
           name: e2e-screenshots
           path: e2e/screenshots/output/
           if-no-files-found: ignore
+          retention-days: 3
+
       - name: Upload build
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: build
           path: build
+          if-no-files-found: ignore
+          retention-days: 3

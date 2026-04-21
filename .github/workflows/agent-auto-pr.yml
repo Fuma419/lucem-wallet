@@ -1,0 +1,50 @@
+name: Agent Auto PR
+
+on:
+  push:
+    branches:
+      - "agent/**"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: agent-pr-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update PR and enable auto-merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          pr_number="$(gh pr list --repo "$REPO" --head "$BRANCH_NAME" --base main --json number --jq '.[0].number')"
+
+          if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
+            gh pr create \
+              --repo "$REPO" \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --title "chore(agent): merge ${BRANCH_NAME}" \
+              --body "Automated PR from \`${BRANCH_NAME}\`.
+
+              This PR was opened automatically from an agent branch.
+              Auto-merge is enabled and will complete after required checks pass."
+
+            pr_number="$(gh pr list --repo "$REPO" --head "$BRANCH_NAME" --base main --json number --jq '.[0].number')"
+          fi
+
+          if [ -z "$pr_number" ] || [ "$pr_number" = "null" ]; then
+            echo "Failed to create or find PR for branch: $BRANCH_NAME"
+            exit 1
+          fi
+
+          # Auto-merge waits for required checks and branch protection rules.
+          gh pr merge --repo "$REPO" "$pr_number" --auto --squash --delete-branch || true

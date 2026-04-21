@@ -41,3 +41,8 @@ lucem-wallet.code-workspace
 # Large local clones (not part of Lucem app source)
 /koios-artifacts/
 /yoroi-frontend/
+
+# Local RAG index/model cache
+/.cursor/rag/
+/lancedb/
+/models/

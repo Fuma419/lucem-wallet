@@ -419,3 +419,27 @@ body {
   transform: none;
 }
 
+/* Network switcher: explicitly disable neon glow/hover lift. */
+.button.network-mainnet,
+.button.network-preprod,
+.button.network-preview,
+.button.network-testnet {
+  box-shadow: none !important;
+}
+
+.button.network-mainnet:hover,
+.button.network-preprod:hover,
+.button.network-preview:hover,
+.button.network-testnet:hover,
+.button.network-mainnet:focus-visible,
+.button.network-preprod:focus-visible,
+.button.network-preview:focus-visible,
+.button.network-testnet:focus-visible,
+.button.network-mainnet[data-active],
+.button.network-preprod[data-active],
+.button.network-preview[data-active],
+.button.network-testnet[data-active] {
+  transform: none !important;
+  box-shadow: none !important;
+}
+

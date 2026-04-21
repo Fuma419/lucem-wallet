@@ -1,5 +1,14 @@
 {
   "mcpServers": {
+    "code-rag": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${workspaceFolder}/utils/code-rag-mcp.cjs"],
+      "env": {
+        "CODE_RAG_BASE_DIR": "${workspaceFolder}",
+        "CODE_RAG_INDEX_PATH": "${workspaceFolder}/.cursor/rag/code-index.json"
+      }
+    },
     "local-files": {
       "type": "stdio",
       "command": "npx",

@@ -24,6 +24,7 @@ describe('governance API service', () => {
     provider.api.key.mockReset();
     provider.api.key.mockReturnValue({ project_id: 'dummy' });
     koiosRequestEnhanced.mockReset();
+    koiosRequestEnhanced.mockResolvedValue([]);
     global.fetch = jest.fn();
   });
 
@@ -36,7 +37,12 @@ describe('governance API service', () => {
         status: 200,
         statusText: 'OK',
         json: async () => [
-          { gov_action_id: 'proposal-1', proposal_type: 'parameter_change' },
+          {
+            gov_action_id: 'proposal-1',
+            proposal_type: 'parameter_change',
+            tx_hash: 'abc',
+            cert_index: 0,
+          },
         ],
       })
       .mockResolvedValueOnce({
@@ -45,6 +51,35 @@ describe('governance API service', () => {
         statusText: 'OK',
         json: async () => [{ drep_id: 'a'.repeat(56), active_stake: '1234' }],
       });
+    koiosRequestEnhanced
+      .mockResolvedValueOnce([
+        {
+          proposal_id: 'proposal-1',
+          meta_json: {
+            body: {
+              title: 'Koios merged title',
+              abstract: 'Koios merged abstract',
+            },
+          },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          epoch_no: 100,
+          drep_yes_votes_cast: 11,
+          drep_yes_vote_power: '2000000',
+          drep_no_votes_cast: 7,
+          drep_no_vote_power: '1000000',
+          drep_abstain_votes_cast: 2,
+          drep_abstain_vote_power: '500000',
+          pool_yes_votes_cast: 1,
+          pool_no_votes_cast: 0,
+          pool_abstain_votes_cast: 0,
+          committee_yes_votes_cast: 2,
+          committee_no_votes_cast: 1,
+          committee_abstain_votes_cast: 0,
+        },
+      ]);
 
     const result = await fetchGovernanceOverview('preprod', {
       proposalLimit: 3,
@@ -54,8 +89,15 @@ describe('governance API service', () => {
     expect(result.source).toBe('blockfrost');
     expect(result.proposals).toHaveLength(1);
     expect(result.proposals[0].id).toBe('proposal-1');
+    expect(result.proposals[0].title).toBe('Koios merged title');
+    expect(result.proposals[0].summary).toBe('Koios merged abstract');
+    expect(result.proposals[0].voteSummary?.drep?.yesVotesCast).toBe(11);
     expect(result.dreps[0].keyHashHex).toBe('a'.repeat(56));
-    expect(koiosRequestEnhanced).not.toHaveBeenCalled();
+    expect(koiosRequestEnhanced).toHaveBeenCalledTimes(2);
+    expect(koiosRequestEnhanced.mock.calls[0][0]).toContain('/proposal_list?limit=3&offset=0');
+    expect(koiosRequestEnhanced.mock.calls[1][0]).toContain(
+      '/proposal_voting_summary?_proposal_id=proposal-1'
+    );
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining('/governance/proposals?order=desc&count=3&page=1'),
@@ -67,8 +109,14 @@ describe('governance API service', () => {
 
   test('falls back to Koios when Blockfrost key is missing', async () => {
     koiosRequestEnhanced
-      .mockResolvedValueOnce([{ proposal_id: 'koios-proposal' }])
-      .mockResolvedValueOnce([{ drep_id: 'b'.repeat(56), active_stake: '2' }]);
+      .mockResolvedValueOnce([
+        {
+          proposal_id: 'koios-proposal',
+          meta_json: { body: { abstract: 'Koios fallback abstract' } },
+        },
+      ])
+      .mockResolvedValueOnce([{ drep_id: 'b'.repeat(56), active_stake: '2' }])
+      .mockResolvedValueOnce([{ epoch_no: 250, drep_yes_votes_cast: 1 }]);
 
     const result = await fetchGovernanceOverview('mainnet', {
       proposalLimit: 4,
@@ -78,8 +126,10 @@ describe('governance API service', () => {
     expect(result.source).toBe('koios');
     expect(result.fallbackReason).toMatch(/missing/i);
     expect(global.fetch).not.toHaveBeenCalled();
-    expect(koiosRequestEnhanced).toHaveBeenCalledTimes(2);
+    expect(koiosRequestEnhanced).toHaveBeenCalledTimes(3);
     expect(result.proposals[0].id).toBe('koios-proposal');
+    expect(result.proposals[0].summary).toBe('Koios fallback abstract');
+    expect(result.proposals[0].voteSummary?.epoch).toBe(250);
   });
 
   test('falls back to Koios when Blockfrost request errors', async () => {
@@ -100,13 +150,15 @@ describe('governance API service', () => {
 
     koiosRequestEnhanced
       .mockResolvedValueOnce([{ proposal_id: 'fallback-proposal' }])
-      .mockResolvedValueOnce([{ drep_id: 'c'.repeat(56), active_stake: '10' }]);
+      .mockResolvedValueOnce([{ drep_id: 'c'.repeat(56), active_stake: '10' }])
+      .mockResolvedValueOnce([{ epoch_no: 310, drep_yes_votes_cast: 2 }]);
 
     const result = await fetchGovernanceOverview('preview');
 
     expect(result.source).toBe('koios');
     expect(result.fallbackReason).toMatch(/Blockfrost governance request failed/);
     expect(result.proposals[0].id).toBe('fallback-proposal');
+    expect(result.proposals[0].voteSummary?.epoch).toBe(310);
   });
 
   test('utility helpers sanitize key hash and detect placeholder keys', () => {

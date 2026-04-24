@@ -112,6 +112,18 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toMatch(/requestDevice/);
   });
 
+  test('ledger flow checks for requestDevice capability (not only navigator.bluetooth)', () => {
+    expect(hwSrc).toMatch(/const hasWebBluetoothRequestDevice/);
+    expect(hwSrc).toMatch(/!hasWebBluetoothRequestDevice\(\)/);
+  });
+
+  test('continue button stays clickable and unsupported ledger is handled in click path', () => {
+    expect(hwSrc).not.toMatch(
+      /\(selected === HW\.ledger && isIosLikeWithoutWebBluetooth\(\)\)/
+    );
+    expect(hwSrc).toMatch(/setError\(ledgerBluetoothUnavailableMessage\(\)\)/);
+  });
+
   test('Ledger BLE options helper is defined', () => {
     expect(hwSrc).toMatch(/ledgerBleRequestOptions/);
   });

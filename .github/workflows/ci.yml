@@ -40,6 +40,8 @@ jobs:
 
   heavy:
     name: Build + UI screenshots (self-hosted)
+    # Temporarily disabled until self-hosted runner capacity is stable.
+    if: ${{ false }}
     needs: quick
     runs-on: [self-hosted, linux]
     timeout-minutes: 60

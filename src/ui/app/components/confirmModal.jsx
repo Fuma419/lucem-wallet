@@ -13,6 +13,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import React from 'react';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
@@ -104,6 +105,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
   });
   const [waitReady, setWaitReady] = React.useState(true);
   const inputRef = React.useRef();
+  const isMobile = useBreakpointValue({ base: true, md: false }) ?? false;
 
   React.useEffect(() => {
     setState({
@@ -137,16 +139,30 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
       size="xs"
       isOpen={isOpen}
       onClose={onClose}
-      isCentered
+      isCentered={!isMobile}
       initialFocusRef={inputRef}
       blockScrollOnMount={false}
+      scrollBehavior="inside"
     >
       <ModalOverlay />
-      <ModalContent m={0}>
+      <ModalContent
+        mx={{ base: 2, md: 0 }}
+        my={{ base: 'max(0.5rem, env(safe-area-inset-top, 0px))', md: 0 }}
+        sx={{
+          '@supports (height: 100dvh)': {
+            maxHeight:
+              'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)',
+          },
+          '@supports not (height: 100dvh)': {
+            maxHeight:
+              'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)',
+          },
+        }}
+      >
         <ModalHeader fontSize="md">
           {props.title ? props.title : 'Confirm with password'}
         </ModalHeader>
-        <ModalBody>
+        <ModalBody overflowY="auto">
           {props.info}
           <InputGroup size="md">
             <Input
@@ -216,6 +232,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
 const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
   const [waitReady, setWaitReady] = React.useState(true);
   const [error, setError] = React.useState('');
+  const isMobile = useBreakpointValue({ base: true, md: false }) ?? false;
 
   const confirmHandler = async () => {
     if (props.ready === false || !waitReady) return;
@@ -250,15 +267,29 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         size="xs"
         isOpen={isOpen}
         onClose={onClose}
-        isCentered
+        isCentered={!isMobile}
         blockScrollOnMount={false}
+        scrollBehavior="inside"
       >
         <ModalOverlay />
-        <ModalContent m={0}>
+        <ModalContent
+          mx={{ base: 2, md: 0 }}
+          my={{ base: 'max(0.5rem, env(safe-area-inset-top, 0px))', md: 0 }}
+          sx={{
+            '@supports (height: 100dvh)': {
+              maxHeight:
+                'calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)',
+            },
+            '@supports not (height: 100dvh)': {
+              maxHeight:
+                'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem)',
+            },
+          }}
+        >
           <ModalHeader fontSize="md">
             {props.title ? props.title : `Confirm with device`}
           </ModalHeader>
-          <ModalBody>
+          <ModalBody overflowY="auto">
             {props.info}
             <Box
               width="full"

@@ -69,7 +69,6 @@ import {
   StarIcon,
   DeleteIcon,
   CopyIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
   InfoOutlineIcon,
 } from '@chakra-ui/icons';
@@ -91,6 +90,7 @@ import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
 import { GiToken } from 'react-icons/gi';
+import { MdHowToVote, MdOutlineHowToReg } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorModeValue } from '@chakra-ui/react';
@@ -115,6 +115,20 @@ const walletHeaderOrbShellProps = {
   rounded: 'full',
   overflow: 'hidden',
   flexShrink: 0,
+};
+
+const walletFloatingActionButtonProps = {
+  className: 'button settings',
+  background: 'purple.500',
+  rounded: 'full',
+  shadow: 'md',
+  boxSize: { base: '12', sm: '13', md: '14' },
+  minW: { base: '12', sm: '13', md: '14' },
+  minH: { base: '12', sm: '13', md: '14' },
+  p: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
 };
 
 const useIsMounted = () => {
@@ -355,41 +369,36 @@ const Wallet = () => {
               justifyContent="center"
               gap={2}
             >
-              <Button
-                onClick={() => navigate('/governance')}
-                variant="solid"
-                size="sm"
-                rounded="lg"
-                shadow="md"
-                bg="purple.500"
-                color="white"
-                _hover={{ bg: "purple.600" }}
-              >
-                Vote
-              </Button>
+              <Tooltip label="Vote" hasArrow>
+                <Button
+                  {...walletFloatingActionButtonProps}
+                  onClick={() => navigate('/governance')}
+                  aria-label="Open voting"
+                >
+                  <Icon as={MdHowToVote} boxSize={6} />
+                </Button>
+              </Tooltip>
               {state.delegation.active ? (
                 <DelegationPopover
                   account={state.account}
                   delegation={state.delegation}
-                >
-                  {state.delegation.ticker ||
-                    state.delegation.poolId.slice(-9)}
-                </DelegationPopover>
+                  label={state.delegation.ticker || state.delegation.poolId.slice(-9)}
+                />
               ) : (
-                <Button
-                  onClick={() => {
-                    builderRef.current.initDelegation(
-                      state.account,
-                      state.delegation
-                    );
-                  }}
-                  variant="solid"
-                  size="sm"
-                  rounded="lg"
-                  shadow="md"
-                >
-                  Delegate
-                </Button>
+                <Tooltip label="Delegate" hasArrow>
+                  <Button
+                    {...walletFloatingActionButtonProps}
+                    onClick={() => {
+                      builderRef.current.initDelegation(
+                        state.account,
+                        state.delegation
+                      );
+                    }}
+                    aria-label="Delegate stake"
+                  >
+                    <Icon as={MdOutlineHowToReg} boxSize={6} />
+                  </Button>
+                </Tooltip>
               )}
             </Box>
           )}
@@ -440,17 +449,7 @@ const Wallet = () => {
             >
               <MenuButton
                 as={Button}
-                className="button settings"
-                background="purple.500"
-                rounded="full"
-                shadow="md"
-                boxSize={{ base: '12', sm: '13', md: '14' }}
-                minW={{ base: '12', sm: '13', md: '14' }}
-                minH={{ base: '12', sm: '13', md: '14' }}
-                p={0}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
+                {...walletFloatingActionButtonProps}
               >
                 <SettingsIcon boxSize={6} />
               </MenuButton>
@@ -972,7 +971,7 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
   );
 });
 
-const DelegationPopover = ({ account, delegation, children }) => {
+const DelegationPopover = ({ account, delegation, label }) => {
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
   return (
@@ -980,25 +979,14 @@ const DelegationPopover = ({ account, delegation, children }) => {
       <Popover offset={[80, 8]}>
         <PopoverTrigger>
           <Button
-            className="lineClamp"
-            style={{
-              all: 'revert',
-              background: 'none',
-              border: 'none',
-              outline: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              maxWidth: '100%',
-            }}
-            onClick={() => {
-            }}
-            rightIcon={<ChevronDownIcon />}
+            {...walletFloatingActionButtonProps}
+            aria-label={
+              label
+                ? `Open delegation details for ${label}`
+                : 'Open delegation details'
+            }
           >
-            <Text as="span" isTruncated maxW="100%">
-              {children}
-            </Text>
+            <Icon as={MdOutlineHowToReg} boxSize={6} />
           </Button>
         </PopoverTrigger>
         <PopoverContent width="60">

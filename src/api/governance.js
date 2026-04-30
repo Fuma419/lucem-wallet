@@ -322,14 +322,19 @@ export const isUsableBlockfrostProjectId = (projectId) => {
   if (typeof projectId !== 'string') return false;
   const normalized = projectId.trim();
   if (!normalized) return false;
-  return !BLOCKFROST_PLACEHOLDER_KEYS.has(normalized.toLowerCase());
+  const lower = normalized.toLowerCase();
+  if (BLOCKFROST_PLACEHOLDER_KEYS.has(lower)) return false;
+  if (/^dummy/i.test(lower)) return false;
+  return true;
 };
 
 const fetchBlockfrostJson = async (networkId, endpoint, signal) => {
   const normalizedNetwork = normalizeNetworkId(networkId);
-  const projectId = provider.api.key(normalizedNetwork)?.project_id;
-  if (!isUsableBlockfrostProjectId(projectId)) {
-    throw new Error('Blockfrost project_id is missing');
+  const blockfrostProjectId = provider.api.key(normalizedNetwork)?.blockfrost_project_id;
+  if (!isUsableBlockfrostProjectId(blockfrostProjectId)) {
+    throw new Error(
+      'Blockfrost project id is missing (set BLOCKFROST_PROJECT_ID_* or secrets.BLOCKFROST_PROJECT_ID_* — not your Koios API key)'
+    );
   }
 
   const baseUrl = BLOCKFROST_BASE_URLS[normalizedNetwork];
@@ -337,7 +342,7 @@ const fetchBlockfrostJson = async (networkId, endpoint, signal) => {
     method: 'GET',
     headers: {
       Accept: 'application/json',
-      project_id: projectId,
+      project_id: blockfrostProjectId,
     },
     signal,
   });
@@ -353,8 +358,8 @@ const fetchBlockfrostJson = async (networkId, endpoint, signal) => {
 
 const fetchBlockfrostJsonMaybe = async (networkId, endpoint, signal) => {
   const normalizedNetwork = normalizeNetworkId(networkId);
-  const projectId = provider.api.key(normalizedNetwork)?.project_id;
-  if (!isUsableBlockfrostProjectId(projectId)) {
+  const blockfrostProjectId = provider.api.key(normalizedNetwork)?.blockfrost_project_id;
+  if (!isUsableBlockfrostProjectId(blockfrostProjectId)) {
     return null;
   }
 
@@ -364,7 +369,7 @@ const fetchBlockfrostJsonMaybe = async (networkId, endpoint, signal) => {
       method: 'GET',
       headers: {
         Accept: 'application/json',
-        project_id: projectId,
+        project_id: blockfrostProjectId,
       },
       signal,
     });
@@ -427,7 +432,11 @@ export const enrichProposalsWithBlockfrostMetadata = async (
   proposals,
   options = {}
 ) => {
-  if (!isUsableBlockfrostProjectId(provider.api.key(normalizeNetworkId(networkId))?.project_id)) {
+  if (
+    !isUsableBlockfrostProjectId(
+      provider.api.key(normalizeNetworkId(networkId))?.blockfrost_project_id
+    )
+  ) {
     return proposals;
   }
 

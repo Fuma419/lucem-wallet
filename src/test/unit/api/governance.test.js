@@ -45,13 +45,19 @@ describe('governance API service', () => {
 
   beforeEach(() => {
     provider.api.key.mockReset();
-    provider.api.key.mockReturnValue({ project_id: 'dummy' });
+    provider.api.key.mockReturnValue({
+      project_id: 'dummy',
+      blockfrost_project_id: undefined,
+    });
     koiosRequestEnhanced.mockReset();
     global.fetch = jest.fn();
   });
 
-  test('uses Blockfrost first when project_id is available', async () => {
-    provider.api.key.mockReturnValue({ project_id: 'bf_live_key' });
+  test('uses Blockfrost first when blockfrost_project_id is available', async () => {
+    provider.api.key.mockReturnValue({
+      project_id: 'koios_should_not_be_used_for_bf',
+      blockfrost_project_id: 'bf_live_key',
+    });
 
     global.fetch
       .mockResolvedValueOnce({
@@ -89,7 +95,10 @@ describe('governance API service', () => {
   });
 
   test('loads Blockfrost proposal metadata for CIP-108 abstract and rationale', async () => {
-    provider.api.key.mockReturnValue({ project_id: 'bf_live_key' });
+    provider.api.key.mockReturnValue({
+      project_id: 'koios_token',
+      blockfrost_project_id: 'bf_live_key',
+    });
     const txHash = `${'c'.repeat(64)}`;
 
     global.fetch
@@ -164,7 +173,10 @@ describe('governance API service', () => {
   });
 
   test('falls back to Koios when Blockfrost request errors', async () => {
-    provider.api.key.mockReturnValue({ project_id: 'bf_live_key' });
+    provider.api.key.mockReturnValue({
+      project_id: 'koios_token',
+      blockfrost_project_id: 'bf_live_key',
+    });
     global.fetch
       .mockResolvedValueOnce({
         ok: false,
@@ -227,6 +239,7 @@ describe('governance API service', () => {
 
     expect(isUsableBlockfrostProjectId('bf_key_123')).toBe(true);
     expect(isUsableBlockfrostProjectId('dummy')).toBe(false);
+    expect(isUsableBlockfrostProjectId('DUMMY_PREVIEW')).toBe(false);
     expect(isUsableBlockfrostProjectId('your-koios-api-key-here')).toBe(false);
   });
 });

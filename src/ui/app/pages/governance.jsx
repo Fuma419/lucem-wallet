@@ -622,9 +622,17 @@ const Governance = () => {
                           </Box>
                         ) : (
                           <Text color="gray.500" fontSize={votingFontSize.sm} mb={1}>
-                            No proposal description in API metadata yet. Use “Open proposal details”
-                            when an anchor URL is available, or configure Blockfrost to load CIP-108
-                            JSON.
+                            No proposal description loaded yet. Add a Blockfrost project id
+                            (env{' '}
+                            <Text as="span" fontFamily="mono" fontSize="xs">
+                              BLOCKFROST_PROJECT_ID_PREPROD
+                            </Text>{' '}
+                            / Preview / Mainnet, or{' '}
+                            <Text as="span" fontFamily="mono" fontSize="xs">
+                              BLOCKFROST_PROJECT_ID_*
+                            </Text>{' '}
+                            in secrets) — it must not be your Koios API key. Or open the anchor link
+                            below when present.
                           </Text>
                         )}
 

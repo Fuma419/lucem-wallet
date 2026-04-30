@@ -2,35 +2,7 @@ import { getNetwork } from './extension';
 import provider from '../config/provider';
 import Loader from './loader';
 import { NETWORK_ID } from '../config/config';
-
-function isExtensionRuntime() {
-  return (
-    typeof chrome !== 'undefined' &&
-    typeof chrome.runtime !== 'undefined' &&
-    typeof chrome.runtime.id !== 'undefined'
-  );
-}
-
-/** Extension: call Koios directly (host_permissions). Web/PWA: same-origin proxy avoids CORS. */
-function getKoiosBaseUrl(networkKey) {
-  const direct = {
-    mainnet: 'https://api.koios.rest/api/v1',
-    testnet: 'https://testnet.koios.rest/api/v1',
-    preview: 'https://preview.koios.rest/api/v1',
-    preprod: 'https://preprod.koios.rest/api/v1',
-  };
-  const base = direct[networkKey];
-  if (!base) {
-    return direct.mainnet;
-  }
-  if (isExtensionRuntime()) {
-    return base;
-  }
-  if (typeof window !== 'undefined' && window.location && window.location.origin) {
-    return `${window.location.origin}/api/koios/${networkKey}`;
-  }
-  return base;
-}
+import { isMidnightNetworkId } from '../config/network';
 import AssetFingerprint from '@emurgo/cip14-js';
 import {
   AddressType,
@@ -49,6 +21,38 @@ import {
   TxRequiredSignerType,
 } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import { crc8 } from 'crc';
+
+function isExtensionRuntime() {
+  return (
+    typeof chrome !== 'undefined' &&
+    typeof chrome.runtime !== 'undefined' &&
+    typeof chrome.runtime.id !== 'undefined'
+  );
+}
+
+/** Extension: call Koios directly (host_permissions). Web/PWA: same-origin proxy avoids CORS. */
+function getKoiosBaseUrl(networkKey) {
+  if (isMidnightNetworkId(networkKey)) {
+    return null;
+  }
+  const direct = {
+    mainnet: 'https://api.koios.rest/api/v1',
+    testnet: 'https://testnet.koios.rest/api/v1',
+    preview: 'https://preview.koios.rest/api/v1',
+    preprod: 'https://preprod.koios.rest/api/v1',
+  };
+  const base = direct[networkKey];
+  if (!base) {
+    return direct.mainnet;
+  }
+  if (isExtensionRuntime()) {
+    return base;
+  }
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return `${window.location.origin}/api/koios/${networkKey}`;
+  }
+  return base;
+}
 
 export async function delay(delayInMs) {
   return new Promise((resolve) => {
@@ -75,6 +79,10 @@ export async function koiosRequest(endpoint, headers, body, signal) {
     
     const networkKey = network.name || network.id;
     const baseUrl = getKoiosBaseUrl(networkKey);
+
+    if (!baseUrl) {
+      return { error: true, status_code: 503 };
+    }
 
     if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
@@ -140,6 +148,9 @@ export async function koiosRequest(endpoint, headers, body, signal) {
 export async function koiosSubmitTransaction(txHex, signal) {
   const network = await getNetwork();
   const networkKey = network.name || network.id;
+  if (isMidnightNetworkId(networkKey)) {
+    throw new Error('Cardano transaction submit is not available on Midnight networks.');
+  }
   const baseUrl = getKoiosBaseUrl(networkKey);
   const fullUrl = `${baseUrl}/submittx`;
 
@@ -243,6 +254,7 @@ export const networkNameToId = (name) => {
     [NETWORK_ID.testnet]: 0,
     [NETWORK_ID.preview]: 0,
     [NETWORK_ID.preprod]: 0,
+    [NETWORK_ID.midnight_preview]: 0,
   };
   return names[name];
 };

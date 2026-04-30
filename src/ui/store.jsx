@@ -36,7 +36,12 @@ const settings = {
     setNetwork(settings.network);
     state.settings = {
       ...settings,
-      adaSymbol: settings.network.id === NETWORK_ID.mainnet ? '₳' : 't₳',
+      adaSymbol:
+        settings.network.id === NETWORK_ID.mainnet
+          ? '₳'
+          : settings.network.id === NETWORK_ID.midnight_preview
+            ? '—'
+            : 't₳',
     };
   }),
 };
@@ -62,7 +67,13 @@ const initSettings = async (setSettings) => {
   setSettings({
     currency: currency || 'usd',
     network: network || { id: NETWORK_ID.mainnet, node: NODE.mainnet },
-    adaSymbol: network ? (network.id === NETWORK_ID.mainnet ? '₳' : 't₳') : '₳',
+    adaSymbol: network
+      ? network.id === NETWORK_ID.mainnet
+        ? '₳'
+        : network.id === NETWORK_ID.midnight_preview
+          ? '—'
+          : 't₳'
+      : '₳',
   });
 };
 

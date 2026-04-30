@@ -68,7 +68,7 @@ import {
 } from '../../../api/util';
 import { FixedSizeList as List } from 'react-window';
 import AssetBadge from '../components/assetBadge';
-import { ERROR, HW, TAB } from '../../../config/config';
+import { ERROR, HW, NETWORK_ID, TAB } from '../../../config/config';
 import { Planet } from 'react-kawaii';
 import Loader from '../../../api/loader';
 import { action, useStoreActions, useStoreState } from 'easy-peasy';
@@ -178,6 +178,19 @@ const Send = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const ref = React.useRef();
+
+  React.useEffect(() => {
+    if (settings?.network?.id !== NETWORK_ID.midnight_preview) return;
+    toast({
+      title: 'Send unavailable',
+      description:
+        'Midnight is a separate blockchain from Cardano. Use a Cardano network to send ADA and tokens.',
+      status: 'info',
+      duration: 6000,
+      isClosable: true,
+    });
+    navigate('/wallet');
+  }, [settings?.network?.id, navigate, toast]);
 
   const startKeystoneQrSign = React.useCallback(async () => {
     if (!tx) {

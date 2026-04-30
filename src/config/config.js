@@ -71,6 +71,8 @@ export const NODE = {
   testnet: 'https://testnet.koios.rest/api/v1',
   preview: 'https://preview.koios.rest/api/v1',
   preprod: 'https://preprod.koios.rest/api/v1',
+  /** Blockfrost Midnight indexer (GraphQL over HTTP POST); not a Koios URL. */
+  midnight_preview: 'https://midnight-preview.blockfrost.io/api/v0',
 };
 
 export const NETWORK_ID = {
@@ -78,6 +80,8 @@ export const NETWORK_ID = {
   testnet: 'testnet',
   preview: 'preview',
   preprod: 'preprod',
+  /** Midnight developer preview chain (Blockfrost-hosted indexer). */
+  midnight_preview: 'midnight_preview',
 };
 
 export const NETWORKD_ID_NUMBER = {
@@ -85,6 +89,8 @@ export const NETWORKD_ID_NUMBER = {
   testnet: 0,
   preview: 0,
   preprod: 0,
+  /** CIP-30 network id is Cardano-oriented; Midnight mode reports testnet bucket. */
+  midnight_preview: 0,
 };
 
 export const POPUP = {

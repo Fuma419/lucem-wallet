@@ -37,6 +37,7 @@ import { GoStop } from 'react-icons/go';
 // Assets
 import IOHK from '../../../assets/img/iohk.svg';
 import { ERROR, HW, TAB } from '../../../config/config';
+import { isMidnightNetworkId } from '../../../config/network';
 import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';
 import {
@@ -214,6 +215,16 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
 
   React.useImperativeHandle(ref, () => ({
     async initDelegation(account, delegation) {
+      if (isMidnightNetworkId(settings?.network?.id)) {
+        toast({
+          title: 'Unavailable on Midnight',
+          description:
+            'Stake delegation is a Cardano L1 flow. Switch network to Mainnet, Preprod, or Preview.',
+          status: 'info',
+          duration: 5000,
+        });
+        return;
+      }
       setData({
         fee: '',
         stakeRegistration: '',
@@ -244,6 +255,15 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
       }
     },
     async initWithdrawal(account, delegation) {
+      if (isMidnightNetworkId(settings?.network?.id)) {
+        toast({
+          title: 'Unavailable on Midnight',
+          description: 'Rewards withdrawals use Cardano Koios. Switch to a Cardano network.',
+          status: 'info',
+          duration: 5000,
+        });
+        return;
+      }
       setData({
         pool: { ...poolDefaultValue },
         fee: '',
@@ -274,6 +294,15 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
       }
     },
     async initUndelegate(account, delegation) {
+      if (isMidnightNetworkId(settings?.network?.id)) {
+        toast({
+          title: 'Unavailable on Midnight',
+          description: 'Switch to a Cardano network to change delegation.',
+          status: 'info',
+          duration: 5000,
+        });
+        return;
+      }
       setData({
         pool: { ...poolDefaultValue },
         fee: '',
@@ -301,6 +330,15 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
       }
     },
     async initCollateral(account) {
+      if (isMidnightNetworkId(settings?.network?.id)) {
+        toast({
+          title: 'Unavailable on Midnight',
+          description: 'Collateral is for Cardano Plutus. Switch to a Cardano network.',
+          status: 'info',
+          duration: 5000,
+        });
+        return;
+      }
       setData({
         pool: { ...poolDefaultValue },
         fee: '',

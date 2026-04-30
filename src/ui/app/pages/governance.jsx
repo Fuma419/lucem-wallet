@@ -102,6 +102,15 @@ const toEpochSortValue = (value) => {
 const shouldCollapseSummary = (value) =>
   typeof value === 'string' && value.trim().length > 220;
 
+const addFourPoint = (baseSize) => `calc(${baseSize} + 4pt)`;
+
+const votingFontSize = {
+  xs: addFourPoint('var(--chakra-fontSizes-xs)'),
+  sm: addFourPoint('var(--chakra-fontSizes-sm)'),
+  headingSm: addFourPoint('1rem'),
+  headingMd: addFourPoint('1.25rem'),
+};
+
 const Governance = () => {
   const navigate = useNavigate();
   const toast = useToast();
@@ -300,21 +309,26 @@ const Governance = () => {
                 aria-label="Back"
                 color="white"
               />
-              <Heading size="md" color="white">
+              <Heading size="md" color="white" fontSize={votingFontSize.headingMd}>
                 Voting
               </Heading>
             </HStack>
             <HStack spacing={2}>
               {governanceState.source ? (
                 <Tooltip label={governanceState.fallbackReason || ''} hasArrow>
-                  <Badge colorScheme={sourceBadgeColor(governanceState.source)}>
+                  <Badge
+                    colorScheme={sourceBadgeColor(governanceState.source)}
+                    fontSize={votingFontSize.xs}
+                  >
                     {governanceState.source === 'blockfrost'
                       ? 'Blockfrost'
                       : 'Koios fallback'}
                   </Badge>
                 </Tooltip>
               ) : null}
-              <Badge colorScheme="cyan">{networkId}</Badge>
+              <Badge colorScheme="cyan" fontSize={votingFontSize.xs}>
+                {networkId}
+              </Badge>
             </HStack>
           </Flex>
 
@@ -326,11 +340,12 @@ const Governance = () => {
               p={4}
             >
               <Flex align="center" justify="space-between" mb={3}>
-                <Heading size="sm" color="white">
+                <Heading size="sm" color="white" fontSize={votingFontSize.headingSm}>
                   Delegate Voting Power
                 </Heading>
                 <Button
                   size="xs"
+                  fontSize={votingFontSize.xs}
                   leftIcon={<RepeatIcon />}
                   variant="ghost"
                   color="gray.300"
@@ -341,13 +356,14 @@ const Governance = () => {
                 </Button>
               </Flex>
 
-              <Text fontSize="sm" color="gray.300" mb={3}>
+              <Text fontSize={votingFontSize.sm} color="gray.300" mb={3}>
                 Build and sign an on-chain vote delegation certificate for this wallet.
               </Text>
 
               <VStack spacing={2} align="stretch">
                 <Button
                   size="sm"
+                  fontSize={votingFontSize.sm}
                   colorScheme="blue"
                   onClick={() => void prepareVoteDelegation('always_abstain')}
                   isLoading={isBuildingTx}
@@ -356,6 +372,7 @@ const Governance = () => {
                 </Button>
                 <Button
                   size="sm"
+                  fontSize={votingFontSize.sm}
                   colorScheme="orange"
                   onClick={() => void prepareVoteDelegation('always_no_confidence')}
                   isLoading={isBuildingTx}
@@ -368,6 +385,7 @@ const Governance = () => {
                     value={drepIdInput}
                     onChange={(event) => setDrepIdInput(event.target.value)}
                     size="sm"
+                    fontSize={votingFontSize.sm}
                     bg="rgba(255, 255, 255, 0.05)"
                     borderColor="whiteAlpha.300"
                     color="white"
@@ -375,6 +393,7 @@ const Governance = () => {
                   />
                   <Button
                     size="sm"
+                    fontSize={votingFontSize.sm}
                     colorScheme="purple"
                     onClick={() => void handleCustomDrepDelegation()}
                     isDisabled={!drepIdInput.trim()}
@@ -387,7 +406,7 @@ const Governance = () => {
 
               {governanceState.dreps.length > 0 && (
                 <Box mt={4}>
-                  <Text fontSize="xs" color="gray.400" mb={2}>
+                  <Text fontSize={votingFontSize.xs} color="gray.400" mb={2}>
                     Quick pick from top DReps
                   </Text>
                   <VStack spacing={2} align="stretch">
@@ -402,15 +421,16 @@ const Governance = () => {
                         justify="space-between"
                       >
                         <Box minW={0} mr={2}>
-                          <Text color="white" fontSize="sm" isTruncated>
+                          <Text color="white" fontSize={votingFontSize.sm} isTruncated>
                             {drep.name || truncateMiddle(drep.id)}
                           </Text>
-                          <Text color="gray.400" fontSize="xs">
+                          <Text color="gray.400" fontSize={votingFontSize.xs}>
                             {truncateMiddle(drep.id)} {drep.votingPower ? `| ${drep.votingPower} lovelace` : ''}
                           </Text>
                         </Box>
                         <Button
                           size="xs"
+                          fontSize={votingFontSize.xs}
                           colorScheme="purple"
                           onClick={() => {
                             setDrepIdInput(drep.keyHashHex);
@@ -433,16 +453,16 @@ const Governance = () => {
               rounded="xl"
               p={4}
             >
-              <Heading size="sm" color="white" mb={3}>
+              <Heading size="sm" color="white" mb={3} fontSize={votingFontSize.headingSm}>
                 Active Governance Proposals
               </Heading>
-              <Text fontSize="xs" color="gray.400" mb={3}>
+              <Text fontSize={votingFontSize.xs} color="gray.400" mb={3}>
                 Proposal cards highlight action type, status, voting window, and abstract so you
                 can scan decisions quickly before opening full details.
               </Text>
               <Link
                 color="cyan.300"
-                fontSize="xs"
+                fontSize={votingFontSize.xs}
                 display="inline-block"
                 mb={4}
                 onClick={() =>
@@ -461,7 +481,7 @@ const Governance = () => {
                   <Spinner />
                 </Flex>
               ) : governanceState.error ? (
-                <Text color="red.300" fontSize="sm">
+                <Text color="red.300" fontSize={votingFontSize.sm}>
                   {governanceState.error}
                 </Text>
               ) : sortedProposals.length > 0 ? (
@@ -481,15 +501,22 @@ const Governance = () => {
                       >
                         <Flex align="start" justify="space-between" gap={2} mb={1}>
                           <HStack spacing={2} flexWrap="wrap">
-                            <Badge colorScheme={proposalTypeColor(proposal.type)}>
+                            <Badge
+                              colorScheme={proposalTypeColor(proposal.type)}
+                              fontSize={votingFontSize.xs}
+                            >
                               {toReadableLabel(proposal.type)}
                             </Badge>
-                            <Badge colorScheme={proposalStatusColor(proposal.status)}>
+                            <Badge
+                              colorScheme={proposalStatusColor(proposal.status)}
+                              fontSize={votingFontSize.xs}
+                            >
                               {toReadableLabel(proposal.status)}
                             </Badge>
                           </HStack>
                           <Button
                             size="xs"
+                            fontSize={votingFontSize.xs}
                             variant="ghost"
                             color="gray.300"
                             onClick={() => void copyProposalId(proposal.id)}
@@ -498,10 +525,10 @@ const Governance = () => {
                           </Button>
                         </Flex>
 
-                        <Text color="white" fontWeight="bold" fontSize="sm" mb={1}>
+                        <Text color="white" fontWeight="bold" fontSize={votingFontSize.sm} mb={1}>
                           {proposal.title}
                         </Text>
-                        <Text color="gray.400" fontSize="xs" mb={2}>
+                        <Text color="gray.400" fontSize={votingFontSize.xs} mb={2}>
                           {truncateMiddle(proposal.id, 14, 10)}
                         </Text>
 
@@ -509,7 +536,7 @@ const Governance = () => {
                           <>
                             <Text
                               color="gray.300"
-                              fontSize="sm"
+                              fontSize={votingFontSize.sm}
                               mb={1}
                               noOfLines={summaryExpanded ? undefined : 4}
                             >
@@ -518,6 +545,7 @@ const Governance = () => {
                             {canToggleSummary && (
                               <Button
                                 size="xs"
+                                fontSize={votingFontSize.xs}
                                 variant="link"
                                 colorScheme="cyan"
                                 onClick={() => toggleProposalSummary(proposal.id)}
@@ -527,7 +555,7 @@ const Governance = () => {
                             )}
                           </>
                         ) : (
-                          <Text color="gray.500" fontSize="sm" mb={1}>
+                          <Text color="gray.500" fontSize={votingFontSize.sm} mb={1}>
                             No abstract provided by the selected governance API.
                           </Text>
                         )}
@@ -537,14 +565,14 @@ const Governance = () => {
                           spacing={1}
                           mt={2}
                           color="gray.400"
-                          fontSize="xs"
+                          fontSize={votingFontSize.xs}
                         >
                           <Text>Submitted: {formatEpoch(proposal.submittedEpoch)}</Text>
                           <Text>Voting closes: {formatEpoch(proposal.expiresAfterEpoch)}</Text>
                         </SimpleGrid>
 
                         {proposal.anchorHash ? (
-                          <Text color="gray.500" fontSize="xs" mt={1}>
+                          <Text color="gray.500" fontSize={votingFontSize.xs} mt={1}>
                             Anchor hash: {truncateMiddle(proposal.anchorHash, 14, 10)}
                           </Text>
                         ) : null}
@@ -554,7 +582,7 @@ const Governance = () => {
                             mt={2}
                             display="inline-block"
                             color="cyan.300"
-                            fontSize="xs"
+                            fontSize={votingFontSize.xs}
                             onClick={() =>
                               window.open(proposal.url, '_blank', 'noopener,noreferrer')
                             }
@@ -562,7 +590,7 @@ const Governance = () => {
                             Open proposal details
                           </Link>
                         ) : (
-                          <Text color="gray.500" fontSize="xs" mt={2}>
+                          <Text color="gray.500" fontSize={votingFontSize.xs} mt={2}>
                             No proposal anchor URL available.
                           </Text>
                         )}
@@ -571,7 +599,7 @@ const Governance = () => {
                   })}
                 </VStack>
               ) : (
-                <Text color="gray.300" fontSize="sm">
+                <Text color="gray.300" fontSize={votingFontSize.sm}>
                   No proposals returned by the current network API.
                 </Text>
               )}
@@ -659,16 +687,16 @@ const Governance = () => {
             justifyContent="center"
             flexDirection="column"
           >
-            <Text fontSize="sm" mb={2} textAlign="center">
+            <Text fontSize={votingFontSize.sm} mb={2} textAlign="center">
               Delegation target: {voteLabel(voteTxState.voteType)}
             </Text>
             {voteTxState.targetDrep ? (
-              <Text fontSize="xs" color="gray.500" mb={2}>
+              <Text fontSize={votingFontSize.xs} color="gray.500" mb={2}>
                 {voteTxState.targetDrep}
               </Text>
             ) : null}
             <HStack spacing={1}>
-              <Text fontWeight="bold" fontSize="sm">
+              <Text fontWeight="bold" fontSize={votingFontSize.sm}>
                 Fee:
               </Text>
               <UnitDisplay

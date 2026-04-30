@@ -40,6 +40,7 @@ describe('governance page and wallet network button wiring', () => {
     expect(governanceSrc).toContain('Learn governance action types');
     expect(governanceSrc).toContain('Read full proposal text');
     expect(governanceSrc).toContain('Copy ID');
+    expect(governanceSrc).toContain('isMidnightNetworkId');
   });
 });
 

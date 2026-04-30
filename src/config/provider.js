@@ -42,6 +42,12 @@ export default {
     ipfs: 'https://ipfs.blockfrost.dev/ipfs', // Keep this for now as it's still useful
     base: (node = NODE.mainnet) => node,
     header: { [getEnvVar('NAMI_HEADER', secrets.NAMI_HEADER) || 'dummy']: version },
+    /** Blockfrost dashboard project for Midnight Preview (GraphQL indexer). */
+    midnightPreviewProjectId: () =>
+      getEnvVar(
+        'BLOCKFROST_MIDNIGHT_PROJECT_ID_PREVIEW',
+        secrets.BLOCKFROST_MIDNIGHT_PROJECT_ID_PREVIEW || ''
+      ),
     key: (network = 'mainnet') => ({
       project_id: networkToProjectId[network],
       blockfrost_project_id: networkToBlockfrostProjectId[network],

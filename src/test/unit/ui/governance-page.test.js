@@ -38,7 +38,7 @@ describe('governance page and wallet network button wiring', () => {
     expect(governanceSrc).toContain('Delegate Voting Power');
     expect(governanceSrc).toContain('Active Governance Proposals');
     expect(governanceSrc).toContain('Learn governance action types');
-    expect(governanceSrc).toContain('Read full abstract');
+    expect(governanceSrc).toContain('Read full proposal text');
     expect(governanceSrc).toContain('Copy ID');
   });
 });

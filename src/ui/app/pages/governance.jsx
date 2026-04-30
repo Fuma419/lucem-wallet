@@ -99,8 +99,12 @@ const toEpochSortValue = (value) => {
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
 };
 
-const shouldCollapseSummary = (value) =>
-  typeof value === 'string' && value.trim().length > 220;
+const shouldCollapseProposalNarrative = (proposal) => {
+  const parts = [proposal.summary, proposal.motivation, proposal.rationale]
+    .filter((value) => typeof value === 'string' && value.trim())
+    .join('\n');
+  return parts.length > 280;
+};
 
 const addFourPoint = (baseSize) => `calc(${baseSize} + 4pt)`;
 
@@ -457,8 +461,12 @@ const Governance = () => {
                 Active Governance Proposals
               </Heading>
               <Text fontSize={votingFontSize.xs} color="gray.400" mb={3}>
-                Proposal cards highlight action type, status, voting window, and abstract so you
-                can scan decisions quickly before opening full details.
+                Titles and descriptions come from on-chain anchors (CIP-108). Blockfrost resolves
+                proposal metadata when a project id is configured; Koios may include{' '}
+                <Text as="span" fontWeight="semibold">
+                  meta_json
+                </Text>{' '}
+                inline.
               </Text>
               <Link
                 color="cyan.300"
@@ -487,9 +495,18 @@ const Governance = () => {
               ) : sortedProposals.length > 0 ? (
                 <VStack spacing={3} align="stretch">
                   {sortedProposals.map((proposal) => {
-                    const hasSummary = Boolean(proposal.summary);
                     const summaryExpanded = Boolean(expandedProposalIds[proposal.id]);
-                    const canToggleSummary = shouldCollapseSummary(proposal.summary);
+                    const hasSummary = Boolean(
+                      proposal.summary && String(proposal.summary).trim()
+                    );
+                    const hasMotivation = Boolean(
+                      proposal.motivation && String(proposal.motivation).trim()
+                    );
+                    const hasRationale = Boolean(
+                      proposal.rationale && String(proposal.rationale).trim()
+                    );
+                    const hasReadableBody = hasSummary || hasMotivation || hasRationale;
+                    const canToggleSummary = shouldCollapseProposalNarrative(proposal);
 
                     return (
                       <Box
@@ -532,16 +549,65 @@ const Governance = () => {
                           {truncateMiddle(proposal.id, 14, 10)}
                         </Text>
 
-                        {hasSummary ? (
-                          <>
-                            <Text
-                              color="gray.300"
-                              fontSize={votingFontSize.sm}
-                              mb={1}
-                              noOfLines={summaryExpanded ? undefined : 4}
-                            >
-                              {proposal.summary}
-                            </Text>
+                        {hasReadableBody ? (
+                          <Box mb={1}>
+                            {hasSummary ? (
+                              <Text
+                                color="gray.300"
+                                fontSize={votingFontSize.sm}
+                                whiteSpace="pre-wrap"
+                                mb={hasMotivation || hasRationale ? 2 : 1}
+                                noOfLines={
+                                  summaryExpanded || !canToggleSummary ? undefined : 4
+                                }
+                              >
+                                {proposal.summary}
+                              </Text>
+                            ) : null}
+                            {hasMotivation ? (
+                              <Box mb={hasRationale ? 2 : 1}>
+                                <Text
+                                  color="gray.500"
+                                  fontSize={votingFontSize.xs}
+                                  fontWeight="semibold"
+                                  mb={0.5}
+                                >
+                                  Motivation
+                                </Text>
+                                <Text
+                                  color="gray.300"
+                                  fontSize={votingFontSize.sm}
+                                  whiteSpace="pre-wrap"
+                                  noOfLines={
+                                    summaryExpanded || !canToggleSummary ? undefined : 3
+                                  }
+                                >
+                                  {proposal.motivation}
+                                </Text>
+                              </Box>
+                            ) : null}
+                            {hasRationale ? (
+                              <Box mb={1}>
+                                <Text
+                                  color="gray.500"
+                                  fontSize={votingFontSize.xs}
+                                  fontWeight="semibold"
+                                  mb={0.5}
+                                >
+                                  Rationale
+                                </Text>
+                                <Text
+                                  color="gray.300"
+                                  fontSize={votingFontSize.sm}
+                                  whiteSpace="pre-wrap"
+                                  noOfLines={
+                                    summaryExpanded || !canToggleSummary ? undefined : 3
+                                  }
+                                >
+                                  {proposal.rationale}
+                                </Text>
+                              </Box>
+                            ) : null}
                             {canToggleSummary && (
                               <Button
                                 size="xs"
@@ -550,15 +616,59 @@ const Governance = () => {
                                 colorScheme="cyan"
                                 onClick={() => toggleProposalSummary(proposal.id)}
                               >
-                                {summaryExpanded ? 'Show less' : 'Read full abstract'}
+                                {summaryExpanded ? 'Show less' : 'Read full proposal text'}
                               </Button>
                             )}
-                          </>
+                          </Box>
                         ) : (
                           <Text color="gray.500" fontSize={votingFontSize.sm} mb={1}>
-                            No abstract provided by the selected governance API.
+                            No proposal description in API metadata yet. Use “Open proposal details”
+                            when an anchor URL is available, or configure Blockfrost to load CIP-108
+                            JSON.
                           </Text>
                         )}
+
+                        {proposal.authors && proposal.authors.length > 0 ? (
+                          <Text color="gray.500" fontSize={votingFontSize.xs} mb={2}>
+                            Authors: {proposal.authors.join(', ')}
+                          </Text>
+                        ) : null}
+
+                        {proposal.references && proposal.references.length > 0 ? (
+                          <Box mt={1} mb={1}>
+                            <Text
+                              color="gray.500"
+                              fontSize={votingFontSize.xs}
+                              fontWeight="semibold"
+                              mb={1}
+                            >
+                              References
+                            </Text>
+                            <VStack align="stretch" spacing={1}>
+                              {proposal.references.map((reference, referenceIndex) => (
+                                <Link
+                                  key={`${proposal.id}-ref-${referenceIndex}`}
+                                  color="cyan.300"
+                                  fontSize={votingFontSize.xs}
+                                  wordBreak="break-word"
+                                  onClick={() => {
+                                    const target = reference.uri || reference.label;
+                                    if (target && /^https?:\/\//i.test(target)) {
+                                      window.open(target, '_blank', 'noopener,noreferrer');
+                                    }
+                                  }}
+                                >
+                                  {reference.label || reference.uri || 'Link'}
+                                  {reference.uri &&
+                                  reference.label &&
+                                  reference.uri !== reference.label
+                                    ? ` — ${reference.uri}`
+                                    : ''}
+                                </Link>
+                              ))}
+                            </VStack>
+                          </Box>
+                        ) : null}
 
                         <SimpleGrid
                           columns={{ base: 1, md: 2 }}

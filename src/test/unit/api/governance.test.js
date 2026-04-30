@@ -1,6 +1,7 @@
 import provider from '../../../config/provider';
 import { koiosRequestEnhanced } from '../../../api/util';
 import {
+  extractGovernanceNarrativeFromMetadataRoot,
   fetchGovernanceOverview,
   isUsableBlockfrostProjectId,
   normalizeDrepKeyHash,
@@ -20,6 +21,28 @@ jest.mock('../../../api/util', () => ({
 }));
 
 describe('governance API service', () => {
+  test('extracts CIP-108 narrative fields from metadata JSON root', () => {
+    const narrative = extractGovernanceNarrativeFromMetadataRoot({
+      body: {
+        title: 'Hardfork example',
+        abstract: 'Short summary',
+        rationale: 'Testing rationale',
+        motivation: 'Testing motivation',
+        references: [{ uri: 'https://example.org/doc', label: 'Doc' }],
+      },
+      authors: [{ name: 'Alice', witness: {} }],
+    });
+
+    expect(narrative.title).toBe('Hardfork example');
+    expect(narrative.summary).toBe('Short summary');
+    expect(narrative.rationale).toBe('Testing rationale');
+    expect(narrative.motivation).toBe('Testing motivation');
+    expect(narrative.references).toEqual([
+      expect.objectContaining({ uri: 'https://example.org/doc', label: 'Doc' }),
+    ]);
+    expect(narrative.authors).toEqual(['Alice']);
+  });
+
   beforeEach(() => {
     provider.api.key.mockReset();
     provider.api.key.mockReturnValue({ project_id: 'dummy' });
@@ -62,6 +85,64 @@ describe('governance API service', () => {
       expect.objectContaining({
         headers: expect.objectContaining({ project_id: 'bf_live_key' }),
       })
+    );
+  });
+
+  test('loads Blockfrost proposal metadata for CIP-108 abstract and rationale', async () => {
+    provider.api.key.mockReturnValue({ project_id: 'bf_live_key' });
+    const txHash = `${'c'.repeat(64)}`;
+
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => [
+          {
+            id: 'gov_action1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqvrsnmqq',
+            tx_hash: txHash,
+            cert_index: 1,
+            governance_type: 'info_action',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => [{ drep_id: 'd'.repeat(56), active_stake: '99' }],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({
+          url: 'https://example.test/proposal.json',
+          hash: 'e'.repeat(64),
+          json_metadata: {
+            body: {
+              title: 'Resolved title',
+              abstract: 'Resolved abstract',
+              rationale: 'Resolved rationale',
+              motivation: 'Resolved motivation',
+            },
+          },
+        }),
+      });
+
+    const result = await fetchGovernanceOverview('preview', {
+      proposalLimit: 3,
+      drepLimit: 2,
+    });
+
+    expect(result.source).toBe('blockfrost');
+    expect(result.proposals[0].title).toBe('Resolved title');
+    expect(result.proposals[0].summary).toBe('Resolved abstract');
+    expect(result.proposals[0].rationale).toBe('Resolved rationale');
+    expect(result.proposals[0].motivation).toBe('Resolved motivation');
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(global.fetch.mock.calls[2][0]).toContain(
+      `/governance/proposals/${txHash}/1/metadata`
     );
   });
 

@@ -17,7 +17,13 @@ import { searchPools } from '../../../api/extension';
 import UnitDisplay from './unitDisplay';
 import { useStoreState } from 'easy-peasy';
 
-const PoolSearch = ({ selectedPoolId, onSelect }) => {
+const PoolSearch = ({
+  selectedPoolId,
+  onSelect,
+  inputFontSize = 'sm',
+  bodyFontSize = 'sm',
+  metaFontSize = 'xs',
+}) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -66,6 +72,7 @@ const PoolSearch = ({ selectedPoolId, onSelect }) => {
         <Input
           placeholder="Search by Ticker or Pool ID"
           value={query}
+          fontSize={inputFontSize}
           onChange={(e) => {
             setQuery(e.target.value);
             setIsOpen(true);
@@ -112,11 +119,11 @@ const PoolSearch = ({ selectedPoolId, onSelect }) => {
         >
           {loading && results.length === 0 ? (
             <Box p={4} textAlign="center">
-              <Text fontSize="sm" color="gray.400">Searching...</Text>
+              <Text fontSize={bodyFontSize} color="gray.400">Searching...</Text>
             </Box>
           ) : results.length === 0 ? (
             <Box p={4} textAlign="center">
-              <Text fontSize="sm" color="gray.400">No pools found.</Text>
+              <Text fontSize={bodyFontSize} color="gray.400">No pools found.</Text>
             </Box>
           ) : (
             <VStack align="stretch" spacing={0} divider={<Box borderBottomWidth={1} borderColor="whiteAlpha.100" />}>
@@ -136,13 +143,13 @@ const PoolSearch = ({ selectedPoolId, onSelect }) => {
                     <HStack>
                       <Avatar size="sm" name={pool.ticker} src={pool.homepage ? `${pool.homepage}/favicon.ico` : ''} bg="purple.500" color="white" />
                       <VStack align="start" spacing={0}>
-                        <Text fontWeight="bold" fontSize="sm">{pool.ticker}</Text>
-                        <Text fontSize="xs" color="gray.400" isTruncated maxW="150px">{pool.name}</Text>
+                        <Text fontWeight="bold" fontSize={bodyFontSize}>{pool.ticker}</Text>
+                        <Text fontSize={metaFontSize} color="gray.400" isTruncated maxW="150px">{pool.name}</Text>
                       </VStack>
                     </HStack>
                     <VStack align="end" spacing={0}>
-                      <Text fontSize="xs" color="gray.400">Margin: {(pool.margin * 100).toFixed(2)}%</Text>
-                      <Text fontSize="xs" color="gray.400">
+                      <Text fontSize={metaFontSize} color="gray.400">Margin: {(pool.margin * 100).toFixed(2)}%</Text>
+                      <Text fontSize={metaFontSize} color="gray.400">
                         Pledge: <UnitDisplay quantity={pool.pledge} decimals={6} symbol={settings.adaSymbol} hide />
                       </Text>
                     </VStack>

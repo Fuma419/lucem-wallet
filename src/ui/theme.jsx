@@ -3,6 +3,8 @@ import { ChakraProvider, extendTheme } from '@chakra-ui/react';
 import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
 
+const scaledFont = (rem) => `calc(${rem} * var(--lucem-font-scale, 1))`;
+
 // Define custom sizes for Input components
 const inputSizes = {
   sm: {
@@ -65,6 +67,16 @@ const theme = extendTheme({
     lg: '62em',
     xl: '80em',
     '2xl': '96em',
+  },
+  fontSizes: {
+    xs: scaledFont('0.75rem'),
+    sm: scaledFont('0.875rem'),
+    md: scaledFont('1rem'),
+    lg: scaledFont('1.125rem'),
+    xl: scaledFont('1.25rem'),
+    '2xl': scaledFont('1.5rem'),
+    '3xl': scaledFont('1.875rem'),
+    '4xl': scaledFont('2.25rem'),
   },
   colors: {
     yellow: {
@@ -249,10 +261,15 @@ const theme = extendTheme({
 
   styles: {
     global: {
+      html: {
+        WebkitTextSizeAdjust: '100%',
+        textSizeAdjust: '100%',
+      },
       body: {
         overflow: 'hidden',
         bg: '#080808', // Ensure the background is dark
         color: 'gray.100', // Ensure text is light-colored
+        fontSize: 'md',
       },
     },
   },

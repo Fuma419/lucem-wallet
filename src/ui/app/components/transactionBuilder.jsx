@@ -99,6 +99,13 @@ const poolTooltipMessage = (pool) => {
   return `${ticker} / ${name}`;
 };
 
+const addTwoPoint = (baseSize) => `calc(${baseSize} + 2pt)`;
+
+const delegationTextSize = {
+  xs: addTwoPoint('var(--chakra-fontSizes-xs)'),
+  sm: addTwoPoint('var(--chakra-fontSizes-sm)'),
+};
+
 const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
   const settings = useStoreState((state) => state.settings.settings);
   const toast = useToast();
@@ -417,11 +424,14 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             flexDirection="column"
 
           >
-            <Text fontSize="sm" textAlign="center" mb={2}>
+            <Text fontSize={delegationTextSize.sm} textAlign="center" mb={2}>
               Search for a stake pool by ticker or pool ID to delegate your funds.
             </Text>
             <PoolSearch
               selectedPoolId={data.pool.id}
+              inputFontSize={delegationTextSize.sm}
+              bodyFontSize={delegationTextSize.sm}
+              metaFontSize={delegationTextSize.xs}
               onSelect={(poolId) => {
                 if (poolId) {
                   setData((s) => ({
@@ -437,11 +447,17 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
               }}
             />
             {error ? (
-              <Box textAlign="center" mb="4" color="red.300" mt="4">
+              <Box
+                textAlign="center"
+                mb="4"
+                color="red.300"
+                mt="4"
+                fontSize={delegationTextSize.sm}
+              >
                 {error}
               </Box>
             ) : (
-              <Box fontSize="sm">
+              <Box fontSize={delegationTextSize.sm}>
                 {data.stakeRegistration && (
                   <Box
                     mt="1"

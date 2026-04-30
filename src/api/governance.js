@@ -38,6 +38,76 @@ const humanizeSlug = (value) => {
     .trim();
 };
 
+const GOV_ACTION_BECH32_PREFIX = 'gov_action1';
+
+const isLikelyProposalTxHash = (value) =>
+  typeof value === 'string' && /^[0-9a-f]{64}$/i.test(value.trim());
+
+const parseJsonField = (value) => {
+  if (value == null) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const normalizeReferenceEntries = (refs) => {
+  if (!Array.isArray(refs)) return [];
+  return refs
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const label = firstString(entry.label, entry.title);
+      const uri = firstString(entry.uri, entry.reference_uri, entry.url);
+      if (!label && !uri) return null;
+      return { label, uri };
+    })
+    .filter(Boolean);
+};
+
+/** CIP-108 / Blockfrost json_metadata: narrative lives under body or at root. */
+export const extractGovernanceNarrativeFromMetadataRoot = (root) => {
+  if (!root || typeof root !== 'object') {
+    return {
+      title: '',
+      summary: '',
+      rationale: '',
+      motivation: '',
+      references: [],
+      authors: [],
+    };
+  }
+
+  const body =
+    root.body && typeof root.body === 'object' && !Array.isArray(root.body)
+      ? root.body
+      : root;
+
+  const title = firstString(body.title, root.title);
+  const summary = firstString(
+    body.abstract,
+    body.summary,
+    root.abstract,
+    root.summary
+  );
+  const rationale = firstString(body.rationale, root.rationale);
+  const motivation = firstString(body.motivation, root.motivation);
+  const references = normalizeReferenceEntries(body.references ?? root.references);
+  const authors = Array.isArray(root.authors)
+    ? root.authors
+        .map((author) =>
+          firstString(author?.name, author?.given_name, author?.handle)
+        )
+        .filter(Boolean)
+    : [];
+
+  return { title, summary, rationale, motivation, references, authors };
+};
+
 const titleFromUrl = (value) => {
   if (typeof value !== 'string' || !value.trim()) return '';
 
@@ -118,18 +188,23 @@ const normalizeProposal = (proposal, index) => {
   const type = firstString(
     proposal.proposal_type,
     proposal.gov_action_type,
+    proposal.governance_type,
     proposal.type
   );
   const url = firstString(
     proposal.url,
     proposal.anchor?.url,
     proposal.anchor_url,
-    proposal.metadata_url
+    proposal.metadata_url,
+    proposal.meta_url
   );
+  const metaJsonRoot = parseJsonField(proposal.meta_json);
+  const metaNarrative = extractGovernanceNarrativeFromMetadataRoot(metaJsonRoot);
   const titleCandidate = firstString(
     proposal.title,
     proposal.metadata?.title,
-    proposal.metadata?.name
+    proposal.metadata?.name,
+    metaNarrative.title
   );
   const derivedUrlTitle = titleFromUrl(url);
   const title = firstString(
@@ -140,20 +215,44 @@ const normalizeProposal = (proposal, index) => {
   const summary = firstString(
     proposal.description,
     proposal.metadata?.abstract,
-    proposal.metadata?.summary
+    proposal.metadata?.summary,
+    metaNarrative.summary
   );
+  const rationale = firstString(metaNarrative.rationale);
+  const motivation = firstString(metaNarrative.motivation);
+  const references = metaNarrative.references.length ? metaNarrative.references : [];
+  const authors = metaNarrative.authors.length ? metaNarrative.authors : [];
   const anchorHash = firstString(
     proposal.anchor?.hash,
     proposal.anchor_hash,
-    proposal.metadata_hash
+    proposal.metadata_hash,
+    proposal.meta_hash
   );
   const submittedEpoch =
     proposal.proposed_in_epoch ??
     proposal.proposal_epoch ??
     proposal.epoch_no ??
+    proposal.proposed_epoch ??
     null;
   const expiresAfterEpoch =
-    proposal.expires_after ?? proposal.expires_epoch ?? proposal.expire_epoch ?? null;
+    proposal.expires_after ??
+    proposal.expires_epoch ??
+    proposal.expire_epoch ??
+    proposal.expiration ??
+    proposal.expired_epoch ??
+    null;
+
+  const rawTx = firstString(proposal.tx_hash, proposal.proposal_tx_hash);
+  const txHash = isLikelyProposalTxHash(rawTx) ? rawTx.trim().toLowerCase() : '';
+  const certRaw = proposal.cert_index ?? proposal.proposal_index;
+  let certIndex = null;
+  if (certRaw !== null && certRaw !== undefined && certRaw !== '') {
+    const parsedCert = Number(certRaw);
+    if (Number.isFinite(parsedCert) && parsedCert >= 0) {
+      certIndex = parsedCert;
+    }
+  }
+  const govActionId = firstString(proposal.id, proposal.proposal_id, proposal.gov_action_id);
 
   return {
     id,
@@ -161,10 +260,17 @@ const normalizeProposal = (proposal, index) => {
     status: toStatus(proposal),
     title,
     summary,
+    rationale,
+    motivation,
+    references,
+    authors,
     url,
     anchorHash,
     submittedEpoch,
     expiresAfterEpoch,
+    txHash,
+    certIndex,
+    govActionId,
   };
 };
 
@@ -245,6 +351,112 @@ const fetchBlockfrostJson = async (networkId, endpoint, signal) => {
   return response.json();
 };
 
+const fetchBlockfrostJsonMaybe = async (networkId, endpoint, signal) => {
+  const normalizedNetwork = normalizeNetworkId(networkId);
+  const projectId = provider.api.key(normalizedNetwork)?.project_id;
+  if (!isUsableBlockfrostProjectId(projectId)) {
+    return null;
+  }
+
+  const baseUrl = BLOCKFROST_BASE_URLS[normalizedNetwork];
+  try {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        project_id: projectId,
+      },
+      signal,
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+    if (!response.ok) {
+      return null;
+    }
+    return response.json();
+  } catch {
+    return null;
+  }
+};
+
+const resolveProposalMetadataPath = (proposal) => {
+  if (
+    proposal.txHash &&
+    proposal.certIndex !== null &&
+    proposal.certIndex !== undefined
+  ) {
+    return `/governance/proposals/${proposal.txHash}/${proposal.certIndex}/metadata`;
+  }
+  const gid = firstString(proposal.govActionId);
+  if (gid && gid.startsWith(GOV_ACTION_BECH32_PREFIX)) {
+    return `/governance/proposals/${encodeURIComponent(gid)}/metadata`;
+  }
+  return '';
+};
+
+const mergeBlockfrostMetadataIntoProposal = (proposal, payload) => {
+  if (!payload || typeof payload !== 'object') return proposal;
+
+  const rawMeta = payload.json_metadata;
+  const metaRoot =
+    typeof rawMeta === 'string' ? parseJsonField(rawMeta) : rawMeta;
+  const narrative = extractGovernanceNarrativeFromMetadataRoot(metaRoot);
+
+  const mergedRefs =
+    proposal.references?.length > 0 ? proposal.references : narrative.references;
+  const mergedAuthors =
+    proposal.authors?.length > 0 ? proposal.authors : narrative.authors;
+
+  return {
+    ...proposal,
+    title: firstString(narrative.title, proposal.title, proposal.id),
+    summary: firstString(narrative.summary, proposal.summary),
+    rationale: firstString(narrative.rationale, proposal.rationale),
+    motivation: firstString(narrative.motivation, proposal.motivation),
+    references: mergedRefs,
+    authors: mergedAuthors,
+    url: firstString(proposal.url, payload.url),
+    anchorHash: firstString(proposal.anchorHash, payload.hash),
+  };
+};
+
+export const enrichProposalsWithBlockfrostMetadata = async (
+  networkId,
+  proposals,
+  options = {}
+) => {
+  if (!isUsableBlockfrostProjectId(provider.api.key(normalizeNetworkId(networkId))?.project_id)) {
+    return proposals;
+  }
+
+  const concurrency = Math.max(1, Math.min(options.metadataConcurrency ?? 4, 8));
+  const signal = options.signal;
+  const next = [...proposals];
+
+  for (let offset = 0; offset < next.length; offset += concurrency) {
+    const slice = next.slice(offset, offset + concurrency);
+    const enriched = await Promise.all(
+      slice.map(async (proposal) => {
+        const path = resolveProposalMetadataPath(proposal);
+        if (!path) return proposal;
+
+        const payload = await fetchBlockfrostJsonMaybe(networkId, path, signal);
+        if (!payload) return proposal;
+
+        return mergeBlockfrostMetadataIntoProposal(proposal, payload);
+      })
+    );
+
+    for (let index = 0; index < enriched.length; index += 1) {
+      next[offset + index] = enriched[index];
+    }
+  }
+
+  return next;
+};
+
 const fetchBlockfrostGovernance = async (networkId, options) => {
   const proposalLimit = Math.max(1, Math.min(options.proposalLimit ?? 12, 50));
   const drepLimit = Math.max(1, Math.min(options.drepLimit ?? 20, 50));
@@ -262,9 +474,15 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
     ),
   ]);
 
+  const proposals = await enrichProposalsWithBlockfrostMetadata(
+    networkId,
+    normalizeProposals(proposalList),
+    options
+  );
+
   return {
     source: 'blockfrost',
-    proposals: normalizeProposals(proposalList),
+    proposals,
     dreps: normalizeDreps(drepList),
   };
 };
@@ -298,8 +516,15 @@ export const fetchGovernanceOverview = async (
   }
 
   const koiosResult = await fetchKoiosGovernance(options);
+  const proposals = await enrichProposalsWithBlockfrostMetadata(
+    networkId,
+    koiosResult.proposals,
+    options
+  );
+
   return {
     ...koiosResult,
+    proposals,
     fallbackReason: blockfrostError ? blockfrostError.message : '',
   };
 };

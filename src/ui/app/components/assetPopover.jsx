@@ -45,13 +45,17 @@ const AssetPopover = ({ asset, gutter, ...props }) => {
                 display="flex"
                 flexDirection="column"
               >
-                <Image
-                  rounded="sm"
-                  height="140px"
-                  maxWidth="280px"
-                  src={asset.image}
-                  fallback={<Avatar size="xl" name={asset.name} />}
-                />
+                <Box boxSize="140px" rounded="full" overflow="hidden" mx="auto">
+                  <Image
+                    width="100%"
+                    height="100%"
+                    objectFit="cover"
+                    objectPosition="center"
+                    alt=""
+                    src={asset.image}
+                    fallback={<Avatar boxSize="140px" name={asset.name} />}
+                  />
+                </Box>
                 <Box h="4" />
                 <Copy
                   label="Copied name"

@@ -94,8 +94,12 @@ const AssetBadge = ({ asset, onRemove, onInput, onLoad }) => {
                     }}
                   >
                     <Image
-                      width="full"
-                      rounded="sm"
+                      width="100%"
+                      height="100%"
+                      rounded="full"
+                      objectFit="cover"
+                      objectPosition="center"
+                      alt=""
                       src={token.image}
                       fallback={
                         !token.image ? (

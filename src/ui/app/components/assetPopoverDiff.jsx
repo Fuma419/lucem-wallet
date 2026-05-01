@@ -9,7 +9,7 @@ import {
   PopoverHeader,
   PopoverTrigger,
 } from '@chakra-ui/react';
-import { Avatar, Box, Stack, Button, Portal } from '@chakra-ui/react';
+import { Avatar, Box, Stack, Button, Portal, Image } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import { FixedSizeList as List } from 'react-window';
 import Copy from './copy';
@@ -149,7 +149,20 @@ const Asset = ({ asset, isDifference }) => {
           alignItems="center"
           justifyContent="start"
         >
-          <Avatar userSelect="none" size="xs" name={token.name} />
+          {token.image ? (
+            <Box boxSize="24px" rounded="full" overflow="hidden" flexShrink={0}>
+              <Image
+                src={token.image}
+                width="100%"
+                height="100%"
+                objectFit="cover"
+                objectPosition="center"
+                alt=""
+              />
+            </Box>
+          ) : (
+            <Avatar userSelect="none" size="xs" name={token.name} />
+          )}
 
           <Box
             textAlign="left"

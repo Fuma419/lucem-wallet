@@ -86,10 +86,14 @@ const Asset = ({ asset, enableSend, ...props }) => {
           alignItems="center"
           px={4}
         >
-          <Box width="44px" height="44px" rounded="full" overflow="hidden">
+          <Box width="44px" height="44px" rounded="full" overflow="hidden" flexShrink={0}>
             <Image
               draggable={false}
-              width="full"
+              width="100%"
+              height="100%"
+              objectFit="cover"
+              objectPosition="center"
+              alt=""
               src={token.image}
               fallback={
                 !token.image ? (

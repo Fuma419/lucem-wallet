@@ -1,0 +1,44 @@
+# Optional: notifies self-hosted Jenkins to rescan multibranch job `lucem-wallet` immediately
+# (GitHub-hosted Actions does not run the Jenkins pipeline — it only pings the indexer).
+#
+# Repo → Settings → Secrets and variables → Actions:
+#   JENKINS_MULTIBRANCH_WEBHOOK_URL = full POST URL Jenkins expects for this job, e.g.
+#     https://<jenkins-host>/multibranch-webhook-trigger/invoke?token=<token>
+# Token for job `lucem-wallet`: see `jenkins-deployment` casc `mswt-lucem-*` token.
+#
+# If the secret is absent (e.g. forks), this workflow is skipped.
+
+name: Jenkins multibranch scan (optional)
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  ping-jenkins:
+    name: Ping Jenkins indexer
+    if: ${{ github.repository_owner == 'Fuma419' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger multibranch scan
+        env:
+          URL: ${{ secrets.JENKINS_MULTIBRANCH_WEBHOOK_URL }}
+        run: |
+          if [ -z "${URL:-}" ]; then
+            echo "JENKINS_MULTIBRANCH_WEBHOOK_URL not set — skipping (add secret to enable)."
+            exit 0
+          fi
+          curl -fsS --max-time 30 -X POST "$URL"
+          echo "Jenkins indexer ping sent."

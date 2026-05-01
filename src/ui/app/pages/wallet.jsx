@@ -123,9 +123,7 @@ const walletHeaderOrbShellProps = {
   flexShrink: 0,
 };
 
-const walletFloatingActionButtonProps = {
-  className: 'button settings',
-  background: 'purple.500',
+const walletFabBase = {
   rounded: 'full',
   shadow: 'md',
   boxSize: { base: '12', sm: '13', md: '14' },
@@ -135,6 +133,7 @@ const walletFloatingActionButtonProps = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  color: 'white',
 };
 
 const useIsMounted = () => {
@@ -185,6 +184,57 @@ const Wallet = () => {
     colorMode === 'dark' ? 'button import-wallet' : undefined;
   const sendBtnClass = colorMode === 'dark' ? 'button new-wallet' : undefined;
   const actionBtnColor = 'white';
+
+  const fabVote = useColorModeValue(
+    {
+      bg: 'cyan.500',
+      borderWidth: '2px',
+      borderColor: 'cyan.700',
+      _hover: { bg: 'cyan.600' },
+    },
+    {
+      bg: 'cyan.700',
+      borderWidth: '2px',
+      borderColor: 'cyan.300',
+      boxShadow: '0 0 14px rgba(0, 245, 255, 0.35)',
+      _hover: { bg: 'cyan.600' },
+    }
+  );
+  const fabStake = useColorModeValue(
+    {
+      bg: 'yellow.500',
+      borderWidth: '2px',
+      borderColor: 'yellow.700',
+      _hover: { bg: 'yellow.600' },
+    },
+    {
+      bg: 'yellow.600',
+      borderWidth: '2px',
+      borderColor: 'yellow.400',
+      boxShadow: '0 0 14px rgba(206, 250, 0, 0.35)',
+      _hover: { bg: 'yellow.500' },
+    }
+  );
+  const fabSettings = useColorModeValue(
+    {
+      bg: 'purple.500',
+      borderWidth: '2px',
+      borderColor: 'purple.700',
+      _hover: { bg: 'purple.600' },
+    },
+    {
+      bg: 'purple.600',
+      borderWidth: '2px',
+      borderColor: 'purple.300',
+      boxShadow: '0 0 14px rgba(220, 27, 250, 0.35)',
+      _hover: { bg: 'purple.500' },
+    }
+  );
+
+  const floatingVoteProps = { ...walletFabBase, ...fabVote };
+  const floatingStakeProps = { ...walletFabBase, ...fabStake };
+  const floatingSettingsProps = { ...walletFabBase, ...fabSettings };
+
   const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({
     account: null,
@@ -438,7 +488,7 @@ const Wallet = () => {
             >
               <Tooltip label="Vote" hasArrow>
                 <Button
-                  {...walletFloatingActionButtonProps}
+                  {...floatingVoteProps}
                   onClick={() => navigate('/governance')}
                   aria-label="Open voting"
                 >
@@ -447,6 +497,7 @@ const Wallet = () => {
               </Tooltip>
               {state.delegation.active ? (
                 <DelegationPopover
+                  fabProps={floatingStakeProps}
                   account={state.account}
                   delegation={state.delegation}
                   label={state.delegation.ticker || state.delegation.poolId.slice(-9)}
@@ -454,7 +505,7 @@ const Wallet = () => {
               ) : (
                 <Tooltip label="Delegate" hasArrow>
                   <Button
-                    {...walletFloatingActionButtonProps}
+                    {...floatingStakeProps}
                     onClick={() => {
                       builderRef.current.initDelegation(
                         state.account,
@@ -518,7 +569,7 @@ const Wallet = () => {
             >
               <MenuButton
                 as={Button}
-                {...walletFloatingActionButtonProps}
+                {...floatingSettingsProps}
               >
                 <SettingsIcon boxSize={6} />
               </MenuButton>
@@ -1069,7 +1120,7 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
   );
 });
 
-const DelegationPopover = ({ account, delegation, label }) => {
+const DelegationPopover = ({ account, delegation, label, fabProps }) => {
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
   const popoverInnerBg = useColorModeValue('gray.50', 'black');
@@ -1079,7 +1130,7 @@ const DelegationPopover = ({ account, delegation, label }) => {
       <Popover offset={[80, 8]}>
         <PopoverTrigger>
           <Button
-            {...walletFloatingActionButtonProps}
+            {...fabProps}
             aria-label={
               label
                 ? `Open delegation details for ${label}`

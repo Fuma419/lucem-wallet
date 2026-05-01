@@ -24,9 +24,11 @@ import {
   RadioGroup,
   Radio,
   Stack,
-  useColorMode,
   useColorModeValue,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
+import { useAppearancePreference } from '../../appearanceContext';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -240,7 +242,7 @@ const GeneralSettings = ({ accountRef }) => {
   const setSettings = useStoreActions(
     (actions) => actions.settings.setSettings
   );
-  const { colorMode, setColorMode } = useColorMode();
+  const { appearance, setAppearance } = useAppearancePreference();
   const { inputProps: settingsInputProps, primaryButtonProps: settingsPrimaryButtonProps } =
     useGeneralSettingsChrome();
   const labelMuted = useColorModeValue('gray.700', 'white');
@@ -391,15 +393,24 @@ const GeneralSettings = ({ accountRef }) => {
         <Text color={labelMuted} fontWeight="semibold" fontSize="sm">
           Appearance
         </Text>
-        <RadioGroup onChange={setColorMode} value={colorMode}>
-          <Stack direction="row" spacing={6} align="center">
-            <Radio value="dark" colorScheme="yellow">
-              Dark
-            </Radio>
-            <Radio value="light" colorScheme="yellow">
-              Light
-            </Radio>
-          </Stack>
+        <RadioGroup onChange={setAppearance} value={appearance}>
+          <Wrap spacing={4} rowGap={3}>
+            <WrapItem>
+              <Radio value="dark" colorScheme="yellow">
+                Dark
+              </Radio>
+            </WrapItem>
+            <WrapItem>
+              <Radio value="light" colorScheme="yellow">
+                Light
+              </Radio>
+            </WrapItem>
+            <WrapItem>
+              <Radio value="system" colorScheme="yellow">
+                System
+              </Radio>
+            </WrapItem>
+          </Wrap>
         </RadioGroup>
       </Flex>
 

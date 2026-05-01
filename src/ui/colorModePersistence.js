@@ -2,16 +2,16 @@ import platform from '../platform';
 import { STORAGE } from '../config/config';
 
 /**
- * Persist wallet UI appearance without importing `api/extension` (keeps MV3/create-wallet CSP lean).
+ * User-selected appearance (not necessarily the resolved Chakra mode when `system`).
  *
- * @returns {Promise<'light' | 'dark' | null>}
+ * @returns {Promise<'light' | 'dark' | 'system' | null>}
  */
-export async function getStoredUiColorMode() {
+export async function getStoredAppearancePreference() {
   const v = await platform.storage.get(STORAGE.colorMode);
-  return v === 'light' || v === 'dark' ? v : null;
+  return v === 'light' || v === 'dark' || v === 'system' ? v : null;
 }
 
-/** @param {'light' | 'dark'} mode */
-export function persistUiColorMode(mode) {
-  return platform.storage.set({ [STORAGE.colorMode]: mode });
+/** @param {'light' | 'dark' | 'system'} appearance */
+export function persistAppearancePreference(appearance) {
+  return platform.storage.set({ [STORAGE.colorMode]: appearance });
 }

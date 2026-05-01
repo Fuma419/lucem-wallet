@@ -99,7 +99,7 @@ import { GiToken } from 'react-icons/gi';
 import { MdHowToVote, MdOutlineHowToReg } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
-import { useColorModeValue } from '@chakra-ui/react';
+import { useColorMode, useColorModeValue } from '@chakra-ui/react';
 
 // Assets
 import Logo from '../../../assets/img/logo.png';
@@ -175,10 +175,15 @@ const Wallet = () => {
       getData();
     }, 100);
   };
-  const avatarBg = useColorModeValue('yellow.100', 'gray.900');
-  const panelBg = useColorModeValue('yellow.100', 'black');
-  const receiveButton = useColorModeValue('yellow.100', 'cyan.700');
-  const sendButton = useColorModeValue('yellow.500', 'yellow.600');
+  const { colorMode } = useColorMode();
+  const avatarBg = useColorModeValue('gray.100', 'gray.900');
+  const panelBg = useColorModeValue('gray.100', 'black');
+  const receiveButton = useColorModeValue('gray.200', 'cyan.700');
+  const sendButton = useColorModeValue('gray.200', 'yellow.600');
+  const receiveBtnClass =
+    colorMode === 'dark' ? 'button import-wallet' : undefined;
+  const sendBtnClass = colorMode === 'dark' ? 'button new-wallet' : undefined;
+  const actionBtnColor = useColorModeValue('gray.800', 'white');
   const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({
     account: null,
@@ -824,8 +829,12 @@ const Wallet = () => {
                 <Button
                   w="120px"
                   data-testid="wallet-receive"
-                  className="button import-wallet"
+                  className={receiveBtnClass}
+                  color={actionBtnColor}
                   background={receiveButton}
+                  _hover={{
+                    bg: colorMode === 'dark' ? undefined : 'gray.300',
+                  }}
                   rightIcon={<Icon as={BsArrowDownRight} />}
                   size="sm"
                   rounded="lg"
@@ -895,9 +904,13 @@ const Wallet = () => {
                 onClick={() => {
                   navigate('/send');
                 }}
-                className="button new-wallet"
+                className={sendBtnClass}
+                color={actionBtnColor}
                 size="sm"
                 background={sendButton}
+                _hover={{
+                  bg: colorMode === 'dark' ? undefined : 'gray.300',
+                }}
                 rounded="lg"
                 rightIcon={<Icon as={BsArrowUpRight} />}
                 shadow="md"

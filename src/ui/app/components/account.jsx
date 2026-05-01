@@ -6,8 +6,8 @@ import { Box, Flex, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import AvatarLoader from './avatarLoader';
 
 const Account = React.forwardRef(({ leadingSlot, ...props }, ref) => {
-  const avatarBg = useColorModeValue('blue.100', 'gray.900');
-  const panelBg = useColorModeValue('blue.100', 'gray.800');
+  const avatarBg = useColorModeValue('gray.100', 'gray.900');
+  const panelBg = useColorModeValue('gray.100', 'gray.800');
   const nameColor = useColorModeValue('gray.900', 'white');
   const [account, setAccount] = React.useState(null);
 

@@ -1,22 +1,14 @@
 import React from 'react';
-import {
-  ChakraProvider,
-  extendTheme,
-  createLocalStorageManager,
-  useColorMode,
-} from '@chakra-ui/react';
+import { ChakraProvider, extendTheme, createLocalStorageManager } from '@chakra-ui/react';
 import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
-import {
-  persistUiColorMode,
-  getStoredUiColorMode,
-} from './colorModePersistence';
+import { AppearancePreferenceProvider } from './appearanceContext';
 
 const scaledFont = (rem) => `calc(${rem} * var(--lucem-font-scale, 1))`;
 
 const chakraLocalStorage = createLocalStorageManager('chakra-ui-color-mode');
 
-/** Mirror Chakra toggles into extension/IndexedDB so all entry points agree. */
+/** Chakra localStorage only; platform `STORAGE.colorMode` holds light/dark/system preference. */
 export const lucemChakraColorModeManager = {
   ssr: false,
   type: 'localStorage',
@@ -25,38 +17,8 @@ export const lucemChakraColorModeManager = {
   },
   set(value) {
     chakraLocalStorage.set(value);
-    void persistUiColorMode(value).catch(() => {});
   },
 };
-
-/** One-way sync: platform preference wins when it disagrees with `localStorage`. */
-function ExtensionColorModeSync() {
-  const { setColorMode } = useColorMode();
-
-  React.useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const stored = await getStoredUiColorMode();
-        if (cancelled || !stored) return;
-        let ls = '';
-        try {
-          ls = localStorage.getItem('chakra-ui-color-mode') || '';
-        } catch (_) {
-          /* ignore */
-        }
-        if (ls !== stored) setColorMode(stored);
-      } catch (_) {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [setColorMode]);
-
-  return null;
-}
 
 // Define custom sizes for Input components
 const inputSizes = {
@@ -340,8 +302,7 @@ const theme = extendTheme({
 // Wrap the ChakraProvider with the custom theme
 const Theme = ({ children }) => (
   <ChakraProvider theme={theme} colorModeManager={lucemChakraColorModeManager}>
-    <ExtensionColorModeSync />
-    {children}
+    <AppearancePreferenceProvider>{children}</AppearancePreferenceProvider>
   </ChakraProvider>
 );
 

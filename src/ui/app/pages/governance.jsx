@@ -16,6 +16,7 @@ import {
   Tooltip,
   Link,
   SimpleGrid,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import { ChevronLeftIcon, RepeatIcon } from '@chakra-ui/icons';
 import { useStoreState } from 'easy-peasy';
@@ -121,6 +122,23 @@ const Governance = () => {
   const toast = useToast();
   const confirmRef = React.useRef();
   const settings = useStoreState((state) => state.settings.settings);
+
+  const pageBg = useColorModeValue('gray.50', 'black');
+  const cardBg = useColorModeValue('white', 'rgba(16, 16, 20, 0.95)');
+  const insetBg = useColorModeValue('gray.100', 'rgba(255, 255, 255, 0.05)');
+  const insetBgTight = useColorModeValue('gray.50', 'rgba(255, 255, 255, 0.04)');
+  const listRowBg = useColorModeValue('gray.100', 'rgba(255, 255, 255, 0.03)');
+  const heading = useColorModeValue('gray.900', 'white');
+  const body = useColorModeValue('gray.700', 'gray.300');
+  const muted = useColorModeValue('gray.600', 'gray.400');
+  const subtle = useColorModeValue('gray.600', 'gray.500');
+  const border = useColorModeValue('gray.200', 'whiteAlpha.300');
+  const inputFg = useColorModeValue('gray.900', 'white');
+  const linkAccent = useColorModeValue('cyan.700', 'cyan.300');
+  const cardBorder = useColorModeValue('gray.200', 'rgba(140, 140, 180, 0.35)');
+  const softRowBorder = useColorModeValue('gray.200', 'rgba(255, 255, 255, 0.08)');
+  const proposalBorder = useColorModeValue('gray.200', 'rgba(255, 255, 255, 0.12)');
+  const errText = useColorModeValue('red.600', 'red.300');
 
   const networkId = settings?.network?.id || 'mainnet';
   const adaSymbol = settings?.adaSymbol || (networkId === 'mainnet' ? '₳' : 't₳');
@@ -310,7 +328,7 @@ const Governance = () => {
       <Box
         minH="100vh"
         sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
-        bg="black"
+        bg={pageBg}
       >
         <Box className="lucem-wallet-main-column" px={{ base: 3, md: 4 }} pb={6}>
           <Flex
@@ -325,9 +343,9 @@ const Governance = () => {
                 onClick={() => navigate('/wallet')}
                 variant="ghost"
                 aria-label="Back"
-                color="white"
+                color={heading}
               />
-              <Heading size="md" color="white" fontSize={votingFontSize.headingMd}>
+              <Heading size="md" color={heading} fontSize={votingFontSize.headingMd}>
                 Voting
               </Heading>
             </HStack>
@@ -352,13 +370,14 @@ const Governance = () => {
 
           <VStack spacing={4} align="stretch">
             <Box
-              bg="rgba(16, 16, 20, 0.95)"
-              border="1px solid rgba(140, 140, 180, 0.35)"
+              bg={cardBg}
+              borderWidth="1px"
+              borderColor={cardBorder}
               rounded="xl"
               p={4}
             >
               <Flex align="center" justify="space-between" mb={3}>
-                <Heading size="sm" color="white" fontSize={votingFontSize.headingSm}>
+                <Heading size="sm" color={heading} fontSize={votingFontSize.headingSm}>
                   Delegate Voting Power
                 </Heading>
                 <Button
@@ -366,7 +385,7 @@ const Governance = () => {
                   fontSize={votingFontSize.xs}
                   leftIcon={<RepeatIcon />}
                   variant="ghost"
-                  color="gray.300"
+                  color={body}
                   onClick={() => void loadGovernance()}
                   isLoading={governanceState.isLoading}
                 >
@@ -374,7 +393,7 @@ const Governance = () => {
                 </Button>
               </Flex>
 
-              <Text fontSize={votingFontSize.sm} color="gray.300" mb={3}>
+              <Text fontSize={votingFontSize.sm} color={body} mb={3}>
                 Build and sign an on-chain vote delegation certificate for this wallet.
               </Text>
 
@@ -404,10 +423,10 @@ const Governance = () => {
                     onChange={(event) => setDrepIdInput(event.target.value)}
                     size="sm"
                     fontSize={votingFontSize.sm}
-                    bg="rgba(255, 255, 255, 0.05)"
-                    borderColor="whiteAlpha.300"
-                    color="white"
-                    _placeholder={{ color: 'gray.400' }}
+                    bg={insetBg}
+                    borderColor={border}
+                    color={inputFg}
+                    _placeholder={{ color: muted }}
                   />
                   <Button
                     size="sm"
@@ -424,7 +443,7 @@ const Governance = () => {
 
               {governanceState.dreps.length > 0 && (
                 <Box mt={4}>
-                  <Text fontSize={votingFontSize.xs} color="gray.400" mb={2}>
+                  <Text fontSize={votingFontSize.xs} color={muted} mb={2}>
                     Quick pick from top DReps
                   </Text>
                   <VStack spacing={2} align="stretch">
@@ -433,16 +452,17 @@ const Governance = () => {
                         key={drep.id}
                         p={2}
                         rounded="md"
-                        bg="rgba(255, 255, 255, 0.04)"
-                        border="1px solid rgba(255, 255, 255, 0.08)"
+                        bg={insetBgTight}
+                        borderWidth="1px"
+                        borderColor={softRowBorder}
                         align="center"
                         justify="space-between"
                       >
                         <Box minW={0} mr={2}>
-                          <Text color="white" fontSize={votingFontSize.sm} isTruncated>
+                          <Text color={heading} fontSize={votingFontSize.sm} isTruncated>
                             {drep.name || truncateMiddle(drep.id)}
                           </Text>
-                          <Text color="gray.400" fontSize={votingFontSize.xs}>
+                          <Text color={muted} fontSize={votingFontSize.xs}>
                             {truncateMiddle(drep.id)} {drep.votingPower ? `| ${drep.votingPower} lovelace` : ''}
                           </Text>
                         </Box>
@@ -466,15 +486,16 @@ const Governance = () => {
             </Box>
 
             <Box
-              bg="rgba(16, 16, 20, 0.95)"
-              border="1px solid rgba(140, 140, 180, 0.35)"
+              bg={cardBg}
+              borderWidth="1px"
+              borderColor={cardBorder}
               rounded="xl"
               p={4}
             >
-              <Heading size="sm" color="white" mb={3} fontSize={votingFontSize.headingSm}>
+              <Heading size="sm" color={heading} mb={3} fontSize={votingFontSize.headingSm}>
                 Active Governance Proposals
               </Heading>
-              <Text fontSize={votingFontSize.xs} color="gray.400" mb={3}>
+              <Text fontSize={votingFontSize.xs} color={muted} mb={3}>
                 Titles and descriptions come from on-chain anchors (CIP-108). Blockfrost resolves
                 proposal metadata when a project id is configured; Koios may include{' '}
                 <Text as="span" fontWeight="semibold">
@@ -483,7 +504,7 @@ const Governance = () => {
                 inline.
               </Text>
               <Link
-                color="cyan.300"
+                color={linkAccent}
                 fontSize={votingFontSize.xs}
                 display="inline-block"
                 mb={4}
@@ -503,7 +524,7 @@ const Governance = () => {
                   <Spinner />
                 </Flex>
               ) : governanceState.error ? (
-                <Text color="red.300" fontSize={votingFontSize.sm}>
+                <Text color={errText} fontSize={votingFontSize.sm}>
                   {governanceState.error}
                 </Text>
               ) : sortedProposals.length > 0 ? (
@@ -527,8 +548,9 @@ const Governance = () => {
                         key={proposal.id}
                         p={3}
                         rounded="md"
-                        border="1px solid rgba(255, 255, 255, 0.12)"
-                        bg="rgba(255, 255, 255, 0.03)"
+                        borderWidth="1px"
+                        borderColor={proposalBorder}
+                        bg={listRowBg}
                       >
                         <Flex align="start" justify="space-between" gap={2} mb={1}>
                           <HStack spacing={2} flexWrap="wrap">
@@ -549,17 +571,17 @@ const Governance = () => {
                             size="xs"
                             fontSize={votingFontSize.xs}
                             variant="ghost"
-                            color="gray.300"
+                            color={body}
                             onClick={() => void copyProposalId(proposal.id)}
                           >
                             Copy ID
                           </Button>
                         </Flex>
 
-                        <Text color="white" fontWeight="bold" fontSize={votingFontSize.sm} mb={1}>
+                        <Text color={heading} fontWeight="bold" fontSize={votingFontSize.sm} mb={1}>
                           {proposal.title}
                         </Text>
-                        <Text color="gray.400" fontSize={votingFontSize.xs} mb={2}>
+                        <Text color={muted} fontSize={votingFontSize.xs} mb={2}>
                           {truncateMiddle(proposal.id, 14, 10)}
                         </Text>
 
@@ -567,7 +589,7 @@ const Governance = () => {
                           <Box mb={1}>
                             {hasSummary ? (
                               <Text
-                                color="gray.300"
+                                color={body}
                                 fontSize={votingFontSize.sm}
                                 whiteSpace="pre-wrap"
                                 mb={hasMotivation || hasRationale ? 2 : 1}
@@ -581,7 +603,7 @@ const Governance = () => {
                             {hasMotivation ? (
                               <Box mb={hasRationale ? 2 : 1}>
                                 <Text
-                                  color="gray.500"
+                                  color={subtle}
                                   fontSize={votingFontSize.xs}
                                   fontWeight="semibold"
                                   mb={0.5}
@@ -589,7 +611,7 @@ const Governance = () => {
                                   Motivation
                                 </Text>
                                 <Text
-                                  color="gray.300"
+                                  color={body}
                                   fontSize={votingFontSize.sm}
                                   whiteSpace="pre-wrap"
                                   noOfLines={
@@ -603,7 +625,7 @@ const Governance = () => {
                             {hasRationale ? (
                               <Box mb={1}>
                                 <Text
-                                  color="gray.500"
+                                  color={subtle}
                                   fontSize={votingFontSize.xs}
                                   fontWeight="semibold"
                                   mb={0.5}
@@ -611,7 +633,7 @@ const Governance = () => {
                                   Rationale
                                 </Text>
                                 <Text
-                                  color="gray.300"
+                                  color={body}
                                   fontSize={votingFontSize.sm}
                                   whiteSpace="pre-wrap"
                                   noOfLines={
@@ -635,7 +657,7 @@ const Governance = () => {
                             )}
                           </Box>
                         ) : (
-                          <Text color="gray.500" fontSize={votingFontSize.sm} mb={1}>
+                          <Text color={subtle} fontSize={votingFontSize.sm} mb={1}>
                             No proposal description loaded yet. Add a Blockfrost project id
                             (env{' '}
                             <Text as="span" fontFamily="mono" fontSize="xs">
@@ -651,7 +673,7 @@ const Governance = () => {
                         )}
 
                         {proposal.authors && proposal.authors.length > 0 ? (
-                          <Text color="gray.500" fontSize={votingFontSize.xs} mb={2}>
+                          <Text color={subtle} fontSize={votingFontSize.xs} mb={2}>
                             Authors: {proposal.authors.join(', ')}
                           </Text>
                         ) : null}
@@ -659,7 +681,7 @@ const Governance = () => {
                         {proposal.references && proposal.references.length > 0 ? (
                           <Box mt={1} mb={1}>
                             <Text
-                              color="gray.500"
+                              color={subtle}
                               fontSize={votingFontSize.xs}
                               fontWeight="semibold"
                               mb={1}
@@ -670,7 +692,7 @@ const Governance = () => {
                               {proposal.references.map((reference, referenceIndex) => (
                                 <Link
                                   key={`${proposal.id}-ref-${referenceIndex}`}
-                                  color="cyan.300"
+                                  color={linkAccent}
                                   fontSize={votingFontSize.xs}
                                   wordBreak="break-word"
                                   onClick={() => {
@@ -696,7 +718,7 @@ const Governance = () => {
                           columns={{ base: 1, md: 2 }}
                           spacing={1}
                           mt={2}
-                          color="gray.400"
+                          color={muted}
                           fontSize={votingFontSize.xs}
                         >
                           <Text>Submitted: {formatEpoch(proposal.submittedEpoch)}</Text>
@@ -704,7 +726,7 @@ const Governance = () => {
                         </SimpleGrid>
 
                         {proposal.anchorHash ? (
-                          <Text color="gray.500" fontSize={votingFontSize.xs} mt={1}>
+                          <Text color={subtle} fontSize={votingFontSize.xs} mt={1}>
                             Anchor hash: {truncateMiddle(proposal.anchorHash, 14, 10)}
                           </Text>
                         ) : null}
@@ -713,7 +735,7 @@ const Governance = () => {
                           <Link
                             mt={2}
                             display="inline-block"
-                            color="cyan.300"
+                            color={linkAccent}
                             fontSize={votingFontSize.xs}
                             onClick={() =>
                               window.open(proposal.url, '_blank', 'noopener,noreferrer')
@@ -722,7 +744,7 @@ const Governance = () => {
                             Open proposal details
                           </Link>
                         ) : (
-                          <Text color="gray.500" fontSize={votingFontSize.xs} mt={2}>
+                          <Text color={subtle} fontSize={votingFontSize.xs} mt={2}>
                             No proposal anchor URL available.
                           </Text>
                         )}
@@ -731,7 +753,7 @@ const Governance = () => {
                   })}
                 </VStack>
               ) : (
-                <Text color="gray.300" fontSize={votingFontSize.sm}>
+                <Text color={body} fontSize={votingFontSize.sm}>
                   No proposals returned by the current network API.
                 </Text>
               )}
@@ -823,7 +845,7 @@ const Governance = () => {
               Delegation target: {voteLabel(voteTxState.voteType)}
             </Text>
             {voteTxState.targetDrep ? (
-              <Text fontSize={votingFontSize.xs} color="gray.500" mb={2}>
+              <Text fontSize={votingFontSize.xs} color={subtle} mb={2}>
                 {voteTxState.targetDrep}
               </Text>
             ) : null}

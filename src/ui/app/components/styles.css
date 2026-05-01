@@ -23,6 +23,20 @@ body {
   font-size: var(--lucem-font-md);
 }
 
+html[data-theme='light'] body {
+  background-color: #eef1f6;
+}
+
+/* Welcome: class-based hero copy follows color mode. */
+html[data-theme='light'] .welcome,
+html[data-theme='light'] .walletTitle {
+  color: rgba(26, 34, 51, 1);
+}
+
+html[data-theme='light'] .message {
+  color: rgba(70, 80, 96, 0.95);
+}
+
 /*
  * Lucem responsive layout system (safe areas, scroll regions, modal caps).
  * Used by wallet hero, create-wallet tab, and fixed controls.
@@ -73,9 +87,13 @@ html {
   margin-right: auto;
 }
 
-/* Settings + extension: pure black shell (mock-aligned). */
+/* Settings shell — dark by default; follows Chakra `html[data-theme]`. */
 .lucem-settings-shell {
   background-color: #000000;
+}
+
+html[data-theme='light'] .lucem-settings-shell {
+  background-color: #f4f6fb;
 }
 
 /* Tight “Create Account” card (create-wallet tab + similar). */

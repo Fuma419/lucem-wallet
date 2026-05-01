@@ -1,6 +1,5 @@
 // Welcome.js
 import React from 'react';
-import { Backpack } from 'react-kawaii';
 import {
   Box,
   Button,
@@ -19,6 +18,8 @@ import {
   Spacer,
   Text,
   useDisclosure,
+  useColorMode,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import BannerDark from '../../../assets/img/bannerBlack.png'; // Directly using the dark banner
 import TermsOfUse from '../components/termsOfUse';
@@ -34,26 +35,30 @@ const Welcome = () => {
   const refImport = React.useRef();
   const refHw = React.useRef();
   const navigate = useNavigate();
+  const { colorMode } = useColorMode();
+  const pageBg = useColorModeValue('#f4f6fb', '#121212');
+  const pageFg = useColorModeValue('#1a2233', '#ffffff');
   const [hasWallet, setHasWallet] = React.useState(false);
 
   React.useEffect(() => {
     hasStoredAccounts().then(setHasWallet);
+  }, []);
 
-    // Dynamically set the theme-color for the dynamic island / notch to match the welcome screen's background (#121212)
+  React.useEffect(() => {
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    const originalColor = metaThemeColor ? metaThemeColor.getAttribute('content') : null;
-    
+    const originalColor = metaThemeColor
+      ? metaThemeColor.getAttribute('content')
+      : null;
+    const next = colorMode === 'light' ? '#f4f6fb' : '#121212';
     if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', '#121212');
+      metaThemeColor.setAttribute('content', next);
     }
-
     return () => {
-      // Revert to original theme color when leaving the welcome screen
-      if (metaThemeColor && originalColor) {
+      if (metaThemeColor && originalColor !== null) {
         metaThemeColor.setAttribute('content', originalColor);
       }
     };
-  }, []);
+  }, [colorMode]);
 
   return (
     <>
@@ -63,9 +68,9 @@ const Welcome = () => {
         display="flex"
         flexDirection="column"
         alignItems="stretch"
-        bg="#121212"
-        color="#ffffff"
-        className="lucem-wallet-main-column"
+        bg={pageBg}
+        color={pageFg}
+        className="lucem-wallet-main-column lucem-welcome-root"
       >
         <Box
           flexShrink={0}

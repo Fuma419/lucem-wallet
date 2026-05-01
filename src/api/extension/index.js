@@ -1580,6 +1580,11 @@ const clearIndexedDbWalletDb = () =>
 
 async function wipeAllLocalWalletData() {
   await platform.storage.clear();
+  try {
+    localStorage.removeItem('chakra-ui-color-mode');
+  } catch (_) {
+    /* ignore */
+  }
   clearBrowserWalletCaches();
   await clearIndexedDbWalletDb();
 }

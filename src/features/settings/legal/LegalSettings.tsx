@@ -1,16 +1,17 @@
-import { Box, Flex, Text } from '@chakra-ui/react';
+import { Box, Flex, Text, useColorModeValue } from '@chakra-ui/react';
 import React, { useRef } from 'react';
 import { ChevronRightIcon } from '@chakra-ui/icons';
 import PrivacyPolicy from '../../../ui/app/components/privacyPolicy';
 import TermsOfUse from '../../../ui/app/components/termsOfUse';
 
 function SettingsPageTitle({ children }: { children: React.ReactNode }) {
+  const titleColor = useColorModeValue('gray.900', 'white');
   return (
     <Text
       textAlign="center"
       fontSize="xl"
       fontWeight="bold"
-      color="white"
+      color={titleColor}
       letterSpacing="tight"
       mb={6}
       mt={1}
@@ -27,6 +28,9 @@ function SettingsListNavItem({
   label: string;
   onClick: () => void;
 }) {
+  const labelColor = useColorModeValue('gray.900', 'white');
+  const chevron = useColorModeValue('blackAlpha.500', 'whiteAlpha.600');
+  const rowHover = useColorModeValue('blackAlpha.50', 'whiteAlpha.50');
   return (
     <Box
       as="button"
@@ -42,13 +46,13 @@ function SettingsListNavItem({
       borderWidth={0}
       cursor="pointer"
       transition="background 0.15s ease"
-      _hover={{ bg: 'whiteAlpha.50' }}
+      _hover={{ bg: rowHover }}
       onClick={onClick}
     >
-      <Text fontWeight="semibold" color="white" fontSize="md" textAlign="left">
+      <Text fontWeight="semibold" color={labelColor} fontSize="md" textAlign="left">
         {label}
       </Text>
-      <ChevronRightIcon color="whiteAlpha.600" boxSize={5} />
+      <ChevronRightIcon color={chevron} boxSize={5} />
     </Box>
   );
 }

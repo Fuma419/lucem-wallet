@@ -56,6 +56,8 @@ export const STORAGE = {
   currentAccount: 'currentAccount',
   network: 'network',
   currency: 'currency',
+  /** User preference for Chakra UI color mode (`light` | `dark`). */
+  colorMode: 'colorMode',
   migration: 'migration',
   userId: 'userId',
   acceptedLegalDocsVersion: 'acceptedLegalDocsVersion',

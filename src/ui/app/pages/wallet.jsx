@@ -1058,6 +1058,8 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
 const DelegationPopover = ({ account, delegation, label }) => {
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
+  const popoverInnerBg = useColorModeValue('gray.50', 'black');
+  const popoverBorder = useColorModeValue('gray.200', 'black');
   return (
     <>
       <Popover offset={[80, 8]}>
@@ -1083,8 +1085,9 @@ const DelegationPopover = ({ account, delegation, label }) => {
             display="flex"
             flexDirection="column"
             textAlign="center"
-            background="black"
-            border="black"
+            background={popoverInnerBg}
+            borderWidth="1px"
+            borderColor={popoverBorder}
           >
             <Text
               fontWeight="bold"

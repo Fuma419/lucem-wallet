@@ -1,9 +1,62 @@
 import React from 'react';
-import { ChakraProvider, extendTheme } from '@chakra-ui/react';
+import {
+  ChakraProvider,
+  extendTheme,
+  createLocalStorageManager,
+  useColorMode,
+} from '@chakra-ui/react';
 import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
+import {
+  persistUiColorMode,
+  getStoredUiColorMode,
+} from './colorModePersistence';
 
 const scaledFont = (rem) => `calc(${rem} * var(--lucem-font-scale, 1))`;
+
+const chakraLocalStorage = createLocalStorageManager('chakra-ui-color-mode');
+
+/** Mirror Chakra toggles into extension/IndexedDB so all entry points agree. */
+export const lucemChakraColorModeManager = {
+  ssr: false,
+  type: 'localStorage',
+  get(initialValue) {
+    return chakraLocalStorage.get(initialValue);
+  },
+  set(value) {
+    chakraLocalStorage.set(value);
+    void persistUiColorMode(value).catch(() => {});
+  },
+};
+
+/** One-way sync: platform preference wins when it disagrees with `localStorage`. */
+function ExtensionColorModeSync() {
+  const { setColorMode } = useColorMode();
+
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const stored = await getStoredUiColorMode();
+        if (cancelled || !stored) return;
+        let ls = '';
+        try {
+          ls = localStorage.getItem('chakra-ui-color-mode') || '';
+        } catch (_) {
+          /* ignore */
+        }
+        if (ls !== stored) setColorMode(stored);
+      } catch (_) {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setColorMode]);
+
+  return null;
+}
 
 // Define custom sizes for Input components
 const inputSizes = {
@@ -51,12 +104,23 @@ const Button = {
 };
 
 const Switch = {
-  baseStyle: {  
-  },
+  baseStyle: {},
   defaultProps: {
     colorScheme: '#C5FF0A',
   },
 };
+
+const popoverChrome = (props) => ({
+  content: {
+    bg: props.colorMode === 'dark' ? '#1a1a1a' : 'gray.50',
+    color: props.colorMode === 'dark' ? 'white' : 'gray.900',
+    borderColor: props.colorMode === 'dark' ? 'black' : 'gray.200',
+    zIndex: '1',
+  },
+  arrow: {
+    bg: props.colorMode === 'dark' ? '#1a1a1a' : 'gray.50',
+  },
+});
 
 // Define the theme
 const theme = extendTheme({
@@ -124,16 +188,16 @@ const theme = extendTheme({
       900: '#2A2A2A',
     },
     customGray: {
-      50: "#2F2F2F",
-      100: "#2F2F2F",
-      200: "#2F2F2F",
-      300: "#2F2F2F",
-      400: "#2F2F2F",
-      500: "#ffffff",
-      600: "#ffffff",
-      700: "#ffffff",
-      800: "#ffffff",
-      900: "#ffffff",
+      50: '#2F2F2F',
+      100: '#2F2F2F',
+      200: '#2F2F2F',
+      300: '#2F2F2F',
+      400: '#2F2F2F',
+      500: '#ffffff',
+      600: '#ffffff',
+      700: '#ffffff',
+      800: '#ffffff',
+      900: '#ffffff',
     },
     blue: {
       100: '#b4c5d5',
@@ -175,18 +239,18 @@ const theme = extendTheme({
             tab: {
               fontWeight: 'bold',
               _selected: {
-                bgGradient: 'linear(to-r, cyan.500, purple.500)', // Define the gradient here
-                color: 'white', // Set text color when selected
+                bgGradient: 'linear(to-r, cyan.500, purple.500)',
+                color: 'white',
               },
               _hover: {
-                bgGradient: 'linear(to-r, yellow.400, orange.400)', // Gradient on hover
+                bgGradient: 'linear(to-r, yellow.400, orange.400)',
                 color: 'white',
               },
               _focus: {
-                boxShadow: 'none', // No focus outline
+                boxShadow: 'none',
               },
-              padding: '12px', // Padding inside the tabs
-              borderRadius: '8px', // To give a rounded effect
+              padding: '12px',
+              borderRadius: '8px',
             },
           },
         },
@@ -201,77 +265,71 @@ const theme = extendTheme({
     Button,
     Switch,
     Popover: {
-      baseStyle: {
-        content: {
-          bg: '#1a1a1a', // Popover content background color
-          color: 'white', // Text color for popover content
-          borderColor: 'black', // Border color to match the background
-          zIndex: '1', // Set zIndex to 1
-        },
-        arrow: {
-          bg: 'black', // Arrow color to match the popover content background
-        },
-      },
+      baseStyle: popoverChrome,
     },
     PopoverContent: {
-  baseStyle: {
-    bg: 'black',
-    borderColor: 'rgba(255, 255, 0, 0.75)',
-    borderWidth: '2px',
-    zIndex: '1',  // Set a high z-index to ensure it is on top
-  },
-},
+      baseStyle: (props) => ({
+        bg: props.colorMode === 'dark' ? '#1a1a1a' : 'white',
+        borderColor:
+          props.colorMode === 'dark'
+            ? 'rgba(255, 255, 0, 0.75)'
+            : 'rgba(0, 0, 0, 0.12)',
+        borderWidth: '2px',
+        zIndex: '1',
+        color: props.colorMode === 'dark' ? 'white' : 'gray.900',
+      }),
+    },
     Modal: {
-      baseStyle: {
+      baseStyle: (props) => ({
         overlay: {
-          bg: 'black', // This sets the background of the overlay to a near black color
+          bg: props.colorMode === 'dark' ? 'blackAlpha.800' : 'blackAlpha.500',
         },
         dialog: {
-          bg: '#1a1a1a',  // This sets the background of the modal content to black
-          color: 'white', // This sets the text color to white for readability on the black background
+          bg: props.colorMode === 'dark' ? '#1a1a1a' : 'gray.50',
+          color: props.colorMode === 'dark' ? 'white' : 'gray.900',
         },
-      },
+      }),
     },
     Menu: {
-      baseStyle: {
-        list: {
-          bg: '#1a1a1a', // Set the background for the MenuList container
-        },
-        item: {
-          bg: '#1a1a1a', // Default background for each MenuItem
-          color: 'white', // Text color
-          _hover: {
-            bg: 'black', // Hover state background for each MenuItem
+      baseStyle: (props) => {
+        const listBg = props.colorMode === 'dark' ? '#1a1a1a' : 'white';
+        const rowHover = props.colorMode === 'dark' ? 'black' : 'gray.100';
+        return {
+          list: {
+            bg: listBg,
+            borderWidth: props.colorMode === 'light' ? '1px' : undefined,
+            borderColor: props.colorMode === 'light' ? 'gray.200' : undefined,
           },
-          _focus: {
-            bg: 'black', // Focus state background for each MenuItem
+          item: {
+            bg: listBg,
+            color: props.colorMode === 'dark' ? 'white' : 'gray.900',
+            _hover: { bg: rowHover },
+            _focus: { bg: rowHover },
+            _active: { bg: rowHover },
           },
-          _active: {
-            bg: 'black', // Active state background for each MenuItem
-          },
-        },
+        };
       },
     },
   },
 
   config: {
-    initialColorMode: 'dark', // Force dark mode
-    useSystemColorMode: false, // Disable system color mode preference
+    initialColorMode: 'dark',
+    useSystemColorMode: false,
   },
 
   styles: {
-    global: {
+    global: (props) => ({
       html: {
         WebkitTextSizeAdjust: '100%',
         textSizeAdjust: '100%',
       },
       body: {
         overflow: 'hidden',
-        bg: '#080808', // Ensure the background is dark
-        color: 'gray.100', // Ensure text is light-colored
+        bg: props.colorMode === 'dark' ? '#080808' : '#eef1f6',
+        color: props.colorMode === 'dark' ? 'gray.100' : 'gray.800',
         fontSize: 'md',
       },
-    },
+    }),
   },
 
   fonts: {
@@ -280,8 +338,11 @@ const theme = extendTheme({
 });
 
 // Wrap the ChakraProvider with the custom theme
-const Theme = ({ children }) => {
-  return <ChakraProvider theme={theme}>{children}</ChakraProvider>;
-};
+const Theme = ({ children }) => (
+  <ChakraProvider theme={theme} colorModeManager={lucemChakraColorModeManager}>
+    <ExtensionColorModeSync />
+    {children}
+  </ChakraProvider>
+);
 
 export default Theme;

@@ -21,6 +21,11 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
+  RadioGroup,
+  Radio,
+  Stack,
+  useColorMode,
+  useColorModeValue,
 } from '@chakra-ui/react';
 import {
   ChevronLeftIcon,
@@ -59,27 +64,45 @@ const ERASE_WALLET_CONFIRM_PHRASE = 'Erase all data';
 const normalizeErasePhraseInput = (s) =>
   s.trim().replace(/\s+/g, ' ').toLowerCase();
 
-const settingsInputProps = {
-  bg: 'black',
-  borderColor: 'whiteAlpha.300',
-  color: 'white',
-  _placeholder: { color: 'whiteAlpha.500' },
-  _hover: { borderColor: 'whiteAlpha.400' },
-};
+/** Field + button tokens scoped to Settings routes (supports light mode). */
+function useGeneralSettingsChrome() {
+  const inputBg = useColorModeValue('white', 'black');
+  const border = useColorModeValue('gray.300', 'whiteAlpha.300');
+  const inputFg = useColorModeValue('gray.900', 'white');
+  const placeholder = useColorModeValue('blackAlpha.500', 'whiteAlpha.500');
+  const hoverBorder = useColorModeValue('gray.400', 'whiteAlpha.400');
+  const primaryBg = useColorModeValue('gray.200', 'gray.800');
+  const primaryFg = useColorModeValue('gray.900', 'white');
+  const primaryHover = useColorModeValue('gray.300', 'gray.700');
+  const primaryActive = primaryHover;
 
-const settingsPrimaryButtonProps = {
-  size: 'md',
-  w: 'full',
-  h: '12',
-  rounded: 'xl',
-  bg: 'gray.800',
-  color: 'white',
-  fontWeight: 'semibold',
-  _hover: { bg: 'gray.700' },
-  _active: { bg: 'gray.700' },
-};
+  const inputProps = {
+    bg: inputBg,
+    borderColor: border,
+    color: inputFg,
+    _placeholder: { color: placeholder },
+    _hover: { borderColor: hoverBorder },
+  };
+
+  const primaryButtonProps = {
+    size: 'md',
+    w: 'full',
+    h: '12',
+    rounded: 'xl',
+    bg: primaryBg,
+    color: primaryFg,
+    fontWeight: 'semibold',
+    _hover: { bg: primaryHover },
+    _active: { bg: primaryActive },
+  };
+
+  return { inputProps, primaryButtonProps };
+}
 
 function SettingsListNavItem({ label, onClick }) {
+  const labelColor = useColorModeValue('gray.900', 'white');
+  const chevron = useColorModeValue('blackAlpha.500', 'whiteAlpha.600');
+  const rowHover = useColorModeValue('blackAlpha.50', 'whiteAlpha.50');
   return (
     <Box
       as="button"
@@ -95,24 +118,25 @@ function SettingsListNavItem({ label, onClick }) {
       borderWidth={0}
       cursor="pointer"
       transition="background 0.15s ease"
-      _hover={{ bg: 'whiteAlpha.50' }}
+      _hover={{ bg: rowHover }}
       onClick={onClick}
     >
-      <Text fontWeight="semibold" color="white" fontSize="md" textAlign="left">
+      <Text fontWeight="semibold" color={labelColor} fontSize="md" textAlign="left">
         {label}
       </Text>
-      <ChevronRightIcon color="whiteAlpha.600" boxSize={5} />
+      <ChevronRightIcon color={chevron} boxSize={5} />
     </Box>
   );
 }
 
 function SettingsPageTitle({ children }) {
+  const titleColor = useColorModeValue('gray.900', 'white');
   return (
     <Text
       textAlign="center"
       fontSize="xl"
       fontWeight="bold"
-      color="white"
+      color={titleColor}
       letterSpacing="tight"
       mb={6}
       mt={1}
@@ -136,7 +160,6 @@ const Settings = () => {
         position="relative"
         w="full"
         maxW="100%"
-        bg="black"
         className="lucem-settings-shell lucem-wallet-main-column"
       >
         <Account
@@ -217,10 +240,22 @@ const GeneralSettings = ({ accountRef }) => {
   const setSettings = useStoreActions(
     (actions) => actions.settings.setSettings
   );
+  const { colorMode, setColorMode } = useColorMode();
+  const { inputProps: settingsInputProps, primaryButtonProps: settingsPrimaryButtonProps } =
+    useGeneralSettingsChrome();
+  const labelMuted = useColorModeValue('gray.700', 'white');
+  const iconBorder = useColorModeValue('gray.300', 'whiteAlpha.300');
+  const iconFg = useColorModeValue('gray.800', 'whiteAlpha.900');
+  const iconBtnBg = useColorModeValue('gray.100', 'black');
+  const iconBtnHover = useColorModeValue('gray.200', 'whiteAlpha.50');
+  const editIcon = useColorModeValue('gray.500', 'whiteAlpha.700');
+  const hintColor = useColorModeValue('gray.600', 'whiteAlpha.500');
+  const eraseModalBg = useColorModeValue('white', 'gray.900');
+  const eraseModalFg = useColorModeValue('gray.900', 'white');
+  const phraseHint = useColorModeValue('gray.600', 'whiteAlpha.600');
   const [refreshed, setRefreshed] = React.useState(false);
   const [account, setAccount] = React.useState({ name: '', avatar: '' });
   const [originalName, setOriginalName] = React.useState('');
-  // const { colorMode, toggleColorMode } = useColorMode();
   const changePasswordRef = React.useRef();
   const [eraseModalOpen, setEraseModalOpen] = React.useState(false);
   const [eraseAck, setEraseAck] = React.useState(false);
@@ -292,7 +327,7 @@ const GeneralSettings = ({ accountRef }) => {
         />
         <InputRightElement width="4.5rem" h="full">
           {account.name === originalName ? (
-            <Icon mr="-2" as={MdModeEdit} color="whiteAlpha.700" />
+            <Icon mr="-2" as={MdModeEdit} color={editIcon} />
           ) : (
             <Button
               isDisabled={account.name.length <= 0}
@@ -318,10 +353,10 @@ const GeneralSettings = ({ accountRef }) => {
           rounded="lg"
           size="md"
           variant="outline"
-          borderColor="whiteAlpha.300"
-          color="whiteAlpha.900"
-          bg="black"
-          _hover={{ bg: 'whiteAlpha.50' }}
+          borderColor={iconBorder}
+          color={iconFg}
+          bg={iconBtnBg}
+          _hover={{ bg: iconBtnHover }}
           aria-label="New avatar"
           icon={<RepeatIcon />}
         />
@@ -334,7 +369,7 @@ const GeneralSettings = ({ accountRef }) => {
         mt={8}
         w="full"
       >
-        <Text color="white" fontWeight="medium">
+        <Text color={labelMuted} fontWeight="medium">
           USD
         </Text>
         <ButtonSwitch
@@ -347,9 +382,25 @@ const GeneralSettings = ({ accountRef }) => {
             }
           }}
         />
-        <Text color="white" fontWeight="medium">
+        <Text color={labelMuted} fontWeight="medium">
           EUR
         </Text>
+      </Flex>
+
+      <Flex direction="column" align="stretch" gap={2} mt={8} w="full">
+        <Text color={labelMuted} fontWeight="semibold" fontSize="sm">
+          Appearance
+        </Text>
+        <RadioGroup onChange={setColorMode} value={colorMode}>
+          <Stack direction="row" spacing={6} align="center">
+            <Radio value="dark" colorScheme="yellow">
+              Dark
+            </Radio>
+            <Radio value="light" colorScheme="yellow">
+              Light
+            </Radio>
+          </Stack>
+        </RadioGroup>
       </Flex>
 
       <Flex direction="column" gap={3} mt={8} w="full">
@@ -386,7 +437,7 @@ const GeneralSettings = ({ accountRef }) => {
       >
         Erase all data
       </Button>
-      <Text mt={3} fontSize="xs" color="whiteAlpha.500" textAlign="center" w="full">
+      <Text mt={3} fontSize="xs" color={hintColor} textAlign="center" w="full">
         Removes every Lucem account, keys, and settings from this browser or
         extension. You will need your recovery phrase to use funds again.
       </Text>
@@ -399,7 +450,7 @@ const GeneralSettings = ({ accountRef }) => {
         size="sm"
       >
         <ModalOverlay />
-        <ModalContent bg="gray.900" color="white" mx={3}>
+        <ModalContent bg={eraseModalBg} color={eraseModalFg} mx={3}>
           <ModalHeader fontSize="md">Erase all data on this device?</ModalHeader>
           <ModalBody>
             <Text fontSize="sm" mb={3}>
@@ -417,7 +468,7 @@ const GeneralSettings = ({ accountRef }) => {
               I have saved my recovery phrase or I accept losing access to these
               funds.
             </Checkbox>
-            <Text fontSize="xs" color="whiteAlpha.600" mb={1}>
+            <Text fontSize="xs" color={phraseHint} mb={1}>
               Type the phrase below (spacing and capitalization are flexible):
             </Text>
             <Text
@@ -495,6 +546,12 @@ const GeneralSettings = ({ accountRef }) => {
 
 const Whitelisted = () => {
   const [whitelisted, setWhitelisted] = React.useState(null);
+  const rowBg = useColorModeValue('gray.100', 'whiteAlpha.50');
+  const rowBorder = useColorModeValue('gray.200', 'whiteAlpha.100');
+  const rowText = useColorModeValue('gray.900', 'white');
+  const closeIcon = useColorModeValue('gray.600', 'whiteAlpha.700');
+  const closeHover = useColorModeValue('gray.800', 'white');
+  const emptyHint = useColorModeValue('gray.600', 'whiteAlpha.500');
   const getData = () =>
     getWhitelisted().then((whitelisted) => {
       setWhitelisted(whitelisted);
@@ -517,9 +574,9 @@ const Whitelisted = () => {
                 py={3}
                 px={4}
                 rounded="xl"
-                bg="whiteAlpha.50"
+                bg={rowBg}
                 borderWidth="1px"
-                borderColor="whiteAlpha.100"
+                borderColor={rowBorder}
               >
                 <Image
                   width="24px"
@@ -528,7 +585,7 @@ const Whitelisted = () => {
                 />
                 <Text
                   flex="1"
-                  color="white"
+                  color={rowText}
                   fontSize="sm"
                   fontWeight="medium"
                   isTruncated
@@ -537,8 +594,8 @@ const Whitelisted = () => {
                 </Text>
                 <SmallCloseIcon
                   cursor="pointer"
-                  color="whiteAlpha.700"
-                  _hover={{ color: 'white' }}
+                  color={closeIcon}
+                  _hover={{ color: closeHover }}
                   onClick={async () => {
                     await removeWhitelisted(origin);
                     getData();
@@ -548,7 +605,7 @@ const Whitelisted = () => {
             ))}
           </Flex>
         ) : (
-          <Text textAlign="center" color="whiteAlpha.500" py={16} fontSize="sm">
+          <Text textAlign="center" color={emptyHint} py={16} fontSize="sm">
             No whitelisted sites
           </Text>
         )
@@ -566,8 +623,13 @@ const Network = () => {
   const setSettings = useStoreActions(
     (actions) => actions.settings.setSettings
   );
+  const { inputProps: settingsInputProps } = useGeneralSettingsChrome();
+  const selectBg = useColorModeValue('white', 'gray.900');
+  const selectBorder = useColorModeValue('gray.300', 'whiteAlpha.300');
+  const selectFg = useColorModeValue('gray.900', 'white');
+  const labelColor = useColorModeValue('gray.800', 'white');
 
-  const endpointHandler = (e) => {
+  const endpointHandler = () => {
     setSettings({
       ...settings,
       network: {
@@ -599,9 +661,9 @@ const Network = () => {
       <Select
         w="full"
         rounded="xl"
-        bg="gray.900"
-        borderColor="whiteAlpha.300"
-        color="white"
+        bg={selectBg}
+        borderColor={selectBorder}
+        color={selectFg}
         mb={6}
         defaultValue={settings.network.id}
         onChange={(e) => {
@@ -639,7 +701,7 @@ const Network = () => {
           }}
           size="md"
         />
-        <Text color="white" fontWeight="medium">
+        <Text color={labelColor} fontWeight="medium">
           Custom node
         </Text>
       </Flex>

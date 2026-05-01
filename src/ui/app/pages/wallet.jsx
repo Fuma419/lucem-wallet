@@ -178,12 +178,13 @@ const Wallet = () => {
   const { colorMode } = useColorMode();
   const avatarBg = useColorModeValue('gray.100', 'gray.900');
   const panelBg = useColorModeValue('gray.100', 'black');
-  const receiveButton = useColorModeValue('gray.200', 'cyan.700');
-  const sendButton = useColorModeValue('gray.200', 'yellow.600');
+  /** Light: solid brand tints; dark: filled cyan / gradient class handles Send. */
+  const receiveButton = useColorModeValue('cyan.500', 'cyan.700');
+  const sendButton = useColorModeValue('purple.500', 'yellow.600');
   const receiveBtnClass =
     colorMode === 'dark' ? 'button import-wallet' : undefined;
   const sendBtnClass = colorMode === 'dark' ? 'button new-wallet' : undefined;
-  const actionBtnColor = useColorModeValue('gray.800', 'white');
+  const actionBtnColor = 'white';
   const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({
     account: null,
@@ -832,9 +833,9 @@ const Wallet = () => {
                   className={receiveBtnClass}
                   color={actionBtnColor}
                   background={receiveButton}
-                  _hover={{
-                    bg: colorMode === 'dark' ? undefined : 'gray.300',
-                  }}
+                  _hover={
+                    colorMode === 'light' ? { bg: 'cyan.600' } : undefined
+                  }
                   rightIcon={<Icon as={BsArrowDownRight} />}
                   size="sm"
                   rounded="lg"
@@ -908,9 +909,9 @@ const Wallet = () => {
                 color={actionBtnColor}
                 size="sm"
                 background={sendButton}
-                _hover={{
-                  bg: colorMode === 'dark' ? undefined : 'gray.300',
-                }}
+                _hover={
+                  colorMode === 'light' ? { bg: 'purple.600' } : undefined
+                }
                 rounded="lg"
                 rightIcon={<Icon as={BsArrowUpRight} />}
                 shadow="md"

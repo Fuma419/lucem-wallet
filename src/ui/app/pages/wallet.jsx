@@ -133,7 +133,6 @@ const walletFabBase = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  color: 'white',
 };
 
 const useIsMounted = () => {
@@ -186,7 +185,7 @@ const Wallet = () => {
   const fabVoteClass = colorMode === 'dark' ? 'button fab-vote' : undefined;
   const fabStakeClass = colorMode === 'dark' ? 'button fab-stake' : undefined;
   const fabSettingsClass = colorMode === 'dark' ? 'button fab-settings' : undefined;
-  const actionBtnColor = 'white';
+  const actionBtnColor = colorMode === 'dark' ? 'white' : 'black';
 
   const fabVote = useColorModeValue(
     {
@@ -234,9 +233,10 @@ const Wallet = () => {
     }
   );
 
-  const floatingVoteProps = { ...walletFabBase, ...fabVote };
-  const floatingStakeProps = { ...walletFabBase, ...fabStake };
-  const floatingSettingsProps = { ...walletFabBase, ...fabSettings };
+  const fabColor = colorMode === 'dark' ? 'white' : 'black';
+  const floatingVoteProps = { ...walletFabBase, color: fabColor, ...fabVote };
+  const floatingStakeProps = { ...walletFabBase, color: fabColor, ...fabStake };
+  const floatingSettingsProps = { ...walletFabBase, color: fabColor, ...fabSettings };
 
   const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({

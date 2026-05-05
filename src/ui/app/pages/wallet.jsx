@@ -303,11 +303,6 @@ const Wallet = () => {
     const { avatar, name, index, paymentAddr } = accounts[currentIndex];
     if (!isMounted.current) return;
     setInfo({ avatar, name, currentIndex: index, paymentAddr, accounts });
-    setState((s) => ({
-      ...s,
-      account: null,
-      delegation: null,
-    }));
     if (!skipUpdate) {
       await updateAccount(forceUpdate);
     }

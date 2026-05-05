@@ -252,6 +252,34 @@ html[data-theme='light'] .lucem-settings-shell {
   box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75);
 }
 
+.button.fab-vote {
+  opacity: .85;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(0, 245, 255, 1);
+  box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75);
+  border-radius: 9999px;
+}
+
+.button.fab-stake {
+  opacity: .85;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(206, 250, 0, 1);
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75);
+  border-radius: 9999px;
+}
+
+.button.fab-settings {
+  opacity: .85;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(220, 27, 250, 1);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+  border-radius: 9999px;
+}
+
+.button.fab-settings[data-active] {
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9) !important;
+}
+
 /* Hover States */
 .button:hover {
   transform: translateY(-2px);
@@ -276,6 +304,21 @@ html[data-theme='light'] .lucem-settings-shell {
 .button.hw-wallet:hover {
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, .5));
   box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
+}
+
+.button.fab-vote:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.9);
+}
+
+.button.fab-stake:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
+}
+
+.button.fab-settings:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9);
 }
 
 /* Hardware wallet tab: wider CTAs so uppercase labels fit (e.g. Continue, long Keystone strings). */

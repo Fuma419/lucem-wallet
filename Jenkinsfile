@@ -38,6 +38,7 @@ pipeline {
 
     stage('Install') {
       steps {
+        checkout scm
         sh '''
           set -e
           export PATH="${NODE20_DIR}/bin:${PATH}"

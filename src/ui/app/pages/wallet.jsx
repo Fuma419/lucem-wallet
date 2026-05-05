@@ -546,7 +546,11 @@ const Wallet = () => {
             <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
               <Stack spacing={2} mb={2} alignItems="center">
                 {state.delegation && !isMidnightNetworkId(settings.network.id) && (
-                  <>
+                  <Stack
+                    data-testid="wallet-delegation"
+                    spacing={2}
+                    alignItems="center"
+                  >
                     <Tooltip label="Vote" hasArrow placement="left">
                       <Button
                         {...floatingVoteProps}
@@ -582,7 +586,7 @@ const Wallet = () => {
                         </Button>
                       </Tooltip>
                     )}
-                  </>
+                  </Stack>
                 )}
 
                 <Menu

@@ -183,6 +183,9 @@ const Wallet = () => {
   const receiveBtnClass =
     colorMode === 'dark' ? 'button import-wallet' : undefined;
   const sendBtnClass = colorMode === 'dark' ? 'button new-wallet' : undefined;
+  const fabVoteClass = colorMode === 'dark' ? 'button fab-vote' : undefined;
+  const fabStakeClass = colorMode === 'dark' ? 'button fab-stake' : undefined;
+  const fabSettingsClass = colorMode === 'dark' ? 'button fab-settings' : undefined;
   const actionBtnColor = 'white';
 
   const fabVote = useColorModeValue(
@@ -489,6 +492,7 @@ const Wallet = () => {
               <Tooltip label="Vote" hasArrow>
                 <Button
                   {...floatingVoteProps}
+                  className={fabVoteClass}
                   onClick={() => navigate('/governance')}
                   aria-label="Open voting"
                 >
@@ -498,6 +502,7 @@ const Wallet = () => {
               {state.delegation.active ? (
                 <DelegationPopover
                   fabProps={floatingStakeProps}
+                  fabClassName={fabStakeClass}
                   account={state.account}
                   delegation={state.delegation}
                   label={state.delegation.ticker || state.delegation.poolId.slice(-9)}
@@ -506,6 +511,7 @@ const Wallet = () => {
                 <Tooltip label="Delegate" hasArrow>
                   <Button
                     {...floatingStakeProps}
+                    className={fabStakeClass}
                     onClick={() => {
                       builderRef.current.initDelegation(
                         state.account,
@@ -570,6 +576,7 @@ const Wallet = () => {
               <MenuButton
                 as={Button}
                 {...floatingSettingsProps}
+                className={fabSettingsClass}
               >
                 <SettingsIcon boxSize={6} />
               </MenuButton>
@@ -1120,7 +1127,7 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
   );
 });
 
-const DelegationPopover = ({ account, delegation, label, fabProps }) => {
+const DelegationPopover = ({ account, delegation, label, fabProps, fabClassName }) => {
   const settings = useStoreState((state) => state.settings.settings);
   const withdrawRef = React.useRef();
   const popoverInnerBg = useColorModeValue('gray.50', 'black');
@@ -1131,6 +1138,7 @@ const DelegationPopover = ({ account, delegation, label, fabProps }) => {
         <PopoverTrigger>
           <Button
             {...fabProps}
+            className={fabClassName}
             aria-label={
               label
                 ? `Open delegation details for ${label}`

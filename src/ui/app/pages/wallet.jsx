@@ -66,6 +66,7 @@ import {
   AlertIcon,
   AlertTitle,
   AlertDescription,
+  Collapse,
 } from '@chakra-ui/react';
 import {
   SettingsIcon,
@@ -74,6 +75,8 @@ import {
   DeleteIcon,
   CopyIcon,
   ChevronRightIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
   InfoOutlineIcon,
 } from '@chakra-ui/icons';
 import { Scrollbars } from '../components/scrollbar';
@@ -186,7 +189,8 @@ const Wallet = () => {
   const fabVoteClass = colorMode === 'dark' ? 'button fab-vote' : undefined;
   const fabStakeClass = colorMode === 'dark' ? 'button fab-stake' : undefined;
   const fabSettingsClass = colorMode === 'dark' ? 'button fab-settings' : undefined;
-  const actionBtnColor = 'white';
+  const fabToggleClass = colorMode === 'dark' ? 'button fab-toggle' : undefined;
+  const actionBtnColor = colorMode === 'dark' ? 'white' : 'black';
 
   const fabVote = useColorModeValue(
     {
@@ -233,10 +237,27 @@ const Wallet = () => {
       _hover: { bg: 'purple.500' },
     }
   );
+  const fabToggle = useColorModeValue(
+    {
+      bg: 'blue.500',
+      borderWidth: '2px',
+      borderColor: 'blue.700',
+      _hover: { bg: 'blue.600' },
+    },
+    {
+      bg: 'blue.600',
+      borderWidth: '2px',
+      borderColor: 'blue.300',
+      boxShadow: '0 0 14px rgba(0, 122, 255, 0.35)',
+      _hover: { bg: 'blue.500' },
+    }
+  );
 
-  const floatingVoteProps = { ...walletFabBase, ...fabVote };
-  const floatingStakeProps = { ...walletFabBase, ...fabStake };
-  const floatingSettingsProps = { ...walletFabBase, ...fabSettings };
+  const fabColor = colorMode === 'dark' ? 'white' : 'black';
+  const floatingVoteProps = { ...walletFabBase, color: fabColor, ...fabVote };
+  const floatingStakeProps = { ...walletFabBase, color: fabColor, ...fabStake };
+  const floatingSettingsProps = { ...walletFabBase, color: fabColor, ...fabSettings };
+  const floatingToggleProps = { ...walletFabBase, color: fabColor, ...fabToggle };
 
   const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({
@@ -247,6 +268,7 @@ const Wallet = () => {
     network: { id: '', node: '' },
   });
   const [menu, setMenu] = React.useState(false);
+  const [isTrayOpen, setIsTrayOpen] = React.useState(false);
   const aboutRef = React.useRef();
   const deletAccountRef = React.useRef();
   const refreshTimeoutRef = React.useRef(null);
@@ -475,57 +497,6 @@ const Wallet = () => {
             </Alert>
           ) : null}
 
-          {/* Lower left delegation — respect safe area on notched devices */}
-          {state.delegation && !isMidnightNetworkId(settings.network.id) && (
-            <Box
-              data-testid="wallet-delegation"
-              zIndex={2}
-              position="fixed"
-              bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-              left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              justifyContent="center"
-              gap={2}
-            >
-              <Tooltip label="Vote" hasArrow>
-                <Button
-                  {...floatingVoteProps}
-                  className={fabVoteClass}
-                  onClick={() => navigate('/governance')}
-                  aria-label="Open voting"
-                >
-                  <Icon as={MdHowToVote} boxSize={6} />
-                </Button>
-              </Tooltip>
-              {state.delegation.active ? (
-                <DelegationPopover
-                  fabProps={floatingStakeProps}
-                  fabClassName={fabStakeClass}
-                  account={state.account}
-                  delegation={state.delegation}
-                  label={state.delegation.ticker || state.delegation.poolId.slice(-9)}
-                />
-              ) : (
-                <Tooltip label="Delegate" hasArrow>
-                  <Button
-                    {...floatingStakeProps}
-                    className={fabStakeClass}
-                    onClick={() => {
-                      builderRef.current.initDelegation(
-                        state.account,
-                        state.delegation
-                      );
-                    }}
-                    aria-label="Delegate stake"
-                  >
-                    <Icon as={MdOutlineHowToReg} boxSize={6} />
-                  </Button>
-                </Tooltip>
-              )}
-            </Box>
-          )}
 
           {/* Network Switcher — center aligned */}
           {/* Network Switcher — center aligned */}
@@ -560,24 +531,76 @@ const Wallet = () => {
             </Button>
           </Box>
 
-          {/* Lower right settings — respect safe area on notched devices */}
+          {/* Lower right tray — respect safe area on notched devices */}
           <Box
             zIndex={2}
             position="fixed"
             bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
             right="calc(env(safe-area-inset-right, 0px) + 1.5rem)"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="flex-end"
+            gap={2}
           >
-            <Menu
-              isOpen={menu}
-              autoSelect={false}
-              onOpen={() => setMenu(true)}
-              onClose={() => setMenu(false)}
-            >
-              <MenuButton
-                as={Button}
-                {...floatingSettingsProps}
-                className={fabSettingsClass}
-              >
+            <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
+              <Stack spacing={2} mb={2} alignItems="center">
+                {state.delegation && !isMidnightNetworkId(settings.network.id) && (
+                  <Stack
+                    data-testid="wallet-delegation"
+                    spacing={2}
+                    alignItems="center"
+                  >
+                    <Tooltip label="Vote" hasArrow placement="left">
+                      <Button
+                        {...floatingVoteProps}
+                        className={fabVoteClass}
+                        onClick={() => navigate('/governance')}
+                        aria-label="Open voting"
+                      >
+                        <Icon as={MdHowToVote} boxSize={6} />
+                      </Button>
+                    </Tooltip>
+                    {state.delegation.active ? (
+                      <DelegationPopover
+                        fabProps={floatingStakeProps}
+                        fabClassName={fabStakeClass}
+                        account={state.account}
+                        delegation={state.delegation}
+                        label={state.delegation.ticker || state.delegation.poolId.slice(-9)}
+                      />
+                    ) : (
+                      <Tooltip label="Delegate" hasArrow placement="left">
+                        <Button
+                          {...floatingStakeProps}
+                          className={fabStakeClass}
+                          onClick={() => {
+                            builderRef.current.initDelegation(
+                              state.account,
+                              state.delegation
+                            );
+                          }}
+                          aria-label="Delegate stake"
+                        >
+                          <Icon as={MdOutlineHowToReg} boxSize={6} />
+                        </Button>
+                      </Tooltip>
+                    )}
+                  </Stack>
+                )}
+
+                <Menu
+                  isOpen={menu}
+                  autoSelect={false}
+                  onOpen={() => setMenu(true)}
+                  onClose={() => setMenu(false)}
+                  placement="left-end"
+                >
+                  <MenuButton
+                    as={Button}
+                    {...floatingSettingsProps}
+                    className={fabSettingsClass}
+                  >
                 <SettingsIcon boxSize={6} />
               </MenuButton>
               <MenuList fontSize="md">
@@ -739,6 +762,16 @@ const Wallet = () => {
                 </MenuItem>
               </MenuList>
             </Menu>
+              </Stack>
+            </Collapse>
+            <Button
+              {...floatingToggleProps}
+              className={fabToggleClass}
+              onClick={() => setIsTrayOpen(!isTrayOpen)}
+              aria-label="Toggle action menu"
+            >
+              <Icon as={isTrayOpen ? ChevronDownIcon : ChevronUpIcon} boxSize={8} />
+            </Button>
           </Box>
 
           <Box px={{ base: 3, md: 4 }} pb={1} flexShrink={0} textAlign="center">

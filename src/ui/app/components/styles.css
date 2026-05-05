@@ -321,6 +321,19 @@ html[data-theme='light'] .lucem-settings-shell {
   box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9);
 }
 
+.button.fab-toggle {
+  opacity: .85;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(0, 122, 255, 1);
+  box-shadow: 0px 0px 15px rgba(0, 122, 255, 0.75);
+  border-radius: 9999px;
+}
+
+.button.fab-toggle:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9);
+}
+
 /* Hardware wallet tab: wider CTAs so uppercase labels fit (e.g. Continue, long Keystone strings). */
 /* removed hw-tab-cta class */
 

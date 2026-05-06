@@ -13,13 +13,14 @@ describe('governance page and wallet network button wiring', () => {
     expect(css).toMatch(/\.button\.network-preview\[data-active\][\s\S]*box-shadow:\s*none\s*!important/);
   });
 
-  test('wallet network button uses no shadow prop', () => {
+  test('wallet network tray buttons use per-network class names with no shadow', () => {
     const walletSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),
       'utf8'
     );
 
-    expect(walletSrc).toMatch(/className=\{`button network-\$\{settings\.network\.id\}/);
+    expect(walletSrc).toContain('networkOptions.map((networkOption)');
+    expect(walletSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
     expect(walletSrc).toMatch(/shadow="none"/);
   });
 

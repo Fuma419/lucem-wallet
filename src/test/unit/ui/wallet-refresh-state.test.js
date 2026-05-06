@@ -17,9 +17,7 @@ describe('wallet refresh state retention', () => {
       path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),
       'utf8'
     );
-    expect(walletSrc).toMatch(
-      /\{state\.delegation && !isMidnightNetworkId\(settings\.network\.id\) && \(/
-    );
+    expect(walletSrc).toMatch(/\{state\.delegation && \(/);
     expect(walletSrc).toMatch(
       /quantity=\{\s*state\.account[\s\S]{0,260}state\.account\.lovelace !== null[\s\S]{0,260}\?\s*\(/
     );

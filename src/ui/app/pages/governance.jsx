@@ -37,7 +37,6 @@ import {
 } from '../../../api/extension/wallet';
 import { fetchGovernanceOverview, normalizeDrepKeyHash } from '../../../api/governance';
 import { ERROR, HW, TAB } from '../../../config/config';
-import { isMidnightNetworkId } from '../../../config/network';
 
 const sourceBadgeColor = (source) =>
   source === 'blockfrost' ? 'green' : 'purple';
@@ -142,19 +141,6 @@ const Governance = () => {
 
   const networkId = settings?.network?.id || 'mainnet';
   const adaSymbol = settings?.adaSymbol || (networkId === 'mainnet' ? '₳' : 't₳');
-
-  React.useEffect(() => {
-    if (!isMidnightNetworkId(settings?.network?.id)) return;
-    toast({
-      title: 'Cardano governance only',
-      description:
-        'Vote delegation targets Cardano L1. Choose Mainnet, Preprod, or Preview to use this screen.',
-      status: 'info',
-      duration: 5500,
-      isClosable: true,
-    });
-    navigate('/wallet');
-  }, [settings?.network?.id, navigate, toast]);
 
   const [drepIdInput, setDrepIdInput] = React.useState('');
   const [isBuildingTx, setIsBuildingTx] = React.useState(false);

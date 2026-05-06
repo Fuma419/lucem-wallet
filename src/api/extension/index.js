@@ -13,7 +13,6 @@ import {
   TARGET,
   TxSignError,
 } from '../../config/config';
-import { isMidnightNetworkId } from '../../config/network';
 import { POPUP_WINDOW } from '../../config/config';
 import platform from '../../platform';
 import { mnemonicToEntropy } from 'bip39';
@@ -665,9 +664,6 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
 };
 
 const checkCollateral = async (currentAccount, network, checkTx) => {
-  if (isMidnightNetworkId(network.id)) {
-    return;
-  }
   if (checkTx) {
     const transactions = await getTransactions();
     if (
@@ -777,9 +773,6 @@ export const setNetwork = async (network) => {
   } else if (network.id === NETWORK_ID.preview) {
     id = NETWORK_ID.preview;
     node = NODE.preview;
-  } else if (network.id === NETWORK_ID.midnight_preview) {
-    id = NETWORK_ID.midnight_preview;
-    node = NODE.midnight_preview;
   } else {
     id = NETWORK_ID.preprod;
     node = NODE.preprod;
@@ -936,8 +929,7 @@ export const isValidAddress = async (address) => {
       (addr.network_id() === 0 &&
         (network.id === NETWORK_ID.testnet ||
           network.id === NETWORK_ID.preview ||
-          network.id === NETWORK_ID.preprod ||
-          network.id === NETWORK_ID.midnight_preview))
+          network.id === NETWORK_ID.preprod))
     ) {
       return Buffer.from(addr.to_bytes());
     }
@@ -952,8 +944,7 @@ export const isValidAddress = async (address) => {
         (addr.network_id() === 0 &&
           (network.id === NETWORK_ID.testnet ||
             network.id === NETWORK_ID.preview ||
-            network.id === NETWORK_ID.preprod ||
-            network.id === NETWORK_ID.midnight_preview))
+            network.id === NETWORK_ID.preprod))
       ) {
         return Buffer.from(addr.to_bytes());
       }
@@ -977,8 +968,7 @@ const isValidAddressBytes = async (address) => {
       (addr.network_id() === 0 &&
         (network.id === NETWORK_ID.testnet ||
           network.id === NETWORK_ID.preview ||
-          network.id === NETWORK_ID.preprod ||
-          network.id === NETWORK_ID.midnight_preview))
+          network.id === NETWORK_ID.preprod))
     )
       return true;
     return false;
@@ -990,8 +980,7 @@ const isValidAddressBytes = async (address) => {
       (addr.network_id() === 0 &&
         (network.id === NETWORK_ID.testnet ||
           network.id === NETWORK_ID.preview ||
-          network.id === NETWORK_ID.preprod ||
-          network.id === NETWORK_ID.midnight_preview))
+          network.id === NETWORK_ID.preprod))
     )
       return true;
     return false;
@@ -1746,11 +1735,6 @@ export const createAccount = async (name, password, accountIndex = null) => {
         paymentAddr: paymentAddrTestnet,
         rewardAddr: rewardAddrTestnet,
       },
-      [NETWORK_ID.midnight_preview]: {
-        ...networkDefault,
-        paymentAddr: paymentAddrTestnet,
-        rewardAddr: rewardAddrTestnet,
-      },
       avatar: Math.random().toString(),
     },
   };
@@ -1848,11 +1832,6 @@ export const createHWAccounts = async (accounts) => {
         rewardAddr: rewardAddrTestnet,
       },
       [NETWORK_ID.preprod]: {
-        ...networkDefault,
-        paymentAddr: paymentAddrTestnet,
-        rewardAddr: rewardAddrTestnet,
-      },
-      [NETWORK_ID.midnight_preview]: {
         ...networkDefault,
         paymentAddr: paymentAddrTestnet,
         rewardAddr: rewardAddrTestnet,
@@ -2385,12 +2364,6 @@ export const getAsset = async (unit) => {
 };
 
 export const updateBalance = async (currentAccount, network) => {
-  if (isMidnightNetworkId(network.id)) {
-    currentAccount[network.id].lovelace = '0';
-    currentAccount[network.id].assets = [];
-    currentAccount[network.id].minAda = 0;
-    return true;
-  }
   await Loader.load();
   const assets = await getBalanceExtended();
   const amount = await assetsToValue(assets);

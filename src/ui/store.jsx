@@ -39,9 +39,7 @@ const settings = {
       adaSymbol:
         settings.network.id === NETWORK_ID.mainnet
           ? '₳'
-          : settings.network.id === NETWORK_ID.midnight_preview
-            ? '—'
-            : 't₳',
+          : 't₳',
     };
   }),
 };
@@ -63,16 +61,21 @@ const globalModel = persist(
 
 const initSettings = async (setSettings) => {
   const currency = await getCurrency();
-  const network = await getNetwork();
+  const storedNetwork = await getNetwork();
+  const network =
+    storedNetwork && NODE[storedNetwork.id]
+      ? storedNetwork
+      : { id: NETWORK_ID.preprod, node: NODE.preprod };
+  if (storedNetwork && !NODE[storedNetwork.id]) {
+    await setNetwork(network);
+  }
   setSettings({
     currency: currency || 'usd',
     network: network || { id: NETWORK_ID.mainnet, node: NODE.mainnet },
     adaSymbol: network
       ? network.id === NETWORK_ID.mainnet
         ? '₳'
-        : network.id === NETWORK_ID.midnight_preview
-          ? '—'
-          : 't₳'
+        : 't₳'
       : '₳',
   });
 };

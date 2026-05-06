@@ -62,10 +62,6 @@ import {
   TabPanels,
   TabPanel,
   Tooltip,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
   Collapse,
 } from '@chakra-ui/react';
 import {
@@ -93,8 +89,6 @@ import AvatarLoader from '../components/avatarLoader';
 import { currencyToSymbol, fromAssetUnit } from '../../../api/util';
 import TransactionBuilder from '../components/transactionBuilder';
 import { NETWORK_ID, TAB, STORAGE, NODE } from '../../../config/config';
-import { isMidnightNetworkId } from '../../../config/network';
-import { fetchMidnightPreviewTip } from '../../../api/midnight-indexer';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
@@ -259,7 +253,6 @@ const Wallet = () => {
     { id: NETWORK_ID.mainnet, label: 'Mainnet' },
     { id: NETWORK_ID.preprod, label: 'Preprod' },
     { id: NETWORK_ID.preview, label: 'Preview' },
-    { id: NETWORK_ID.midnight_preview, label: 'Midnight' },
   ];
 
   const [isFetching, setIsFetching] = React.useState(false);
@@ -284,21 +277,6 @@ const Wallet = () => {
   }); // for quicker displaying
   const builderRef = React.useRef();
   const fiatPrice = React.useRef(0);
-  const [midnightTip, setMidnightTip] = React.useState(null);
-
-  React.useEffect(() => {
-    if (settings?.network?.id !== NETWORK_ID.midnight_preview) {
-      setMidnightTip(null);
-      return undefined;
-    }
-    const controller = new AbortController();
-    fetchMidnightPreviewTip(controller.signal)
-      .then((tip) => {
-        setMidnightTip(tip);
-      })
-      .catch(() => setMidnightTip(null));
-    return () => controller.abort();
-  }, [settings?.network?.id]);
 
   const getData = async ({ forceUpdate = false, skipUpdate = false } = {}) => {
     setIsFetching(true);
@@ -459,44 +437,6 @@ const Wallet = () => {
             </Box>
           </Flex>
 
-          {isMidnightNetworkId(settings.network.id) ? (
-            <Alert
-              status="info"
-              variant="subtle"
-              mx={{ base: 3, md: 4 }}
-              mb={3}
-              rounded="md"
-              fontSize="sm"
-            >
-              <AlertIcon />
-              <Box>
-                <AlertTitle fontSize="sm">Midnight Preview (testnet-class)</AlertTitle>
-                <AlertDescription fontSize="xs">
-                  This is a separate chain from Cardano L1. Your existing Lucem seed still controls your Cardano accounts only;
-                  native Midnight keys and transfers are not wired up yet (that needs Midnight SDK work). Use Cardano networks for ADA.{' '}
-                  {midnightTip ? (
-                    <>
-                      Blockfrost indexer: height {midnightTip.height}
-                      {midnightTip.hash
-                        ? ` · ${String(midnightTip.hash).slice(0, 12)}…`
-                        : ''}
-                      .
-                    </>
-                  ) : (
-                    <>
-                      Set env{' '}
-                      <Text as="span" fontFamily="mono" fontSize="xs">
-                        BLOCKFROST_MIDNIGHT_PROJECT_ID_PREVIEW
-                      </Text>{' '}
-                      (from blockfrost.io Midnight project) to load live tip here.
-                    </>
-                  )}
-                </AlertDescription>
-              </Box>
-            </Alert>
-          ) : null}
-
-
           {/* Lower left tray — network switcher with collapse toggle */}
           <Box
             zIndex={2}
@@ -564,7 +504,7 @@ const Wallet = () => {
           >
             <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
               <Stack spacing={2} mb={2} alignItems="center">
-                {state.delegation && !isMidnightNetworkId(settings.network.id) && (
+                {state.delegation && (
                   <Stack
                     data-testid="wallet-delegation"
                     spacing={2}
@@ -761,7 +701,6 @@ const Wallet = () => {
                 <MenuDivider />
                 <MenuItem
                   icon={<Icon as={FaRegFileCode} w={3} h={3} />}
-                  isDisabled={isMidnightNetworkId(settings.network.id)}
                   onClick={() => {
                     builderRef.current.initCollateral(state.account);
                   }}
@@ -815,11 +754,6 @@ const Wallet = () => {
             gap={1}
           >
             <Flex align="center" justify="center" flexWrap="wrap" gap={1}>
-              {isMidnightNetworkId(settings.network.id) ? (
-                <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="bold" color="gray.300">
-                  Cardano balance not shown on Midnight
-                </Text>
-              ) : (
               <UnitDisplay
                 className="lineClamp"
                 fontSize={{ base: 'xl', md: '2xl' }}
@@ -840,7 +774,6 @@ const Wallet = () => {
                 decimals={6}
                 symbol={settings.adaSymbol}
               />
-              )}
               {state.account &&
               (state.account.assets.length > 0 || state.account.collateral) ? (
                 <Tooltip
@@ -893,7 +826,6 @@ const Wallet = () => {
                 ''
               )}
             </Flex>
-            {!isMidnightNetworkId(settings.network.id) ? (
             <UnitDisplay
               className="lineClamp"
               fontSize="md"
@@ -918,7 +850,6 @@ const Wallet = () => {
               symbol={currencyToSymbol(settings.currency)}
               decimals={2}
             />
-            ) : null}
           </Flex>
 
           {/* Receive, delegation, Send — flows under balance (no overlap). */}
@@ -951,12 +882,6 @@ const Wallet = () => {
                   rounded="lg"
                   shadow="md"
                   flexShrink={0}
-                  isDisabled={isMidnightNetworkId(settings.network.id)}
-                  title={
-                    isMidnightNetworkId(settings.network.id)
-                      ? 'Cardano receive only—switch to Mainnet, Preprod, or Preview'
-                      : undefined
-                  }
                   onClick={() => {}}
                 >
                   Receive
@@ -1006,7 +931,7 @@ const Wallet = () => {
           <Box flex={1} display="flex" justifyContent="flex-start">
             <Tooltip
               label="Send uses Cardano Koios. Switch network for ADA transfers."
-              isDisabled={!isMidnightNetworkId(settings.network.id)}
+              isDisabled={true}
               hasArrow
             >
               <Button
@@ -1026,7 +951,6 @@ const Wallet = () => {
                 rightIcon={<Icon as={BsArrowUpRight} />}
                 shadow="md"
                 flexShrink={0}
-                isDisabled={isMidnightNetworkId(settings.network.id)}
               >
                 Send
               </Button>

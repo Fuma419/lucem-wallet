@@ -179,19 +179,6 @@ const Send = () => {
   const toast = useToast();
   const ref = React.useRef();
 
-  React.useEffect(() => {
-    if (settings?.network?.id !== NETWORK_ID.midnight_preview) return;
-    toast({
-      title: 'Send unavailable',
-      description:
-        'Midnight is a separate blockchain from Cardano. Use a Cardano network to send ADA and tokens.',
-      status: 'info',
-      duration: 6000,
-      isClosable: true,
-    });
-    navigate('/wallet');
-  }, [settings?.network?.id, navigate, toast]);
-
   const startKeystoneQrSign = React.useCallback(async () => {
     if (!tx) {
       toast({

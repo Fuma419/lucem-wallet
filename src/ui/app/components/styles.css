@@ -489,23 +489,6 @@ html[data-theme='light'] .lucem-settings-shell {
   transform: none;
 }
 
-.button.network-midnight_preview {
-  font-family: 'Barlow', sans-serif;
-  opacity: .85;
-  letter-spacing: 2px;
-  background: rgba(138, 43, 226, 0.12);
-  border: thin solid rgba(186, 104, 255, 0.55);
-  color: white;
-  transition: all 0.3s ease;
-  box-shadow: none;
-}
-
-.button.network-midnight_preview:hover {
-  background: rgba(138, 43, 226, 0.22);
-  box-shadow: none;
-  transform: none;
-}
-
 .button.network-testnet {
   font-family: 'Barlow', sans-serif;
   opacity: .85;
@@ -568,18 +551,6 @@ html[data-theme='light'] .button.network-preview:hover {
   color: #033a3d;
 }
 
-html[data-theme='light'] .button.network-midnight_preview {
-  opacity: 1;
-  background: rgba(138, 43, 226, 0.12);
-  border: thin solid rgba(100, 40, 165, 0.45);
-  color: #3d1a5c;
-}
-
-html[data-theme='light'] .button.network-midnight_preview:hover {
-  background: rgba(138, 43, 226, 0.2);
-  color: #2f1449;
-}
-
 html[data-theme='light'] .button.network-testnet {
   opacity: 1;
   background: rgba(90, 90, 90, 0.1);
@@ -596,7 +567,6 @@ html[data-theme='light'] .button.network-testnet:hover {
 .button.network-mainnet,
 .button.network-preprod,
 .button.network-preview,
-.button.network-midnight_preview,
 .button.network-testnet {
   box-shadow: none !important;
 }
@@ -604,17 +574,14 @@ html[data-theme='light'] .button.network-testnet:hover {
 .button.network-mainnet:hover,
 .button.network-preprod:hover,
 .button.network-preview:hover,
-.button.network-midnight_preview:hover,
 .button.network-testnet:hover,
 .button.network-mainnet:focus-visible,
 .button.network-preprod:focus-visible,
 .button.network-preview:focus-visible,
-.button.network-midnight_preview:focus-visible,
 .button.network-testnet:focus-visible,
 .button.network-mainnet[data-active],
 .button.network-preprod[data-active],
 .button.network-preview[data-active],
-.button.network-midnight_preview[data-active],
 .button.network-testnet[data-active] {
   transform: none !important;
   box-shadow: none !important;

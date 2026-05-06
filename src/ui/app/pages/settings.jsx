@@ -692,7 +692,6 @@ const Network = () => {
         <option value={NETWORK_ID.mainnet}>Mainnet</option>
         <option value={NETWORK_ID.preprod}>Preprod</option>
         <option value={NETWORK_ID.preview}>Preview</option>
-        <option value={NETWORK_ID.midnight_preview}>Midnight Preview</option>
       </Select>
       <Flex align="center" gap={3} mb={4}>
         <Checkbox

@@ -154,16 +154,7 @@ const Wallet = () => {
   const settings = useStoreState((state) => state.settings.settings);
   const setSettings = useStoreActions((actions) => actions.settings.setSettings);
 
-  const toggleNetwork = () => {
-    let nextId = NETWORK_ID.mainnet;
-    if (settings.network.id === NETWORK_ID.mainnet) nextId = NETWORK_ID.preprod;
-    else if (settings.network.id === NETWORK_ID.preprod) nextId = NETWORK_ID.preview;
-    else if (settings.network.id === NETWORK_ID.preview)
-      nextId = NETWORK_ID.midnight_preview;
-    else if (settings.network.id === NETWORK_ID.midnight_preview)
-      nextId = NETWORK_ID.mainnet;
-    else nextId = NETWORK_ID.mainnet;
-    
+  const setWalletNetwork = (nextId) => {
     setSettings({
       ...settings,
       network: {
@@ -258,6 +249,18 @@ const Wallet = () => {
   const floatingStakeProps = { ...walletFabBase, color: fabColor, ...fabStake };
   const floatingSettingsProps = { ...walletFabBase, color: fabColor, ...fabSettings };
   const floatingToggleProps = { ...walletFabBase, color: fabColor, ...fabToggle };
+  const floatingNetworkToggleProps = {
+    ...walletFabBase,
+    color: fabColor,
+    ...fabSettings,
+  };
+
+  const networkOptions = [
+    { id: NETWORK_ID.mainnet, label: 'Mainnet' },
+    { id: NETWORK_ID.preprod, label: 'Preprod' },
+    { id: NETWORK_ID.preview, label: 'Preview' },
+    { id: NETWORK_ID.midnight_preview, label: 'Midnight' },
+  ];
 
   const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({
@@ -507,30 +510,39 @@ const Wallet = () => {
             gap={2}
           >
             <Collapse in={isNetworkTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
-              <Button
-                w="120px"
-                mb={2}
-                className={`button network-${settings.network.id} ${isFetching ? 'is-loading' : ''}`}
-                size="sm"
-                rounded="lg"
-                shadow="none"
-                flexShrink={0}
-                onClick={toggleNetwork}
-              >
-                {settings.network.id === NETWORK_ID.mainnet
-                  ? 'Mainnet'
-                  : settings.network.id === NETWORK_ID.preprod
-                  ? 'Preprod'
-                  : settings.network.id === NETWORK_ID.preview
-                  ? 'Preview'
-                  : settings.network.id === NETWORK_ID.midnight_preview
-                  ? 'Midnight'
-                  : 'Testnet'}
-              </Button>
+              <Stack spacing={2} mb={2} alignItems="center">
+                {networkOptions.map((networkOption) => (
+                  <Button
+                    key={networkOption.id}
+                    w="128px"
+                    h="40px"
+                    className={`button network-${networkOption.id} ${
+                      isFetching && settings.network.id === networkOption.id
+                        ? 'is-loading'
+                        : ''
+                    }`}
+                    size="sm"
+                    rounded="lg"
+                    shadow="none"
+                    flexShrink={0}
+                    variant={
+                      settings.network.id === networkOption.id ? 'solid' : 'outline'
+                    }
+                    onClick={() => {
+                      if (settings.network.id !== networkOption.id) {
+                        setWalletNetwork(networkOption.id);
+                      }
+                      setIsNetworkTrayOpen(false);
+                    }}
+                  >
+                    {networkOption.label}
+                  </Button>
+                ))}
+              </Stack>
             </Collapse>
             <Button
-              {...floatingToggleProps}
-              className={fabToggleClass}
+              {...floatingNetworkToggleProps}
+              className={fabSettingsClass}
               onClick={() => setIsNetworkTrayOpen(!isNetworkTrayOpen)}
               aria-label="Toggle network menu"
             >

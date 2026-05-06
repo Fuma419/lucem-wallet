@@ -445,12 +445,12 @@ const Wallet = () => {
             left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"
             display="flex"
             flexDirection="column"
-            alignItems="center"
+            alignItems="flex-start"
             justifyContent="flex-end"
             gap={2}
           >
             <Collapse in={isNetworkTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
-              <Stack spacing={2} mb={2} alignItems="center">
+              <Stack spacing={2} mb={2} alignItems="stretch">
                 {networkOptions.map((networkOption) => (
                   <Button
                     key={networkOption.id}

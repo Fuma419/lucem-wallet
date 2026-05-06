@@ -269,6 +269,7 @@ const Wallet = () => {
   });
   const [menu, setMenu] = React.useState(false);
   const [isTrayOpen, setIsTrayOpen] = React.useState(false);
+  const [isNetworkTrayOpen, setIsNetworkTrayOpen] = React.useState(false);
   const aboutRef = React.useRef();
   const deletAccountRef = React.useRef();
   const refreshTimeoutRef = React.useRef(null);
@@ -493,36 +494,47 @@ const Wallet = () => {
           ) : null}
 
 
-          {/* Network Switcher — center aligned */}
-          {/* Network Switcher — center aligned */}
+          {/* Lower left tray — network switcher with collapse toggle */}
           <Box
             zIndex={2}
             position="fixed"
             bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-            left="50%"
-            transform="translateX(-50%)"
+            left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"
             display="flex"
+            flexDirection="column"
             alignItems="center"
-            justifyContent="center"
+            justifyContent="flex-end"
+            gap={2}
           >
+            <Collapse in={isNetworkTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
+              <Button
+                w="120px"
+                mb={2}
+                className={`button network-${settings.network.id} ${isFetching ? 'is-loading' : ''}`}
+                size="sm"
+                rounded="lg"
+                shadow="none"
+                flexShrink={0}
+                onClick={toggleNetwork}
+              >
+                {settings.network.id === NETWORK_ID.mainnet
+                  ? 'Mainnet'
+                  : settings.network.id === NETWORK_ID.preprod
+                  ? 'Preprod'
+                  : settings.network.id === NETWORK_ID.preview
+                  ? 'Preview'
+                  : settings.network.id === NETWORK_ID.midnight_preview
+                  ? 'Midnight'
+                  : 'Testnet'}
+              </Button>
+            </Collapse>
             <Button
-              w="120px"
-              className={`button network-${settings.network.id} ${isFetching ? 'is-loading' : ''}`}
-              size="sm"
-              rounded="lg"
-              shadow="none"
-              flexShrink={0}
-              onClick={toggleNetwork}
+              {...floatingToggleProps}
+              className={fabToggleClass}
+              onClick={() => setIsNetworkTrayOpen(!isNetworkTrayOpen)}
+              aria-label="Toggle network menu"
             >
-              {settings.network.id === NETWORK_ID.mainnet
-                ? 'Mainnet'
-                : settings.network.id === NETWORK_ID.preprod
-                ? 'Preprod'
-                : settings.network.id === NETWORK_ID.preview
-                ? 'Preview'
-                : settings.network.id === NETWORK_ID.midnight_preview
-                ? 'Midnight'
-                : 'Testnet'}
+              <Icon as={isNetworkTrayOpen ? ChevronDownIcon : ChevronUpIcon} boxSize={8} />
             </Button>
           </Box>
 

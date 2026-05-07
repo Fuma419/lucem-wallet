@@ -2,16 +2,15 @@ const fs = require('fs');
 const path = require('path');
 
 describe('governance page and wallet network button wiring', () => {
-  test('network button CSS applies active indicator and requested colors', () => {
+  test('network button CSS uses gray inactive + yellow active indicator', () => {
     const css = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/styles.css'),
       'utf8'
     );
 
-    expect(css).toMatch(/\.button\.network-mainnet\s*\{[\s\S]*rgba\(0,\s*122,\s*255/);
-    expect(css).toMatch(/\.button\.network-preview\s*\{[\s\S]*rgba\(26,\s*214,\s*95/);
-    expect(css).toMatch(/\.button\.network-mainnet\[data-active\][\s\S]*box-shadow:/);
-    expect(css).toMatch(/\.button\.network-preview\[data-active\][\s\S]*box-shadow:/);
+    expect(css).toMatch(/\.button\.network-mainnet,\s*[\s\S]*background:\s*rgba\(120,\s*120,\s*120/);
+    expect(css).toMatch(/\.button\.network-mainnet\[data-active\][\s\S]*rgba\(206,\s*250,\s*0/);
+    expect(css).toMatch(/\.button\.network-preview\[data-active\][\s\S]*box-shadow:\s*0 0 14px rgba\(206,\s*250,\s*0/);
   });
 
   test('wallet network tray buttons use per-network class names with no shadow', () => {

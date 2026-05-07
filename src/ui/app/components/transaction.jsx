@@ -154,7 +154,8 @@ const Transaction = ({
               position="relative"
               left="-15px"
             >
-              {displayInfo.lovelace ? (
+              {displayInfo.lovelace !== undefined &&
+              displayInfo.lovelace !== null ? (
                 <UnitDisplay
                   fontSize={18}
                   color={
@@ -162,7 +163,7 @@ const Transaction = ({
                       ? txTypeColor.externalIn
                       : txTypeColor.externalOut
                   }
-                  quantity={displayInfo.lovelace}
+                  quantity={displayInfo.lovelace.toString()}
                   decimals={6}
                   symbol={settings.adaSymbol}
                 />

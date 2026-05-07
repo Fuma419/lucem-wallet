@@ -14,7 +14,7 @@ const {
 } = require('./koios-self-send');
 
 /**
- * Preprod only: live Koios self-transfer from account 0 (CIP-1852), ADA-only UTxOs.
+ * Preprod only: live Koios transfer from account 0 -> account 1 (CIP-1852), ADA-only UTxOs.
  *
  * Run locally: `npm run test:integration` with `.env` (see `.env.example`). Live tests skip if mnemonic unset.
  * To run on GitHub Actions later, add a workflow step + repo secrets; see commented block in `ci.yml`.
@@ -47,7 +47,7 @@ function preprodApiKey() {
 const phrase = preprodMnemonic();
 const describeLive = phrase && validateMnemonic(phrase) ? describe : describe.skip;
 
-describeLive('Preprod — tADA self-transfer (Koios integration)', () => {
+describeLive('Preprod — tADA account0->account1 transfer (Koios integration)', () => {
   const apiKey = preprodApiKey();
 
   test('mnemonic is valid BIP-39', () => {
@@ -66,7 +66,7 @@ describeLive('Preprod — tADA self-transfer (Koios integration)', () => {
   });
 
   test(
-    'submits signed self-transfer; optional Koios /tx_status poll (LUCEM_INTEGRATION_POLL_TX=1)',
+    'submits signed account0->account1 transfer; optional Koios /tx_status poll (LUCEM_INTEGRATION_POLL_TX=1)',
     async () => {
       const hash = await buildSignSubmitSelfTransfer({
         baseUrl: PREPROD_BASE,

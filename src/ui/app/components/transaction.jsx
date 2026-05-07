@@ -515,7 +515,14 @@ const getAddressCredentials = (address) => {
     const cmlAddress = Loader.Cardano.Address.from_bech32(address);
     const paymentCred = cmlAddress.payment_cred()?.to_hex() || null;
     const stakingCred = cmlAddress.staking_cred()?.to_hex() || null;
-    return [paymentCred, stakingCred];
+    if (paymentCred || stakingCred) {
+      return [paymentCred, stakingCred];
+    }
+    const rewardAddr = Loader.Cardano.RewardAddress.from_address(cmlAddress);
+    if (rewardAddr) {
+      return [null, rewardAddr.payment_cred()?.to_hex() || null];
+    }
+    return [null, null];
   } catch (error) {
     try {
       // try casting as byron address
@@ -545,9 +552,18 @@ const calculateAmount = (currentAddr, uTxOList, validContract = true) => {
 
   const [ownPaymentCred, ownStakingCred] = getAddressCredentials(currentAddr);
 
+  const normalizeAddress = (utxo) =>
+    utxo.payment_addr?.bech32 ||
+    utxo.address ||
+    utxo.payment_addr ||
+    utxo.stake_address ||
+    utxo.stake_addr?.bech32 ||
+    utxo.stake_addr ||
+    null;
+
   // Convert Koios UTXO format to expected format
   const convertKoiosUtxo = (utxo) => ({
-    address: utxo.payment_addr?.bech32 || utxo.address,
+    address: normalizeAddress(utxo),
     stake_address: utxo.stake_addr || utxo.stake_address,
     tx_hash: utxo.tx_hash,
     tx_index: utxo.tx_index,

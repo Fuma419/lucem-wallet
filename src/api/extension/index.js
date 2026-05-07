@@ -394,10 +394,18 @@ export const getBlock = async (blockHashOrNumb) => {
 // Helper function to convert Koios UTXO format to expected format
 const convertKoiosUtxosToExpectedFormat = (koiosUtxos) => {
   if (!koiosUtxos) return null;
+  const normalizeAddress = (utxo) =>
+    utxo.payment_addr?.bech32 ||
+    utxo.address ||
+    utxo.payment_addr ||
+    utxo.stake_address ||
+    utxo.stake_addr?.bech32 ||
+    utxo.stake_addr ||
+    null;
   
   return {
     inputs: (koiosUtxos.inputs || []).map(input => ({
-      address: input.payment_addr?.bech32 || input.address || input.payment_addr,
+      address: normalizeAddress(input),
       stake_address: input.stake_addr || input.stake_address || input.stake_addr?.bech32,
       tx_hash: input.tx_hash,
       tx_index: input.tx_index,
@@ -408,7 +416,7 @@ const convertKoiosUtxosToExpectedFormat = (koiosUtxos) => {
       reference_script: input.reference_script
     })),
     outputs: (koiosUtxos.outputs || []).map(output => ({
-      address: output.payment_addr?.bech32 || output.address || output.payment_addr,
+      address: normalizeAddress(output),
       stake_address: output.stake_addr || output.stake_address || output.stake_addr?.bech32,
       tx_hash: output.tx_hash,
       tx_index: output.tx_index,

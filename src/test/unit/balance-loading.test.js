@@ -211,4 +211,21 @@ describe('history transaction amount display', () => {
     expect(txSrc).toContain("internalOut: 'Internal send'");
     expect(txSrc).toContain("internalIn: 'Internal receive'");
   });
+
+  test('should normalize tx row address from stake-address fallback when payment address is missing', () => {
+    const txSrc = require('fs').readFileSync(
+      require('path').join(__dirname, '../../ui/app/components/transaction.jsx'),
+      'utf8'
+    );
+    expect(txSrc).toContain('utxo.stake_address');
+    expect(txSrc).toContain('utxo.stake_addr?.bech32');
+  });
+
+  test('should parse reward addresses for credential matching fallback', () => {
+    const txSrc = require('fs').readFileSync(
+      require('path').join(__dirname, '../../ui/app/components/transaction.jsx'),
+      'utf8'
+    );
+    expect(txSrc).toContain('RewardAddress.from_address');
+  });
 });

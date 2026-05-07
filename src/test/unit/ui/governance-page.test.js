@@ -2,15 +2,16 @@ const fs = require('fs');
 const path = require('path');
 
 describe('governance page and wallet network button wiring', () => {
-  test('network button CSS disables glow and hover lift', () => {
+  test('network button CSS applies active indicator and requested colors', () => {
     const css = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/styles.css'),
       'utf8'
     );
 
-    expect(css).toMatch(/\.button\.network-mainnet,\s*[\s\S]*box-shadow:\s*none\s*!important/);
-    expect(css).toMatch(/\.button\.network-mainnet:hover[\s\S]*transform:\s*none\s*!important/);
-    expect(css).toMatch(/\.button\.network-preview\[data-active\][\s\S]*box-shadow:\s*none\s*!important/);
+    expect(css).toMatch(/\.button\.network-mainnet\s*\{[\s\S]*rgba\(0,\s*122,\s*255/);
+    expect(css).toMatch(/\.button\.network-preview\s*\{[\s\S]*rgba\(26,\s*214,\s*95/);
+    expect(css).toMatch(/\.button\.network-mainnet\[data-active\][\s\S]*box-shadow:/);
+    expect(css).toMatch(/\.button\.network-preview\[data-active\][\s\S]*box-shadow:/);
   });
 
   test('wallet network tray buttons use per-network class names with no shadow', () => {
@@ -21,6 +22,7 @@ describe('governance page and wallet network button wiring', () => {
 
     expect(walletSrc).toContain('networkOptions.map((networkOption)');
     expect(walletSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
+    expect(walletSrc).toContain('data-active=');
     expect(walletSrc).toMatch(/shadow="none"/);
   });
 

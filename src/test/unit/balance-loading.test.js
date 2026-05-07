@@ -201,4 +201,14 @@ describe('history transaction amount display', () => {
     );
     expect(txSrc).toContain('quantity={displayInfo.lovelace.toString()}');
   });
+
+  test('should expose transaction flow label mapping for user clarity', () => {
+    const txSrc = require('fs').readFileSync(
+      require('path').join(__dirname, '../../ui/app/components/transaction.jsx'),
+      'utf8'
+    );
+    expect(txSrc).toContain("self: 'Self transfer'");
+    expect(txSrc).toContain("internalOut: 'Internal send'");
+    expect(txSrc).toContain("internalIn: 'Internal receive'");
+  });
 });

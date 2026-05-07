@@ -189,3 +189,16 @@ describe('old balance expression regression check', () => {
     expect(result).toBeFalsy();
   });
 });
+
+describe('history transaction amount display', () => {
+  test('should render zero net lovelace (BigInt 0) instead of hiding amount', () => {
+    const txSrc = require('fs').readFileSync(
+      require('path').join(__dirname, '../../ui/app/components/transaction.jsx'),
+      'utf8'
+    );
+    expect(txSrc).toMatch(
+      /displayInfo\.lovelace !== undefined[\s\S]{0,80}displayInfo\.lovelace !== null/
+    );
+    expect(txSrc).toContain('quantity={displayInfo.lovelace.toString()}');
+  });
+});

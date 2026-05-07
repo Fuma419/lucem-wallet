@@ -1,5 +1,5 @@
 /**
- * Minimal Koios + CSL path to build, sign, and submit a small ADA self-transfer
+ * Minimal Koios + CSL path to build, sign, and submit a small ADA transfer
  * on preview / preprod (for integration tests). No extension storage.
  */
 
@@ -109,10 +109,7 @@ async function fetchProtocolParams(base, apiKey) {
   };
 }
 
-/**
- * Derive account 0 base address (CIP-1852) for preview/preprod (network id 0).
- */
-function deriveAccount0Address(mnemonicPhrase) {
+function deriveAccountAddress(mnemonicPhrase, accountIndex = 0) {
   if (!validateMnemonic(mnemonicPhrase)) {
     throw new Error('Invalid BIP-39 mnemonic');
   }
@@ -124,7 +121,7 @@ function deriveAccount0Address(mnemonicPhrase) {
   const accountKey = root
     .derive(harden(1852))
     .derive(harden(1815))
-    .derive(harden(0));
+    .derive(harden(accountIndex));
   const paymentKey = accountKey.derive(0).derive(0).to_raw_key();
   const stakeKey = accountKey.derive(2).derive(0).to_raw_key();
   const networkId = 0;
@@ -142,22 +139,30 @@ function deriveAccount0Address(mnemonicPhrase) {
   };
 }
 
+/** Derive account 0 base address (CIP-1852) for preview/preprod (network id 0). */
+function deriveAccount0Address(mnemonicPhrase) {
+  return deriveAccountAddress(mnemonicPhrase, 0);
+}
+
 async function fetchUtxosForAddress(base, bech32, apiKey) {
-  // Prefer /address_utxos (utxo_infos): includes tx_index and optional is_spent.
-  // address_info.utxo_set uses tx_index, not output_index — mapping wrong indices breaks inputs.
+  // address_info.utxo_set tracks unspent outputs for an address at query time.
   const rows = await koiosPost(
     base,
-    '/address_utxos',
-    { _addresses: [bech32], _extended: true },
+    '/address_info',
+    { _addresses: [bech32] },
     apiKey
   );
-  if (!Array.isArray(rows) || rows.length === 0) {
+  const utxoSet =
+    Array.isArray(rows) && rows.length > 0 && Array.isArray(rows[0].utxo_set)
+      ? rows[0].utxo_set
+      : [];
+  if (utxoSet.length === 0) {
     return [];
   }
   const ix = (u) =>
     u.tx_index != null ? u.tx_index : u.output_index;
-  return rows
-    .filter((u) => (u.address == null || u.address === bech32) && u.is_spent !== true)
+  return utxoSet
+    .filter((u) => (u.address == null || u.address === bech32))
     .map((utxo) => ({
       tx_hash: utxo.tx_hash,
       output_index: ix(utxo),
@@ -245,14 +250,20 @@ async function waitForTxStatus(opts) {
 }
 
 /**
- * Build, sign, submit transfer of `sendLovelace` to the same address (exercise round-trip).
+ * Build, sign, submit transfer of `sendLovelace` from account 0 to account 1.
  *
  * @param {{ baseUrl: string, apiKey: string | undefined, mnemonic: string, sendLovelace: string }} opts
  * @returns {Promise<string>} submitted tx hash / id from Koios
  */
 async function buildSignSubmitSelfTransfer(opts) {
   const { baseUrl, apiKey, mnemonic, sendLovelace } = opts;
-  const { address, bech32, paymentKey } = deriveAccount0Address(mnemonic.trim());
+  const sender = deriveAccountAddress(mnemonic.trim(), 0);
+  const recipient = deriveAccountAddress(mnemonic.trim(), 1);
+  const { address, bech32, paymentKey } = sender;
+
+  if (bech32 === recipient.bech32) {
+    throw new Error('Sender and recipient must be different addresses.');
+  }
 
   const protocolParameters = await fetchProtocolParams(baseUrl, apiKey);
   const utxoJson = await fetchUtxosForAddress(baseUrl, bech32, apiKey);
@@ -291,7 +302,7 @@ async function buildSignSubmitSelfTransfer(opts) {
   const outputs = Cardano.TransactionOutputs.new();
   outputs.add(
     Cardano.TransactionOutput.new(
-      address,
+      recipient.address,
       Cardano.Value.new(Cardano.BigNum.from_str(String(sendLovelace)))
     )
   );
@@ -356,6 +367,7 @@ async function buildSignSubmitSelfTransfer(opts) {
 
 module.exports = {
   buildSignSubmitSelfTransfer,
+  deriveAccountAddress,
   deriveAccount0Address,
   fetchProtocolParams,
   normalizeSubmitTxHash,

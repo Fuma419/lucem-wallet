@@ -456,6 +456,9 @@ const Wallet = () => {
                     key={networkOption.id}
                     w="128px"
                     h="40px"
+                    data-active={
+                      settings.network.id === networkOption.id ? 'true' : undefined
+                    }
                     className={`button network-${networkOption.id} ${
                       isFetching && settings.network.id === networkOption.id
                         ? 'is-loading'

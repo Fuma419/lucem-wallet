@@ -63,6 +63,15 @@ const txTypeLabel = {
   contract: 'Contract',
 };
 
+const txFlowLabel = {
+  self: 'Self transfer',
+  internalIn: 'Internal receive',
+  internalOut: 'Internal send',
+  externalIn: 'Receive',
+  externalOut: 'Send',
+  multisig: 'Multi-signature',
+};
+
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
   React.useEffect(() => {
@@ -174,6 +183,9 @@ const Transaction = ({
               ) : (
                 ''
               )}
+              <Text fontSize={11} fontWeight="semibold" color="gray.500">
+                {txFlowLabel[displayInfo.type] || 'Transaction'}
+              </Text>
               {!['internalIn', 'externalIn'].includes(displayInfo.type) ? (
                 <Box flexDirection="row" fontSize={12}>
                   Fee:{' '}

@@ -440,95 +440,87 @@ html[data-theme='light'] .lucem-settings-shell {
 /* Network Switcher Buttons */
 .button.network-mainnet {
   font-family: 'Barlow', sans-serif;
-  opacity: .85;
+  opacity: 0.72;
   letter-spacing: 2px;
-  background: rgba(255, 255, 255, 0.1);
-  border: thin solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 122, 255, 0.14);
+  border: thin solid rgba(90, 180, 255, 0.52);
   color: white;
   transition: all 0.3s ease;
-  box-shadow: none;
+  box-shadow: 0 0 0 rgba(0, 122, 255, 0);
 }
 
 .button.network-mainnet:hover {
-  background: rgba(255, 255, 255, 0.2);
-  box-shadow: none;
+  background: rgba(0, 122, 255, 0.22);
+  box-shadow: 0 0 0 rgba(0, 122, 255, 0);
   transform: none;
 }
 
 .button.network-preprod {
   font-family: 'Barlow', sans-serif;
-  opacity: .85;
+  opacity: 0.72;
   letter-spacing: 2px;
   background: rgba(220, 27, 250, 0.1);
   border: thin solid rgba(220, 27, 250, 0.5);
   color: white;
   transition: all 0.3s ease;
-  box-shadow: none;
+  box-shadow: 0 0 0 rgba(220, 27, 250, 0);
 }
 
 .button.network-preprod:hover {
   background: rgba(220, 27, 250, 0.2);
-  box-shadow: none;
+  box-shadow: 0 0 0 rgba(220, 27, 250, 0);
   transform: none;
 }
 
 .button.network-preview {
   font-family: 'Barlow', sans-serif;
-  opacity: .85;
+  opacity: 0.72;
   letter-spacing: 2px;
-  background: rgba(0, 122, 255, 0.1);
-  border: thin solid rgba(0, 122, 255, 0.5);
+  background: rgba(26, 214, 95, 0.14);
+  border: thin solid rgba(74, 235, 131, 0.52);
   color: white;
   transition: all 0.3s ease;
-  box-shadow: none;
+  box-shadow: 0 0 0 rgba(26, 214, 95, 0);
 }
 
 .button.network-preview:hover {
-  background: rgba(0, 122, 255, 0.2);
-  box-shadow: none;
+  background: rgba(26, 214, 95, 0.24);
+  box-shadow: 0 0 0 rgba(26, 214, 95, 0);
   transform: none;
 }
 
 .button.network-testnet {
   font-family: 'Barlow', sans-serif;
-  opacity: .85;
+  opacity: 0.72;
   letter-spacing: 2px;
   background: rgba(100, 100, 100, 0.1);
   border: thin solid rgba(100, 100, 100, 0.5);
   color: white;
   transition: all 0.3s ease;
-  box-shadow: none;
+  box-shadow: 0 0 0 rgba(90, 90, 90, 0);
 }
 
 .button.network-testnet:hover {
   background: rgba(100, 100, 100, 0.2);
-  box-shadow: none;
+  box-shadow: 0 0 0 rgba(90, 90, 90, 0);
   transform: none;
 }
 
 /* Light mode: WCAG-ish contrast — avoid white-on-frosted which washed out Mainnet */
 html[data-theme='light'] .button.network-mainnet {
-  opacity: 1;
-  background: linear-gradient(
-    168deg,
-    rgba(206, 250, 0, 0.5) 0%,
-    rgba(206, 250, 0, 0.2) 100%
-  );
-  border: thin solid rgba(140, 150, 0, 0.55);
-  color: #2e3304;
+  opacity: 0.74;
+  background: rgba(0, 122, 255, 0.18);
+  border: thin solid rgba(0, 96, 190, 0.46);
+  color: #053e7c;
 }
 
 html[data-theme='light'] .button.network-mainnet:hover {
-  background: linear-gradient(
-    168deg,
-    rgba(206, 250, 0, 0.62) 0%,
-    rgba(206, 250, 0, 0.3) 100%
-  );
-  color: #1a1d03;
+  background: rgba(0, 122, 255, 0.26);
+  color: #032f5f;
 }
 
 html[data-theme='light'] .button.network-preprod {
-  opacity: 1;
+  opacity: 0.74;
   background: rgba(220, 27, 250, 0.14);
   border: thin solid rgba(150, 20, 170, 0.45);
   color: #4a0d55;
@@ -540,19 +532,19 @@ html[data-theme='light'] .button.network-preprod:hover {
 }
 
 html[data-theme='light'] .button.network-preview {
-  opacity: 1;
-  background: rgba(0, 245, 255, 0.14);
-  border: thin solid rgba(0, 140, 150, 0.45);
-  color: #045256;
+  opacity: 0.74;
+  background: rgba(26, 214, 95, 0.18);
+  border: thin solid rgba(22, 154, 69, 0.48);
+  color: #0a6d32;
 }
 
 html[data-theme='light'] .button.network-preview:hover {
-  background: rgba(0, 245, 255, 0.24);
-  color: #033a3d;
+  background: rgba(26, 214, 95, 0.28);
+  color: #085227;
 }
 
 html[data-theme='light'] .button.network-testnet {
-  opacity: 1;
+  opacity: 0.74;
   background: rgba(90, 90, 90, 0.1);
   border: thin solid rgba(60, 60, 60, 0.4);
   color: #252525;
@@ -561,14 +553,6 @@ html[data-theme='light'] .button.network-testnet {
 html[data-theme='light'] .button.network-testnet:hover {
   background: rgba(90, 90, 90, 0.16);
   color: #141414;
-}
-
-/* Network switcher: explicitly disable neon glow/hover lift. */
-.button.network-mainnet,
-.button.network-preprod,
-.button.network-preview,
-.button.network-testnet {
-  box-shadow: none !important;
 }
 
 .button.network-mainnet:hover,
@@ -584,6 +568,25 @@ html[data-theme='light'] .button.network-testnet:hover {
 .button.network-preview[data-active],
 .button.network-testnet[data-active] {
   transform: none !important;
-  box-shadow: none !important;
+}
+
+.button.network-mainnet[data-active] {
+  opacity: 1 !important;
+  box-shadow: 0 0 14px rgba(0, 122, 255, 0.45) !important;
+}
+
+.button.network-preview[data-active] {
+  opacity: 1 !important;
+  box-shadow: 0 0 14px rgba(26, 214, 95, 0.45) !important;
+}
+
+.button.network-preprod[data-active] {
+  opacity: 1 !important;
+  box-shadow: 0 0 14px rgba(220, 27, 250, 0.4) !important;
+}
+
+.button.network-testnet[data-active] {
+  opacity: 1 !important;
+  box-shadow: 0 0 12px rgba(120, 120, 120, 0.38) !important;
 }
 

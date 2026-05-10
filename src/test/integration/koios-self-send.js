@@ -1,6 +1,6 @@
 /**
- * Minimal Koios + CSL path to build, sign, and submit a small ADA transfer
- * on preview / preprod (for integration tests). No extension storage.
+ * CSL path to build, sign, and submit a small ADA transfer.
+ * Prefers Blockfrost, falls back to Koios (integration tests only).
  */
 
 const Cardano = require('@emurgo/cardano-serialization-lib-nodejs');
@@ -11,60 +11,92 @@ const harden = (n) => HARDEN + n;
 
 const TX = { invalid_hereafter: 3600 * 6 };
 
-function authHeaders(apiKey) {
+const PROVIDER = {
+  blockfrost: 'blockfrost',
+  koios: 'koios',
+};
+
+function authHeaders(providerType, apiKey) {
   const h = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   };
-  if (apiKey && apiKey !== 'your-koios-api-key-here' && apiKey !== 'DUMMY_PREVIEW') {
+  if (
+    apiKey &&
+    apiKey !== 'your-koios-api-key-here' &&
+    apiKey !== 'your-blockfrost-project-id' &&
+    apiKey !== 'DUMMY_PREVIEW'
+  ) {
+    if (providerType === PROVIDER.blockfrost) {
+      h.project_id = apiKey;
+      return h;
+    }
     h.Authorization = `Bearer ${apiKey}`;
   }
   return h;
 }
 
-async function koiosGet(base, path, apiKey) {
-  const r = await fetch(`${base}${path}`, { headers: authHeaders(apiKey) });
+async function requestJson({ providerType, base, path, method = 'GET', body, apiKey }) {
+  const r = await fetch(`${base}${path}`, {
+    method,
+    headers: authHeaders(providerType, apiKey),
+    body: body ? JSON.stringify(body) : undefined,
+  });
   const text = await r.text();
-  if (!r.ok) throw new Error(`Koios GET ${path} ${r.status}: ${text.slice(0, 500)}`);
+  if (!r.ok) {
+    throw new Error(`${providerType} ${method} ${path} ${r.status}: ${text.slice(0, 500)}`);
+  }
   return JSON.parse(text);
 }
 
-async function koiosPost(base, path, body, apiKey) {
+async function submitTx(providerType, base, txHex, apiKey) {
+  const path = providerType === PROVIDER.blockfrost ? '/tx/submit' : '/submittx';
+  const h = { ...authHeaders(providerType, apiKey), 'Content-Type': 'application/cbor' };
   const r = await fetch(`${base}${path}`, {
-    method: 'POST',
-    headers: authHeaders(apiKey),
-    body: JSON.stringify(body),
-  });
-  const text = await r.text();
-  let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`Koios POST ${path} non-JSON ${r.status}: ${text.slice(0, 500)}`);
-  }
-  if (!r.ok) {
-    throw new Error(`Koios POST ${path} ${r.status}: ${text.slice(0, 800)}`);
-  }
-  return json;
-}
-
-/** Koios v1: POST /submittx with application/cbor body (not /tx/submit JSON). */
-async function koiosSubmitTx(base, txHex, apiKey) {
-  const h = { ...authHeaders(apiKey), 'Content-Type': 'application/cbor' };
-  const r = await fetch(`${base}/submittx`, {
     method: 'POST',
     headers: h,
     body: Buffer.from(txHex, 'hex'),
   });
   const text = await r.text();
   if (!r.ok) {
-    throw new Error(`Koios POST /submittx ${r.status}: ${text.slice(0, 800)}`);
+    throw new Error(`${providerType} POST ${path} ${r.status}: ${text.slice(0, 800)}`);
   }
   try {
     return JSON.parse(text);
   } catch {
     return text;
   }
+}
+
+async function koiosGet(base, path, apiKey) {
+  return requestJson({
+    providerType: PROVIDER.koios,
+    base,
+    path,
+    method: 'GET',
+    apiKey,
+  });
+}
+
+async function koiosPost(base, path, body, apiKey) {
+  return requestJson({
+    providerType: PROVIDER.koios,
+    base,
+    path,
+    method: 'POST',
+    body,
+    apiKey,
+  });
+}
+
+async function blockfrostGet(base, path, apiKey) {
+  return requestJson({
+    providerType: PROVIDER.blockfrost,
+    base,
+    path,
+    method: 'GET',
+    apiKey,
+  });
 }
 
 function latestEpochParamsFromKoios(paramsPayload) {
@@ -74,7 +106,14 @@ function latestEpochParamsFromKoios(paramsPayload) {
   return paramsPayload;
 }
 
-async function fetchProtocolSlot(base, apiKey) {
+async function fetchProtocolSlot(base, apiKey, providerType = PROVIDER.koios) {
+  if (providerType === PROVIDER.blockfrost) {
+    const latest = await blockfrostGet(base, '/blocks/latest', apiKey);
+    const s = latest?.slot;
+    if (s == null) throw new Error('Blockfrost /blocks/latest: missing slot');
+    return parseInt(String(s), 10);
+  }
+
   const raw = await koiosGet(base, '/tip', apiKey);
   const row = Array.isArray(raw) && raw.length > 0 ? raw[0] : raw;
   const s = row?.abs_slot ?? row?.absolute_slot ?? row?.slot;
@@ -82,13 +121,35 @@ async function fetchProtocolSlot(base, apiKey) {
   return parseInt(String(s), 10);
 }
 
-async function fetchProtocolParams(base, apiKey) {
-  const raw = await koiosGet(base, '/epoch_params', apiKey);
-  const p = latestEpochParamsFromKoios(raw);
-  if (!p.min_fee_a || !p.min_fee_b) {
-    throw new Error('Koios epoch_params: missing fee fields');
+const toKoiosEpochParamsFromBlockfrost = (p) => ({
+  min_fee_a: p.min_fee_a,
+  min_fee_b: p.min_fee_b,
+  pool_deposit: p.pool_deposit,
+  key_deposit: p.key_deposit,
+  coins_per_utxo_size: p.coins_per_utxo_size || p.coins_per_utxo_word,
+  max_val_size: p.max_val_size,
+  price_mem: p.price_mem,
+  price_step: p.price_step,
+  min_fee_ref_script_cost_per_byte: p.min_fee_ref_script_cost_per_byte || 0,
+  max_tx_size: p.max_tx_size,
+  collateral_percent: p.collateral_percent,
+  max_collateral_inputs: p.max_collateral_inputs,
+});
+
+async function fetchProtocolParams(base, apiKey, providerType = PROVIDER.koios) {
+  let p;
+  if (providerType === PROVIDER.blockfrost) {
+    const bf = await blockfrostGet(base, '/epochs/latest/parameters', apiKey);
+    p = toKoiosEpochParamsFromBlockfrost(bf);
+  } else {
+    const raw = await koiosGet(base, '/epoch_params', apiKey);
+    p = latestEpochParamsFromKoios(raw);
   }
-  const latest_block_slot = await fetchProtocolSlot(base, apiKey);
+
+  if (!p?.min_fee_a || !p?.min_fee_b) {
+    throw new Error(`${providerType} epoch params: missing fee fields`);
+  }
+  const latest_block_slot = await fetchProtocolSlot(base, apiKey, providerType);
   return {
     linearFee: {
       minFeeA: p.min_fee_a.toString(),
@@ -176,6 +237,33 @@ async function fetchUtxosForAddress(base, bech32, apiKey) {
     }));
 }
 
+async function fetchUtxosForAddressBlockfrost(base, bech32, apiKey) {
+  const pageSize = 100;
+  let page = 1;
+  const utxos = [];
+  while (page <= 50) {
+    const rows = await blockfrostGet(
+      base,
+      `/addresses/${bech32}/utxos?order=asc&count=${pageSize}&page=${page}`,
+      apiKey
+    );
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    utxos.push(...rows);
+    if (rows.length < pageSize) break;
+    page += 1;
+  }
+  return utxos.map((utxo) => ({
+    tx_hash: utxo.tx_hash,
+    output_index: utxo.output_index,
+    amount: Array.isArray(utxo.amount)
+      ? utxo.amount.map((asset) => ({
+          unit: asset.unit,
+          quantity: String(asset.quantity || '0'),
+        }))
+      : [{ unit: 'lovelace', quantity: '0' }],
+  }));
+}
+
 function utxoToCsl(output, bech32) {
   const addr = Cardano.Address.from_bech32(bech32);
   const ix = Number.parseInt(
@@ -185,9 +273,42 @@ function utxoToCsl(output, bech32) {
   if (!Number.isFinite(ix) || ix < 0) {
     throw new Error(`Invalid UTxO index for ${output.tx_hash}`);
   }
-  const lovelace = output.amount.find((a) => a.unit === 'lovelace');
+  const amountList = Array.isArray(output.amount) ? output.amount : [];
+  const lovelace = amountList.find((a) => a.unit === 'lovelace');
   const coin = Cardano.BigNum.from_str(lovelace ? String(lovelace.quantity) : '0');
-  const value = Cardano.Value.new(coin);
+  const multiAsset = Cardano.MultiAsset.new();
+  const policyBuckets = new Map();
+
+  for (const asset of amountList) {
+    if (!asset || asset.unit === 'lovelace') continue;
+    const unit = String(asset.unit || '');
+    const policy = unit.slice(0, 56);
+    const nameHex = unit.slice(56);
+    if (!policy || !nameHex) continue;
+    if (!policyBuckets.has(policy)) {
+      policyBuckets.set(policy, []);
+    }
+    policyBuckets.get(policy).push({
+      nameHex,
+      quantity: String(asset.quantity || '0'),
+    });
+  }
+
+  for (const [policy, assets] of policyBuckets.entries()) {
+    const cslAssets = Cardano.Assets.new();
+    for (const asset of assets) {
+      cslAssets.insert(
+        Cardano.AssetName.new(Buffer.from(asset.nameHex, 'hex')),
+        Cardano.BigNum.from_str(asset.quantity)
+      );
+    }
+    multiAsset.insert(Cardano.ScriptHash.from_hex(policy), cslAssets);
+  }
+
+  const value =
+    policyBuckets.size > 0
+      ? Cardano.Value.new_with_assets(coin, multiAsset)
+      : Cardano.Value.new(coin);
   return Cardano.TransactionUnspentOutput.new(
     Cardano.TransactionInput.new(
       Cardano.TransactionHash.from_bytes(Buffer.from(output.tx_hash, 'hex')),
@@ -255,8 +376,8 @@ async function waitForTxStatus(opts) {
  * @param {{ baseUrl: string, apiKey: string | undefined, mnemonic: string, sendLovelace: string }} opts
  * @returns {Promise<string>} submitted tx hash / id from Koios
  */
-async function buildSignSubmitSelfTransfer(opts) {
-  const { baseUrl, apiKey, mnemonic, sendLovelace } = opts;
+async function buildSignSubmitAccountTransfer(opts) {
+  const { baseUrl, apiKey, mnemonic, sendLovelace, providerType = PROVIDER.koios } = opts;
   const sender = deriveAccountAddress(mnemonic.trim(), 0);
   const recipient = deriveAccountAddress(mnemonic.trim(), 1);
   const { address, bech32, paymentKey } = sender;
@@ -265,108 +386,133 @@ async function buildSignSubmitSelfTransfer(opts) {
     throw new Error('Sender and recipient must be different addresses.');
   }
 
-  const protocolParameters = await fetchProtocolParams(baseUrl, apiKey);
-  const utxoJson = await fetchUtxosForAddress(baseUrl, bech32, apiKey);
-  if (utxoJson.length === 0) {
-    throw new Error(`No UTxOs at ${bech32} — fund this address with test ADA first.`);
+  const protocolParameters = await fetchProtocolParams(baseUrl, apiKey, providerType);
+
+  for (let submitAttempt = 0; submitAttempt < 3; submitAttempt += 1) {
+    const utxoJson =
+      providerType === PROVIDER.blockfrost
+        ? await fetchUtxosForAddressBlockfrost(baseUrl, bech32, apiKey)
+        : await fetchUtxosForAddress(baseUrl, bech32, apiKey);
+    if (utxoJson.length === 0) {
+      throw new Error(`No UTxOs at ${bech32} — fund this address with test ADA first.`);
+    }
+
+    const utxos = utxoJson.map((u) => utxoToCsl(u, bech32));
+    const utxoCollection = Cardano.TransactionUnspentOutputs.new();
+    for (const u of utxos) utxoCollection.add(u);
+
+    const totalInputLovelace = utxoJson.reduce((sum, u) => {
+      const lovelace = (u.amount || []).find((a) => a.unit === 'lovelace');
+      return sum + BigInt(lovelace?.quantity || '0');
+    }, 0n);
+    const requestedSend = BigInt(String(sendLovelace));
+    const maxSafeSend = totalInputLovelace > 600000n ? totalInputLovelace - 600000n : 0n;
+    if (maxSafeSend <= 0n) {
+      throw new Error(`Insufficient ADA balance at ${bech32} to build transfer transaction.`);
+    }
+    const effectiveSend = requestedSend > maxSafeSend ? maxSafeSend : requestedSend;
+
+    const linearFee = Cardano.LinearFee.new(
+      Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
+      Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
+    );
+
+    const txConfig = Cardano.TransactionBuilderConfigBuilder.new()
+      .fee_algo(linearFee)
+      .pool_deposit(Cardano.BigNum.from_str(protocolParameters.poolDeposit))
+      .key_deposit(Cardano.BigNum.from_str(protocolParameters.keyDeposit))
+      .coins_per_utxo_byte(Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
+      .max_value_size(parseInt(protocolParameters.maxValSize, 10))
+      .max_tx_size(parseInt(protocolParameters.maxTxSize, 10))
+      .prefer_pure_change(true)
+      .build();
+
+    const outputs = Cardano.TransactionOutputs.new();
+    outputs.add(
+      Cardano.TransactionOutput.new(
+        recipient.address,
+        Cardano.Value.new(Cardano.BigNum.from_str(effectiveSend.toString()))
+      )
+    );
+
+    const invalidHereafter = Cardano.BigNum.from_str(
+      String(Math.floor(Number(protocolParameters.slot)) + TX.invalid_hereafter)
+    );
+
+    let explicitFee = null;
+    let signed;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const txBuilder = Cardano.TransactionBuilder.new(txConfig);
+      txBuilder.add_inputs_from(
+        utxoCollection,
+        Cardano.CoinSelectionStrategyCIP2.LargestFirst
+      );
+      for (let i = 0; i < outputs.len(); i += 1) {
+        txBuilder.add_output(outputs.get(i));
+      }
+      txBuilder.add_required_signer(paymentKey.to_public().hash());
+      if (explicitFee != null) {
+        txBuilder.set_fee(explicitFee);
+      }
+      txBuilder.add_change_if_needed(address);
+      txBuilder.set_ttl_bignum(invalidHereafter);
+
+      const txBody = txBuilder.build();
+      const emptyWitness = Cardano.TransactionWitnessSet.new();
+      const unsigned = Cardano.Transaction.new(txBody, emptyWitness, undefined);
+
+      const bodyBytes = unsigned.body().to_bytes();
+      const fixedBody = Cardano.FixedTransactionBody.from_bytes(bodyBytes);
+      const txHash = fixedBody.tx_hash();
+      if (typeof fixedBody.free === 'function') fixedBody.free();
+
+      const vkeys = Cardano.Vkeywitnesses.new();
+      vkeys.add(Cardano.make_vkey_witness(txHash, paymentKey));
+      const witnessSet = Cardano.TransactionWitnessSet.new();
+      witnessSet.set_vkeys(vkeys);
+
+      signed = Cardano.Transaction.new(
+        unsigned.body(),
+        witnessSet,
+        unsigned.auxiliary_data()
+      );
+      signed.set_is_valid(unsigned.is_valid());
+
+      const required = Cardano.min_fee(signed, linearFee);
+      if (txBody.fee().compare(required) >= 0) {
+        break;
+      }
+      explicitFee = required;
+    }
+
+    const txHex = Buffer.from(signed.to_bytes()).toString('hex');
+    const signedBody = Cardano.FixedTransactionBody.from_bytes(signed.body().to_bytes());
+    const signedTxHashHex = Buffer.from(signedBody.tx_hash().to_bytes()).toString('hex');
+    if (typeof signedBody.free === 'function') signedBody.free();
+    try {
+      const submitRes = await submitTx(providerType, baseUrl, txHex, apiKey);
+      return normalizeSubmitTxHash(submitRes);
+    } catch (error) {
+      const message = String(error?.message || '');
+      if (message.includes('already been included') || message.includes('All inputs are spent')) {
+        return signedTxHashHex;
+      }
+      const shouldRetry =
+        submitAttempt < 2 &&
+        message.includes('temporarily unavailable');
+      if (!shouldRetry) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
 
-  const adaOnly = utxoJson.filter(
-    (u) => !(u.amount || []).some((a) => a.unit !== 'lovelace')
-  );
-  if (adaOnly.length === 0) {
-    throw new Error(
-      `No ADA-only UTxOs at ${bech32} — consolidate or use an address with plain tADA (no tokens on outputs).`
-    );
-  }
-
-  const utxos = adaOnly.map((u) => utxoToCsl(u, bech32));
-  const utxoCollection = Cardano.TransactionUnspentOutputs.new();
-  for (const u of utxos) utxoCollection.add(u);
-
-  const linearFee = Cardano.LinearFee.new(
-    Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-    Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
-  );
-
-  const txConfig = Cardano.TransactionBuilderConfigBuilder.new()
-    .fee_algo(linearFee)
-    .pool_deposit(Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-    .key_deposit(Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-    .coins_per_utxo_byte(Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-    .max_value_size(parseInt(protocolParameters.maxValSize, 10))
-    .max_tx_size(parseInt(protocolParameters.maxTxSize, 10))
-    .prefer_pure_change(true)
-    .build();
-
-  const outputs = Cardano.TransactionOutputs.new();
-  outputs.add(
-    Cardano.TransactionOutput.new(
-      recipient.address,
-      Cardano.Value.new(Cardano.BigNum.from_str(String(sendLovelace)))
-    )
-  );
-
-  const invalidHereafter = Cardano.BigNum.from_str(
-    String(
-      Math.floor(Number(protocolParameters.slot)) + TX.invalid_hereafter
-    )
-  );
-
-  /** Ledger-accurate min fee vs builder estimate can differ slightly; align with min_fee(signed). */
-  let explicitFee = null;
-  let signed;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const txBuilder = Cardano.TransactionBuilder.new(txConfig);
-    txBuilder.add_inputs_from(
-      utxoCollection,
-      Cardano.CoinSelectionStrategyCIP2.LargestFirst
-    );
-    for (let i = 0; i < outputs.len(); i += 1) {
-      txBuilder.add_output(outputs.get(i));
-    }
-    txBuilder.add_required_signer(paymentKey.to_public().hash());
-    if (explicitFee != null) {
-      txBuilder.set_fee(explicitFee);
-    }
-    txBuilder.add_change_if_needed(address);
-    txBuilder.set_ttl_bignum(invalidHereafter);
-
-    const txBody = txBuilder.build();
-    const emptyWitness = Cardano.TransactionWitnessSet.new();
-    const unsigned = Cardano.Transaction.new(txBody, emptyWitness, undefined);
-
-    const bodyBytes = unsigned.body().to_bytes();
-    const fixedBody = Cardano.FixedTransactionBody.from_bytes(bodyBytes);
-    const txHash = fixedBody.tx_hash();
-    if (typeof fixedBody.free === 'function') fixedBody.free();
-
-    const vkeys = Cardano.Vkeywitnesses.new();
-    vkeys.add(Cardano.make_vkey_witness(txHash, paymentKey));
-    const witnessSet = Cardano.TransactionWitnessSet.new();
-    witnessSet.set_vkeys(vkeys);
-
-    signed = Cardano.Transaction.new(
-      unsigned.body(),
-      witnessSet,
-      unsigned.auxiliary_data()
-    );
-    signed.set_is_valid(unsigned.is_valid());
-
-    const required = Cardano.min_fee(signed, linearFee);
-    if (txBody.fee().compare(required) >= 0) {
-      break;
-    }
-    explicitFee = required;
-  }
-
-  const txHex = Buffer.from(signed.to_bytes()).toString('hex');
-  const submitRes = await koiosSubmitTx(baseUrl, txHex, apiKey);
-  return normalizeSubmitTxHash(submitRes);
+  throw new Error('Could not submit transaction after refreshing UTxOs.');
 }
 
 module.exports = {
-  buildSignSubmitSelfTransfer,
+  PROVIDER,
+  buildSignSubmitAccountTransfer,
+  // Backward-compatible alias for older test imports.
+  buildSignSubmitSelfTransfer: buildSignSubmitAccountTransfer,
   deriveAccountAddress,
   deriveAccount0Address,
   fetchProtocolParams,

@@ -1,26 +1,16 @@
-name: CI
+name: GitHub diagnostics (manual only)
 
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  build_gate:
-    name: "Jenkins gate: build"
+  validate_workflows:
+    name: "GitHub helper / validate workflow YAML"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
 
     steps:
       - name: Checkout
@@ -37,85 +27,3 @@ jobs:
                   yaml.safe_load(fh)
               print(f'OK {path}')
           PY
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build extension
-        run: npm run build:webpack
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build
-          path: build
-          if-no-files-found: error
-          retention-days: 3
-
-  unit_test_gate:
-    name: "Jenkins gate: unit tests"
-    needs: build_gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Unit tests
-        run: npm run test
-
-  functional_test_gate:
-    name: "Jenkins gate: functional tests"
-    needs: unit_test_gate
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build
-          path: build
-
-      - name: Install Playwright Chromium
-        run: npx playwright install chromium
-
-      - name: Functional UI screenshots
-        run: npm run test:screenshots:only
-
-      - name: Upload UI screenshots
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: e2e-screenshots
-          path: e2e/screenshots/output/
-          if-no-files-found: ignore
-          retention-days: 3

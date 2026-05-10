@@ -334,7 +334,7 @@ const Staking = () => {
         tx,
         pool: detailedPool,
         fee: tx.body().fee().toString(),
-        stakeRegistration: delegation.active ? '0' : protocolParameters.keyDeposit,
+        stakeRegistration: delegation.registered ? '0' : protocolParameters.keyDeposit,
       });
     } catch (e) {
       console.error(e);

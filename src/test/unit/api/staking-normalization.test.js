@@ -39,6 +39,49 @@ describe('staking normalization', () => {
     });
   });
 
+  test('normalizes Koios account_info (delegated_pool, no active field)', () => {
+    expect(
+      normalizeDelegationRow(
+        {
+          delegated_pool: 'pool1xyz',
+          rewards_available: '1230000',
+        },
+        'stake_test1abc'
+      )
+    ).toMatchObject({
+      registered: true,
+      active: true,
+      rewards: '1230000',
+      poolId: 'pool1xyz',
+    });
+  });
+
+  test('Blockfrost active:false with pool_id still shows delegated', () => {
+    expect(
+      normalizeDelegationRow(
+        { active: false, pool_id: 'pool1abc', withdrawable_amount: '0' },
+        'stake_test1abc'
+      )
+    ).toMatchObject({
+      registered: true,
+      active: true,
+      poolId: 'pool1abc',
+    });
+  });
+
+  test('undelegated Koios account (no delegated_pool) is not active', () => {
+    expect(
+      normalizeDelegationRow(
+        { status: 'registered' },
+        'stake_test1abc'
+      )
+    ).toMatchObject({
+      registered: true,
+      active: false,
+      poolId: '',
+    });
+  });
+
   test('normalizes stake pool metadata and metrics', () => {
     expect(
       normalizeStakePool({

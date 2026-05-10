@@ -8,7 +8,6 @@ import {
   Box,
   Button,
   Flex,
-  Grid,
   HStack,
   Icon,
   Input,
@@ -249,7 +248,7 @@ const Staking = () => {
   const [protocolParameters, setProtocolParameters] = React.useState(null);
   const [pools, setPools] = React.useState([]);
   const [selectedPool, setSelectedPool] = React.useState(null);
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = React.useState('HODLR');
   const [txPreview, setTxPreview] = React.useState(null);
   const [txMode, setTxMode] = React.useState('delegate');
   const [isLoading, setIsLoading] = React.useState(true);
@@ -257,6 +256,8 @@ const Staking = () => {
   const [isBuilding, setIsBuilding] = React.useState(false);
   const [error, setError] = React.useState('');
   const [poolError, setPoolError] = React.useState('');
+  const [showPoolSearch, setShowPoolSearch] = React.useState(true);
+  const didAutoSelect = React.useRef(false);
   const [submittedTx, setSubmittedTx] = React.useState('');
   const panelBg = useColorModeValue('gray.900', 'gray.900');
 
@@ -291,7 +292,19 @@ const Staking = () => {
         const nextPools = trimmed.length >= 2
           ? await searchPools(trimmed)
           : await getStakePools(18);
-        if (!cancelled) setPools(nextPools);
+        if (!cancelled) {
+          setPools(nextPools);
+          if (!didAutoSelect.current && nextPools.length > 0) {
+            const hodlr = nextPools.find(
+              (p) => (p.ticker || '').toUpperCase() === 'HODLR'
+            );
+            if (hodlr) {
+              didAutoSelect.current = true;
+              buildDelegatePreview(hodlr);
+              setShowPoolSearch(false);
+            }
+          }
+        }
       } catch (e) {
         console.error(e);
         if (!cancelled) {
@@ -316,6 +329,7 @@ const Staking = () => {
     setTxPreview(null);
     setTxMode('delegate');
     setSelectedPool(pool);
+    setShowPoolSearch(false);
     try {
       if (!account || !delegation || !protocolParameters) {
         throw new Error('Staking data is still loading. Try again in a moment.');
@@ -536,12 +550,110 @@ const Staking = () => {
         )}
 
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-          <ActionCard
-            icon={delegation?.active ? MdSwapHoriz : MdOutlineHowToReg}
-            title={delegation?.active ? 'Change Pool' : 'Delegate'}
-            text="Search pools below, review the details, then delegate or switch pools."
-            onClick={() => document.getElementById('stake-pool-search')?.focus()}
-          />
+          <Box
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            bg="whiteAlpha.100"
+            rounded="2xl"
+            p={4}
+          >
+            <HStack spacing={3} align="start">
+              <Flex
+                rounded="xl"
+                bg="yellow.400"
+                color="gray.900"
+                boxSize="10"
+                align="center"
+                justify="center"
+                flexShrink={0}
+              >
+                <Icon as={delegation?.active ? MdSwapHoriz : MdOutlineHowToReg} boxSize={5} />
+              </Flex>
+              <Box flex={1}>
+                <Text fontWeight="bold">{delegation?.active ? 'Change Pool' : 'Delegate'}</Text>
+                <Text fontSize="xs" color="whiteAlpha.700" mt={1}>
+                  Search by ticker or pool id.
+                </Text>
+              </Box>
+              {isPoolsLoading && <Spinner color="yellow.400" size="sm" />}
+            </HStack>
+
+            {selectedPool && !showPoolSearch && (
+              <Box mt={3}>
+                <PoolCard
+                  pool={selectedPool}
+                  selected
+                  onSelect={() => {}}
+                />
+                <Button
+                  mt={2}
+                  size="sm"
+                  width="full"
+                  variant="outline"
+                  colorScheme="yellow"
+                  onClick={() => setShowPoolSearch(true)}
+                >
+                  Change Pool
+                </Button>
+              </Box>
+            )}
+
+            {showPoolSearch && (
+              <Box mt={3}>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <SearchIcon color="whiteAlpha.600" />
+                  </InputLeftElement>
+                  <Input
+                    id="stake-pool-search"
+                    data-testid="stake-pool-search"
+                    value={query}
+                    onChange={(e) => { setQuery(e.target.value); didAutoSelect.current = true; }}
+                    placeholder="Search ticker or pool id"
+                    bg="whiteAlpha.100"
+                    borderColor="whiteAlpha.200"
+                    focusBorderColor="yellow.400"
+                  />
+                </InputGroup>
+                {poolError && (
+                  <Alert
+                    status="warning"
+                    rounded="xl"
+                    mt={3}
+                    bg="orange.900"
+                    color="white"
+                    cursor="pointer"
+                    _hover={{ opacity: 0.85 }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(poolError).then(() =>
+                        toast({ title: 'Error copied', status: 'info', duration: 1500 })
+                      );
+                    }}
+                    title="Click to copy"
+                  >
+                    <AlertIcon />
+                    <AlertDescription>{poolError}</AlertDescription>
+                  </Alert>
+                )}
+                <Stack spacing={3} mt={3} maxH="400px" overflowY="auto" pr={1}>
+                  {pools.map((pool) => (
+                    <PoolCard
+                      key={poolId(pool)}
+                      pool={pool}
+                      selected={poolId(pool) === poolId(selectedPool)}
+                      onSelect={buildDelegatePreview}
+                    />
+                  ))}
+                  {!isPoolsLoading && pools.length === 0 && (
+                    <Box textAlign="center" color="whiteAlpha.700" py={4}>
+                      No stake pools found.
+                    </Box>
+                  )}
+                </Stack>
+              </Box>
+            )}
+          </Box>
+
           <ActionCard
             icon={MdOutlineSavings}
             title="Withdraw Rewards"
@@ -560,72 +672,7 @@ const Staking = () => {
           />
         </SimpleGrid>
 
-        <Grid templateColumns={{ base: '1fr', lg: '1.15fr 0.85fr' }} gap={5}>
-          <Box rounded="3xl" bg={panelBg} borderWidth="1px" borderColor="whiteAlpha.200" p={4}>
-            <Flex justify="space-between" align="center" gap={3} mb={4}>
-              <Box>
-                <Text fontSize="xl" fontWeight="black">
-                  Pool Explorer
-                </Text>
-                <Text fontSize="xs" color="whiteAlpha.700">
-                  Search by ticker or pool id. Selecting a pool prepares a transaction preview.
-                </Text>
-              </Box>
-              {isPoolsLoading && <Spinner color="yellow.400" size="sm" />}
-            </Flex>
-            <InputGroup>
-              <InputLeftElement pointerEvents="none">
-                <SearchIcon color="whiteAlpha.600" />
-              </InputLeftElement>
-              <Input
-                id="stake-pool-search"
-                data-testid="stake-pool-search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search ticker or pool id"
-                bg="whiteAlpha.100"
-                borderColor="whiteAlpha.200"
-                focusBorderColor="yellow.400"
-              />
-            </InputGroup>
-            {poolError && (
-              <Alert
-                status="warning"
-                rounded="xl"
-                mt={3}
-                bg="orange.900"
-                color="white"
-                cursor="pointer"
-                _hover={{ opacity: 0.85 }}
-                onClick={() => {
-                  navigator.clipboard.writeText(poolError).then(() =>
-                    toast({ title: 'Error copied', status: 'info', duration: 1500 })
-                  );
-                }}
-                title="Click to copy"
-              >
-                <AlertIcon />
-                <AlertDescription>{poolError}</AlertDescription>
-              </Alert>
-            )}
-            <Stack spacing={3} mt={4} maxH={{ base: 'none', lg: '620px' }} overflowY="auto" pr={{ base: 0, lg: 2 }}>
-              {pools.map((pool) => (
-                <PoolCard
-                  key={poolId(pool)}
-                  pool={pool}
-                  selected={poolId(pool) === poolId(selectedPool)}
-                  onSelect={buildDelegatePreview}
-                />
-              ))}
-              {!isPoolsLoading && pools.length === 0 && (
-                <Box textAlign="center" color="whiteAlpha.700" py={8}>
-                  No stake pools found.
-                </Box>
-              )}
-            </Stack>
-          </Box>
-
-          <Stack spacing={5}>
+        <Stack spacing={5}>
             <Box
               data-testid="stake-pool-details"
               rounded="3xl"
@@ -734,8 +781,7 @@ const Staking = () => {
                 </Text>
               )}
             </Box>
-          </Stack>
-        </Grid>
+        </Stack>
       </Stack>
       <ConfirmModal
         ref={confirmRef}

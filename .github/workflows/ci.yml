@@ -26,6 +26,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate workflow YAML syntax
+        run: |
+          python3 - <<'PY'
+          import glob
+          import yaml
+
+          for path in sorted(glob.glob('.github/workflows/*.yml')):
+              with open(path, 'r', encoding='utf-8') as fh:
+                  yaml.safe_load(fh)
+              print(f'OK {path}')
+          PY
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

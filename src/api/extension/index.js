@@ -666,7 +666,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
       (utxo) =>
         !(
           utxo.tx_hash === currentAccount.collateral.txHash &&
-          utxo.output_index === currentAccount.collateral.txId
+          (utxo.output_index ?? utxo.tx_index) === currentAccount.collateral.txId
         )
     );
   }
@@ -677,7 +677,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
       // Ensure the UTXO has the required fields
       const formattedUtxo = {
         tx_hash: utxo.tx_hash,
-        output_index: utxo.output_index,
+        output_index: utxo.output_index ?? utxo.tx_index,
         amount: [
           { unit: 'lovelace', quantity: utxo.value || '0' },
           ...(utxo.asset_list || []).map(asset => ({

@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   open-pr:
+    name: PR helper: open/update PR (Jenkins-gated auto-merge)
     runs-on: ubuntu-latest
     steps:
       - name: Create or update PR and enable auto-merge

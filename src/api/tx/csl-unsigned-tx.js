@@ -141,7 +141,7 @@ export function buildUnsignedSimpleTx({
   }
   if (!containsMultiasset) {
     for (const u of utxos) {
-      const multiAsset = u.amount().multiasset();
+      const multiAsset = u.output().amount().multiasset();
       if (multiAsset && multiAsset.len() > 0) {
         containsMultiasset = true;
         break;

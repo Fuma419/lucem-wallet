@@ -35,7 +35,6 @@ import {
   Alert,
   AlertDescription,
   AlertIcon,
-  Badge,
   Avatar,
   IconButton,
   Input,
@@ -588,7 +587,7 @@ const Send = () => {
         position="relative"
         w="full"
         maxW="100%"
-        bgGradient="linear(to-b, #050b1f, #071329 52%, #050712)"
+        bg="black"
         color="white"
         className="lucem-wallet-main-column"
       >
@@ -628,9 +627,6 @@ const Send = () => {
                 />
               </Box>
               <Box flex="1" textAlign="center">
-                <Badge colorScheme="yellow" mb={1}>
-                  Transfer
-                </Badge>
                 <Text fontSize="2xl" fontWeight="black" lineHeight="1">
                   Send
                 </Text>
@@ -656,10 +652,9 @@ const Send = () => {
               width={{ base: '94%', md: '80%' }}
               maxW="560px"
               rounded="3xl"
-              bg="whiteAlpha.100"
+              bg="whiteAlpha.50"
               borderWidth="1px"
               borderColor="whiteAlpha.200"
-              boxShadow="0 24px 80px rgba(0,0,0,0.28)"
               px={{ base: 4, md: 6 }}
               py={5}
             >

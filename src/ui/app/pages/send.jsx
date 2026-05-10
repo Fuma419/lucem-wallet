@@ -217,11 +217,33 @@ const Send = () => {
         isClosable: true,
       });
     } catch (e) {
+      const errMsg = e?.message || String(e);
       toast({
-        title: 'Could not open Keystone signing',
-        description: e?.message || String(e),
         status: 'error',
-        duration: 5000,
+        duration: 6000,
+        render: ({ onClose }) => (
+          <Alert
+            status="error"
+            rounded="xl"
+            bg="red.900"
+            color="white"
+            cursor="pointer"
+            _hover={{ opacity: 0.85 }}
+            onClick={() => {
+              navigator.clipboard.writeText(errMsg);
+              toast({ title: 'Copied', status: 'info', duration: 1200 });
+              onClose();
+            }}
+            title="Tap to copy"
+            p={4}
+          >
+            <AlertIcon />
+            <Box>
+              <Text fontWeight="bold" fontSize="sm">Could not open Keystone signing</Text>
+              <Text fontSize="xs">{errMsg}</Text>
+            </Box>
+          </Alert>
+        ),
       });
     }
   }, [tx, toast]);
@@ -904,6 +926,14 @@ const Send = () => {
                   width={{ base: '90%', md: '366px' }}
                   maxWidth="366px"
                   mb={3}
+                  cursor="pointer"
+                  _hover={{ opacity: 0.85 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(feeError).then(() =>
+                      toast({ title: 'Error copied', status: 'info', duration: 1500 })
+                    );
+                  }}
+                  title="Click to copy"
                 >
                   <AlertIcon />
                   <AlertDescription fontSize="sm">
@@ -1130,22 +1160,36 @@ const Send = () => {
             if (await isValidAddress(address.result))
               await updateRecentSentToAddress(address.result);
           } else if (signedTx === ERROR.fullMempool) {
+            const errMsg = 'Mempool full. Try again.';
             toast({
-              title: 'Transaction failed',
-              description: 'Mempool full. Try again.',
               status: 'error',
-              duration: 4000,
-              variant: 'success',
-              isClosable: true,
-              containerStyle: {
-                background: 'yellow.300', // Custom background color
-                color: 'black', // Text color
-                borderRadius: 'md',
-                padding: '2rem',
-              },
+              duration: 6000,
+              render: ({ onClose }) => (
+                <Alert
+                  status="error"
+                  rounded="xl"
+                  bg="red.900"
+                  color="white"
+                  cursor="pointer"
+                  _hover={{ opacity: 0.85 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(errMsg);
+                    toast({ title: 'Copied', status: 'info', duration: 1200 });
+                    onClose();
+                  }}
+                  title="Tap to copy"
+                  p={4}
+                >
+                  <AlertIcon />
+                  <Box>
+                    <Text fontWeight="bold" fontSize="sm">Transaction failed</Text>
+                    <Text fontSize="xs">{errMsg}</Text>
+                  </Box>
+                </Alert>
+              ),
             });
             ref.current.closeModal();
-            return; // don't go back to home screen. let user try to submit same tx again
+            return;
           } else {
             const description =
               signedTx == null
@@ -1154,19 +1198,33 @@ const Send = () => {
                   ? signedTx
                   : String(signedTx?.message || signedTx);
 
+            const errMsg = description ? description.slice(0, 200) : 'Transaction failed';
             toast({
-              title: 'Transaction failed',
-              description: description ? description.slice(0, 200) : undefined,
               status: 'error',
-              duration: 4000,
-              variant: 'success',
-              isClosable: true,
-              containerStyle: {
-                background: 'purple.300', // Custom background color
-                color: 'black', // Text color
-                borderRadius: 'md',
-                padding: '2rem',
-              },
+              duration: 6000,
+              render: ({ onClose }) => (
+                <Alert
+                  status="error"
+                  rounded="xl"
+                  bg="red.900"
+                  color="white"
+                  cursor="pointer"
+                  _hover={{ opacity: 0.85 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(errMsg);
+                    toast({ title: 'Copied', status: 'info', duration: 1200 });
+                    onClose();
+                  }}
+                  title="Tap to copy"
+                  p={4}
+                >
+                  <AlertIcon />
+                  <Box>
+                    <Text fontWeight="bold" fontSize="sm">Transaction failed</Text>
+                    <Text fontSize="xs">{errMsg}</Text>
+                  </Box>
+                </Alert>
+              ),
             });
           }
           ref.current.closeModal();

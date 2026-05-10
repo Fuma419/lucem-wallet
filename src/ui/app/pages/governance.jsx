@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Alert,
+  AlertIcon,
   Box,
   Flex,
   Text,
@@ -256,12 +258,33 @@ const Governance = () => {
 
       confirmRef.current?.openModal(currentAccount.index);
     } catch (error) {
+      const errMsg = error.message || 'Transaction preparation failed';
       toast({
-        title: 'Unable to build vote delegation',
-        description: error.message || 'Transaction preparation failed',
         status: 'error',
-        duration: 4000,
-        isClosable: true,
+        duration: 6000,
+        render: ({ onClose }) => (
+          <Alert
+            status="error"
+            rounded="xl"
+            bg="red.900"
+            color="white"
+            cursor="pointer"
+            _hover={{ opacity: 0.85 }}
+            onClick={() => {
+              navigator.clipboard.writeText(errMsg);
+              toast({ title: 'Copied', status: 'info', duration: 1200 });
+              onClose();
+            }}
+            title="Tap to copy"
+            p={4}
+          >
+            <AlertIcon />
+            <Box>
+              <Text fontWeight="bold" fontSize="sm">Unable to build vote delegation</Text>
+              <Text fontSize="xs">{errMsg}</Text>
+            </Box>
+          </Alert>
+        ),
       });
     } finally {
       setIsBuildingTx(false);
@@ -795,18 +818,62 @@ const Governance = () => {
               duration: 4500,
             });
           } else if (result === ERROR.fullMempool) {
+            const errMsg = 'Mempool is full, please retry in a moment.';
             toast({
-              title: 'Transaction failed',
-              description: 'Mempool is full, please retry in a moment.',
               status: 'error',
-              duration: 3500,
+              duration: 6000,
+              render: ({ onClose }) => (
+                <Alert
+                  status="error"
+                  rounded="xl"
+                  bg="red.900"
+                  color="white"
+                  cursor="pointer"
+                  _hover={{ opacity: 0.85 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(errMsg);
+                    toast({ title: 'Copied', status: 'info', duration: 1200 });
+                    onClose();
+                  }}
+                  title="Tap to copy"
+                  p={4}
+                >
+                  <AlertIcon />
+                  <Box>
+                    <Text fontWeight="bold" fontSize="sm">Transaction failed</Text>
+                    <Text fontSize="xs">{errMsg}</Text>
+                  </Box>
+                </Alert>
+              ),
             });
           } else {
+            const errMsg = 'Unable to submit vote delegation transaction.';
             toast({
-              title: 'Transaction failed',
-              description: 'Unable to submit vote delegation transaction.',
               status: 'error',
-              duration: 3500,
+              duration: 6000,
+              render: ({ onClose }) => (
+                <Alert
+                  status="error"
+                  rounded="xl"
+                  bg="red.900"
+                  color="white"
+                  cursor="pointer"
+                  _hover={{ opacity: 0.85 }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(errMsg);
+                    toast({ title: 'Copied', status: 'info', duration: 1200 });
+                    onClose();
+                  }}
+                  title="Tap to copy"
+                  p={4}
+                >
+                  <AlertIcon />
+                  <Box>
+                    <Text fontWeight="bold" fontSize="sm">Transaction failed</Text>
+                    <Text fontSize="xs">{errMsg}</Text>
+                  </Box>
+                </Alert>
+              ),
             });
           }
           confirmRef.current?.closeModal();

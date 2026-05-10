@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   enable-auto-merge:
-    name: PR helper: owner auto-merge (Jenkins-gated)
+    name: "PR helper: owner auto-merge (Jenkins-gated)"
     if: >
       github.event.pull_request.draft == false &&
       github.event.pull_request.user.login == github.repository_owner &&

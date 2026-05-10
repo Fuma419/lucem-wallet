@@ -1405,7 +1405,9 @@ export const signTx = async (
 
   const txWitnessSet = Loader.Cardano.TransactionWitnessSet.new();
   const vkeyWitnesses = Loader.Cardano.Vkeywitnesses.new();
-  const txHash = Loader.Cardano.hash_transaction(rawTx.body());
+  const fixedBody = Loader.Cardano.FixedTransactionBody.from_bytes(rawTx.body().to_bytes());
+  const txHash = fixedBody.tx_hash();
+  if (typeof fixedBody.free === 'function') fixedBody.free();
   keyHashes.forEach((keyHash) => {
     let signingKey;
     if (keyHash === paymentKeyHash) signingKey = paymentKey;
@@ -1426,7 +1428,7 @@ export const signTx = async (
   paymentKey.free();
   paymentKey = null;
 
-  txWitnessSet.set_vkeywitnesses(vkeyWitnesses);
+  txWitnessSet.set_vkeys(vkeyWitnesses);
   return txWitnessSet;
 };
 
@@ -1506,7 +1508,7 @@ export const signTxHW = async (
         vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
       }
     });
-    witnessSet.set_vkeywitnesses(vkeys);
+    witnessSet.set_vkeys(vkeys);
     return witnessSet;
   }
   if (hw.device === HW.keystone) {
@@ -1550,7 +1552,7 @@ export const signTxHW = async (
       );
       vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
     });
-    witnessSet.set_vkeywitnesses(vkeys);
+    witnessSet.set_vkeys(vkeys);
     return witnessSet;
   }
   throw new Error('Unsupported hardware wallet device');

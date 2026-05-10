@@ -1404,7 +1404,7 @@ export const signTx = async (
   const rawTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
 
   const txWitnessSet = Loader.Cardano.TransactionWitnessSet.new();
-  const vkeyWitnesses = Loader.Cardano.VkeywitnessList.new();
+  const vkeyWitnesses = Loader.Cardano.Vkeywitnesses.new();
   const txHash = Loader.Cardano.hash_transaction(rawTx.body());
   keyHashes.forEach((keyHash) => {
     let signingKey;
@@ -1476,7 +1476,7 @@ export const signTxHW = async (
     });
     // getting public keys
     const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
-    const vkeys = Loader.Cardano.VkeywitnessList.new();
+    const vkeys = Loader.Cardano.Vkeywitnesses.new();
     result.witnesses.forEach((witness) => {
       if (
         witness.path[3] == 0 // payment key
@@ -1540,7 +1540,7 @@ export const signTxHW = async (
     });
     if (!result.success) throw new Error('Trezor could not sign tx');
     const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
-    const vkeys = Loader.Cardano.VkeywitnessList.new();
+    const vkeys = Loader.Cardano.Vkeywitnesses.new();
     result.payload.witnesses.forEach((witness) => {
       const vkey = Loader.Cardano.PublicKey.from_bytes(
         Buffer.from(witness.pubKey, 'hex')

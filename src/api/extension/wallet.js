@@ -206,7 +206,7 @@ export const delegationTx = async (
       const txBuilder = Loader.Cardano.TransactionBuilder.new(txBuilderConfig);
 
       const certsBuilder = Loader.Cardano.CertificatesBuilder.new();
-      if (!delegation.active) {
+      if (!delegation.registered) {
         certsBuilder.add(
           createStakeRegistrationCertificate(Loader.Cardano, account.stakeKeyHash)
         );
@@ -271,7 +271,7 @@ export const voteDelegationTx = async (
       const txBuilder = Loader.Cardano.TransactionBuilder.new(txBuilderConfig);
 
       const certsBuilder = Loader.Cardano.CertificatesBuilder.new();
-      if (!delegation.active) {
+      if (!delegation.registered) {
         certsBuilder.add(
           createStakeRegistrationCertificate(Loader.Cardano, account.stakeKeyHash)
         );

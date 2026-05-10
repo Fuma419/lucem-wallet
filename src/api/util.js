@@ -578,9 +578,7 @@ export async function koiosSubmitTransaction(txHex, signal) {
         `Blockfrost API error: ${blockfrostResult.status} ${blockfrostResult.statusText} ${text.slice(0, 500)}`
       );
     } catch (error) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('Blockfrost submit failed, falling back to Koios:', error);
-      }
+      console.warn('Blockfrost submit failed, falling back to Koios:', error.message || error);
     }
   }
 
@@ -804,7 +802,7 @@ export const utxoFromJson = async (output, address) => {
       Loader.Cardano.TransactionHash.from_bytes(
         Buffer.from(output.tx_hash || output.txHash, 'hex')
       ),
-      Loader.Cardano.BigNum.from_str(outputIndex.toString())
+      parseInt(outputIndex, 10)
     ),
     Loader.Cardano.TransactionOutput.new(
       parsedAddress,

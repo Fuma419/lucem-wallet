@@ -12,6 +12,7 @@
     { "source": "/wallet", "destination": "/mainPopup.html" },
     { "source": "/welcome", "destination": "/mainPopup.html" },
     { "source": "/send", "destination": "/mainPopup.html" },
+    { "source": "/staking", "destination": "/mainPopup.html" },
     { "source": "/settings/:path*", "destination": "/mainPopup.html" },
     { "source": "/enable", "destination": "/internalPopup.html" },
     { "source": "/signTx", "destination": "/internalPopup.html" },

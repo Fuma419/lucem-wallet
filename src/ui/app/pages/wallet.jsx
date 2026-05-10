@@ -54,7 +54,6 @@ import {
   PopoverContent,
   PopoverBody,
   PopoverArrow,
-  PopoverCloseButton,
   Portal,
   Tabs,
   TabList,
@@ -523,31 +522,20 @@ const Wallet = () => {
                         <Icon as={MdHowToVote} boxSize={6} />
                       </Button>
                     </Tooltip>
-                    {state.delegation.active ? (
-                      <DelegationPopover
-                        fabProps={floatingStakeProps}
-                        fabClassName={fabStakeClass}
-                        account={state.account}
-                        delegation={state.delegation}
-                        label={state.delegation.ticker || state.delegation.poolId.slice(-9)}
-                      />
-                    ) : (
-                      <Tooltip label="Delegate" hasArrow placement="left">
-                        <Button
-                          {...floatingStakeProps}
-                          className={fabStakeClass}
-                          onClick={() => {
-                            builderRef.current.initDelegation(
-                              state.account,
-                              state.delegation
-                            );
-                          }}
-                          aria-label="Delegate stake"
-                        >
-                          <Icon as={MdOutlineHowToReg} boxSize={6} />
-                        </Button>
-                      </Tooltip>
-                    )}
+                    <Tooltip
+                      label={state.delegation.active ? 'Stake Center' : 'Delegate'}
+                      hasArrow
+                      placement="left"
+                    >
+                      <Button
+                        {...floatingStakeProps}
+                        className={fabStakeClass}
+                        onClick={() => navigate('/staking')}
+                        aria-label="Open stake center"
+                      >
+                        <Icon as={MdOutlineHowToReg} boxSize={6} />
+                      </Button>
+                    </Tooltip>
                   </Stack>
                 )}
 
@@ -1126,101 +1114,5 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
     </AlertDialog>
   );
 });
-
-const DelegationPopover = ({ account, delegation, label, fabProps, fabClassName }) => {
-  const settings = useStoreState((state) => state.settings.settings);
-  const withdrawRef = React.useRef();
-  const popoverInnerBg = useColorModeValue('gray.50', 'black');
-  const popoverBorder = useColorModeValue('gray.200', 'black');
-  return (
-    <>
-      <Popover offset={[80, 8]}>
-        <PopoverTrigger>
-          <Button
-            {...fabProps}
-            className={fabClassName}
-            aria-label={
-              label
-                ? `Open delegation details for ${label}`
-                : 'Open delegation details'
-            }
-          >
-            <Icon as={MdOutlineHowToReg} boxSize={6} />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent width="60">
-          <PopoverArrow />
-          <PopoverCloseButton />
-          <PopoverBody
-            mt="2"
-            alignItems="center"
-            justifyContent="center"
-            display="flex"
-            flexDirection="column"
-            textAlign="center"
-            background={popoverInnerBg}
-            borderWidth="1px"
-            borderColor={popoverBorder}
-          >
-            <Text
-              fontWeight="bold"
-              fontSize="md"
-              textDecoration="underline"
-              cursor="pointer"
-              onClick={() => window.open(delegation.homepage)}
-            >
-              {delegation.ticker}
-            </Text>
-            <Box h="2" />
-            <Text fontWeight="light" fontSize="xs">
-              {delegation.description}
-            </Text>
-            <Box h="3" />
-            <Text fontSize="xs">Available rewards:</Text>
-            <UnitDisplay
-              hide
-              fontWeight="bold"
-              fontSize="sm"
-              quantity={bigIntLovelace(delegation.rewards).toString()}
-              decimals={6}
-              symbol={settings.adaSymbol}
-            />
-            <Box h="4" />
-            <Tooltip
-              placement="top"
-              isDisabled={bigIntLovelace(delegation.rewards) >= 2000000n}
-              label="2 ADA minimum"
-            >
-              <span>
-                <Button
-                  onClick={() =>
-                    withdrawRef.current.initWithdrawal(account, delegation)
-                  }
-                  isDisabled={bigIntLovelace(delegation.rewards) < 2000000n}
-                  size="sm"
-                >
-                  Withdraw
-                </Button>
-              </span>
-            </Tooltip>
-            <Button
-              onClick={() => {
-                withdrawRef.current.initUndelegate(account, delegation);
-              }}
-              mt="10px"
-              colorScheme="red"
-              size="xm"
-              variant="link"
-            >
-              Unstake
-            </Button>
-            <Box h="2" />
-          </PopoverBody>
-        </PopoverContent>
-      </Popover>
-      <TransactionBuilder ref={withdrawRef} />
-    </>
-  );
-};
 
 export default Wallet;

@@ -123,4 +123,17 @@ test.describe('capture static entry UIs', () => {
     await waitFonts(page);
     await shot(page, '05-keystone-tx-tab');
   });
+
+  test('06 stake center route does not blank', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto('/staking', { waitUntil: 'domcontentloaded' });
+
+    await Promise.any([
+      page.getByTestId('stake-center-page').waitFor({ state: 'visible', timeout: 60_000 }),
+      page.getByText('Wallet Setup').waitFor({ state: 'visible', timeout: 60_000 }),
+    ]);
+
+    await waitFonts(page);
+    await shot(page, '06-stake-center-route');
+  });
 });

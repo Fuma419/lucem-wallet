@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  delegationTx,
   initTx,
   buildTx,
   signAndSubmit,
@@ -9,7 +8,6 @@ import {
   undelegateTx,
 } from '../../../api/extension/wallet';
 import ConfirmModal from './confirmModal';
-import PoolSearch from './poolSearch';
 import UnitDisplay from './unitDisplay';
 import {
   Box,
@@ -27,15 +25,8 @@ import {
   Icon,
   UnorderedList,
   ListItem,
-  InputGroup,
-  InputRightElement,
-  Input,
-  Tooltip,
 } from '@chakra-ui/react';
-import { CheckIcon, WarningIcon } from '@chakra-ui/icons';
 import { GoStop } from 'react-icons/go';
-// Assets
-import IOHK from '../../../assets/img/iohk.svg';
 import { ERROR, HW, TAB } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';
@@ -46,65 +37,10 @@ import {
   removeCollateral,
   setCollateral,
   toUnit,
-  getPoolMetadata,
 } from '../../../api/extension';
 import { FaRegFileCode } from 'react-icons/fa';
-import { getNetwork } from '../../../api/extension';
 
-const PoolStates = {
-  LOADING: 'LOADING',
-  ERROR: 'ERROR',
-  EDITING: 'EDITING',
-  DONE: 'DONE',
-};
-
-const poolDefaultValue = {
-  ticker: '',
-  name: '',
-  id: '',
-  error: '',
-  state: PoolStates.EDITING,
-  showTooltip: false,
-};
-
-const poolRightElementStyle = (pool) => {
-  if (pool.state === PoolStates.DONE || pool.state === PoolStates.ERROR) {
-    return {
-      width: 'auto',
-      h: 'fit-content',
-      top: '8px',
-      right: '8px',
-    };
-  }
-
-  return {
-    width: '4.5rem',
-    h: 'fit-content',
-    top: '4px',
-  };
-};
-
-const poolHasTicker = (pool) => {
-  return pool.state === PoolStates.DONE && Boolean(pool.ticker);
-};
-
-const poolTooltipMessage = (pool) => {
-  if (pool.state !== PoolStates.DONE) {
-    return undefined;
-  }
-
-  const ticker = pool.ticker ? pool.ticker : '-';
-  const name = pool.name ? pool.name : '-';
-
-  return `${ticker} / ${name}`;
-};
-
-const addTwoPoint = (baseSize) => `calc(${baseSize} + 2pt)`;
-
-const delegationTextSize = {
-  xs: addTwoPoint('var(--chakra-fontSizes-xs)'),
-  sm: addTwoPoint('var(--chakra-fontSizes-sm)'),
-};
+const poolDefaultValue = {};
 
 const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
   const settings = useStoreState((state) => state.settings.settings);
@@ -114,31 +50,6 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     onOpen: onOpenCol,
     onClose: onCloseCol,
   } = useDisclosure();
-
-    // PoolIDs
-    const networkUrls = {
-      mainnet: 'pool1eaeynp2hs06v4x8q65jfm2xqcd3dc80rv220gmxvwg8m5sd6e7a',
-      preprod: 'pool1z05xqzuxnpl8kg8u2wwg8ftng0fwtdluv3h20ruryfqc5gc3efl',
-      preview: 'pool1y0uxkqyplyx6ld25e976t0s35va3ysqcscatwvy2sd2cwcareq7',
-    };
-  
-    const [networkUrl, setNetworkUrl] = React.useState(networkUrls.mainnet); // Default to mainnet
-  
-    // Fetch the network and set the URL accordingly
-    React.useEffect(() => {
-      async function fetchNetwork() {
-        const network = await getNetwork();
-        if (network.id === 'mainnet') {
-          setNetworkUrl(networkUrls.mainnet);
-        } else if (network.id === 'preprod') {
-          setNetworkUrl(networkUrls.preprod);
-        } else if (network.id === 'preview') {
-          setNetworkUrl(networkUrls.preview);
-        }
-      }
-  
-      fetchNetwork();
-    }, []);
 
   const [isLoading, setIsLoading] = React.useState(false);
   const [data, setData] = React.useState({
@@ -151,98 +62,11 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     pool: { ...poolDefaultValue },
   });
   const COLLATERAL = '5';
-  const delegationRef = React.useRef();
   const withdrawRef = React.useRef();
   const undelegateRef = React.useRef();
   const collateralRef = React.useRef();
-  const accountIndex = React.useRef();
-
-  const prepareDelegationTx = async (overrideId = null) => {
-    const targetId = overrideId || data.pool.id;
-    if (!targetId) return;
-
-    setData((d) => ({
-      ...d,
-      pool: {
-        ...d.pool,
-        id: targetId,
-        state: PoolStates.LOADING,
-      },
-    }));
-
-    try {
-      const metadata = await getPoolMetadata(targetId).catch((err) => {
-        console.error('getPoolMetadata failed:', err);
-        throw new Error('Stake pool not found');
-      });
-
-      const tx = await delegationTx(
-        data.account,
-        data.delegation,
-        data.protocolParameters,
-        metadata.hex
-      ).catch((error) => {
-        console.error(error);
-        throw new Error(
-          'Transaction not possible (maybe insufficient balance)'
-        );
-      });
-
-      setData((d) => ({
-        ...d,
-        fee: tx.body().fee().toString(),
-        tx,
-        pool: {
-          ticker: metadata.ticker,
-          name: metadata.name,
-          id: metadata.id,
-          state: PoolStates.DONE,
-        },
-      }));
-    } catch (e) {
-      console.log(e);
-      setData((d) => ({
-        ...d,
-        pool: {
-          ...d.pool,
-          error: e.message,
-          state: PoolStates.ERROR,
-        },
-      }));
-    }
-  };
 
   React.useImperativeHandle(ref, () => ({
-    async initDelegation(account, delegation) {
-      setData({
-        fee: '',
-        stakeRegistration: '',
-        rewards: '',
-        ready: false,
-        error: '',
-        pool: { ...poolDefaultValue },
-      });
-      delegationRef.current.openModal(account.index);
-
-      try {
-        const protocolParameters = await initTx();
-
-        setData((s) => ({
-          ...s,
-          account,
-          delegation,
-          protocolParameters,
-          stakeRegistration:
-            !delegation.active && protocolParameters.keyDeposit,
-          ready: true,
-        }));
-      } catch {
-        setData((d) => ({
-          ...d,
-          error: 'Transaction not possible (maybe insufficient balance)',
-        }));
-      }
-    },
     async initWithdrawal(account, delegation) {
       setData({
         pool: { ...poolDefaultValue },
@@ -345,152 +169,8 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     },
   }));
 
-  const error = data.error || data.pool.error;
-
   return (
     <>
-      <ConfirmModal
-        ready={data.ready && data.pool.state === PoolStates.DONE}
-        title="Delegate your funds"
-        sign={async (password, hw) => {
-          if (hw) {
-            if (hw.device === HW.trezor) {
-              return createTab(
-                TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
-              );
-            }
-            if (hw.device === HW.keystone) {
-              return openKeystoneSignTxTab({
-                txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
-                keyHashes: [
-                  data.account.paymentKeyHash,
-                  data.account.stakeKeyHash,
-                ],
-                partialSign: false,
-              });
-            }
-            return await signAndSubmitHW(data.tx, {
-              keyHashes: [
-                data.account.paymentKeyHash,
-                data.account.stakeKeyHash,
-              ],
-              account: data.account,
-              hw,
-            });
-          }
-          return await signAndSubmit(
-            data.tx,
-            {
-              keyHashes: [
-                data.account.paymentKeyHash,
-                data.account.stakeKeyHash,
-              ],
-              accountIndex: data.account.index,
-            },
-            password
-          );
-        }}
-        onConfirm={(status, signedTx) => {
-          if (status === true) {
-            toast({
-              title: 'Delegation submitted',
-              status: 'success',
-              duration: 4000,
-            });
-          } else if (signedTx === ERROR.fullMempool) {
-            toast({
-              title: 'Transaction failed',
-              description: 'Mempool full. Try again.',
-              status: 'error',
-              duration: 3000,
-            });
-          } else {
-            console.warn(signedTx);
-            toast({
-              title: 'Transaction failed',
-              status: 'error',
-              duration: 3000,
-            });
-          }
-          delegationRef.current.closeModal();
-        }}
-        info={
-          <Box 
-            width="100%"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexDirection="column"
-
-          >
-            <Text fontSize={delegationTextSize.sm} textAlign="center" mb={2}>
-              Search for a stake pool by ticker or pool ID to delegate your funds.
-            </Text>
-            <PoolSearch
-              selectedPoolId={data.pool.id}
-              inputFontSize={delegationTextSize.sm}
-              bodyFontSize={delegationTextSize.sm}
-              metaFontSize={delegationTextSize.xs}
-              onSelect={(poolId) => {
-                if (poolId) {
-                  setData((s) => ({
-                    ...s,
-                    pool: {
-                      ...s.pool,
-                      id: poolId,
-                      state: PoolStates.EDITING,
-                    },
-                  }));
-                  prepareDelegationTx(poolId);
-                }
-              }}
-            />
-            {error ? (
-              <Box
-                textAlign="center"
-                mb="4"
-                color="red.300"
-                mt="4"
-                fontSize={delegationTextSize.sm}
-              >
-                {error}
-              </Box>
-            ) : (
-              <Box fontSize={delegationTextSize.sm}>
-                {data.stakeRegistration && (
-                  <Box
-                    mt="1"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                  >
-                    <Text fontWeight="bold">+ Stake Registration:</Text>
-                    <Box w="1" />
-                    <UnitDisplay
-                      hide
-                      quantity={data.stakeRegistration}
-                      decimals={6}
-                      symbol={settings.adaSymbol}
-                    />
-                  </Box>
-                )}
-                <Box display="flex" alignItems="center" justifyContent="center">
-                  <Text fontWeight="bold">+ Fee:</Text>
-                  <Box w="1" />
-                  <UnitDisplay
-                    quantity={data.fee}
-                    decimals={6}
-                    symbol={settings.adaSymbol}
-                  />
-                </Box>
-                <Box h="4" />
-              </Box>
-            )}
-          </Box>
-        }
-        ref={delegationRef}
-      />
       <ConfirmModal
         sign={async (password, hw) => {
           if (hw) {

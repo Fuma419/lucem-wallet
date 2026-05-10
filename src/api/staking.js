@@ -48,8 +48,7 @@ export const normalizeDelegationRow = (stakeRow = {}, stakeAddress = '') => ({
   ...emptyDelegation(stakeAddress),
   registered: true,
   active: Boolean(
-    stakeRow.active ??
-    Boolean(stakeRow.delegated_pool || stakeRow.pool_id)
+    stakeRow.active || stakeRow.delegated_pool || stakeRow.pool_id
   ),
   rewards: toPoolMetric(stakeRow.withdrawable_amount ?? stakeRow.rewards_available),
   poolId: stakeRow.delegated_pool || stakeRow.pool_id || '',

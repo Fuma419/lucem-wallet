@@ -128,13 +128,38 @@ export function buildUnsignedSimpleTx({
     utxoCollection.add(u);
   }
 
+  // Token transfers may involve multi-asset UTxOs and/or multi-asset change outputs.
+  // Using a multi-asset-aware coin selection strategy avoids building transactions
+  // that the ledger rejects at submission time.
+  let containsMultiasset = false;
+  for (let i = 0; i < outputs.len(); i += 1) {
+    const multiAsset = outputs.get(i).amount().multiasset();
+    if (multiAsset && multiAsset.len() > 0) {
+      containsMultiasset = true;
+      break;
+    }
+  }
+  if (!containsMultiasset) {
+    for (const u of utxos) {
+      const multiAsset = u.amount().multiasset();
+      if (multiAsset && multiAsset.len() > 0) {
+        containsMultiasset = true;
+        break;
+      }
+    }
+  }
+
+  const inputSelectionStrategy = containsMultiasset
+    ? Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset
+    : Cardano.CoinSelectionStrategyCIP2.LargestFirst;
+
   let explicitFee = null;
 
   for (let attempt = 0; attempt < FEE_ALIGN_MAX_ATTEMPTS; attempt += 1) {
     const txBuilder = Cardano.TransactionBuilder.new(txConfig);
     txBuilder.add_inputs_from(
       utxoCollection,
-      Cardano.CoinSelectionStrategyCIP2.LargestFirst
+      inputSelectionStrategy
     );
     for (let i = 0; i < outputs.len(); i += 1) {
       txBuilder.add_output(outputs.get(i));

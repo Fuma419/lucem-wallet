@@ -29,16 +29,20 @@ def githubNotifyStatus(String state) {
 
 def publishGithubStatus(String stageName, String state, String description) {
   def repo = env.GITHUB_REPOSITORY ?: 'Fuma419/lucem-wallet'
-  def sha = env.GIT_COMMIT ?: env.CHANGE_HEAD
+  // Branch protection evaluates the PR head SHA, while multibranch PR jobs may
+  // set GIT_COMMIT to Jenkins' synthetic merge ref. Prefer CHANGE_HEAD.
+  def sha = env.CHANGE_HEAD ?: env.GIT_COMMIT
   if (!sha) {
     echo "Skipping GitHub status for ${stageName}: no commit SHA is available."
     return
   }
 
   def targetUrl = env.RUN_DISPLAY_URL ?: env.BUILD_URL ?: ''
+  echo "Publishing GitHub status Jenkins / ${stageName}=${state} to ${repo}@${sha}"
   try {
     githubNotify(
       context: "Jenkins / ${stageName}",
+      sha: sha,
       status: githubNotifyStatus(state),
       description: description.take(140),
       targetUrl: targetUrl

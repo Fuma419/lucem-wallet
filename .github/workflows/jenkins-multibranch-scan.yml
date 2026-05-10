@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   ping-jenkins:
@@ -32,6 +33,24 @@ jobs:
     if: ${{ github.repository_owner == 'Fuma419' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Mark Jenkins gates pending
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          for stage in "Build" "Unit tests" "Integration tests" "Functional tests"; do
+            gh api "repos/${REPO}/statuses/${SHA}" \
+              --method POST \
+              --field state=pending \
+              --field context="Jenkins / ${stage}" \
+              --field description="${stage} is waiting in Jenkins" \
+              --field target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              >/dev/null
+          done
+
       - name: Trigger multibranch scan
         env:
           URL: ${{ secrets.JENKINS_MULTIBRANCH_WEBHOOK_URL }}

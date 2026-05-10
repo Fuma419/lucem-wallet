@@ -15,6 +15,9 @@ export const METHOD = {
   signData: 'signData',
   signTx: 'signTx',
   submitTx: 'submitTx',
+  getRegisteredPubStakeKeys: 'getRegisteredPubStakeKeys',
+  getUnregisteredPubStakeKeys: 'getUnregisteredPubStakeKeys',
+  getPubDRepKey: 'getPubDRepKey',
   //internal
   requestData: 'requestData',
   returnData: 'returnData',

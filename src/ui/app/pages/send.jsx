@@ -1082,9 +1082,17 @@ const Send = () => {
             });
             ref.current.closeModal();
             return; // don't go back to home screen. let user try to submit same tx again
-          } else
+          } else {
+            const description =
+              signedTx == null
+                ? undefined
+                : typeof signedTx === 'string'
+                  ? signedTx
+                  : String(signedTx?.message || signedTx);
+
             toast({
               title: 'Transaction failed',
+              description: description ? description.slice(0, 200) : undefined,
               status: 'error',
               duration: 4000,
               variant: 'success',
@@ -1096,6 +1104,7 @@ const Send = () => {
                 padding: '2rem',
               },
             });
+          }
           ref.current.closeModal();
           setTimeout(() => {
             navigate('/wallet', { replace: true });

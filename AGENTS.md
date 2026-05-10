@@ -212,6 +212,17 @@ Jenkins runs as a Docker container on this host. Agents have full access to debu
 - Indexing log: `~/jenkins_home/jobs/lucem-wallet/indexing/indexing.log`
 - Plugin issues: check `~/jenkins_home/plugins/` against `~/jenkins-deployment/jenkins/plugins.txt`
 
+### MCP Servers (`.cursor/mcp.json`)
+
+Only servers that provide **unique** capabilities beyond native tools are configured:
+
+| Server | Purpose | Notes |
+|--------|---------|-------|
+| `code-rag` | BM25 keyword search over chunked source index | Rebuild: call `code_rag_rebuild_index` tool or run indexer script |
+| `jenkins` | Jenkins REST API (jobs, builds, logs, pipelines) | Needs `JENKINS_API_TOKEN` env var; generate in Jenkins → admin → Configure → API Token |
+
+**Removed (redundant with native tools):** `@modelcontextprotocol/server-filesystem` (→ Read/Write/Glob/Grep), `server-git` (→ Shell git), `server-github` (→ github-* MCP tools), `server-fetch` (→ WebFetch), `server-puppeteer` (→ puppeteer-* tools).
+
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.
 - Never modify generated WASM files in `src/wasm/`.

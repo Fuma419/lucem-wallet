@@ -764,6 +764,49 @@ export const getRewardAddress = async () => {
   return currentAccount.rewardAddr;
 };
 
+export const getPubDRepKey = async () => {
+  await Loader.load();
+  const currentAccount = await getCurrentAccount();
+  if (!currentAccount?.publicKey) {
+    throw APIError.InternalError;
+  }
+  return deriveAccountDRepPublicKeyHex(currentAccount.publicKey);
+};
+
+export const getRegisteredPubStakeKeys = async () => {
+  await Loader.load();
+  const currentAccount = await getCurrentAccount();
+  if (!currentAccount?.publicKey || !currentAccount?.rewardAddr) {
+    throw APIError.InternalError;
+  }
+
+  const stakePubKeyHex = deriveAccountStakePublicKeyHex(currentAccount.publicKey);
+  const request = KOIOS_REQUESTS.getAccountInfo(currentAccount.rewardAddr);
+  const result = await koiosRequest(request.endpoint, {}, request.body);
+  const row = Array.isArray(result) && result.length > 0 ? result[0] : null;
+  const status = String(row?.status || '').toLowerCase();
+  const isRegistered =
+    row != null &&
+    (row.registered === true ||
+      (!status.includes('unreg') &&
+        !status.includes('not registered') &&
+        !status.includes('deregistered')));
+
+  return isRegistered ? [stakePubKeyHex] : [];
+};
+
+export const getUnregisteredPubStakeKeys = async () => {
+  const registeredKeys = await getRegisteredPubStakeKeys();
+  if (registeredKeys.length > 0) {
+    return [];
+  }
+  const currentAccount = await getCurrentAccount();
+  if (!currentAccount?.publicKey) {
+    throw APIError.InternalError;
+  }
+  return [deriveAccountStakePublicKeyHex(currentAccount.publicKey)];
+};
+
 export const getCurrentAccountIndex = () => getStorage(STORAGE.currentAccount);
 
 export const getNetwork = () => getStorage(STORAGE.network);
@@ -1000,8 +1043,13 @@ export const isValidEthAddress = function (address) {
   return isAddress(address);
 };
 
+const DREP_ID_HEX_RE = /^[0-9a-f]{56}$/i;
+
 export const extractKeyHash = async (address) => {
   await Loader.load();
+  if (DREP_ID_HEX_RE.test(address)) {
+    return `drep_vkh${address.toLowerCase()}`;
+  }
   if (!(await isValidAddressBytes(Buffer.from(address, 'hex'))))
     throw DataSignError.InvalidFormat;
   try {
@@ -1029,6 +1077,24 @@ export const extractKeyHash = async (address) => {
     return addr.payment_cred().to_keyhash().to_bech32('stake_vkh');
   } catch (e) {}
   throw DataSignError.AddressNotPK;
+};
+
+const deriveAccountDRepPrivateKey = (accountKey) => accountKey.derive(3).derive(0).to_raw_key();
+
+const deriveAccountStakePublicKeyHex = (accountPublicKeyHex) => {
+  const stakeKey = Loader.Cardano.Bip32PublicKey.from_hex(accountPublicKeyHex)
+    .derive(2)
+    .derive(0)
+    .to_raw_key();
+  return Buffer.from(stakeKey.as_bytes()).toString('hex');
+};
+
+const deriveAccountDRepPublicKeyHex = (accountPublicKeyHex) => {
+  const drepKey = Loader.Cardano.Bip32PublicKey.from_hex(accountPublicKeyHex)
+    .derive(3)
+    .derive(0)
+    .to_raw_key();
+  return Buffer.from(drepKey.as_bytes()).toString('hex');
 };
 
 export const extractKeyOrScriptHash = async (address) => {
@@ -1123,14 +1189,20 @@ export const verifyTx = async (tx) => {
 export const signData = async (address, payload, password, accountIndex) => {
   await Loader.load();
   const keyHash = await extractKeyHash(address);
-  const prefix = keyHash.startsWith('addr_vkh') ? 'addr_vkh' : 'stake_vkh';
-  let { paymentKey, stakeKey } = await requestAccountKey(
+  const prefix = keyHash.startsWith('addr_vkh')
+    ? 'addr_vkh'
+    : keyHash.startsWith('drep_vkh')
+      ? 'drep_vkh'
+      : 'stake_vkh';
+  let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
     accountIndex
   );
-  const accountKey = prefix === 'addr_vkh' ? paymentKey : stakeKey;
+  let drepKey = deriveAccountDRepPrivateKey(accountKey);
+  const signingKey =
+    prefix === 'addr_vkh' ? paymentKey : prefix === 'drep_vkh' ? drepKey : stakeKey;
 
-  const publicKey = accountKey.to_public();
+  const publicKey = signingKey.to_public();
   if (keyHash !== publicKey.hash().to_bech32(prefix))
     throw DataSignError.ProofGeneration;
 
@@ -1157,9 +1229,13 @@ export const signData = async (address, payload, password, accountIndex) => {
   );
   const toSign = builder.make_data_to_sign().to_bytes();
 
-  const signedSigStruc = accountKey.sign(toSign).to_bytes();
+  const signedSigStruc = signingKey.sign(toSign).to_bytes();
   const coseSign1 = builder.build(signedSigStruc);
 
+  accountKey.free();
+  accountKey = null;
+  drepKey.free();
+  drepKey = null;
   stakeKey.free();
   stakeKey = null;
   paymentKey.free();
@@ -1176,14 +1252,20 @@ export const signDataCIP30 = async (
 ) => {
   await Loader.load();
   const keyHash = await extractKeyHash(address);
-  const prefix = keyHash.startsWith('addr_vkh') ? 'addr_vkh' : 'stake_vkh';
-  let { paymentKey, stakeKey } = await requestAccountKey(
+  const prefix = keyHash.startsWith('addr_vkh')
+    ? 'addr_vkh'
+    : keyHash.startsWith('drep_vkh')
+      ? 'drep_vkh'
+      : 'stake_vkh';
+  let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
     accountIndex
   );
-  const accountKey = prefix === 'addr_vkh' ? paymentKey : stakeKey;
+  let drepKey = deriveAccountDRepPrivateKey(accountKey);
+  const signingKey =
+    prefix === 'addr_vkh' ? paymentKey : prefix === 'drep_vkh' ? drepKey : stakeKey;
 
-  const publicKey = accountKey.to_public();
+  const publicKey = signingKey.to_public();
   if (keyHash !== publicKey.hash().to_bech32(prefix))
     throw DataSignError.ProofGeneration;
   const protectedHeaders = Loader.Message.HeaderMap.new();
@@ -1193,7 +1275,12 @@ export const signDataCIP30 = async (
   // protectedHeaders.set_key_id(publicKey.to_raw_bytes()); // Removed to adhere to CIP-30
   protectedHeaders.set_header(
     Loader.Message.Label.new_text('address'),
-    Loader.Message.CBORValue.new_bytes(Buffer.from(address, 'hex'))
+    Loader.Message.CBORValue.new_bytes(
+      Buffer.from(
+        prefix === 'drep_vkh' ? publicKey.hash().to_hex() : address,
+        'hex'
+      )
+    )
   );
   const protectedSerialized =
     Loader.Message.ProtectedHeaderMap.new(protectedHeaders);
@@ -1209,9 +1296,13 @@ export const signDataCIP30 = async (
   );
   const toSign = builder.make_data_to_sign().to_bytes();
 
-  const signedSigStruc = accountKey.sign(toSign).to_bytes();
+  const signedSigStruc = signingKey.sign(toSign).to_bytes();
   const coseSign1 = builder.build(signedSigStruc);
 
+  accountKey.free();
+  accountKey = null;
+  drepKey.free();
+  drepKey = null;
   stakeKey.free();
   stakeKey = null;
   paymentKey.free();
@@ -1259,12 +1350,14 @@ export const signTx = async (
   partialSign = false
 ) => {
   await Loader.load();
-  let { paymentKey, stakeKey } = await requestAccountKey(
+  let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
     accountIndex
   );
+  let drepKey = deriveAccountDRepPrivateKey(accountKey);
   const paymentKeyHash = paymentKey.to_public().hash().to_hex();
   const stakeKeyHash = stakeKey.to_public().hash().to_hex();
+  const drepKeyHash = drepKey.to_public().hash().to_hex();
 
   const rawTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
 
@@ -1275,12 +1368,17 @@ export const signTx = async (
     let signingKey;
     if (keyHash === paymentKeyHash) signingKey = paymentKey;
     else if (keyHash === stakeKeyHash) signingKey = stakeKey;
+    else if (keyHash === drepKeyHash) signingKey = drepKey;
     else if (!partialSign) throw TxSignError.ProofGeneration;
     else return;
     const vkey = Loader.Cardano.make_vkey_witness(txHash, signingKey);
     vkeyWitnesses.add(vkey);
   });
 
+  accountKey.free();
+  accountKey = null;
+  drepKey.free();
+  drepKey = null;
   stakeKey.free();
   stakeKey = null;
   paymentKey.free();

@@ -441,6 +441,16 @@ const SignTx = ({ request, controller }) => {
     const stakeKeyHash = Buffer.from(
       baseAddr.stake_cred().to_keyhash().to_bytes()
     ).toString('hex');
+    const drepKeyHash = account.publicKey
+      ? Buffer.from(
+          Loader.Cardano.Bip32PublicKey.from_hex(account.publicKey)
+            .derive(3)
+            .derive(0)
+            .to_raw_key()
+            .hash()
+            .to_bytes()
+        ).toString('hex')
+      : null;
 
     //get key hashes from inputs
     const inputs = tx.body().inputs();
@@ -592,6 +602,7 @@ const SignTx = ({ request, controller }) => {
     requiredKeyHashes = [...new Set(requiredKeyHashes)];
     if (requiredKeyHashes.includes(paymentKeyHash)) keyKind.push('payment');
     if (requiredKeyHashes.includes(stakeKeyHash)) keyKind.push('stake');
+    if (drepKeyHash && requiredKeyHashes.includes(drepKeyHash)) keyKind.push('drep');
     if (keyKind.length <= 0) {
       setIsLoading((l) => ({
         ...l,

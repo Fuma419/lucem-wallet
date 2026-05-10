@@ -6,8 +6,11 @@ export const getBalance = async () => {
   return result.data;
 };
 
-export const enable = async () => {
-  const result = await Messaging.sendToContent({ method: METHOD.enable });
+export const enable = async (options = undefined) => {
+  const result = await Messaging.sendToContent({
+    method: METHOD.enable,
+    data: options,
+  });
   return result.data;
 };
 
@@ -81,6 +84,27 @@ export const submitTx = async (tx) => {
   const result = await Messaging.sendToContent({
     method: METHOD.submitTx,
     data: tx,
+  });
+  return result.data;
+};
+
+export const getRegisteredPubStakeKeys = async () => {
+  const result = await Messaging.sendToContent({
+    method: METHOD.getRegisteredPubStakeKeys,
+  });
+  return result.data;
+};
+
+export const getUnregisteredPubStakeKeys = async () => {
+  const result = await Messaging.sendToContent({
+    method: METHOD.getUnregisteredPubStakeKeys,
+  });
+  return result.data;
+};
+
+export const getPubDRepKey = async () => {
+  const result = await Messaging.sendToContent({
+    method: METHOD.getPubDRepKey,
   });
   return result.data;
 };

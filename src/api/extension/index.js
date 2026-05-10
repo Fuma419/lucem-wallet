@@ -2579,6 +2579,22 @@ export const setTransactions = async (txs) => {
   });
 };
 
+/**
+ * Optimistically prepend a just-submitted tx hash so the history viewer
+ * shows it immediately, before Koios indexes the block.
+ */
+export const prependTxHash = async (txHash) => {
+  if (!txHash) return;
+  const currentIndex = await getCurrentAccountIndex();
+  const network = await getNetwork();
+  const accounts = await getStorage(STORAGE.accounts);
+  const confirmed = accounts[currentIndex][network.id].history.confirmed;
+  if (!confirmed.includes(txHash)) {
+    confirmed.unshift(txHash);
+    await setStorage({ [STORAGE.accounts]: { ...accounts } });
+  }
+};
+
 export const setCollateral = async (collateral) => {
   const currentIndex = await getCurrentAccountIndex();
   const network = await getNetwork();

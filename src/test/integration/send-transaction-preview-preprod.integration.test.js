@@ -12,6 +12,7 @@ const {
   deriveAccount0Address,
   fetchProtocolParams,
   waitForTxStatus,
+  waitForTxInAccountHistory,
 } = require('./koios-self-send');
 
 /**
@@ -122,6 +123,8 @@ NETWORKS.forEach(
       expect(p.slot).toBeGreaterThan(0);
     });
 
+    let submittedHash;
+
     test(
       'submits signed 5 tADA account0->account1 transfer; optional /tx_status poll (LUCEM_INTEGRATION_POLL_TX=1)',
       async () => {
@@ -133,6 +136,7 @@ NETWORKS.forEach(
           sendLovelace: sendLovelace(),
         });
         expect(hash).toMatch(TX_HASH_RE);
+        submittedHash = hash;
         if (shouldPollTx()) {
           const status = await waitForTxStatus({
             baseUrl: koiosBaseUrl,
@@ -147,6 +151,27 @@ NETWORKS.forEach(
         }
       },
       180000
+    );
+
+    test(
+      'submitted tx appears in /account_txs history (Koios)',
+      async () => {
+        if (!submittedHash) {
+          console.warn('Skipping history check — no submitted tx hash');
+          return;
+        }
+        const row = await waitForTxInAccountHistory({
+          baseUrl: koiosBaseUrl,
+          apiKey: koiosApiKey,
+          mnemonic: phrase,
+          txHash: submittedHash,
+          maxAttempts: 30,
+          delayMs: 3000,
+        });
+        expect(row.tx_hash.toLowerCase()).toBe(submittedHash.toLowerCase());
+        expect(row.block_height).toBeGreaterThan(0);
+      },
+      120000
     );
   });
 }

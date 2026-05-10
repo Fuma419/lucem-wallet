@@ -435,7 +435,7 @@ const Staking = () => {
     <Box
       data-testid="stake-center-page"
       minH="100vh"
-      bgGradient="linear(to-b, #050b1f, #071329 52%, #050712)"
+      bg="black"
       color="white"
       px={{ base: 4, md: 6 }}
       py={5}
@@ -454,10 +454,9 @@ const Staking = () => {
         <Box
           rounded="3xl"
           p={{ base: 5, md: 7 }}
-          bgGradient="linear(135deg, rgba(250,204,21,0.26), rgba(20,184,166,0.14), rgba(59,130,246,0.16))"
+          bg="whiteAlpha.50"
           borderWidth="1px"
           borderColor="whiteAlpha.200"
-          boxShadow="0 24px 80px rgba(0,0,0,0.32)"
         >
           <Flex direction={{ base: 'column', md: 'row' }} gap={5} justify="space-between">
             <Box maxW="650px">

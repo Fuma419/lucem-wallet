@@ -769,7 +769,7 @@ export const getCollateral = async () => {
         Loader.Cardano.TransactionHash.from_bytes(
           Buffer.from(collateral.txHash, 'hex')
         ),
-        Loader.Cardano.BigNum.from_str(collateral.txId.toString())
+        parseInt(collateral.txId, 10)
       ),
       Loader.Cardano.TransactionOutput.new(
         Loader.Cardano.Address.from_bech32(

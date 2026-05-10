@@ -47,7 +47,18 @@ if (fileSystem.existsSync(secretsPath)) {
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-const envsToExpose = ['NODE_ENV'];
+const envsToExpose = {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  BLOCKFROST_PROJECT_ID_MAINNET: '',
+  BLOCKFROST_MAINNET_PROJECT_ID: '',
+  BLOCKFROST_PROJECT_ID_PREVIEW: '',
+  BLOCKFROST_PREVIEW_PROJECT_ID: '',
+  BLOCKFROST_PROJECT_ID_PREPROD: '',
+  BLOCKFROST_PREPROD_PROJECT_ID: '',
+  KOIOS_API_KEY_MAINNET: '',
+  KOIOS_API_KEY_PREVIEW: '',
+  KOIOS_API_KEY_PREPROD: '',
+};
 
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 

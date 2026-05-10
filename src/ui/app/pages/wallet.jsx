@@ -62,6 +62,7 @@ import {
   TabPanel,
   Tooltip,
   Collapse,
+  IconButton,
 } from '@chakra-ui/react';
 import {
   SettingsIcon,
@@ -92,7 +93,7 @@ import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
 import { GiToken } from 'react-icons/gi';
-import { MdHowToVote, MdOutlineHowToReg } from 'react-icons/md';
+import { MdHowToVote, MdOutlineHowToReg, MdRefresh } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorMode, useColorModeValue } from '@chakra-ui/react';
@@ -269,6 +270,7 @@ const Wallet = () => {
   const aboutRef = React.useRef();
   const deletAccountRef = React.useRef();
   const refreshTimeoutRef = React.useRef(null);
+  const lastRefreshRef = React.useRef(Date.now());
   const [info, setInfo] = React.useState({
     avatar: '',
     name: '',
@@ -347,6 +349,7 @@ const Wallet = () => {
       delegation,
     }));
     setIsFetching(false);
+    lastRefreshRef.current = Date.now();
   };
 
   const schedulePostTxRefresh = (delayMs = 30000) => {
@@ -382,7 +385,20 @@ const Wallet = () => {
         });
       }).catch(() => {});
     });
+    const REFRESH_DEBOUNCE_MS = 15000;
+    const onVisibilityChange = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        isMounted.current &&
+        Date.now() - lastRefreshRef.current > REFRESH_DEBOUNCE_MS
+      ) {
+        getData({ forceUpdate: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
@@ -820,6 +836,16 @@ const Wallet = () => {
               ) : (
                 ''
               )}
+              <IconButton
+                icon={<Icon as={MdRefresh} />}
+                aria-label="Refresh wallet"
+                variant="ghost"
+                size="xs"
+                ml={1}
+                isLoading={isFetching}
+                onClick={() => getData({ forceUpdate: true })}
+                _hover={{ bg: 'whiteAlpha.200' }}
+              />
             </Flex>
             <UnitDisplay
               className="lineClamp"

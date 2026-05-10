@@ -506,30 +506,31 @@ const getTimestamp = (date) => {
 };
 
 const getAddressCredentials = (address) => {
-  
   if (!address) {
     return [null, null];
   }
-  
+
   try {
     const cmlAddress = Loader.Cardano.Address.from_bech32(address);
     const paymentCred = cmlAddress.payment_cred()?.to_hex() || null;
-    const stakingCred = cmlAddress.staking_cred()?.to_hex() || null;
-    if (paymentCred || stakingCred) {
-      return [paymentCred, stakingCred];
+
+    const baseAddr = Loader.Cardano.BaseAddress.from_address(cmlAddress);
+    if (baseAddr) {
+      const stakeCred = baseAddr.stake_cred()?.to_hex() || null;
+      return [paymentCred, stakeCred];
     }
+
     const rewardAddr = Loader.Cardano.RewardAddress.from_address(cmlAddress);
     if (rewardAddr) {
       return [null, rewardAddr.payment_cred()?.to_hex() || null];
     }
-    return [null, null];
+
+    return [paymentCred, null];
   } catch (error) {
     try {
-      // try casting as byron address
       const cmlAddress = Loader.Cardano.ByronAddress.from_base58(address);
       const paymentCred = cmlAddress.to_address()?.payment_cred()?.to_hex() || null;
-      const stakingCred = cmlAddress.to_address()?.staking_cred()?.to_hex() || null;
-      return [paymentCred, stakingCred];
+      return [paymentCred, null];
     } catch (byronError) {
       console.error('Failed to parse address:', address, error);
       return [null, null];
@@ -539,8 +540,10 @@ const getAddressCredentials = (address) => {
 
 const matchesAnyCredential = (address, [ownPaymentCred, ownStakingCred]) => {
   const [otherPaymentCred, otherStakingCred] = getAddressCredentials(address);
-  const matches = otherPaymentCred === ownPaymentCred || otherStakingCred === ownStakingCred;
-  return matches;
+  if (otherPaymentCred && ownPaymentCred) {
+    return otherPaymentCred === ownPaymentCred;
+  }
+  return otherStakingCred != null && otherStakingCred === ownStakingCred;
 }
 
 const calculateAmount = (currentAddr, uTxOList, validContract = true) => {
@@ -682,3 +685,5 @@ const getTxExtra = (extra) =>
   );
 
 export default Transaction;
+
+export { calculateAmount, matchesAnyCredential, getAddressCredentials, getTxType };

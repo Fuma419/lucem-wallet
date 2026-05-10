@@ -6,6 +6,9 @@ import {
   getCollateral,
   getNetwork,
   getRewardAddress,
+  getRegisteredPubStakeKeys,
+  getUnregisteredPubStakeKeys,
+  getPubDRepKey,
   getUtxos,
   isWhitelisted,
   submitTx,
@@ -148,6 +151,63 @@ app.add(METHOD.getRewardAddress, async (request, sendResponse) => {
     sendResponse({
       id: request.id,
       error: APIError.InternalError,
+      target: TARGET,
+      sender: SENDER.extension,
+    });
+  }
+});
+
+app.add(METHOD.getRegisteredPubStakeKeys, async (request, sendResponse) => {
+  try {
+    const keys = await getRegisteredPubStakeKeys();
+    sendResponse({
+      id: request.id,
+      data: keys,
+      target: TARGET,
+      sender: SENDER.extension,
+    });
+  } catch (e) {
+    sendResponse({
+      id: request.id,
+      error: e,
+      target: TARGET,
+      sender: SENDER.extension,
+    });
+  }
+});
+
+app.add(METHOD.getUnregisteredPubStakeKeys, async (request, sendResponse) => {
+  try {
+    const keys = await getUnregisteredPubStakeKeys();
+    sendResponse({
+      id: request.id,
+      data: keys,
+      target: TARGET,
+      sender: SENDER.extension,
+    });
+  } catch (e) {
+    sendResponse({
+      id: request.id,
+      error: e,
+      target: TARGET,
+      sender: SENDER.extension,
+    });
+  }
+});
+
+app.add(METHOD.getPubDRepKey, async (request, sendResponse) => {
+  try {
+    const key = await getPubDRepKey();
+    sendResponse({
+      id: request.id,
+      data: key,
+      target: TARGET,
+      sender: SENDER.extension,
+    });
+  } catch (e) {
+    sendResponse({
+      id: request.id,
+      error: e,
       target: TARGET,
       sender: SENDER.extension,
     });

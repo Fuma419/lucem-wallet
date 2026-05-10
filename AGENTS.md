@@ -134,7 +134,7 @@ Confirm which git branch Vercel Production is tied to in project settings (`rele
 ### Testing the web app
 
 1. Run `npm run build`.
-2. Deploy: `vercel deploy --prod --token $VERCEL_TOKEN --scope my-team-5c660a1c` or visit `https://lucem-wallet.vercel.app/`.
+2. Deploy: `vercel deploy --prod --token $VERCEL_TOKEN --scope my-team-5c660a1c`.
 3. The web app uses IndexedDB for storage, same-tab navigation, and the Google Favicons API.
 
 ### Vercel deployment

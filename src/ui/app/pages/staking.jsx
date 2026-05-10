@@ -836,6 +836,7 @@ const Staking = () => {
               duration: 4000,
             });
             await loadStakeState();
+            setTimeout(() => loadStakeState(), 15000);
             return;
           }
 

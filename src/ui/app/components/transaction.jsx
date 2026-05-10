@@ -428,21 +428,29 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
   const lovelaceAmount = amounts.find((amount) => amount.unit === 'lovelace');
   const lovelace = lovelaceAmount ? BigInt(lovelaceAmount.quantity) : 0n;
 
+  const extra = getExtra(detail.info, type);
+
+  let displayLovelace = ['internalIn', 'externalIn', 'multisig'].includes(type)
+    ? lovelace
+    : lovelace +
+      BigInt(detail.info.fees) +
+      (parseInt(detail.info.deposit) > 0
+        ? BigInt(detail.info.deposit)
+        : BigInt(0));
+
+  if (type === 'self' && extra.length > 0 && displayLovelace === 0n) {
+    displayLovelace = null;
+  }
+
   const result = {
     txHash: txHash,
     detail: detail,
     date: date,
     timestamp: getTimestamp(date),
     type: type,
-    extra: getExtra(detail.info, type),
+    extra: extra,
     amounts: amounts,
-    lovelace: ['internalIn', 'externalIn', 'multisig'].includes(type)
-      ? lovelace
-      : lovelace +
-        BigInt(detail.info.fees) +
-        (parseInt(detail.info.deposit) > 0
-          ? BigInt(detail.info.deposit)
-          : BigInt(0)),
+    lovelace: displayLovelace,
     assets: assets.map((asset) => {
       const _policy = asset.unit.slice(0, 56);
       const _name = asset.unit.slice(56);

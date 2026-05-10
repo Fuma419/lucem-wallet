@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   ping-jenkins:
-    name: Ping Jenkins indexer
+    name: "GitHub helper / trigger Jenkins scan"
     if: ${{ github.repository_owner == 'Fuma419' }}
     runs-on: ubuntu-latest
     steps:

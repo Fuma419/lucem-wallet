@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   open-pr:
-    name: "PR helper: open/update PR (Jenkins-gated auto-merge)"
+    name: "GitHub helper / agent PR auto-merge guard"
     runs-on: ubuntu-latest
     steps:
       - name: Create or update PR and enable auto-merge
@@ -61,9 +61,10 @@ jobs:
           ')"
 
           required_checks=(
-            "Jenkins gate: build"
-            "Jenkins gate: unit tests"
-            "Jenkins gate: functional tests"
+            "Jenkins / Build"
+            "Jenkins / Unit tests"
+            "Jenkins / Integration tests"
+            "Jenkins / Functional tests"
           )
 
           missing_checks=()

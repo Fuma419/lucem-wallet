@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   enable-auto-merge:
-    name: "PR helper: owner auto-merge (Jenkins-gated)"
+    name: "GitHub helper / owner auto-merge guard"
     if: >
       github.event.pull_request.draft == false &&
       github.event.pull_request.user.login == github.repository_owner &&
@@ -41,9 +41,10 @@ jobs:
           ')"
 
           required_checks=(
-            "Jenkins gate: build"
-            "Jenkins gate: unit tests"
-            "Jenkins gate: functional tests"
+            "Jenkins / Build"
+            "Jenkins / Unit tests"
+            "Jenkins / Integration tests"
+            "Jenkins / Functional tests"
           )
 
           missing_checks=()

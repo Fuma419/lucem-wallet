@@ -4,6 +4,7 @@ const DB_NAME = 'lucem-wallet';
 const STORE_NAME = 'storage';
 
 let dbPromise = null;
+let dbInstance = null;
 
 const openDB = () => {
   if (dbPromise) return dbPromise;
@@ -12,7 +13,18 @@ const openDB = () => {
     request.onupgradeneeded = () => {
       request.result.createObjectStore(STORE_NAME);
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      dbInstance = request.result;
+      // Ensure deleteDatabase can proceed after a wipe request.
+      dbInstance.onversionchange = () => {
+        try {
+          dbInstance.close();
+        } catch (_) {
+          /* ignore */
+        }
+      };
+      resolve(dbInstance);
+    };
     request.onerror = () => reject(request.error);
   });
   return dbPromise;
@@ -66,12 +78,37 @@ const idbRemove = async (key) => {
 };
 
 const idbClear = async () => {
+  const existingPromise = dbPromise;
   dbPromise = null;
+  if (dbInstance) {
+    try {
+      dbInstance.close();
+    } catch (_) {
+      /* ignore */
+    }
+    dbInstance = null;
+  }
+  if (existingPromise) {
+    try {
+      const existingDb = await existingPromise;
+      existingDb.close();
+    } catch (_) {
+      /* ignore */
+    }
+  }
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const resolveOnce = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
     const req = indexedDB.deleteDatabase(DB_NAME);
-    req.onsuccess = () => resolve();
+    req.onsuccess = () => resolveOnce();
     req.onerror = () => reject(req.error);
-    req.onblocked = () => resolve();
+    req.onblocked = () => resolveOnce();
+    // Browser-specific IDB edge cases can leave this request pending forever.
+    window.setTimeout(resolveOnce, 2500);
   });
 };
 

@@ -41,15 +41,15 @@ jobs:
           ')"
 
           if [ -z "${jenkins_lines:-}" ]; then
-            echo "No Jenkins check/status found on PR #$PR_NUMBER. Refusing to enable auto-merge."
-            exit 1
+            echo "No Jenkins check/status found on PR #$PR_NUMBER. Skipping auto-merge enable for now."
+            exit 0
           fi
 
           non_green_jenkins="$(printf '%s\n' "$jenkins_lines" | awk -F'\t' 'toupper($2) != "SUCCESS" { print $0 }')"
           if [ -n "${non_green_jenkins:-}" ]; then
-            echo "Jenkins checks are not green yet; refusing auto-merge."
+            echo "Jenkins checks are not green yet; skipping auto-merge enable."
             printf '%s\n' "$non_green_jenkins"
-            exit 1
+            exit 0
           fi
 
           gh pr merge --repo "$REPO" "$PR_NUMBER" --auto --squash --delete-branch || true

@@ -853,6 +853,27 @@ const Wallet = () => {
               symbol={currencyToSymbol(settings.currency)}
               decimals={2}
             />
+            {state.delegation && (
+              <Flex
+                data-testid="wallet-rewards-balance"
+                align="center"
+                justify="center"
+                gap={1}
+                mt={1}
+              >
+                <Text fontSize="xs" opacity={0.8}>
+                  Rewards:
+                </Text>
+                <UnitDisplay
+                  hide
+                  fontSize="sm"
+                  fontWeight="semibold"
+                  quantity={bigIntLovelace(state.delegation.rewards).toString()}
+                  decimals={6}
+                  symbol={settings.adaSymbol}
+                />
+              </Flex>
+            )}
           </Flex>
 
           {/* Receive, delegation, Send — flows under balance (no overlap). */}

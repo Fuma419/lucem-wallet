@@ -9,30 +9,15 @@
         "CODE_RAG_INDEX_PATH": "${workspaceFolder}/.cursor/rag/code-index.json"
       }
     },
-    "local-files": {
+    "jenkins": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"]
-    },
-    "git": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-git"]
-    },
-    "github": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"]
-    },
-    "fetch": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch"]
-    },
-    "puppeteer": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+      "args": ["-y", "@alexsarrell/jenkins-mcp-server"],
+      "env": {
+        "JENKINS_URL": "http://192.168.68.143:8080",
+        "JENKINS_USER": "admin",
+        "JENKINS_API_TOKEN": "${env:JENKINS_API_TOKEN}"
+      }
     }
   }
 }

@@ -9,11 +9,14 @@ alwaysApply: true
 - Concise outputs. Bullet lists over paragraphs. Omit unrequested boilerplate.
 - Targeted reads: `Grep`/`Glob` with filters, `offset`/`limit` for large files. Never `**/*`.
 - **Orientation:** `AGENTS.md` has an **Agent quick map**, Key commands (incl. `npm run test:integration`), and Preview/Preprod env table — read that before spelunking.
+- **MCP preference:** Use native tools first (Read, Write, Glob, Grep, Shell git, github-* tools, WebFetch, puppeteer-*). Only call MCP servers for capabilities native tools lack: `code-rag` for semantic BM25 search over indexed chunks; `jenkins` for build logs, job triggers, and pipeline inspection without docker exec.
 - **Iteration/Finalization**: skip local test/build runs by default and rely on CI for validation. Run targeted tests or builds only when the user requests them or a change is risky enough to warrant a local check.
-- **Commit & push (mandatory — do not wait to be asked):** If you **modified tracked project files** (code, assets, config), the task is **not finished** until you **`git commit`** (clear message; one logical change per commit unless the user asked to batch) and **`git push`** to **`origin`** ( **`main`** when that is the current branch). **Do not** stop after a green tree and expect the user to say “commit” or “push.” Exceptions: the user explicitly asked **not** to commit/push; the environment cannot authenticate to `git push` (say so after the gate); or you only answered a question with **no** repo edits. If `main` is protected and you are on a feature branch, push that branch and state that a PR is needed.
-- **Terminal / long jobs (avoid “stuck”):** Do **not** pipe `npm run build`, `node utils/build.js`, or `jest` into `tail`/`head` — the pipeline waits for the producer to finish, progress is invisible, and tool timeouts background the shell while you see no output. Run the command **directly** (or `cmd > /tmp/log.txt 2>&1` then `tail` the file). Webpack often needs **10+ minutes** on cold CI-like boxes: pass a high `block_until_ms` (e.g. 600000) or run `NODE_ENV=test npx jest` and `npm run build:webpack` **sequentially** as two calls. After a command is backgrounded, read its terminal log file instead of waiting blindly.
+- **Commit & push (mandatory — do not wait to be asked):** If you **modified tracked project files** (code, assets, config), the task is **not finished** until you **`git commit`** (clear message; one logical change per commit unless the user asked to batch) and **`git push`** to **`origin`**. **Do not** stop after a green tree and expect the user to say "commit" or "push." Exceptions: the user explicitly asked **not** to commit/push; the environment cannot authenticate to `git push` (say so); or you only answered a question with **no** repo edits.
+- **Terminal / long jobs (avoid "stuck"):** Do **not** pipe `npm run build`, `node utils/build.js`, or `jest` into `tail`/`head`. Run directly (or `cmd > /tmp/log.txt 2>&1` then `tail` the file). Webpack needs **10+ min** on cold boxes: pass high timeout or run sequentially. After a command is backgrounded, read its terminal log file.
 - One logical change per commit. Never modify `src/wasm/`.
 - All `chrome.*` calls must go through `src/platform/` adapter — never add direct chrome API in shared code.
+- **Avoid re-reading files already in context.** If you read a file earlier in this session and it hasn't changed, reference it from memory instead of re-reading.
+- **Batch parallel tool calls.** If multiple Grep/Glob/Read calls are independent, issue them in one message.
 
 # Lucem Core
 
@@ -21,4 +24,4 @@ alwaysApply: true
 - CIP-30 provider id: `lucem`. Preserve dApp connector compatibility.
 - Keys stay in extension storage or secure hardware paths. Never expose mnemonics/private keys to server or DOM.
 - Prefer existing Cardano deps in `package.json` over new overlapping libraries.
-- CSL v15 API: `Credential.from_keyhash`, `encrypt/decrypt_with_password`, `Value.new_with_assets`, `as_bytes`/`from_bytes` (not `to_raw_bytes`).
+- CSL v15 API: `Credential.from_keyhash`, `encrypt/decrypt_with_password`, `Value.new_with_assets`, `BigNum.from_str()` (not raw `BigInt`), `from_bytes`/`to_bytes` (not `to_raw_bytes`).

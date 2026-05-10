@@ -315,19 +315,20 @@ const Staking = () => {
     setSubmittedTx('');
     setTxPreview(null);
     setTxMode('delegate');
+    setSelectedPool(pool);
     try {
       if (!account || !delegation || !protocolParameters) {
         throw new Error('Staking data is still loading. Try again in a moment.');
       }
 
       const detailedPool = poolHex(pool) ? pool : await getPoolMetadata(poolId(pool));
+      setSelectedPool(detailedPool);
       const tx = await delegationTx(
         account,
         delegation,
         protocolParameters,
         poolHex(detailedPool)
       );
-      setSelectedPool(detailedPool);
       setTxPreview({
         mode: 'delegate',
         tx,
@@ -599,7 +600,14 @@ const Staking = () => {
           </Box>
 
           <Stack spacing={5}>
-            <Box rounded="3xl" bg={panelBg} borderWidth="1px" borderColor="whiteAlpha.200" p={5}>
+            <Box
+              data-testid="stake-pool-details"
+              rounded="3xl"
+              bg={panelBg}
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              p={5}
+            >
               <Text fontSize="xl" fontWeight="black">
                 Pool Details
               </Text>

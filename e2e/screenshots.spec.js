@@ -39,6 +39,181 @@ async function shot(page, name, opts = {}) {
   console.log(`Wrote ${file}`);
 }
 
+async function seedTestWallet(page, persistedRoute = '/wallet') {
+  await page.evaluate(async (routePath) => {
+    const DB_NAME = 'lucem-wallet';
+    const STORE_NAME = 'storage';
+    await new Promise((resolve) => {
+      const deleteReq = indexedDB.deleteDatabase(DB_NAME);
+      deleteReq.onsuccess = resolve;
+      deleteReq.onerror = resolve;
+      deleteReq.onblocked = resolve;
+      setTimeout(resolve, 1000);
+    });
+
+    const db = await new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    const paymentAddr = 'addr_test1qq02xt0z2e7cyd8dg05zlpclhqnpdx6eektgegdsq7nq0whmnjrwgrd2f8txn9g78zh5futgtyn4ctjekjdu9wdpkk8qcz65ed';
+    const rewardAddr = 'stake_test1uraeephypk4yn4nfj50r3t6y7959jf6u9evmfx7zhxsmtrssx6ehu';
+    const account = {
+      index: 0,
+      name: 'Test Wallet',
+      avatar: 'stake-test',
+      publicKey: '00',
+      paymentKeyHash: '1ea32de2567d8234ed43e82f871fb826169b59cd968ca1b007a607ba',
+      stakeKeyHash: 'fb9c86e40daa49d669951e38af44f16859275c2e59b49bc2b9a1b58e',
+      preview: {
+        lovelace: '100000000',
+        minAda: '0',
+        assets: [],
+        history: { confirmed: [], details: {} },
+        paymentAddr,
+        rewardAddr,
+        collateral: null,
+        recentSendToAddresses: [],
+      },
+    };
+
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      store.put({ 0: account }, 'accounts');
+      store.put(0, 'currentAccount');
+      store.put(1, 'acceptedLegalDocsVersion');
+      store.put(
+        { id: 'preview', node: 'https://preview.koios.rest/api/v1' },
+        'network'
+      );
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+
+    window.localStorage.setItem(
+      '[EasyPeasyStore][0][globalModel]',
+      JSON.stringify({
+        data: {
+          routeStore: { route: routePath },
+        },
+      })
+    );
+  }, persistedRoute);
+}
+
+async function mockSendKoios(page) {
+  await page.route('**/*', async (route) => {
+    const url = route.request().url();
+    const requestUrl = decodeURIComponent(url);
+    if (!url.includes('koios.rest') && !url.includes('/api/koios')) {
+      await route.continue();
+      return;
+    }
+
+    let body = [];
+    if (requestUrl.includes('/tip')) {
+      body = [{ abs_slot: '1000000' }];
+    } else if (requestUrl.includes('/epoch_params/latest')) {
+      body = [{
+        min_fee_a: 44,
+        min_fee_b: 155381,
+        pool_deposit: '500000000',
+        key_deposit: '2000000',
+        coins_per_utxo_size: '4310',
+        max_val_size: 5000,
+        max_tx_size: '16384',
+        collateral_percent: 150,
+        max_collateral_inputs: 3,
+      }];
+    } else if (requestUrl.includes('/account_info')) {
+      body = [{
+        active: false,
+        controlled_amount: '100000000',
+        rewards_sum: '0',
+        withdrawable_amount: '0',
+      }];
+    } else if (requestUrl.includes('/address_info')) {
+      body = [{
+        utxo_set: [{
+          tx_hash: '22'.repeat(32),
+          output_index: 0,
+          value: '100000000',
+          asset_list: [],
+        }],
+      }];
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  });
+}
+
+async function mockStakeCenterKoios(page) {
+  const pool = {
+    pool_id_bech32: 'pool1lucemtest',
+    pool_id_hex: '11'.repeat(28),
+    margin: '0.02',
+    fixed_cost: '340000000',
+    pledge: '1000000000',
+    active_stake: '5000000000',
+    live_saturation: '0.2',
+    block_count: 12,
+    meta_json: {
+      ticker: 'LUCEM',
+      name: 'Lucem Pool',
+      description: 'A test stake pool for functional coverage.',
+      homepage: 'https://example.com',
+    },
+  };
+
+  await page.route('**/*', async (route) => {
+    const url = route.request().url();
+    const requestUrl = decodeURIComponent(url);
+    if (!url.includes('koios.rest') && !url.includes('/api/koios')) {
+      await route.continue();
+      return;
+    }
+
+    let body = [];
+    if (requestUrl.includes('/tip')) {
+      body = [{ abs_slot: '1000000' }];
+    } else if (requestUrl.includes('/epoch_params/latest')) {
+      body = [{
+        min_fee_a: 44,
+        min_fee_b: 155381,
+        pool_deposit: '500000000',
+        key_deposit: '2000000',
+        coins_per_utxo_size: '4310',
+        max_val_size: 5000,
+        max_tx_size: '16384',
+        collateral_percent: 150,
+        max_collateral_inputs: 3,
+      }];
+    } else if (requestUrl.includes('/account_info')) {
+      body = [];
+    } else if (requestUrl.includes('/pool_list')) {
+      body = [{ pool_id_bech32: pool.pool_id_bech32 }];
+    } else if (requestUrl.includes('/pool_info')) {
+      body = [pool];
+    } else if (requestUrl.includes('/address_info')) {
+      body = [{ utxo_set: [] }];
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  });
+}
+
 test.beforeAll(() => {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 });
@@ -135,5 +310,61 @@ test.describe('capture static entry UIs', () => {
 
     await waitFonts(page);
     await shot(page, '06-stake-center-route');
+  });
+
+  test('07 stake center pool selection keeps details on tx failure', async ({ page }) => {
+    test.setTimeout(90_000);
+    await mockStakeCenterKoios(page);
+    await page.goto('/mainPopup.html', { waitUntil: 'domcontentloaded' });
+    await seedTestWallet(page, '/staking');
+    await page.goto('/staking', { waitUntil: 'domcontentloaded' });
+
+    await page.getByTestId('stake-center-page').waitFor({
+      state: 'visible',
+      timeout: 60_000,
+    });
+    await page.getByRole('button', { name: /LUCEM Lucem Pool/i }).click();
+
+    await page
+      .getByTestId('stake-pool-details')
+      .getByText('LUCEM', { exact: true })
+      .waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
+    await page.getByText(/No UTxOs available|Unable to prepare delegation|Staking data is still loading/i).waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
+
+    await waitFonts(page);
+    await shot(page, '07-stake-center-pool-selection-failure');
+  });
+
+  test('08 send page keeps action label when preparation fails', async ({ page }) => {
+    test.setTimeout(90_000);
+    await mockSendKoios(page);
+    await page.goto('/mainPopup.html', { waitUntil: 'domcontentloaded' });
+    await seedTestWallet(page);
+    await page.goto('/mainPopup.html', { waitUntil: 'domcontentloaded' });
+
+    await page.getByTestId('wallet-send').waitFor({
+      state: 'visible',
+      timeout: 60_000,
+    });
+    await page.getByTestId('wallet-send').click();
+    await page.getByTestId('send-page').waitFor({ state: 'visible', timeout: 30_000 });
+
+    await page.getByTestId('send-error-alert').waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
+    await page
+      .getByTestId('send-primary-action')
+      .getByText(/Review transaction/i)
+      .waitFor({ state: 'visible', timeout: 5_000 });
+
+    await waitFonts(page);
+    await shot(page, '08-send-page-preparation-error');
   });
 });

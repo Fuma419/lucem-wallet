@@ -510,7 +510,20 @@ const Staking = () => {
         </Box>
 
         {error && (
-          <Alert status="error" rounded="2xl" bg="red.900" color="white">
+          <Alert
+            status="error"
+            rounded="2xl"
+            bg="red.900"
+            color="white"
+            cursor="pointer"
+            _hover={{ opacity: 0.85 }}
+            onClick={() => {
+              navigator.clipboard.writeText(error).then(() =>
+                toast({ title: 'Error copied', status: 'info', duration: 1500 })
+              );
+            }}
+            title="Click to copy"
+          >
             <AlertIcon />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
@@ -576,7 +589,21 @@ const Staking = () => {
               />
             </InputGroup>
             {poolError && (
-              <Alert status="warning" rounded="xl" mt={3} bg="orange.900" color="white">
+              <Alert
+                status="warning"
+                rounded="xl"
+                mt={3}
+                bg="orange.900"
+                color="white"
+                cursor="pointer"
+                _hover={{ opacity: 0.85 }}
+                onClick={() => {
+                  navigator.clipboard.writeText(poolError).then(() =>
+                    toast({ title: 'Error copied', status: 'info', duration: 1500 })
+                  );
+                }}
+                title="Click to copy"
+              >
                 <AlertIcon />
                 <AlertDescription>{poolError}</AlertDescription>
               </Alert>
@@ -773,7 +800,30 @@ const Staking = () => {
             title: actionCopy[txMode].failed,
             description: description.slice(0, 180),
             status: 'error',
-            duration: 4000,
+            duration: 6000,
+            render: ({ onClose }) => (
+              <Alert
+                status="error"
+                rounded="xl"
+                bg="red.900"
+                color="white"
+                cursor="pointer"
+                _hover={{ opacity: 0.85 }}
+                onClick={() => {
+                  navigator.clipboard.writeText(description);
+                  toast({ title: 'Copied', status: 'info', duration: 1200 });
+                  onClose();
+                }}
+                title="Tap to copy"
+                p={4}
+              >
+                <AlertIcon />
+                <Box>
+                  <Text fontWeight="bold" fontSize="sm">{actionCopy[txMode].failed}</Text>
+                  <Text fontSize="xs">{description.slice(0, 180)}</Text>
+                </Box>
+              </Alert>
+            ),
           });
           confirmRef.current.closeModal();
         }}

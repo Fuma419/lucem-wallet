@@ -21,6 +21,20 @@ import {
 } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import { crc8 } from 'crc';
 
+const BLOCKFROST_BASE = {
+  mainnet: 'https://cardano-mainnet.blockfrost.io/api/v0',
+  testnet: 'https://cardano-preprod.blockfrost.io/api/v0',
+  preview: 'https://cardano-preview.blockfrost.io/api/v0',
+  preprod: 'https://cardano-preprod.blockfrost.io/api/v0',
+};
+
+const PLACEHOLDER_KEYS = new Set([
+  'dummy',
+  'your-koios-api-key-here',
+  'your-blockfrost-project-id',
+  'DUMMY_PREVIEW',
+]);
+
 function isExtensionRuntime() {
   return (
     typeof chrome !== 'undefined' &&
@@ -50,6 +64,69 @@ function getKoiosBaseUrl(networkKey) {
   return base;
 }
 
+function getEnvVar(key) {
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key] || null;
+  }
+  return null;
+}
+
+function isUsableKey(key) {
+  return typeof key === 'string' && key.trim() && !PLACEHOLDER_KEYS.has(key.trim());
+}
+
+function normalizeNetworkKey(network) {
+  const key = network?.name || network?.id || 'mainnet';
+  if (Object.prototype.hasOwnProperty.call(BLOCKFROST_BASE, key)) {
+    return key;
+  }
+  return 'mainnet';
+}
+
+function resolveKoiosApiKey(networkKey) {
+  const envKey = getEnvVar(`KOIOS_API_KEY_${networkKey.toUpperCase()}`);
+  return isUsableKey(envKey) ? envKey : null;
+}
+
+function resolveBlockfrostProjectId(networkKey) {
+  const envCandidates = [
+    `BLOCKFROST_PROJECT_ID_${networkKey.toUpperCase()}`,
+    `BLOCKFROST_${networkKey.toUpperCase()}_PROJECT_ID`,
+  ];
+  for (const key of envCandidates) {
+    const envValue = getEnvVar(key);
+    if (isUsableKey(envValue)) return envValue;
+  }
+  const providerId = provider?.api?.key?.(networkKey)?.blockfrost_project_id;
+  return isUsableKey(providerId) ? providerId : null;
+}
+
+function koiosHeaders(networkKey, headers = {}, isCbor = false) {
+  const requestHeaders = {
+    Accept: 'application/json',
+    'Content-Type': isCbor ? 'application/cbor' : 'application/json',
+    'Cache-Control': 'no-cache',
+    ...headers,
+  };
+  const apiKey = resolveKoiosApiKey(networkKey);
+  if (apiKey) {
+    requestHeaders.Authorization = `Bearer ${apiKey}`;
+  }
+  return requestHeaders;
+}
+
+function blockfrostHeaders(networkKey, headers = {}, isCbor = false) {
+  const projectId = resolveBlockfrostProjectId(networkKey);
+  if (!projectId) {
+    throw new Error(`Missing Blockfrost project_id for ${networkKey}`);
+  }
+  return {
+    project_id: projectId,
+    'Content-Type': isCbor ? 'application/cbor' : 'application/json',
+    ...headers,
+  };
+}
+
 export async function delay(delayInMs) {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -58,10 +135,8 @@ export async function delay(delayInMs) {
   });
 }
 
-export async function koiosRequest(endpoint, headers, body, signal) {
-  const network = await getNetwork();
+async function koiosRequestDirect(networkKey, endpoint, headers, body, signal) {
   let result;
-
   const MAX_RETRIES = 5;
   let retries = 0;
   while (!result || result.status_code === 500) {
@@ -72,63 +147,407 @@ export async function koiosRequest(endpoint, headers, body, signal) {
       }
       await delay(100);
     }
-    
-    const networkKey = network.name || network.id;
     const baseUrl = getKoiosBaseUrl(networkKey);
-
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log('Koios request debug:', {
-        network,
-        networkKey,
-        baseUrl,
-        endpoint,
-        fullUrl: baseUrl + endpoint,
-      });
-    }
-    
-    // Prepare headers - optionally include API key
-    const requestHeaders = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...headers,
-      'Cache-Control': 'no-cache',
-    };
-
-    // Add API key from environment variable if available
-    const getEnvVar = (key) => {
-      if (typeof process !== 'undefined' && process.env) {
-        return process.env[key];
-      }
-      return null;
-    };
-
-    const apiKey = getEnvVar(`KOIOS_API_KEY_${networkKey.toUpperCase()}`);
-    
-    if (apiKey && apiKey !== 'your-koios-api-key-here') {
-      requestHeaders['Authorization'] = `Bearer ${apiKey}`;
-    }
-    
+    const requestHeaders = koiosHeaders(networkKey, headers, false);
     const fullUrl = baseUrl + endpoint;
-    
+
     const rawResult = await fetch(fullUrl, {
       headers: requestHeaders,
       method: body ? 'POST' : 'GET',
       body: body ? JSON.stringify(body) : undefined,
       signal,
     });
-    
+
     if (!rawResult.ok) {
       const errorText = await rawResult.text();
-      console.error(`Koios API error: ${rawResult.status} ${rawResult.statusText}`);
-      console.error(`Response: ${errorText}`);
-      throw new Error(`Koios API error: ${rawResult.status} ${rawResult.statusText}`);
+      throw new Error(
+        `Koios API error: ${rawResult.status} ${rawResult.statusText} ${errorText.slice(0, 500)}`
+      );
     }
-    
+
     result = await rawResult.json();
   }
 
   return result;
+}
+
+async function fetchBlockfrostJson(networkKey, path, signal) {
+  const baseUrl = BLOCKFROST_BASE[networkKey] || BLOCKFROST_BASE.mainnet;
+  const result = await fetch(`${baseUrl}${path}`, {
+    method: 'GET',
+    headers: blockfrostHeaders(networkKey),
+    signal,
+  });
+  const text = await result.text();
+  if (!result.ok) {
+    throw new Error(`Blockfrost ${result.status} ${result.statusText}: ${text.slice(0, 500)}`);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+async function fetchBlockfrostAddressUtxos(networkKey, address, signal) {
+  const pageSize = 100;
+  let page = 1;
+  const rows = [];
+  while (page <= 50) {
+    const payload = await fetchBlockfrostJson(
+      networkKey,
+      `/addresses/${address}/utxos?order=asc&count=${pageSize}&page=${page}`,
+      signal
+    );
+    if (!Array.isArray(payload) || payload.length === 0) break;
+    rows.push(...payload);
+    if (payload.length < pageSize) break;
+    page += 1;
+  }
+  return rows;
+}
+
+function blockfrostUtxoToKoios(utxo) {
+  const amount = Array.isArray(utxo.amount) ? utxo.amount : [];
+  const lovelace = amount.find((asset) => asset.unit === 'lovelace');
+  const assetList = amount
+    .filter((asset) => asset.unit !== 'lovelace')
+    .map((asset) => ({
+      policy_id: asset.unit.slice(0, 56),
+      asset_name: asset.unit.slice(56),
+      quantity: asset.quantity || '0',
+    }));
+
+  return {
+    tx_hash: utxo.tx_hash,
+    tx_index: utxo.output_index,
+    output_index: utxo.output_index,
+    value: lovelace?.quantity || '0',
+    asset_list: assetList,
+  };
+}
+
+function toKoiosEpochParams(raw) {
+  return {
+    min_fee_a: raw.min_fee_a,
+    min_fee_b: raw.min_fee_b,
+    max_tx_size: raw.max_tx_size,
+    max_val_size: raw.max_val_size,
+    key_deposit: raw.key_deposit,
+    pool_deposit: raw.pool_deposit,
+    price_mem: raw.price_mem,
+    price_step: raw.price_step,
+    max_collateral_inputs: raw.max_collateral_inputs,
+    collateral_percent: raw.collateral_percent,
+    coins_per_utxo_size: raw.coins_per_utxo_size || raw.coins_per_utxo_word,
+    min_fee_ref_script_cost_per_byte: raw.min_fee_ref_script_cost_per_byte || 0,
+  };
+}
+
+function amountListToKoiosValueAndAssets(amountList = []) {
+  const lovelace = amountList.find((asset) => asset.unit === 'lovelace');
+  const value = String(lovelace?.quantity || '0');
+  const asset_list = amountList
+    .filter((asset) => asset.unit !== 'lovelace')
+    .map((asset) => ({
+      policy_id: asset.unit.slice(0, 56),
+      asset_name: asset.unit.slice(56),
+      quantity: String(asset.quantity || '0'),
+    }));
+  return { value, asset_list };
+}
+
+function blockfrostTxToKoiosTxInfo(txHash, txPayload) {
+  const parsedDeposit = Number.parseInt(String(txPayload?.deposit || '0'), 10);
+  return {
+    tx_hash: txHash,
+    block_height: txPayload?.block_height ?? null,
+    tx_timestamp: txPayload?.block_time ?? null,
+    tx_block_index: txPayload?.index ?? txPayload?.tx_index ?? null,
+    tx_size: txPayload?.size ?? null,
+    total_output: txPayload?.output_amount?.find((a) => a.unit === 'lovelace')?.quantity || '0',
+    fee: txPayload?.fees || '0',
+    deposit: Number.isFinite(parsedDeposit) ? String(parsedDeposit) : '0',
+    invalid_before: txPayload?.valid_contract === false ? null : null,
+    invalid_after: txPayload?.invalid_hereafter ?? null,
+    collateral_inputs: [],
+    collateral_output: null,
+    reference_inputs: [],
+    inputs: [],
+    outputs: [],
+    withdrawals: [],
+    assets_minted: [],
+    metadata: null,
+    certificates: [],
+    native_scripts: [],
+    plutus_contracts: [],
+    voting_procedures: [],
+    proposal_procedures: [],
+  };
+}
+
+async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, signal) {
+  if (endpoint === '/tip') {
+    const latestBlock = await fetchBlockfrostJson(networkKey, '/blocks/latest', signal);
+    return [
+      {
+        abs_slot: latestBlock?.slot,
+        block_height: latestBlock?.height,
+        hash: latestBlock?.hash,
+      },
+    ];
+  }
+
+  if (endpoint === '/epoch_params/latest' || endpoint === '/epoch_params') {
+    const params = await fetchBlockfrostJson(networkKey, '/epochs/latest/parameters', signal);
+    return [toKoiosEpochParams(params)];
+  }
+
+  if (endpoint === '/address_info' && body && Array.isArray(body._addresses)) {
+    const rows = [];
+    for (const address of body._addresses) {
+      const utxos = await fetchBlockfrostAddressUtxos(networkKey, address, signal);
+      const utxoSet = utxos.map(blockfrostUtxoToKoios);
+      const totalLovelace = utxoSet.reduce(
+        (sum, utxo) => sum + BigInt(utxo.value || '0'),
+        0n
+      );
+      rows.push({
+        address,
+        balance: totalLovelace.toString(),
+        utxo_set: utxoSet,
+      });
+    }
+    return rows;
+  }
+
+  if (endpoint === '/account_info' && body && Array.isArray(body._stake_addresses)) {
+    const rows = [];
+    for (const stakeAddress of body._stake_addresses) {
+      try {
+        const account = await fetchBlockfrostJson(
+          networkKey,
+          `/accounts/${stakeAddress}`,
+          signal
+        );
+        rows.push({
+          stake_address: stakeAddress,
+          registered: true,
+          active: account.active,
+          pool_id: account.pool_id || null,
+          withdrawable_amount: account.withdrawable_amount || '0',
+          controlled_amount: account.controlled_amount || '0',
+          status: 'registered',
+        });
+      } catch (error) {
+        if (error.message.includes('404')) {
+          rows.push({
+            stake_address: stakeAddress,
+            registered: false,
+            active: false,
+            pool_id: null,
+            withdrawable_amount: '0',
+            controlled_amount: '0',
+            status: 'unregistered',
+          });
+          continue;
+        }
+        throw error;
+      }
+    }
+    return rows;
+  }
+
+  if (endpoint === '/address_txs' && body && Array.isArray(body._addresses)) {
+    const txs = [];
+    for (const address of body._addresses) {
+      const history = await fetchBlockfrostJson(
+        networkKey,
+        `/addresses/${address}/transactions?order=desc&count=100&page=1`,
+        signal
+      );
+      if (Array.isArray(history)) {
+        txs.push(...history.map((item) => ({ tx_hash: item.tx_hash })));
+      }
+    }
+    return txs;
+  }
+
+  if (endpoint === '/tx_status' && body && Array.isArray(body._tx_hashes)) {
+    const rows = [];
+    for (const txHash of body._tx_hashes) {
+      try {
+        const tx = await fetchBlockfrostJson(networkKey, `/txs/${txHash}`, signal);
+        rows.push({
+          tx_hash: txHash,
+          tx_index: tx.tx_index,
+          block_height: tx.block_height,
+          num_confirmations: tx.confirmations,
+        });
+      } catch (error) {
+        if (!error.message.includes('404')) throw error;
+      }
+    }
+    return rows;
+  }
+
+  if (endpoint === '/tx_info' && body && Array.isArray(body._tx_hashes)) {
+    const rows = [];
+    for (const txHash of body._tx_hashes) {
+      const txPayload = await fetchBlockfrostJson(networkKey, `/txs/${txHash}`, signal);
+      rows.push(blockfrostTxToKoiosTxInfo(txHash, txPayload));
+    }
+    return rows;
+  }
+
+  if (endpoint === '/tx_utxos' && body && Array.isArray(body._tx_hashes)) {
+    const rows = [];
+    for (const txHash of body._tx_hashes) {
+      const txUtxos = await fetchBlockfrostJson(networkKey, `/txs/${txHash}/utxos`, signal);
+      const inputs = Array.isArray(txUtxos?.inputs)
+        ? txUtxos.inputs.map((input) => {
+            const mapped = amountListToKoiosValueAndAssets(input.amount || []);
+            return {
+              tx_hash: input.tx_hash,
+              tx_index: input.output_index,
+              address: input.address,
+              value: mapped.value,
+              asset_list: mapped.asset_list,
+            };
+          })
+        : [];
+      const outputs = Array.isArray(txUtxos?.outputs)
+        ? txUtxos.outputs.map((output) => {
+            const mapped = amountListToKoiosValueAndAssets(output.amount || []);
+            return {
+              tx_hash: txHash,
+              tx_index: output.output_index,
+              address: output.address,
+              value: mapped.value,
+              asset_list: mapped.asset_list,
+            };
+          })
+        : [];
+      rows.push({ tx_hash: txHash, inputs, outputs });
+    }
+    return rows;
+  }
+
+  if (endpoint === '/tx_metadata' && body && Array.isArray(body._tx_hashes)) {
+    const rows = [];
+    for (const txHash of body._tx_hashes) {
+      const metadata = await fetchBlockfrostJson(networkKey, `/txs/${txHash}/metadata`, signal);
+      rows.push({ tx_hash: txHash, metadata: Array.isArray(metadata) ? metadata : [] });
+    }
+    return rows;
+  }
+
+  if (endpoint === '/block_info' && body && Array.isArray(body._block_hashes)) {
+    const rows = [];
+    for (const blockHash of body._block_hashes) {
+      const block = await fetchBlockfrostJson(networkKey, `/blocks/${blockHash}`, signal);
+      rows.push({
+        hash: block.hash,
+        block_height: block.height,
+        epoch_no: block.epoch,
+        epoch_slot: block.epoch_slot,
+        absolute_slot: block.slot,
+        block_time: block.time,
+      });
+    }
+    return rows;
+  }
+
+  if (endpoint.startsWith('/blocks?')) {
+    const query = endpoint.slice('/blocks?'.length);
+    const queryParams = new URLSearchParams(query);
+    const blockHeightParam = queryParams.get('block_height') || '';
+    const blockHeight = blockHeightParam.startsWith('eq.')
+      ? Number.parseInt(blockHeightParam.slice(3), 10)
+      : Number.parseInt(blockHeightParam, 10);
+    if (!Number.isFinite(blockHeight)) {
+      return [];
+    }
+    const block = await fetchBlockfrostJson(networkKey, `/blocks/${blockHeight}`, signal);
+    return [
+      {
+        hash: block.hash,
+        block_height: block.height,
+        epoch_no: block.epoch,
+        epoch_slot: block.epoch_slot,
+        absolute_slot: block.slot,
+        block_time: block.time,
+      },
+    ];
+  }
+
+  if (endpoint.startsWith('/account_txs')) {
+    const queryIndex = endpoint.indexOf('?');
+    const query = queryIndex >= 0 ? endpoint.slice(queryIndex + 1) : '';
+    const queryParams = new URLSearchParams(query);
+    const stakeAddress = queryParams.get('_stake_address');
+    const afterBlockHeight = Number.parseInt(
+      queryParams.get('_after_block_height') || '0',
+      10
+    );
+    const limit = Math.max(
+      1,
+      Math.min(Number.parseInt(queryParams.get('_limit') || '100', 10), 100)
+    );
+    if (!stakeAddress) {
+      return [];
+    }
+
+    const history = await fetchBlockfrostJson(
+      networkKey,
+      `/accounts/${stakeAddress}/history?order=desc&count=${limit}&page=1`,
+      signal
+    );
+    if (!Array.isArray(history)) {
+      return [];
+    }
+    return history
+      .filter((row) => {
+        const h = Number.parseInt(String(row?.block_height || '0'), 10);
+        return Number.isFinite(h) && h >= afterBlockHeight;
+      })
+      .map((row) => ({
+        tx_hash: row.tx_hash,
+        block_height: row.block_height,
+      }));
+  }
+
+  return undefined;
+}
+
+export async function koiosRequest(endpoint, headers, body, signal) {
+  const network = await getNetwork();
+  const networkKey = normalizeNetworkKey(network);
+  const blockfrostProjectId = resolveBlockfrostProjectId(networkKey);
+  let blockfrostError = null;
+
+  if (blockfrostProjectId) {
+    try {
+      const blockfrostResult = await blockfrostKoiosCompatibleRequest(
+        networkKey,
+        endpoint,
+        body,
+        signal
+      );
+      if (blockfrostResult !== undefined) {
+        return blockfrostResult;
+      }
+    } catch (error) {
+      blockfrostError = error;
+    }
+  }
+
+  try {
+    return await koiosRequestDirect(networkKey, endpoint, headers, body, signal);
+  } catch (koiosError) {
+    if (blockfrostError) {
+      throw new Error(
+        `Blockfrost failed then Koios failed: ${blockfrostError.message} | ${koiosError.message}`
+      );
+    }
+    throw koiosError;
+  }
 }
 
 /**
@@ -139,26 +558,35 @@ export async function koiosRequest(endpoint, headers, body, signal) {
  */
 export async function koiosSubmitTransaction(txHex, signal) {
   const network = await getNetwork();
-  const networkKey = network.name || network.id;
+  const networkKey = normalizeNetworkKey(network);
+  const blockfrostProjectId = resolveBlockfrostProjectId(networkKey);
+
+  if (blockfrostProjectId) {
+    try {
+      const blockfrostUrl = `${BLOCKFROST_BASE[networkKey] || BLOCKFROST_BASE.mainnet}/tx/submit`;
+      const blockfrostResult = await fetch(blockfrostUrl, {
+        method: 'POST',
+        headers: blockfrostHeaders(networkKey, {}, true),
+        body: Buffer.from(txHex, 'hex'),
+        signal,
+      });
+      const text = await blockfrostResult.text();
+      if (blockfrostResult.ok) {
+        return text.trim().replace(/^"+|"+$/g, '');
+      }
+      throw new Error(
+        `Blockfrost API error: ${blockfrostResult.status} ${blockfrostResult.statusText} ${text.slice(0, 500)}`
+      );
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Blockfrost submit failed, falling back to Koios:', error);
+      }
+    }
+  }
+
   const baseUrl = getKoiosBaseUrl(networkKey);
   const fullUrl = `${baseUrl}/submittx`;
-
-  const getEnvVar = (key) => {
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env[key];
-    }
-    return null;
-  };
-
-  const apiKey = getEnvVar(`KOIOS_API_KEY_${networkKey.toUpperCase()}`);
-  const requestHeaders = {
-    Accept: 'application/json',
-    'Content-Type': 'application/cbor',
-    'Cache-Control': 'no-cache',
-  };
-  if (apiKey && apiKey !== 'your-koios-api-key-here') {
-    requestHeaders.Authorization = `Bearer ${apiKey}`;
-  }
+  const requestHeaders = koiosHeaders(networkKey, {}, true);
 
   const rawResult = await fetch(fullUrl, {
     method: 'POST',
@@ -194,30 +622,9 @@ export async function koiosSubmitTransaction(txHex, signal) {
   }
 }
 
-// Update blockfrostRequest to use Koios (for backward compatibility)
+// Backward compatibility helper for callers that still use blockfrostRequest.
 export async function blockfrostRequest(endpoint, headers, body, signal) {
-  // Map Blockfrost endpoints to Koios equivalents
-  const endpointMapping = {
-    '/addresses/{address}/transactions': '/addresses/{address}/txs',
-    '/addresses/{address}/utxos': '/addresses/{address}/utxos',
-    '/accounts/{stake_address}': '/accounts/{stake_address}',
-    '/txs/{tx_hash}': '/tx_info',
-    '/txs/{tx_hash}/utxos': '/tx_utxos',
-    '/txs/{tx_hash}/metadata': '/tx_metadata',
-    '/assets/{asset}': '/assets/{asset}',
-    '/pools/{pool_id}/metadata': '/pools/{pool_id}/metadata',
-  };
-
-  // Convert Blockfrost endpoint to Koios endpoint
-  let koiosEndpoint = endpoint;
-  for (const [blockfrost, koios] of Object.entries(endpointMapping)) {
-    if (endpoint.includes(blockfrost.replace('{', '').replace('}', ''))) {
-      koiosEndpoint = koios;
-      break;
-    }
-  }
-
-  return koiosRequest(koiosEndpoint, headers, body, signal);
+  return koiosRequest(endpoint, headers, body, signal);
 }
 
 /**

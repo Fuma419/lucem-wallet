@@ -13,6 +13,7 @@ import {
   indexToHw,
   isHW,
   isValidAddress,
+  prependTxHash,
   toUnit,
   updateRecentSentToAddress,
 } from '../../../api/extension';
@@ -1146,12 +1147,15 @@ const Send = () => {
               variant: 'success',
               isClosable: true,
               containerStyle: {
-                background: 'cyan.300', // Custom background color
-                color: 'black', // Text color
+                background: 'cyan.300',
+                color: 'black',
                 borderRadius: 'lg',
                 padding: '.5rem',
               },
             });
+            if (typeof signedTx === 'string' && /^[a-f0-9]{64}$/i.test(signedTx)) {
+              await prependTxHash(signedTx);
+            }
             if (await isValidAddress(address.result))
               await updateRecentSentToAddress(address.result);
           } else if (signedTx === ERROR.fullMempool) {
@@ -1224,7 +1228,7 @@ const Send = () => {
           }
           ref.current.closeModal();
           setTimeout(() => {
-            navigate('/wallet', { replace: true });
+            navigate('/wallet', { replace: true, state: status === true ? { postTx: true } : undefined });
           }, 200);
         }}
       />

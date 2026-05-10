@@ -508,14 +508,53 @@ async function buildSignSubmitAccountTransfer(opts) {
   throw new Error('Could not submit transaction after refreshing UTxOs.');
 }
 
+/**
+ * Poll Koios /account_txs (via stake address) until txHash appears.
+ * Validates that the history endpoint returns the submitted tx.
+ */
+async function waitForTxInAccountHistory(opts) {
+  const {
+    baseUrl,
+    apiKey,
+    mnemonic,
+    txHash,
+    maxAttempts = 30,
+    delayMs = 2000,
+  } = opts;
+  const h = normalizeSubmitTxHash(txHash).toLowerCase();
+  const { stakeKey } = deriveAccountAddress(mnemonic.trim(), 0);
+  const rewardAddr = Cardano.RewardAddress.new(
+    0,
+    Cardano.Credential.from_keyhash(stakeKey.to_public().hash())
+  ).to_address().to_bech32();
+
+  for (let i = 0; i < maxAttempts; i += 1) {
+    const rows = await koiosGet(
+      baseUrl,
+      `/account_txs?_stake_address=${rewardAddr}&_after_block_height=0`,
+      apiKey
+    );
+    if (Array.isArray(rows)) {
+      const match = rows.find(
+        (r) => (r.tx_hash || '').toLowerCase() === h
+      );
+      if (match) return match;
+    }
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  throw new Error(
+    `Tx ${h} not visible in Koios /account_txs after ${maxAttempts} attempts`
+  );
+}
+
 module.exports = {
   PROVIDER,
   buildSignSubmitAccountTransfer,
-  // Backward-compatible alias for older test imports.
   buildSignSubmitSelfTransfer: buildSignSubmitAccountTransfer,
   deriveAccountAddress,
   deriveAccount0Address,
   fetchProtocolParams,
   normalizeSubmitTxHash,
   waitForTxStatus,
+  waitForTxInAccountHistory,
 };

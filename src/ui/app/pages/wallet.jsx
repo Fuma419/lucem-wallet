@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   createAccount,
   createTab,
@@ -144,6 +144,7 @@ const useIsMounted = () => {
 const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
+  const location = useLocation();
   const settings = useStoreState((state) => state.settings.settings);
   const setSettings = useStoreActions((actions) => actions.settings.setSettings);
 
@@ -361,6 +362,9 @@ const Wallet = () => {
     let accountChangeHandler;
     getData().then(() => {
       if (!isMounted.current) return;
+      if (location.state?.postTx) {
+        schedulePostTxRefresh(15000);
+      }
       accountChangeHandler = onAccountChange(() => getData({ skipUpdate: true }));
     }).catch((e) => {
       setIsFetching(false);

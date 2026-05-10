@@ -115,13 +115,10 @@ export const buildTx = async (
       slot: await fetchKoiosTipSlot(koiosRequestEnhanced),
     };
 
-    const requiredVkeyHashesHex = [
-      account.paymentKeyHash,
-      account.stakeKeyHash,
-    ].filter(Boolean);
+    const requiredVkeyHashesHex = [account.paymentKeyHash].filter(Boolean);
     if (requiredVkeyHashesHex.length === 0) {
       throw new Error(
-        'Account missing payment/stake key hashes for fee estimation'
+        'Account missing payment key hash for fee estimation'
       );
     }
 

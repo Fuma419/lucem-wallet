@@ -46,5 +46,31 @@ jobs:
             exit 1
           fi
 
+          # Do not arm auto-merge unless a Jenkins check is present and green.
+          jenkins_lines="$(gh pr view --repo "$REPO" "$pr_number" --json statusCheckRollup --jq '
+            .statusCheckRollup[]
+            | (
+                if has("context") then
+                  { name: .context, state: .state }
+                else
+                  { name: .name, state: (.conclusion // "PENDING") }
+                end
+              )
+            | select((.name | test("jenkins"; "i")) and (.name | test("^Ping Jenkins indexer$") | not))
+            | "\(.name)\t\(.state)"
+          ')"
+
+          if [ -z "${jenkins_lines:-}" ]; then
+            echo "No Jenkins check/status found on PR #$pr_number. Refusing to enable auto-merge."
+            exit 1
+          fi
+
+          non_green_jenkins="$(printf '%s\n' "$jenkins_lines" | awk -F'\t' 'toupper($2) != "SUCCESS" { print $0 }')"
+          if [ -n "${non_green_jenkins:-}" ]; then
+            echo "Jenkins checks are not green yet; refusing auto-merge."
+            printf '%s\n' "$non_green_jenkins"
+            exit 1
+          fi
+
           # Auto-merge waits for required checks and branch protection rules.
           gh pr merge --repo "$REPO" "$pr_number" --auto --squash --delete-branch || true

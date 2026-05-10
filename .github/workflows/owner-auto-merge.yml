@@ -27,4 +27,29 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
+          jenkins_lines="$(gh pr view --repo "$REPO" "$PR_NUMBER" --json statusCheckRollup --jq '
+            .statusCheckRollup[]
+            | (
+                if has("context") then
+                  { name: .context, state: .state }
+                else
+                  { name: .name, state: (.conclusion // "PENDING") }
+                end
+              )
+            | select((.name | test("jenkins"; "i")) and (.name | test("^Ping Jenkins indexer$") | not))
+            | "\(.name)\t\(.state)"
+          ')"
+
+          if [ -z "${jenkins_lines:-}" ]; then
+            echo "No Jenkins check/status found on PR #$PR_NUMBER. Refusing to enable auto-merge."
+            exit 1
+          fi
+
+          non_green_jenkins="$(printf '%s\n' "$jenkins_lines" | awk -F'\t' 'toupper($2) != "SUCCESS" { print $0 }')"
+          if [ -n "${non_green_jenkins:-}" ]; then
+            echo "Jenkins checks are not green yet; refusing auto-merge."
+            printf '%s\n' "$non_green_jenkins"
+            exit 1
+          fi
+
           gh pr merge --repo "$REPO" "$PR_NUMBER" --auto --squash --delete-branch || true

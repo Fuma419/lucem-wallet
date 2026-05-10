@@ -12,7 +12,6 @@ import {
   InputGroup,
   InputRightElement,
   Icon,
-  Select,
   useToast,
   Flex,
   Modal,
@@ -34,7 +33,6 @@ import {
   ChevronRightIcon,
   SmallCloseIcon,
   RepeatIcon,
-  CheckIcon,
 } from '@chakra-ui/icons';
 import React from 'react';
 import platform from '../../../platform';
@@ -51,9 +49,8 @@ import {
   setAccountName,
   setStorage,
 } from '../../../api/extension';
-import Account from '../components/account';
 import { Route, Routes, useNavigate } from 'react-router-dom';
-import { NETWORK_ID, NODE, STORAGE } from '../../../config/config';
+import { STORAGE } from '../../../config/config';
 import { useStoreState, useStoreActions } from 'easy-peasy';
 import { MdModeEdit } from 'react-icons/md';
 import AvatarLoader from '../components/avatarLoader';
@@ -150,7 +147,7 @@ function SettingsPageTitle({ children }) {
 
 const Settings = () => {
   const navigate = useNavigate();
-  const accountRef = React.useRef();
+  const accountRef = React.useRef(null);
   return (
     <>
       <Box
@@ -164,25 +161,28 @@ const Settings = () => {
         maxW="100%"
         className="lucem-settings-shell lucem-wallet-main-column"
       >
-        <Account
-          ref={accountRef}
-          leadingSlot={
-            <IconButton
-              rounded="md"
-              onClick={async () => {
-                const hasWallet = await hasStoredAccounts();
-                if (hasWallet) {
-                  navigate('/wallet', { replace: true });
-                } else {
-                  navigate('/welcome', { replace: true });
-                }
-              }}
-              variant="ghost"
-              icon={<ChevronLeftIcon boxSize="6" />}
-              aria-label="Go back"
-            />
-          }
-        />
+        <Flex align="center" px={{ base: 3, md: 4 }} pt={4} pb={2}>
+          <IconButton
+            rounded="md"
+            onClick={async () => {
+              const hasWallet = await hasStoredAccounts();
+              if (hasWallet) {
+                navigate('/wallet', { replace: true });
+              } else {
+                navigate('/welcome', { replace: true });
+              }
+            }}
+            variant="ghost"
+            color="whiteAlpha.900"
+            _hover={{ bg: 'whiteAlpha.100' }}
+            icon={<ChevronLeftIcon boxSize="6" />}
+            aria-label="Go back"
+          />
+          <Text flex="1" textAlign="center" fontSize="xl" fontWeight="bold">
+            Settings
+          </Text>
+          <Box w="40px" />
+        </Flex>
 
         <Box
           flex="1"
@@ -199,7 +199,6 @@ const Settings = () => {
               element={<GeneralSettings accountRef={accountRef} />}
             />
             <Route path="whitelisted" element={<Whitelisted />} />
-            <Route path="network" element={<Network />} />
             <Route path="legal" element={<LegalSettings />} />
           </Routes>
         </Box>
@@ -221,10 +220,6 @@ const Overview = () => {
         <SettingsListNavItem
           label="Whitelisted sites"
           onClick={() => navigate('whitelisted')}
-        />
-        <SettingsListNavItem
-          label="Network"
-          onClick={() => navigate('network')}
         />
         <SettingsListNavItem
           label="Legal"
@@ -267,7 +262,7 @@ const GeneralSettings = ({ accountRef }) => {
   const nameHandler = async () => {
     await setAccountName(account.name);
     setOriginalName(account.name);
-    accountRef.current.updateAccount();
+    accountRef.current?.updateAccount?.();
   };
 
   const avatarHandler = async () => {
@@ -275,7 +270,7 @@ const GeneralSettings = ({ accountRef }) => {
     account.avatar = avatar;
     await setAccountAvatar(account.avatar);
     setAccount({ ...account });
-    accountRef.current.updateAccount();
+    accountRef.current?.updateAccount?.();
   };
 
   const refreshHandler = async () => {
@@ -629,122 +624,5 @@ const Whitelisted = () => {
   );
 };
 
-const Network = () => {
-  const settings = useStoreState((state) => state.settings.settings);
-  const setSettings = useStoreActions(
-    (actions) => actions.settings.setSettings
-  );
-  const { inputProps: settingsInputProps } = useGeneralSettingsChrome();
-  const selectBg = useColorModeValue('white', 'gray.900');
-  const selectBorder = useColorModeValue('gray.300', 'whiteAlpha.300');
-  const selectFg = useColorModeValue('gray.900', 'white');
-  const labelColor = useColorModeValue('gray.800', 'white');
-
-  const endpointHandler = () => {
-    setSettings({
-      ...settings,
-      network: {
-        ...settings.network,
-        [settings.network.id + 'Submit']: value,
-      },
-    });
-    setApplied(true);
-    setTimeout(() => setApplied(false), 600);
-  };
-
-  const [value, setValue] = React.useState(
-    settings.network[settings.network.id + 'Submit'] || ''
-  );
-  const [isEnabled, setIsEnabled] = React.useState(
-    settings.network[settings.network.id + 'Submit']
-  );
-
-  const [applied, setApplied] = React.useState(false);
-
-  React.useEffect(() => {
-    setValue(settings.network[settings.network.id + 'Submit'] || '');
-    setIsEnabled(Boolean(settings.network[settings.network.id + 'Submit']));
-  }, [settings]);
-
-  return (
-    <Box w="full" maxW="sm" mx="auto" pt={1}>
-      <SettingsPageTitle>Network</SettingsPageTitle>
-      <Select
-        w="full"
-        rounded="xl"
-        bg={selectBg}
-        borderColor={selectBorder}
-        color={selectFg}
-        mb={6}
-        defaultValue={settings.network.id}
-        onChange={(e) => {
-          const id = e.target.value;
-          setSettings({
-            ...settings,
-            network: {
-              ...settings.network,
-              id: NETWORK_ID[id],
-              node: NODE[id],
-            },
-          });
-        }}
-      >
-        <option value={NETWORK_ID.mainnet}>Mainnet</option>
-        <option value={NETWORK_ID.preprod}>Preprod</option>
-        <option value={NETWORK_ID.preview}>Preview</option>
-      </Select>
-      <Flex align="center" gap={3} mb={4}>
-        <Checkbox
-          isChecked={isEnabled}
-          onChange={(e) => {
-            if (!e.target.checked) {
-              setSettings({
-                ...settings,
-                network: {
-                  ...settings.network,
-                  [settings.network.id + 'Submit']: null,
-                },
-              });
-              setValue('');
-            }
-            setIsEnabled(e.target.checked);
-          }}
-          size="md"
-        />
-        <Text color={labelColor} fontWeight="medium">
-          Custom node
-        </Text>
-      </Flex>
-      <InputGroup size="md" w="full">
-        <Input
-          isDisabled={!isEnabled}
-          fontSize="sm"
-          rounded="xl"
-          {...settingsInputProps}
-          value={value}
-          placeholder="http://localhost:8090/api/submit/tx"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && value.length > 0) {
-              endpointHandler();
-            }
-          }}
-          onChange={(e) => setValue(e.target.value)}
-          pr="4.5rem"
-        />
-        <InputRightElement width="4.5rem" h="full">
-          <Button
-            isDisabled={applied || !isEnabled || value.length <= 0}
-            h="1.75rem"
-            size="sm"
-            rounded="md"
-            onClick={endpointHandler}
-          >
-            {applied ? <CheckIcon color={'yellow.400'} /> : 'Apply'}
-          </Button>
-        </InputRightElement>
-      </InputGroup>
-    </Box>
-  );
-};
 
 export default Settings;

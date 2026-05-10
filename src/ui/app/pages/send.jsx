@@ -16,7 +16,6 @@ import {
   toUnit,
   updateRecentSentToAddress,
 } from '../../../api/extension';
-import Account from '../components/account';
 import { Scrollbars } from '../components/scrollbar';
 import ConfirmModal from '../components/confirmModal';
 import {
@@ -626,7 +625,6 @@ const Send = () => {
           </Box>
         ) : (
           <>
-            <Account />
             <Flex
               align="center"
               w="full"

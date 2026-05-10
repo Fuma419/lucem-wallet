@@ -115,6 +115,9 @@ pipeline {
   stages {
     stage('Bootstrap Node 20') {
       steps {
+        script {
+          publishPendingGithubStatuses()
+        }
         sh '''
           set -e
           if [ ! -x "${NODE20_DIR}/bin/node" ]; then
@@ -127,14 +130,23 @@ pipeline {
           npm -v
         '''
       }
+      post {
+        failure {
+          script {
+            publishGithubStatus('Build', 'failure', 'Bootstrap failed before build in Jenkins')
+          }
+        }
+        aborted {
+          script {
+            publishGithubStatus('Build', 'error', 'Bootstrap was aborted before build in Jenkins')
+          }
+        }
+      }
     }
 
     stage('Install') {
       steps {
         checkout scm
-        script {
-          publishPendingGithubStatuses()
-        }
         sh '''
           set -e
           export PATH="${NODE20_DIR}/bin:${PATH}"
@@ -142,6 +154,18 @@ pipeline {
           npm -v
           npm ci
         '''
+      }
+      post {
+        failure {
+          script {
+            publishGithubStatus('Build', 'failure', 'Install failed before build in Jenkins')
+          }
+        }
+        aborted {
+          script {
+            publishGithubStatus('Build', 'error', 'Install was aborted before build in Jenkins')
+          }
+        }
       }
     }
 

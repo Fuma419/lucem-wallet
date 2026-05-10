@@ -494,15 +494,15 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
       return [];
     }
 
-    const history = await fetchBlockfrostJson(
+    const txs = await fetchBlockfrostJson(
       networkKey,
-      `/accounts/${stakeAddress}/history?order=desc&count=${limit}&page=1`,
+      `/accounts/${stakeAddress}/addresses/transactions?order=desc&count=${limit}&page=1`,
       signal
     );
-    if (!Array.isArray(history)) {
+    if (!Array.isArray(txs)) {
       return [];
     }
-    return history
+    return txs
       .filter((row) => {
         const h = Number.parseInt(String(row?.block_height || '0'), 10);
         return Number.isFinite(h) && h >= afterBlockHeight;
@@ -511,6 +511,71 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
         tx_hash: row.tx_hash,
         block_height: row.block_height,
       }));
+  }
+
+  // --- /address_utxos: wallet balance + UTxO fetching ---
+  if (endpoint === '/address_utxos' && body && Array.isArray(body._addresses)) {
+    const rows = [];
+    for (const address of body._addresses) {
+      const utxos = await fetchBlockfrostAddressUtxos(networkKey, address, signal);
+      rows.push(...utxos.map((utxo) => ({
+        ...blockfrostUtxoToKoios(utxo),
+        address,
+        stake_addr: utxo.stake_address || null,
+        datum_hash: utxo.data_hash || null,
+        inline_datum: utxo.inline_datum ? { value: utxo.inline_datum } : null,
+        reference_script: utxo.reference_script_hash ? { hash: utxo.reference_script_hash } : null,
+      })));
+    }
+    return rows;
+  }
+
+  // --- /pool_info: delegation pool details ---
+  if (endpoint === '/pool_info' && body && Array.isArray(body._pool_bech32_ids)) {
+    const rows = [];
+    for (const poolId of body._pool_bech32_ids) {
+      try {
+        const pool = await fetchBlockfrostJson(networkKey, `/pools/${poolId}`, signal);
+        const meta = await fetchBlockfrostJson(networkKey, `/pools/${poolId}/metadata`, signal).catch(() => null);
+        rows.push({
+          pool_id_bech32: poolId,
+          pool_id_hex: pool.hex || '',
+          active_stake: String(pool.active_stake || '0'),
+          live_saturation: String(pool.live_saturation || '0'),
+          live_stake: String(pool.live_stake || '0'),
+          fixed_cost: String(pool.fixed_cost || '0'),
+          margin: String(pool.margin_cost ?? pool.margin ?? '0'),
+          pledge: String(pool.declared_pledge || pool.pledge || '0'),
+          block_count: pool.blocks_minted || 0,
+          pool_status: pool.retirement?.length ? 'retiring' : 'registered',
+          meta_json: meta ? {
+            ticker: meta.ticker || '',
+            name: meta.name || '',
+            description: meta.description || '',
+            homepage: meta.homepage || '',
+          } : null,
+        });
+      } catch (error) {
+        if (!error.message.includes('404')) throw error;
+      }
+    }
+    return rows;
+  }
+
+  // --- /pool_list: pool search/listing ---
+  if (endpoint.startsWith('/pool_list')) {
+    const queryIndex = endpoint.indexOf('?');
+    const query = queryIndex >= 0 ? endpoint.slice(queryIndex + 1) : '';
+    const queryParams = new URLSearchParams(query);
+    const limit = Math.min(Number.parseInt(queryParams.get('limit') || '25', 10), 100);
+
+    const pools = await fetchBlockfrostJson(
+      networkKey,
+      `/pools?order=asc&count=${limit}&page=1`,
+      signal
+    );
+    if (!Array.isArray(pools)) return [];
+    return pools.map((poolId) => ({ pool_id_bech32: poolId }));
   }
 
   return undefined;

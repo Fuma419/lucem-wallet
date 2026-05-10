@@ -183,6 +183,35 @@ Same policy as **`.cursor/rules/git-push-policy.mdc`** (always-on). Summary:
 
 Every agent shell loads `GH_TOKEN` from `~/.config/agent-secrets/github_pat` via the shared loader in `~/.bashrc`/`~/.profile`. Run `set-gh-token` once to store a fine-grained PAT; future shells automatically see it, and you only need to rerun `set-gh-token` when rotating tokens (`clear-gh-token` removes it).
 
+### Jenkins CI (local host)
+
+Jenkins runs as a Docker container on this host. Agents have full access to debug and improve CI.
+
+| Item | Value |
+|------|-------|
+| URL | `http://192.168.68.143:8080` |
+| Container | `docker exec jenkins ...` |
+| JENKINS_HOME (host) | `~/jenkins_home` |
+| JENKINS_HOME (container) | `/var/jenkins_home` |
+| CasC source | `~/jenkins-deployment/jenkins/casc/` |
+| Plugins list | `~/jenkins-deployment/jenkins/plugins.txt` |
+| Build agent label | `lucem-wallet` |
+| Multibranch job | `lucem-wallet` (discovers PRs via `refs/pull/*/head`) |
+
+**Key files:**
+- `~/jenkins_home/credentials.xml` — runtime credentials (auto-generated from CasC)
+- `~/jenkins_home/secrets/github-status-token` — PAT for publishing commit statuses
+- `~/jenkins_home/secrets/lucem-wallet.env` — env file injected into integration/e2e stages
+
+**Reloading CasC:** `docker restart jenkins` (picks up `~/jenkins-deployment/jenkins/casc/*.yaml`).
+
+**GitHub status publishing:** The `Jenkinsfile` uses `withCredentials('github-status-token')` + `curl` to post `Jenkins / Build`, `Jenkins / Unit tests`, etc. The PAT stored in `github-status-token` must have **`commit_statuses:write`** permission on this repository.
+
+**Troubleshooting:**
+- Build logs: `~/jenkins_home/jobs/lucem-wallet/branches/PR-<n>/builds/<num>/log`
+- Indexing log: `~/jenkins_home/jobs/lucem-wallet/indexing/indexing.log`
+- Plugin issues: check `~/jenkins_home/plugins/` against `~/jenkins-deployment/jenkins/plugins.txt`
+
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.
 - Never modify generated WASM files in `src/wasm/`.

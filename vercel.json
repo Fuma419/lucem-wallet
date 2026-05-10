@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "installCommand": "npm install",
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; else echo \"Skipping Vercel preview deployment; Jenkins gates and protected branch merge control releases.\"; exit 0; fi",
   "framework": null,
   "rewrites": [
     { "source": "/api/koios/mainnet/:path*", "destination": "https://api.koios.rest/api/v1/:path*" },

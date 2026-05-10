@@ -11,6 +11,10 @@ import {
   createCslTransactionBuilderConfig,
   toCanonicalTransactionCip21,
 } from '../tx/csl-unsigned-tx';
+import {
+  createStakeDelegationCertificate,
+  createStakeRegistrationCertificate,
+} from '../tx/staking-certificates';
 import { koiosRequestEnhanced } from '../util';
 
 const RETRIES = 5;
@@ -223,27 +227,21 @@ export const delegationTx = async (
       if (!delegation.active) {
         txBuilder.add_cert(
           Loader.Cardano.SingleCertificateBuilder.new(
-            Loader.Cardano.Certificate.new_stake_registration(
-              Loader.Cardano.StakeRegistration.new(
-                Loader.Cardano.Credential.from_keyhash(
-                  Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
-                )
-              )
+            createStakeRegistrationCertificate(
+              Loader.Cardano,
+              account.stakeKeyHash
             )
           ).payment_key()
         );
       }
 
       // Add delegation certificate
-      const stakeCredential = Loader.Cardano.Credential.from_keyhash(
-        Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
-      );
-      const poolId = Loader.Cardano.PoolId.from_bytes(Buffer.from(poolKeyHash, 'hex'));
-      
       txBuilder.add_cert(
         Loader.Cardano.SingleCertificateBuilder.new(
-          Loader.Cardano.Certificate.new_stake_delegation(
-            Loader.Cardano.StakeDelegation.new(stakeCredential, poolId)
+          createStakeDelegationCertificate(
+            Loader.Cardano,
+            account.stakeKeyHash,
+            poolKeyHash
           )
         ).payment_key()
       );

@@ -32,6 +32,10 @@ import {
   Stack,
   Text,
   Button,
+  Alert,
+  AlertDescription,
+  AlertIcon,
+  Badge,
   Avatar,
   IconButton,
   Input,
@@ -103,6 +107,15 @@ const initialState = {
     utxos: [],
     balance: { lovelace: '0', assets: null },
   },
+};
+
+const sendPreparationErrorMessage = (error) => {
+  const message = error?.message || String(error || '');
+  if (!message) return 'Unable to prepare transaction.';
+  if (/no utxos|insufficient|not enough/i.test(message)) {
+    return message;
+  }
+  return `Unable to prepare transaction: ${message}`;
 };
 
 export const sendStore = {
@@ -456,7 +469,7 @@ const Send = () => {
       setTx(Buffer.from(tx.to_bytes()).toString('hex'));
     } catch (e) {
       console.warn(e);
-      setFee({ error: 'Transaction not possible' });
+      setFee({ error: sendPreparationErrorMessage(e) });
     }
   };
 
@@ -543,7 +556,12 @@ const Send = () => {
   }, [txUpdate]);
 
   React.useEffect(() => {
-    init();
+    init().catch((e) => {
+      console.warn(e);
+      if (!isMounted.current) return;
+      setFee({ error: sendPreparationErrorMessage(e) });
+      setIsLoading(false);
+    });
     return () => {
       resetState();
     };
@@ -555,10 +573,13 @@ const Send = () => {
       ? String(asset.quantity || '0')
       : toUnit(asset.input, asset.decimals),
   }));
+  const feeError = fee.error ? String(fee.error) : '';
+  const actionLabel = value.sendAll ? 'Review send all' : 'Review transaction';
 
   return (
     <>
       <Box
+        data-testid="send-page"
         minH="100vh"
         sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
         display="flex"
@@ -567,6 +588,8 @@ const Send = () => {
         position="relative"
         w="full"
         maxW="100%"
+        bgGradient="linear(to-b, #050b1f, #071329 52%, #050712)"
+        color="white"
         className="lucem-wallet-main-column"
       >
         {txInfo.protocolParameters && isLoading ? (
@@ -587,8 +610,8 @@ const Send = () => {
               align="center"
               w="full"
               px={{ base: 2, md: 4 }}
-              pt={2}
-              pb={1}
+              pt={4}
+              pb={2}
               flexShrink={0}
             >
               <Box w="40px" flexShrink={0}>
@@ -598,13 +621,20 @@ const Send = () => {
                     navigate('/wallet', { replace: true });
                   }}
                   variant="ghost"
+                  color="whiteAlpha.900"
+                  _hover={{ bg: 'whiteAlpha.100' }}
                   icon={<ChevronLeftIcon boxSize="6" />}
                   aria-label="Go back"
                 />
               </Box>
-              <Text flex="1" textAlign="center" fontSize="lg" fontWeight="bold">
-                Send
-              </Text>
+              <Box flex="1" textAlign="center">
+                <Badge colorScheme="yellow" mb={1}>
+                  Transfer
+                </Badge>
+                <Text fontSize="2xl" fontWeight="black" lineHeight="1">
+                  Send
+                </Text>
+              </Box>
               <Box w="40px" flexShrink={0} />
             </Flex>
             <Box
@@ -625,6 +655,13 @@ const Send = () => {
               justifyContent="flex-start"
               width={{ base: '94%', md: '80%' }}
               maxW="560px"
+              rounded="3xl"
+              bg="whiteAlpha.100"
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              boxShadow="0 24px 80px rgba(0,0,0,0.28)"
+              px={{ base: 4, md: 6 }}
+              py={5}
             >
               <AddressPopup
                 setAddress={setAddress}
@@ -654,7 +691,7 @@ const Send = () => {
                 <Button
                   data-testid="send-all-toggle"
                   size="xs"
-                  colorScheme={value.sendAll ? 'red' : 'gray'}
+                  colorScheme={value.sendAll ? 'red' : 'yellow'}
                   variant={value.sendAll ? 'solid' : 'outline'}
                   isDisabled={isLoading}
                   onClick={() => setSendAllMode(!value.sendAll)}
@@ -686,6 +723,7 @@ const Send = () => {
                     }
                   />
                   <NumericFormat
+                    data-testid="send-ada-amount"
                     pl="10"
                     allowNegative={false}
                     thousandsGroupStyle="thousand"
@@ -859,11 +897,30 @@ const Send = () => {
               display="flex"
               alignItems="center"
               justifyContent="center"
+              flexDirection="column"
             >
+              {feeError && (
+                <Alert
+                  data-testid="send-error-alert"
+                  status="error"
+                  rounded="2xl"
+                  bg="red.900"
+                  color="white"
+                  width={{ base: '90%', md: '366px' }}
+                  maxWidth="366px"
+                  mb={3}
+                >
+                  <AlertIcon />
+                  <AlertDescription fontSize="sm">
+                    {feeError}
+                  </AlertDescription>
+                </Alert>
+              )}
               <Button
+                data-testid="send-primary-action"
                 isLoading={
                   !fee.fee &&
-                  !fee.error &&
+                  !feeError &&
                   address.result &&
                   !address.error &&
                   (value.ada || value.assets.length > 0)
@@ -874,10 +931,22 @@ const Send = () => {
                 isDisabled={
                   !tx ||
                   !address.result ||
-                  fee.error ||
+                  Boolean(feeError) ||
                   (value.sendAll && !sendAllRiskAccepted)
                 }
-                colorScheme="gray"
+                colorScheme="yellow"
+                bgGradient="linear(to-r, yellow.300, orange.300)"
+                color="gray.900"
+                fontWeight="black"
+                _hover={{
+                  bgGradient: 'linear(to-r, yellow.200, orange.200)',
+                  transform: 'translateY(-1px)',
+                }}
+                _disabled={{
+                  opacity: 0.45,
+                  cursor: 'not-allowed',
+                  transform: 'none',
+                }}
                 onClick={() => {
                   const idx = account.current?.index;
                   if (
@@ -891,7 +960,7 @@ const Send = () => {
                   ref.current?.openModal(idx);
                 }}
               >
-                {fee.error ? fee.error : 'Send'}
+                {actionLabel}
               </Button>
             </Box>
           </>
@@ -1219,6 +1288,7 @@ const AddressPopup = ({
           <Input
             disabled={isLoading}
             variant="filled"
+            data-testid="send-recipient-input"
             autoComplete="off"
             value={address.display}
             spellCheck={false}

@@ -40,7 +40,25 @@ describe('stake center page wiring', () => {
 
     expect(stakingSrc).toContain('data-testid="stake-center-page"');
     expect(stakingSrc).toContain('data-testid="stake-pool-search"');
+    expect(stakingSrc).toContain('data-testid="stake-pool-details"');
     expect(stakingSrc).toContain('data-testid="stake-confirm-transaction"');
     expect(stakingSrc).toContain('Unable to prepare delegation transaction.');
+  });
+
+  test('pool details are selected before transaction preview is built', () => {
+    const stakingSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/staking.jsx'),
+      'utf8'
+    );
+    const flow = stakingSrc.slice(
+      stakingSrc.indexOf('const buildDelegatePreview'),
+      stakingSrc.indexOf('const buildWithdrawalPreview')
+    );
+
+    expect(flow.indexOf('setSelectedPool(pool)')).toBeGreaterThan(-1);
+    expect(flow.indexOf('delegationTx(')).toBeGreaterThan(-1);
+    expect(flow.indexOf('setSelectedPool(pool)')).toBeLessThan(
+      flow.indexOf('delegationTx(')
+    );
   });
 });

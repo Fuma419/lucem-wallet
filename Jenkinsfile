@@ -18,36 +18,16 @@ def requiredGithubStatusStages() {
   return ['Build', 'Unit tests', 'Integration tests', 'Functional tests']
 }
 
-def githubNotifyStatus(String state) {
-  return [
-    pending: 'PENDING',
-    success: 'SUCCESS',
-    failure: 'FAILURE',
-    error: 'ERROR',
-  ][state] ?: state.toUpperCase()
-}
-
 def publishGithubStatus(String stageName, String state, String description) {
   def repo = env.GITHUB_REPOSITORY ?: 'Fuma419/lucem-wallet'
-  def sha = env.GIT_COMMIT ?: env.CHANGE_HEAD
+  def sha = env.CHANGE_HEAD ?: env.GIT_COMMIT
   if (!sha) {
-    echo "Skipping GitHub status for ${stageName}: no commit SHA is available."
+    echo "Skipping GitHub status for ${stageName}: no commit SHA available."
     return
   }
 
   def targetUrl = env.RUN_DISPLAY_URL ?: env.BUILD_URL ?: ''
-  try {
-    githubNotify(
-      context: "Jenkins / ${stageName}",
-      status: githubNotifyStatus(state),
-      description: description.take(140),
-      targetUrl: targetUrl
-    )
-    return
-  } catch (notifyErr) {
-    echo "Jenkins githubNotify unavailable for ${stageName}: ${notifyErr.getMessage()}"
-  }
-
+  echo "Publishing GitHub status Jenkins / ${stageName}=${state} to ${repo}@${sha}"
   try {
     withCredentials([string(credentialsId: 'github-status-token', variable: 'GITHUB_STATUS_TOKEN')]) {
       withEnv([
@@ -61,9 +41,7 @@ def publishGithubStatus(String stageName, String state, String description) {
         sh(label: "Publish GitHub status: Jenkins / ${stageName}", script: '''
           set +x
           python3 - <<'PY' > /tmp/github-status-payload.json
-import json
-import os
-
+import json, os
 payload = {
     "state": os.environ["GH_STATUS_STATE"],
     "context": os.environ["GH_STATUS_CONTEXT"],
@@ -83,7 +61,7 @@ PY
       }
     }
   } catch (err) {
-    echo "Skipping GitHub status for ${stageName}: ${err.getMessage()}"
+    echo "WARNING: Could not publish GitHub status for ${stageName}: ${err.getMessage()}"
   }
 }
 
@@ -111,6 +89,9 @@ pipeline {
   stages {
     stage('Bootstrap Node 20') {
       steps {
+        script {
+          publishPendingGithubStatuses()
+        }
         sh '''
           set -e
           if [ ! -x "${NODE20_DIR}/bin/node" ]; then
@@ -123,14 +104,23 @@ pipeline {
           npm -v
         '''
       }
+      post {
+        failure {
+          script {
+            publishGithubStatus('Build', 'failure', 'Bootstrap failed before build in Jenkins')
+          }
+        }
+        aborted {
+          script {
+            publishGithubStatus('Build', 'error', 'Bootstrap was aborted before build in Jenkins')
+          }
+        }
+      }
     }
 
     stage('Install') {
       steps {
         checkout scm
-        script {
-          publishPendingGithubStatuses()
-        }
         sh '''
           set -e
           export PATH="${NODE20_DIR}/bin:${PATH}"
@@ -138,6 +128,18 @@ pipeline {
           npm -v
           npm ci
         '''
+      }
+      post {
+        failure {
+          script {
+            publishGithubStatus('Build', 'failure', 'Install failed before build in Jenkins')
+          }
+        }
+        aborted {
+          script {
+            publishGithubStatus('Build', 'error', 'Install was aborted before build in Jenkins')
+          }
+        }
       }
     }
 

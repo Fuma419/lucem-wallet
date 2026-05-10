@@ -88,7 +88,7 @@ function resolveKoiosApiKey(networkKey) {
   return isUsableKey(envKey) ? envKey : null;
 }
 
-function resolveBlockfrostProjectId(networkKey) {
+export function resolveBlockfrostProjectId(networkKey) {
   const envCandidates = [
     `BLOCKFROST_PROJECT_ID_${networkKey.toUpperCase()}`,
     `BLOCKFROST_${networkKey.toUpperCase()}_PROJECT_ID`,

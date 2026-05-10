@@ -157,13 +157,13 @@ export function buildUnsignedSimpleTx({
 
   for (let attempt = 0; attempt < FEE_ALIGN_MAX_ATTEMPTS; attempt += 1) {
     const txBuilder = Cardano.TransactionBuilder.new(txConfig);
+    for (let i = 0; i < outputs.len(); i += 1) {
+      txBuilder.add_output(outputs.get(i));
+    }
     txBuilder.add_inputs_from(
       utxoCollection,
       inputSelectionStrategy
     );
-    for (let i = 0; i < outputs.len(); i += 1) {
-      txBuilder.add_output(outputs.get(i));
-    }
     for (const hex of requiredVkeyHashesHex) {
       txBuilder.add_required_signer(
         Cardano.Ed25519KeyHash.from_bytes(Buffer.from(hex, 'hex'))

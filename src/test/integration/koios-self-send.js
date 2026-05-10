@@ -443,13 +443,13 @@ async function buildSignSubmitAccountTransfer(opts) {
     let signed;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const txBuilder = Cardano.TransactionBuilder.new(txConfig);
+      for (let i = 0; i < outputs.len(); i += 1) {
+        txBuilder.add_output(outputs.get(i));
+      }
       txBuilder.add_inputs_from(
         utxoCollection,
         Cardano.CoinSelectionStrategyCIP2.LargestFirst
       );
-      for (let i = 0; i < outputs.len(); i += 1) {
-        txBuilder.add_output(outputs.get(i));
-      }
       txBuilder.add_required_signer(paymentKey.to_public().hash());
       if (explicitFee != null) {
         txBuilder.set_fee(explicitFee);

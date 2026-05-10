@@ -14,16 +14,16 @@ describe('delegation modal accessibility and typography normalization', () => {
     expect(src).toContain('100dvh');
   });
 
-  test('delegation flow applies +2pt typography and passes it to pool search', () => {
+  test('delegation moved to stake center with accessible search and status copy', () => {
     const src = fs.readFileSync(
-      path.join(__dirname, '../../../ui/app/components/transactionBuilder.jsx'),
+      path.join(__dirname, '../../../ui/app/pages/staking.jsx'),
       'utf8'
     );
 
-    expect(src).toContain('const addTwoPoint');
-    expect(src).toContain('delegationTextSize');
-    expect(src).toContain('inputFontSize={delegationTextSize.sm}');
-    expect(src).toContain('fontSize={delegationTextSize.sm}');
+    expect(src).toContain('data-testid="stake-center-page"');
+    expect(src).toContain('data-testid="stake-pool-search"');
+    expect(src).toContain('Current status');
+    expect(src).toContain('Unable to prepare delegation transaction.');
   });
 
   test('pool search accepts delegated font-size props', () => {

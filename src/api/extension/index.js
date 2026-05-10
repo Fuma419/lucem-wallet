@@ -45,6 +45,13 @@ import { Cardano, Serialization } from '@cardano-sdk/core';
 import provider from '../../config/provider';
 import { KOIOS_REQUESTS, addressTxsIndicatesHistory } from '../koios-endpoints';
 import { bigIntLovelace, normalizeLovelaceScalar } from '../lovelace-scalar';
+import {
+  emptyDelegation,
+  normalizeDelegationRow,
+  normalizeStakePool as normalizeStakePoolData,
+} from '../staking';
+
+export const normalizeStakePool = normalizeStakePoolData;
 
 const hasTaggedSets = (cbor) => {
   const tx = Serialization.Transaction.fromCbor(cbor);
@@ -133,28 +140,53 @@ export const setCurrency = (currency) =>
   setStorage({ [STORAGE.currency]: currency });
 
 export const getDelegation = async () => {
-  const currentAccount = await getCurrentAccount();
-  const stakeAddress = await getRewardAddress(); // Get the stake address
-  
+  const stakeAddress = await getRewardAddress();
   const request = KOIOS_REQUESTS.getAccountInfo(stakeAddress);
   const stake = await koiosRequest(request.endpoint, {}, request.body);
-  
-  if (!stake || stake.error || !stake[0] || !stake[0].pool_id) return {};
-  
-  const poolRequest = KOIOS_REQUESTS.getPoolInfo([stake[0].pool_id]);
-  const poolResponse = await koiosRequest(poolRequest.endpoint, {}, poolRequest.body);
-  
-  if (!poolResponse || poolResponse.error || !Array.isArray(poolResponse) || poolResponse.length === 0) return {};
-  const delegation = poolResponse[0].meta_json || {};
-  
+
+  if (!stake || stake.error || !Array.isArray(stake) || !stake[0]) {
+    return emptyDelegation(stakeAddress);
+  }
+
+  const stakeRow = stake[0];
+  const delegation = normalizeDelegationRow(stakeRow, stakeAddress);
+
+  if (!stakeRow.pool_id) {
+    return delegation;
+  }
+
+  const poolRequest = KOIOS_REQUESTS.getPoolInfo([stakeRow.pool_id]);
+  const poolResponse = await koiosRequest(
+    poolRequest.endpoint,
+    {},
+    poolRequest.body
+  );
+
+  if (
+    !poolResponse ||
+    poolResponse.error ||
+    !Array.isArray(poolResponse) ||
+    poolResponse.length === 0
+  ) {
+    return delegation;
+  }
+
+  const pool = normalizeStakePool(poolResponse[0], stakeRow.pool_id);
   return {
-    active: stake[0].active,
-    rewards: stake[0].withdrawable_amount,
-    homepage: delegation.homepage,
-    poolId: stake[0].pool_id,
-    ticker: delegation.ticker,
-    description: delegation.description,
-    name: delegation.name,
+    ...delegation,
+    poolId: pool.poolId,
+    poolIdHex: pool.poolIdHex,
+    ticker: pool.ticker,
+    description: pool.description,
+    name: pool.name,
+    homepage: pool.homepage,
+    margin: pool.margin,
+    fixedCost: pool.fixedCost,
+    pledge: pool.pledge,
+    activeStake: pool.activeStake,
+    liveSaturation: pool.liveSaturation,
+    blocks: pool.blocks,
+    status: pool.status,
   };
 };
 
@@ -171,49 +203,59 @@ export const getPoolMetadata = async (poolId) => {
   }
 
   const poolData = response[0];
-  const metaJson = poolData.meta_json || {};
+  const pool = normalizeStakePool(poolData, poolId);
 
   return {
-    ticker: metaJson.ticker,
-    name: metaJson.name,
-    id: poolId,
-    hex: poolData.pool_id_hex,
+    ...pool,
+    id: pool.poolId,
+    hex: pool.poolIdHex,
   };
 };
 
 export const searchPools = async (query) => {
   if (!query) return [];
-  const searchLower = query.toLowerCase();
-  
+  const searchLower = encodeURIComponent(query.trim().toLowerCase());
+
   // Use Koios PostgREST filtering for server-side search
   const listEndpoint = `/pool_list?pool_status=eq.registered&or=(ticker.ilike.*${searchLower}*,pool_id_bech32.ilike.*${searchLower}*)&limit=20`;
   const poolList = await koiosRequest(listEndpoint);
-  
+
   if (!poolList || poolList.error || !Array.isArray(poolList) || poolList.length === 0) {
     return [];
   }
-  
+
   // Get detailed info for the matches
   const poolIds = poolList.map(m => m.pool_id_bech32);
   const infoRequest = KOIOS_REQUESTS.getPoolInfo(poolIds);
   const detailedPools = await koiosRequest(infoRequest.endpoint, {}, infoRequest.body);
-  
+
   if (!detailedPools || detailedPools.error || !Array.isArray(detailedPools)) {
     return [];
   }
-  
-  return detailedPools.map(pool => ({
-    id: pool.pool_id_bech32,
-    hex: pool.pool_id_hex,
-    ticker: pool.meta_json?.ticker || pool.ticker || 'Unknown',
-    name: pool.meta_json?.name || pool.ticker || 'Unknown Pool',
-    description: pool.meta_json?.description || '',
-    homepage: pool.meta_json?.homepage || '',
-    margin: pool.margin,
-    pledge: pool.pledge,
-    activeStake: pool.active_stake,
-    liveSaturation: pool.live_saturation,
-  }));
+
+  return detailedPools.map((pool) => normalizeStakePool(pool));
+};
+
+export const getStakePools = async (limit = 25) => {
+  const cappedLimit = Math.max(1, Math.min(Number(limit) || 25, 100));
+  const poolList = await koiosRequest(
+    `/pool_list?pool_status=eq.registered&limit=${cappedLimit}`
+  );
+
+  if (!poolList || poolList.error || !Array.isArray(poolList) || poolList.length === 0) {
+    return [];
+  }
+
+  const poolIds = poolList.map((pool) => pool.pool_id_bech32).filter(Boolean);
+  if (poolIds.length === 0) return [];
+
+  const infoRequest = KOIOS_REQUESTS.getPoolInfo(poolIds);
+  const detailedPools = await koiosRequest(infoRequest.endpoint, {}, infoRequest.body);
+  if (!detailedPools || detailedPools.error || !Array.isArray(detailedPools)) {
+    return [];
+  }
+
+  return detailedPools.map((pool) => normalizeStakePool(pool));
 };
 
 export const getBalance = async () => {

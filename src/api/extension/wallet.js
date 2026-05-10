@@ -27,6 +27,31 @@ function ttlSlotBound(protocolParameters) {
   return base + TX.invalid_hereafter;
 }
 
+function assertDelegationBuildInputs(account, protocolParameters, poolKeyHash) {
+  if (!account?.paymentAddr) {
+    throw new Error('Payment address is required to build delegation transaction');
+  }
+  if (!account?.stakeKeyHash || !/^[0-9a-fA-F]{56}$/.test(account.stakeKeyHash)) {
+    throw new Error('Stake key hash is missing or invalid');
+  }
+  if (!poolKeyHash || !/^[0-9a-fA-F]{56}$/.test(poolKeyHash)) {
+    throw new Error('Stake pool id is missing or invalid');
+  }
+  if (!protocolParameters?.keyDeposit || !protocolParameters?.linearFee) {
+    throw new Error('Protocol parameters are incomplete');
+  }
+}
+
+function retryOrThrow(error, retriesRemaining, label) {
+  const nextRetries = retriesRemaining - 1;
+  if (nextRetries <= 0) {
+    throw new Error(
+      `${label} failed after ${RETRIES} attempts: ${error?.message || String(error)}`
+    );
+  }
+  return nextRetries;
+}
+
 /**
  * Assemble a signed transaction from an unsigned tx and a witness set.
  * CSL v15 only supports Transaction.new(body, witness_set, auxiliary_data?).
@@ -164,11 +189,11 @@ export const delegationTx = async (
   poolKeyHash
 ) => {
   await Loader.load();
+  assertDelegationBuildInputs(account, protocolParameters, poolKeyHash);
 
-  let isTxBuilt = false;
   let selectionRetries = RETRIES;
 
-  while (!isTxBuilt && selectionRetries > 0) {
+  while (selectionRetries > 0) {
     try {
       const txBuilderConfig = Loader.Cardano.TransactionBuilderConfigBuilder.new()
         .coins_per_utxo_byte(
@@ -226,6 +251,9 @@ export const delegationTx = async (
       txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
 
       const utxos = await getUtxos();
+      if (!utxos || utxos.length === 0) {
+        throw new Error('No UTxOs available to pay delegation deposit and fee');
+      }
       const changeAddress = Loader.Cardano.Address.from_bech32(account.paymentAddr);
 
       // We need to add one output for input selection to work.
@@ -254,11 +282,11 @@ export const delegationTx = async (
       );
     } catch (e) {
       console.error('Error building delegation transaction:', e);
-      if (selectionRetries > 0) {
-        --selectionRetries;
-        continue;
-      }
-      throw e;
+      selectionRetries = retryOrThrow(
+        e,
+        selectionRetries,
+        'Delegation transaction'
+      );
     }
   }
 };
@@ -272,10 +300,9 @@ export const voteDelegationTx = async (
 ) => {
   await Loader.load();
 
-  let isTxBuilt = false;
   let selectionRetries = RETRIES;
 
-  while (!isTxBuilt && selectionRetries > 0) {
+  while (selectionRetries > 0) {
     try {
       const txBuilderConfig = Loader.Cardano.TransactionBuilderConfigBuilder.new()
         .coins_per_utxo_byte(BigInt(protocolParameters.coinsPerUtxoWord))
@@ -338,6 +365,9 @@ export const voteDelegationTx = async (
       txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
 
       const utxos = await getUtxos();
+      if (!utxos || utxos.length === 0) {
+        throw new Error('No UTxOs available to pay vote delegation fee');
+      }
       const changeAddress = Loader.Cardano.Address.from_bech32(account.paymentAddr);
 
       txBuilder.add_output(
@@ -361,11 +391,11 @@ export const voteDelegationTx = async (
       );
     } catch (e) {
       console.error('Error building vote delegation transaction:', e);
-      if (selectionRetries > 0) {
-        --selectionRetries;
-        continue;
-      }
-      throw e;
+      selectionRetries = retryOrThrow(
+        e,
+        selectionRetries,
+        'Vote delegation transaction'
+      );
     }
   }
 };
@@ -427,10 +457,9 @@ export const withdrawalTx = async (account, delegation, protocolParameters, utxo
 export const undelegateTx = async (account, delegation, protocolParameters) => {
   await Loader.load();
 
-  let isTxBuilt = false;
   let selectionRetries = RETRIES;
 
-  while (!isTxBuilt && selectionRetries > 0) {
+  while (selectionRetries > 0) {
     try {
       const txBuilderConfig = Loader.Cardano.TransactionBuilderConfigBuilder.new()
         .coins_per_utxo_byte(
@@ -482,6 +511,9 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
       txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
 
       const utxos = await getUtxos();
+      if (!utxos || utxos.length === 0) {
+        throw new Error('No UTxOs available to pay undelegation fee');
+      }
 
       const changeAddress = Loader.Cardano.Address.from_bech32(account.paymentAddr);
 
@@ -515,13 +547,11 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
     }
     catch (e) {
       console.error(e);
-
-      if (selectionRetries > 0) {
-        --selectionRetries;
-        continue;
-      }
-
-      throw e;
+      selectionRetries = retryOrThrow(
+        e,
+        selectionRetries,
+        'Undelegation transaction'
+      );
     }
   }
 };

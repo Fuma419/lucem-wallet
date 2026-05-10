@@ -48,6 +48,19 @@ test.describe('capture static entry UIs', () => {
     await page.setViewportSize({ width: 400, height: 720 });
   });
 
+  test('00 main popup launches', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto('/mainPopup.html', { waitUntil: 'domcontentloaded' });
+
+    await Promise.race([
+      page.getByText('Wallet Setup').waitFor({ state: 'visible', timeout: 60_000 }),
+      page.getByTestId('wallet-send').waitFor({ state: 'visible', timeout: 60_000 }),
+    ]);
+
+    await waitFonts(page);
+    await shot(page, '00-main-popup-launch');
+  });
+
   test('01 welcome', async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto('/welcome', { waitUntil: 'domcontentloaded' });

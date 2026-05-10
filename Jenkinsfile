@@ -18,6 +18,15 @@ def requiredGithubStatusStages() {
   return ['Build', 'Unit tests', 'Integration tests', 'Functional tests']
 }
 
+def githubNotifyStatus(String state) {
+  return [
+    pending: 'PENDING',
+    success: 'SUCCESS',
+    failure: 'FAILURE',
+    error: 'ERROR',
+  ][state] ?: state.toUpperCase()
+}
+
 def publishGithubStatus(String stageName, String state, String description) {
   def repo = env.GITHUB_REPOSITORY ?: 'Fuma419/lucem-wallet'
   def sha = env.GIT_COMMIT ?: env.CHANGE_HEAD
@@ -27,6 +36,18 @@ def publishGithubStatus(String stageName, String state, String description) {
   }
 
   def targetUrl = env.RUN_DISPLAY_URL ?: env.BUILD_URL ?: ''
+  try {
+    githubNotify(
+      context: "Jenkins / ${stageName}",
+      status: githubNotifyStatus(state),
+      description: description.take(140),
+      targetUrl: targetUrl
+    )
+    return
+  } catch (notifyErr) {
+    echo "Jenkins githubNotify unavailable for ${stageName}: ${notifyErr.getMessage()}"
+  }
+
   try {
     withCredentials([string(credentialsId: 'github-status-token', variable: 'GITHUB_STATUS_TOKEN')]) {
       withEnv([

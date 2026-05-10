@@ -28,49 +28,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
-          check_lines="$(gh pr view --repo "$REPO" "$PR_NUMBER" --json statusCheckRollup --jq '
-            .statusCheckRollup[]
-            | (
-                if has("context") then
-                  { name: .context, state: .state }
-                else
-                  { name: .name, state: (.conclusion // "PENDING") }
-                end
-              )
-            | "\(.name)\t\(.state)"
-          ')"
-
-          required_checks=(
-            "Jenkins / Build"
-            "Jenkins / Unit tests"
-            "Jenkins / Integration tests"
-            "Jenkins / Functional tests"
-          )
-
-          missing_checks=()
-          non_green_checks=()
-
-          for check_name in "${required_checks[@]}"; do
-            check_state="$(printf '%s\n' "${check_lines:-}" | awk -F'\t' -v name="$check_name" '$1 == name {state=toupper($2)} END {print state}')"
-            if [ -z "${check_state:-}" ]; then
-              missing_checks+=("$check_name")
-              continue
-            fi
-            if [ "$check_state" != "SUCCESS" ]; then
-              non_green_checks+=("$check_name"$'\t'"$check_state")
-            fi
-          done
-
-          if [ "${#missing_checks[@]}" -gt 0 ]; then
-            echo "Missing required Jenkins gates on PR #$PR_NUMBER. Skipping auto-merge enable for now."
-            printf '%s\n' "${missing_checks[@]}"
-            exit 0
-          fi
-
-          if [ "${#non_green_checks[@]}" -gt 0 ]; then
-            echo "Required Jenkins gates are not green yet; skipping auto-merge enable."
-            printf '%s\n' "${non_green_checks[@]}"
-            exit 0
-          fi
-
+          # Enable auto-merge unconditionally. GitHub branch protection
+          # blocks the actual merge until required status checks pass.
           gh pr merge --repo "$REPO" "$PR_NUMBER" --auto --squash --delete-branch || true

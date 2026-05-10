@@ -199,31 +199,12 @@ export const delegationTx = async (
 
   while (selectionRetries > 0) {
     try {
-      const txBuilderConfig = Loader.Cardano.TransactionBuilderConfigBuilder.new()
-        .coins_per_utxo_byte(
-          BigInt(protocolParameters.coinsPerUtxoWord)
-        )
-        .fee_algo(
-          Loader.Cardano.LinearFee.new(
-            BigInt(protocolParameters.linearFee.minFeeA),
-            BigInt(protocolParameters.linearFee.minFeeB),
-            BigInt(protocolParameters.minFeeRefScriptCostPerByte)
-          )
-        )
-        .key_deposit(BigInt(protocolParameters.keyDeposit))
-        .pool_deposit(
-          BigInt(protocolParameters.poolDeposit)
-        )
-        .max_tx_size(protocolParameters.maxTxSize)
-        .max_value_size(protocolParameters.maxValSize)
-        .ex_unit_prices(Loader.Cardano.ExUnitPrices.new(Loader.Cardano.Rational.new(0n, 1n), Loader.Cardano.Rational.new(0n, 1n)))
-        .collateral_percentage(protocolParameters.collateralPercentage)
-        .max_collateral_inputs(protocolParameters.maxCollateralInputs)
-        .build();
-
+      const txBuilderConfig = createCslTransactionBuilderConfig(
+        Loader.Cardano,
+        protocolParameters
+      );
       const txBuilder = Loader.Cardano.TransactionBuilder.new(txBuilderConfig);
 
-      // Add stake registration if not active
       if (!delegation.active) {
         txBuilder.add_cert(
           Loader.Cardano.SingleCertificateBuilder.new(
@@ -235,7 +216,6 @@ export const delegationTx = async (
         );
       }
 
-      // Add delegation certificate
       txBuilder.add_cert(
         Loader.Cardano.SingleCertificateBuilder.new(
           createStakeDelegationCertificate(
@@ -246,7 +226,9 @@ export const delegationTx = async (
         ).payment_key()
       );
 
-      txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
+      txBuilder.set_ttl(
+        Loader.Cardano.BigNum.from_str(String(ttlSlotBound(protocolParameters)))
+      );
 
       const utxos = await getUtxos();
       if (!utxos || utxos.length === 0) {
@@ -254,7 +236,6 @@ export const delegationTx = async (
       }
       const changeAddress = Loader.Cardano.Address.from_bech32(account.paymentAddr);
 
-      // We need to add one output for input selection to work.
       txBuilder.add_output(
         Loader.Cardano.TransactionOutput.new(
           changeAddress,
@@ -302,36 +283,18 @@ export const voteDelegationTx = async (
 
   while (selectionRetries > 0) {
     try {
-      const txBuilderConfig = Loader.Cardano.TransactionBuilderConfigBuilder.new()
-        .coins_per_utxo_byte(BigInt(protocolParameters.coinsPerUtxoWord))
-        .fee_algo(
-          Loader.Cardano.LinearFee.new(
-            BigInt(protocolParameters.linearFee.minFeeA),
-            BigInt(protocolParameters.linearFee.minFeeB),
-            BigInt(protocolParameters.minFeeRefScriptCostPerByte)
-          )
-        )
-        .key_deposit(BigInt(protocolParameters.keyDeposit))
-        .pool_deposit(BigInt(protocolParameters.poolDeposit))
-        .max_tx_size(protocolParameters.maxTxSize)
-        .max_value_size(protocolParameters.maxValSize)
-        .ex_unit_prices(Loader.Cardano.ExUnitPrices.new(Loader.Cardano.Rational.new(0n, 1n), Loader.Cardano.Rational.new(0n, 1n)))
-        .collateral_percentage(protocolParameters.collateralPercentage)
-        .max_collateral_inputs(protocolParameters.maxCollateralInputs)
-        .build();
-
+      const txBuilderConfig = createCslTransactionBuilderConfig(
+        Loader.Cardano,
+        protocolParameters
+      );
       const txBuilder = Loader.Cardano.TransactionBuilder.new(txBuilderConfig);
 
-      // Add stake registration if not active
       if (!delegation.active) {
         txBuilder.add_cert(
           Loader.Cardano.SingleCertificateBuilder.new(
-            Loader.Cardano.Certificate.new_stake_registration(
-              Loader.Cardano.StakeRegistration.new(
-                Loader.Cardano.Credential.from_keyhash(
-                  Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(account.stakeKeyHash, 'hex'))
-                )
-              )
+            createStakeRegistrationCertificate(
+              Loader.Cardano,
+              account.stakeKeyHash
             )
           ).payment_key()
         );
@@ -360,7 +323,9 @@ export const voteDelegationTx = async (
         ).payment_key()
       );
 
-      txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
+      txBuilder.set_ttl(
+        Loader.Cardano.BigNum.from_str(String(ttlSlotBound(protocolParameters)))
+      );
 
       const utxos = await getUtxos();
       if (!utxos || utxos.length === 0) {
@@ -459,28 +424,10 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
 
   while (selectionRetries > 0) {
     try {
-      const txBuilderConfig = Loader.Cardano.TransactionBuilderConfigBuilder.new()
-        .coins_per_utxo_byte(
-          BigInt(protocolParameters.coinsPerUtxoWord)
-        )
-        .fee_algo(
-          Loader.Cardano.LinearFee.new(
-            BigInt(protocolParameters.linearFee.minFeeA),
-            BigInt(protocolParameters.linearFee.minFeeB),
-            BigInt(protocolParameters.minFeeRefScriptCostPerByte)
-          )
-        )
-        .key_deposit(BigInt(protocolParameters.keyDeposit))
-        .pool_deposit(
-          BigInt(protocolParameters.poolDeposit)
-        )
-        .max_tx_size(protocolParameters.maxTxSize)
-        .max_value_size(protocolParameters.maxValSize)
-        .ex_unit_prices(Loader.Cardano.ExUnitPrices.new(Loader.Cardano.Rational.new(0n, 1n), Loader.Cardano.Rational.new(0n, 1n)))
-        .collateral_percentage(protocolParameters.collateralPercentage)
-        .max_collateral_inputs(protocolParameters.maxCollateralInputs)
-        .build();
-
+      const txBuilderConfig = createCslTransactionBuilderConfig(
+        Loader.Cardano,
+        protocolParameters
+      );
       const txBuilder = Loader.Cardano.TransactionBuilder.new(txBuilderConfig);
 
       if (delegation.rewards > 0) {
@@ -489,7 +436,7 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
             Loader.Cardano.RewardAddress.from_address(
               Loader.Cardano.Address.from_bech32(account.rewardAddr)
             ),
-            BigInt(delegation.rewards)
+            Loader.Cardano.BigNum.from_str(String(delegation.rewards))
           ).payment_key()
         );
       }
@@ -506,7 +453,9 @@ export const undelegateTx = async (account, delegation, protocolParameters) => {
         ).payment_key()
       );
 
-      txBuilder.set_ttl(BigInt(ttlSlotBound(protocolParameters)));
+      txBuilder.set_ttl(
+        Loader.Cardano.BigNum.from_str(String(ttlSlotBound(protocolParameters)))
+      );
 
       const utxos = await getUtxos();
       if (!utxos || utxos.length === 0) {

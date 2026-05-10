@@ -47,8 +47,8 @@ jobs:
             exit 1
           fi
 
-          # Do not arm auto-merge unless a Jenkins check is present and green.
-          jenkins_lines="$(gh pr view --repo "$REPO" "$pr_number" --json statusCheckRollup --jq '
+          # Do not arm auto-merge unless all required Jenkins gates are present and green.
+          check_lines="$(gh pr view --repo "$REPO" "$pr_number" --json statusCheckRollup --jq '
             .statusCheckRollup[]
             | (
                 if has("context") then
@@ -57,19 +57,38 @@ jobs:
                   { name: .name, state: (.conclusion // "PENDING") }
                 end
               )
-            | select((.name | test("jenkins"; "i")) and (.name | test("^Ping Jenkins indexer$") | not))
             | "\(.name)\t\(.state)"
           ')"
 
-          if [ -z "${jenkins_lines:-}" ]; then
-            echo "No Jenkins check/status found on PR #$pr_number. Skipping auto-merge enable for now."
+          required_checks=(
+            "Jenkins gate: build"
+            "Jenkins gate: unit tests"
+            "Jenkins gate: functional tests"
+          )
+
+          missing_checks=()
+          non_green_checks=()
+
+          for check_name in "${required_checks[@]}"; do
+            check_state="$(printf '%s\n' "${check_lines:-}" | awk -F'\t' -v name="$check_name" '$1 == name {state=toupper($2)} END {print state}')"
+            if [ -z "${check_state:-}" ]; then
+              missing_checks+=("$check_name")
+              continue
+            fi
+            if [ "$check_state" != "SUCCESS" ]; then
+              non_green_checks+=("$check_name"$'\t'"$check_state")
+            fi
+          done
+
+          if [ "${#missing_checks[@]}" -gt 0 ]; then
+            echo "Missing required Jenkins gates on PR #$pr_number. Skipping auto-merge enable for now."
+            printf '%s\n' "${missing_checks[@]}"
             exit 0
           fi
 
-          non_green_jenkins="$(printf '%s\n' "$jenkins_lines" | awk -F'\t' 'toupper($2) != "SUCCESS" { print $0 }')"
-          if [ -n "${non_green_jenkins:-}" ]; then
-            echo "Jenkins checks are not green yet; skipping auto-merge enable."
-            printf '%s\n' "$non_green_jenkins"
+          if [ "${#non_green_checks[@]}" -gt 0 ]; then
+            echo "Required Jenkins gates are not green yet; skipping auto-merge enable."
+            printf '%s\n' "${non_green_checks[@]}"
             exit 0
           fi
 

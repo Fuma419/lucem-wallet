@@ -610,8 +610,19 @@ const Send = () => {
         maxW="100%"
         bg="black"
         color="white"
+        overflow="hidden"
         className="lucem-wallet-main-column"
       >
+        {/* Edge glow */}
+        <Box
+          position="absolute"
+          inset="0"
+          pointerEvents="none"
+          zIndex={1}
+          sx={{
+            boxShadow: 'inset 0 0 60px 8px rgba(200,170,255,0.07), inset 0 0 120px 20px rgba(100,80,200,0.04)',
+          }}
+        />
         {txInfo.protocolParameters && isLoading ? (
           <Box
             flex="1"
@@ -625,34 +636,19 @@ const Send = () => {
           </Box>
         ) : (
           <>
-            <Flex
-              align="center"
-              w="full"
-              px={{ base: 2, md: 4 }}
-              pt={4}
-              pb={2}
-              flexShrink={0}
-            >
-              <Box w="40px" flexShrink={0}>
-                <IconButton
-                  rounded="md"
-                  onClick={() => {
-                    navigate('/wallet', { replace: true });
-                  }}
-                  variant="ghost"
-                  color="whiteAlpha.900"
-                  _hover={{ bg: 'whiteAlpha.100' }}
-                  icon={<ChevronLeftIcon boxSize="6" />}
-                  aria-label="Go back"
-                />
-              </Box>
-              <Box flex="1" textAlign="center">
-                <Text fontSize="2xl" fontWeight="black" lineHeight="1">
-                  Send
-                </Text>
-              </Box>
-              <Box w="40px" flexShrink={0} />
-            </Flex>
+            <IconButton
+              position="absolute"
+              top={3}
+              left={3}
+              zIndex={2}
+              rounded="md"
+              onClick={() => navigate('/wallet', { replace: true })}
+              variant="ghost"
+              color="whiteAlpha.900"
+              _hover={{ bg: 'whiteAlpha.100' }}
+              icon={<ChevronLeftIcon boxSize="6" />}
+              aria-label="Go back"
+            />
             <Box
               flex="1"
               minH={0}
@@ -662,6 +658,7 @@ const Send = () => {
               flexDirection="column"
               alignItems="center"
               px={{ base: 2, md: 4 }}
+              pt={6}
               pb={4}
             >
             <Box

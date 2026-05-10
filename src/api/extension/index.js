@@ -45,6 +45,7 @@ import { Cardano, Serialization } from '@cardano-sdk/core';
 import provider from '../../config/provider';
 import { KOIOS_REQUESTS, addressTxsIndicatesHistory } from '../koios-endpoints';
 import { bigIntLovelace, normalizeLovelaceScalar } from '../lovelace-scalar';
+import { buildVkeyWitnessSet } from '../tx/sign-witness-set';
 import {
   emptyDelegation,
   normalizeDelegationRow,
@@ -1401,34 +1402,30 @@ export const signTx = async (
   const stakeKeyHash = stakeKey.to_public().hash().to_hex();
   const drepKeyHash = drepKey.to_public().hash().to_hex();
 
-  const rawTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
+  const keyMap = new Map([
+    [paymentKeyHash, paymentKey],
+    [stakeKeyHash, stakeKey],
+    [drepKeyHash, drepKey],
+  ]);
 
-  const txWitnessSet = Loader.Cardano.TransactionWitnessSet.new();
-  const vkeyWitnesses = Loader.Cardano.Vkeywitnesses.new();
-  const fixedBody = Loader.Cardano.FixedTransactionBody.from_bytes(rawTx.body().to_bytes());
-  const txHash = fixedBody.tx_hash();
-  if (typeof fixedBody.free === 'function') fixedBody.free();
-  keyHashes.forEach((keyHash) => {
-    let signingKey;
-    if (keyHash === paymentKeyHash) signingKey = paymentKey;
-    else if (keyHash === stakeKeyHash) signingKey = stakeKey;
-    else if (keyHash === drepKeyHash) signingKey = drepKey;
-    else if (!partialSign) throw TxSignError.ProofGeneration;
-    else return;
-    const vkey = Loader.Cardano.make_vkey_witness(txHash, signingKey);
-    vkeyWitnesses.add(vkey);
-  });
+  let txWitnessSet;
+  try {
+    txWitnessSet = buildVkeyWitnessSet(
+      Loader.Cardano,
+      tx,
+      keyMap,
+      keyHashes,
+      partialSign
+    );
+  } catch {
+    throw TxSignError.ProofGeneration;
+  } finally {
+    accountKey.free();
+    drepKey.free();
+    stakeKey.free();
+    paymentKey.free();
+  }
 
-  accountKey.free();
-  accountKey = null;
-  drepKey.free();
-  drepKey = null;
-  stakeKey.free();
-  stakeKey = null;
-  paymentKey.free();
-  paymentKey = null;
-
-  txWitnessSet.set_vkeys(vkeyWitnesses);
   return txWitnessSet;
 };
 

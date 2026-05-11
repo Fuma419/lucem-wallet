@@ -300,7 +300,7 @@ const Staking = () => {
             );
             if (hodlr) {
               didAutoSelect.current = true;
-              buildDelegatePreview(hodlr);
+              setSelectedPool(hodlr);
               setShowPoolSearch(false);
             }
           }
@@ -443,7 +443,7 @@ const Staking = () => {
     }
     : null;
   const rewards = toBigInt(delegation?.rewards);
-  const selectedLabel = poolLabel(selectedPool || activePool);
+  const activeLabel = poolLabel(activePool);
 
   return (
     <Box
@@ -502,7 +502,7 @@ const Staking = () => {
                     Current status
                   </Text>
                   <Text fontWeight="bold">
-                    {delegation?.active ? `Delegated to ${selectedLabel}` : 'Ready to delegate'}
+                    {delegation?.active ? `Delegated to ${activeLabel}` : 'Ready to delegate'}
                   </Text>
                 </Box>
               </HStack>

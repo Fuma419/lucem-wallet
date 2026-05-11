@@ -2671,7 +2671,9 @@ export const updateRecentSentToAddress = async (address) => {
 };
 
 export const displayUnit = (quantity, decimals = 6) => {
-  return parseInt(quantity) / 10 ** decimals;
+  const parsed = parseInt(quantity);
+  if (!Number.isFinite(parsed)) return 0;
+  return parsed / 10 ** decimals;
 };
 
 export const toUnit = (amount, decimals = 6) => {

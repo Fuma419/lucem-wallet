@@ -647,20 +647,19 @@ export const getSpecificUtxo = async (txHash, txId) => {
  */
 export const getUtxos = async (amount = undefined, paginate = undefined) => {
   const currentAccount = await getCurrentAccount();
-  const address = await getAddress(); // Get the full address
+  const address = await getAddress();
   
-  const request = KOIOS_REQUESTS.getAddressInfo(address);
+  const request = KOIOS_REQUESTS.getAddressUtxos(address, false);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   
-  if (result.error || !result[0]) {
+  if (result?.error) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
     else return [];
   }
   
-  let utxos = result[0].utxo_set || [];
+  let utxos = Array.isArray(result) ? result : [];
 
-  // exclude collateral input from overall utxo set
   if (currentAccount.collateral) {
     utxos = utxos.filter(
       (utxo) =>
@@ -671,10 +670,8 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
     );
   }
 
-  // Convert Koios UTXO format to expected format
   let convertedUtxos = await Promise.all(
     utxos.map(async (utxo) => {
-      // Ensure the UTXO has the required fields
       const formattedUtxo = {
         tx_hash: utxo.tx_hash,
         output_index: utxo.output_index ?? utxo.tx_index,

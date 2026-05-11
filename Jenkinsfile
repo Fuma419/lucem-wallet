@@ -269,6 +269,25 @@ pipeline {
         }
       }
     }
+    stage('Screenshots') {
+      when {
+        expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+      }
+      steps {
+        sh '''
+          set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
+          npm run test:e2e:install --if-present
+          export LUCEM_SCREENSHOT_DIR="${WORKSPACE}/e2e-screenshots"
+          npx playwright test e2e/screenshots.spec.js || true
+        '''
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'e2e-screenshots/**/*.png', allowEmptyArchive: true, fingerprint: false
+        }
+      }
+    }
   }
 
   post {

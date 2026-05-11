@@ -1054,10 +1054,10 @@ const Send = () => {
             <Box
               position={'relative'}
               background={background}
+              color="black"
               rounded={'xl'}
               p={2}
             >
-              {' '}
               <Copy label="Copied address" copy={address.result}>
                 <Box
                   width="180px"
@@ -1070,24 +1070,26 @@ const Send = () => {
                   flexDirection={'column'}
                 >
                   <MiddleEllipsis>
-                    <span style={{ cursor: 'pointer' }}>{address.result}</span>
+                    <span style={{ cursor: 'pointer', color: 'black' }}>{address.result}</span>
                   </MiddleEllipsis>
                 </Box>
               </Copy>
             </Box>
             <Box h={4} />
-            <Box
-              width={'full'}
-              display={'flex'}
-              alignItems={'center'}
-              justifyContent={'center'}
-              fontSize={'sm'}
-            >
-              <UnitDisplay quantity={fee.fee} decimals={6} symbol={'₳'} />{' '}
-              <Box ml={1} fontWeight={'medium'}>
-                fee
+            {fee.fee && fee.fee !== '0' && (
+              <Box
+                width={'full'}
+                display={'flex'}
+                alignItems={'center'}
+                justifyContent={'center'}
+                fontSize={'sm'}
+              >
+                <UnitDisplay quantity={fee.fee} decimals={6} symbol={'₳'} />{' '}
+                <Box ml={1} fontWeight={'medium'}>
+                  fee
+                </Box>
               </Box>
-            </Box>
+            )}
             {address.isM1 && (
               <>
                 <Box h={4} />

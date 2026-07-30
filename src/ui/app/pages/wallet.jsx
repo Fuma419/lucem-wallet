@@ -488,8 +488,6 @@ const Wallet = () => {
                     rounded="lg"
                     shadow="none"
                     flexShrink={0}
-                    opacity={0.5}
-                    _hover={{ opacity: 1 }}
                     variant={
                       settings.network.id === networkOption.id ? 'solid' : 'outline'
                     }

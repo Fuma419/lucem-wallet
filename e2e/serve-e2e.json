@@ -4,6 +4,10 @@
     { "source": "/", "destination": "/mainPopup.html" },
     { "source": "/wallet", "destination": "/mainPopup.html" },
     { "source": "/welcome", "destination": "/mainPopup.html" },
-    { "source": "/staking", "destination": "/mainPopup.html" }
+    { "source": "/send", "destination": "/mainPopup.html" },
+    { "source": "/settings", "destination": "/mainPopup.html" },
+    { "source": "/settings/*", "destination": "/mainPopup.html" },
+    { "source": "/staking", "destination": "/mainPopup.html" },
+    { "source": "/governance", "destination": "/mainPopup.html" }
   ]
 }

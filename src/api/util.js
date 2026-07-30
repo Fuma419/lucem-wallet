@@ -910,11 +910,9 @@ export const utxoToJson = async (utxo) => {
 
 export const assetsToValue = async (assets) => {
   await Loader.load();
-  console.log('assetsToValue called with:', assets);
   
   const multiAsset = Loader.Cardano.MultiAsset.new();
   const lovelace = assets.find((asset) => asset.unit === 'lovelace');
-  console.log('lovelace asset:', lovelace);
   
   const policies = [
     ...new Set(
@@ -923,7 +921,6 @@ export const assetsToValue = async (assets) => {
         .map((asset) => asset.unit.slice(0, 56))
     ),
   ];
-  console.log('policies:', policies);
   policies.forEach((policy) => {
     const policyAssets = assets.filter(
       (asset) => asset.unit.slice(0, 56) === policy
@@ -940,11 +937,8 @@ export const assetsToValue = async (assets) => {
     multiAsset.insert(Loader.Cardano.ScriptHash.from_hex(policy), assetsValue);
   });
   const coin = Loader.Cardano.BigNum.from_str(lovelace ? String(lovelace.quantity) : '0');
-  console.log('coin created:', coin);
-  console.log('multiAsset created:', multiAsset);
   
   const value = Loader.Cardano.Value.new_with_assets(coin, multiAsset);
-  console.log('Value created successfully');
   return value;
 };
 

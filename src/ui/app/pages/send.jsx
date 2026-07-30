@@ -1076,7 +1076,7 @@ const Send = () => {
               </Copy>
             </Box>
             <Box h={4} />
-            {fee.fee && fee.fee !== '0' && (
+            {fee.fee && fee.fee !== '0' && /^\d+$/.test(fee.fee) && (
               <Box
                 width={'full'}
                 display={'flex'}

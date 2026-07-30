@@ -246,6 +246,9 @@ pipeline {
             set -a
             . "${LUCEM_ENV_FILE}"
             set +a
+            # Free the Playwright web server port from any orphaned/aborted build
+            if command -v fuser >/dev/null 2>&1; then fuser -k 4179/tcp 2>/dev/null || true; fi
+            E2E_PIDS=$(lsof -t -i:4179 2>/dev/null || true); if [ -n "$E2E_PIDS" ]; then kill -9 $E2E_PIDS 2>/dev/null || true; fi
             npm run test:e2e:install --if-present
             npm run test:e2e --if-present
           '''
@@ -266,6 +269,28 @@ pipeline {
           script {
             publishGithubStatus('Functional tests', 'error', 'Functional tests were aborted in Jenkins')
           }
+        }
+      }
+    }
+    stage('Screenshots') {
+      when {
+        expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+      }
+      steps {
+        sh '''
+          set -e
+          export PATH="${NODE20_DIR}/bin:${PATH}"
+          # Free the Playwright web server port from any orphaned/aborted build
+          if command -v fuser >/dev/null 2>&1; then fuser -k 4179/tcp 2>/dev/null || true; fi
+          E2E_PIDS=$(lsof -t -i:4179 2>/dev/null || true); if [ -n "$E2E_PIDS" ]; then kill -9 $E2E_PIDS 2>/dev/null || true; fi
+          npm run test:e2e:install --if-present
+          export LUCEM_SCREENSHOT_DIR="${WORKSPACE}/e2e-screenshots"
+          npx playwright test e2e/screenshots.spec.js || true
+        '''
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'e2e-screenshots/**/*.png', allowEmptyArchive: true, fingerprint: false
         }
       }
     }

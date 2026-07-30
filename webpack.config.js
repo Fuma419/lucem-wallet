@@ -47,7 +47,22 @@ if (fileSystem.existsSync(secretsPath)) {
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
-const envsToExpose = ['NODE_ENV'];
+// Inline these into the browser bundle. Blockfrost project ids live in `.env`
+// (or the host CI/Vercel env); without exposing them here `process.env.*` is
+// undefined at runtime and provider.js falls back to the dummy Koios secrets,
+// which forces governance/voting to always drop to the Koios API.
+// Empty-string defaults keep builds green when a key is not configured.
+const envsToExpose = {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  BLOCKFROST_PROJECT_ID_MAINNET: '',
+  BLOCKFROST_MAINNET_PROJECT_ID: '',
+  BLOCKFROST_PROJECT_ID_TESTNET: '',
+  BLOCKFROST_TESTNET_PROJECT_ID: '',
+  BLOCKFROST_PROJECT_ID_PREPROD: '',
+  BLOCKFROST_PREPROD_PROJECT_ID: '',
+  BLOCKFROST_PROJECT_ID_PREVIEW: '',
+  BLOCKFROST_PREVIEW_PROJECT_ID: '',
+};
 
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 

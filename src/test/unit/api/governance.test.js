@@ -202,6 +202,43 @@ describe('governance API service', () => {
     expect(result.proposals[0].id).toBe('fallback-proposal');
   });
 
+  test('keeps Blockfrost as source when only DRep endpoint fails', async () => {
+    provider.api.key.mockReturnValue({
+      project_id: 'koios_token',
+      blockfrost_project_id: 'bf_live_key',
+    });
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => [{ proposal_id: 'bf-proposal-1' }],
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => [],
+      });
+
+    koiosRequestEnhanced.mockResolvedValueOnce([
+      { drep_id: 'c'.repeat(56), active_stake: '10' },
+    ]);
+
+    const result = await fetchGovernanceOverview('preview');
+
+    expect(result.source).toBe('blockfrost');
+    expect(result.proposals[0].id).toBe('bf-proposal-1');
+    expect(result.dreps[0].keyHashHex).toBe('c'.repeat(56));
+    expect(result.fallbackReason).toMatch(/DRep list unavailable/i);
+    expect(koiosRequestEnhanced).toHaveBeenCalledWith(
+      '/drep_list?limit=20&offset=0',
+      {},
+      undefined,
+      undefined
+    );
+  });
+
   test('normalizes proposal fields for clean UI rendering', async () => {
     koiosRequestEnhanced
       .mockResolvedValueOnce([

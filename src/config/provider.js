@@ -35,23 +35,55 @@ const networkToKoiosApiKey = {
   preview: envValue(['KOIOS_API_KEY_PREVIEW'], secrets.PROJECT_ID_PREVIEW),
 };
 
+// Static process.env.<NAME> references so webpack's EnvironmentPlugin can inline
+// the real values into the browser bundle at build time. The dynamic lookup in
+// `envValue`/`getEnvVar` (process.env[key]) is NOT inlined and resolves to
+// undefined in the browser, which is why Blockfrost previously always fell back
+// to the dummy Koios secrets and forced the Koios API path.
+const staticBlockfrostProjectId = {
+  mainnet: firstDefined(
+    process.env.BLOCKFROST_PROJECT_ID_MAINNET,
+    process.env.BLOCKFROST_MAINNET_PROJECT_ID
+  ),
+  testnet: firstDefined(
+    process.env.BLOCKFROST_PROJECT_ID_TESTNET,
+    process.env.BLOCKFROST_TESTNET_PROJECT_ID
+  ),
+  preprod: firstDefined(
+    process.env.BLOCKFROST_PROJECT_ID_PREPROD,
+    process.env.BLOCKFROST_PREPROD_PROJECT_ID
+  ),
+  preview: firstDefined(
+    process.env.BLOCKFROST_PROJECT_ID_PREVIEW,
+    process.env.BLOCKFROST_PREVIEW_PROJECT_ID
+  ),
+};
+
 /** Blockfrost API project id (header `project_id`). */
 const networkToBlockfrostProjectId = {
-  mainnet: envValue(
-    ['BLOCKFROST_PROJECT_ID_MAINNET', 'BLOCKFROST_MAINNET_PROJECT_ID'],
-    firstDefined(secrets.BLOCKFROST_PROJECT_ID_MAINNET, secrets.PROJECT_ID_MAINNET)
+  mainnet: firstDefined(
+    staticBlockfrostProjectId.mainnet,
+    envValue(['BLOCKFROST_PROJECT_ID_MAINNET', 'BLOCKFROST_MAINNET_PROJECT_ID']),
+    secrets.BLOCKFROST_PROJECT_ID_MAINNET,
+    secrets.PROJECT_ID_MAINNET
   ),
-  testnet: envValue(
-    ['BLOCKFROST_PROJECT_ID_TESTNET', 'BLOCKFROST_TESTNET_PROJECT_ID'],
-    firstDefined(secrets.BLOCKFROST_PROJECT_ID_TESTNET, secrets.PROJECT_ID_TESTNET)
+  testnet: firstDefined(
+    staticBlockfrostProjectId.testnet,
+    envValue(['BLOCKFROST_PROJECT_ID_TESTNET', 'BLOCKFROST_TESTNET_PROJECT_ID']),
+    secrets.BLOCKFROST_PROJECT_ID_TESTNET,
+    secrets.PROJECT_ID_TESTNET
   ),
-  preprod: envValue(
-    ['BLOCKFROST_PROJECT_ID_PREPROD', 'BLOCKFROST_PREPROD_PROJECT_ID'],
-    firstDefined(secrets.BLOCKFROST_PROJECT_ID_PREPROD, secrets.PROJECT_ID_PREPROD)
+  preprod: firstDefined(
+    staticBlockfrostProjectId.preprod,
+    envValue(['BLOCKFROST_PROJECT_ID_PREPROD', 'BLOCKFROST_PREPROD_PROJECT_ID']),
+    secrets.BLOCKFROST_PROJECT_ID_PREPROD,
+    secrets.PROJECT_ID_PREPROD
   ),
-  preview: envValue(
-    ['BLOCKFROST_PROJECT_ID_PREVIEW', 'BLOCKFROST_PREVIEW_PROJECT_ID'],
-    firstDefined(secrets.BLOCKFROST_PROJECT_ID_PREVIEW, secrets.PROJECT_ID_PREVIEW)
+  preview: firstDefined(
+    staticBlockfrostProjectId.preview,
+    envValue(['BLOCKFROST_PROJECT_ID_PREVIEW', 'BLOCKFROST_PREVIEW_PROJECT_ID']),
+    secrets.BLOCKFROST_PROJECT_ID_PREVIEW,
+    secrets.PROJECT_ID_PREVIEW
   ),
 };
 

@@ -1,4 +1,4 @@
-import { ExternalLinkIcon } from '@chakra-ui/icons';
+import { ExternalLinkIcon, CopyIcon, CheckIcon } from '@chakra-ui/icons';
 import React from 'react';
 import { updateTxInfo } from '../../../api/extension';
 import UnitDisplay from './unitDisplay';
@@ -11,9 +11,14 @@ import {
   AccordionItem,
   AccordionPanel,
   VStack,
+  HStack,
   Icon,
   useColorModeValue,
   Skeleton,
+  Badge,
+  Tooltip,
+  IconButton,
+  useClipboard,
 } from '@chakra-ui/react';
 import { compileOutputs } from '../../../api/util';
 import TimeAgo from 'javascript-time-ago';
@@ -165,17 +170,30 @@ const Transaction = ({
             >
               {displayInfo.lovelace !== undefined &&
               displayInfo.lovelace !== null ? (
-                <UnitDisplay
-                  fontSize={18}
-                  color={
-                    displayInfo.lovelace >= 0
-                      ? txTypeColor.externalIn
-                      : txTypeColor.externalOut
-                  }
-                  quantity={displayInfo.lovelace.toString()}
-                  decimals={6}
-                  symbol={settings.adaSymbol}
-                />
+                <HStack spacing={1} justify="center">
+                  <Text
+                    fontSize={18}
+                    fontWeight="bold"
+                    color={
+                      displayInfo.lovelace >= 0 ? 'green.400' : 'red.400'
+                    }
+                  >
+                    {displayInfo.lovelace >= 0 ? '+' : '−'}
+                  </Text>
+                  <UnitDisplay
+                    fontSize={18}
+                    fontWeight="bold"
+                    color={
+                      displayInfo.lovelace >= 0 ? 'green.400' : 'red.400'
+                    }
+                    quantity={(displayInfo.lovelace < 0
+                      ? -displayInfo.lovelace
+                      : displayInfo.lovelace
+                    ).toString()}
+                    decimals={6}
+                    symbol={settings.adaSymbol}
+                  />
+                </HStack>
               ) : displayInfo.extra.length ? (
                 <Text fontSize={12} fontWeight="semibold" color="orange.600">
                   {getTxExtra(displayInfo.extra)}
@@ -310,101 +328,156 @@ const TxIcon = ({ txType, extra }) => {
   );
 };
 
+const DetailRow = ({ label, children, align = 'flex-start' }) => (
+  <HStack align={align} justify="space-between" spacing={3} w="100%">
+    <Text fontSize="xs" fontWeight="bold" color="gray.500" flexShrink={0}>
+      {label}
+    </Text>
+    <Box fontSize="xs" textAlign="right" wordBreak="break-all">
+      {children}
+    </Box>
+  </HStack>
+);
+
 const TxDetail = ({ displayInfo, network }) => {
-  const colorMode = {
-    extraDetail: useColorModeValue('black', 'white'),
-  };
+  const settings = useStoreState((state) => state.settings.settings);
+  const valueColor = useColorModeValue('gray.700', 'gray.200');
+  const panelBg = useColorModeValue('gray.50', 'gray.800');
+
+  const info = displayInfo.detail.info || {};
+  const block = displayInfo.detail.block || {};
+  const explorer = explorerBase(network);
+
+  const blockHeight = block.block_height ?? info.block_height;
+  const epochNo = block.epoch_no ?? info.epoch_no;
+  const absSlot = block.abs_slot ?? info.absolute_slot;
+  const confirmed = blockHeight !== undefined && blockHeight !== null;
+
+  const deposit = parseInt(info.deposit);
+  const outgoing = !['internalIn', 'externalIn', 'multisig'].includes(
+    displayInfo.type
+  );
+  const counterparty = displayInfo.counterparty;
 
   return (
-    <>
-      <Box display="flex" flexDirection="horizontal">
-        <Box>
-          <Box
-            display="flex"
-            flexDirection="vertical"
-            color="gray.900"
-            fontSize="sm"
-            fontWeight="bold"
-          >
-            Transaction ID
-          </Box>
-          <Box>
-            <Link
-              color="gray.500"
-              href={
-                (() => {
-                  switch (network.id) {
-                    case NETWORK_ID.mainnet:
-                      return 'https://cardanoscan.io/transaction/';
-                    case NETWORK_ID.preprod:
-                      return 'https://testnet.cardanoscan.io/transaction/';
-                    case NETWORK_ID.preview:
-                      return 'https://preview.cexplorer.io/tx/';
-                    case NETWORK_ID.testnet:
-                      return 'https://testnet.cexplorer.io/tx/';
-                  }
-                })() + displayInfo.txHash
-              }
-              isExternal
-              onClick={() => {
-              }}
+    <Box
+      bg={panelBg}
+      borderRadius="lg"
+      p={3}
+      mx="auto"
+      maxW="90%"
+      color={valueColor}
+    >
+      <VStack spacing={2} align="stretch">
+        <DetailRow label="Status" align="center">
+          <HStack spacing={2} justify="flex-end">
+            <Badge
+              colorScheme={confirmed ? 'green' : 'yellow'}
+              variant="subtle"
+              borderRadius="md"
             >
-              {displayInfo.txHash} <ExternalLinkIcon mx="2px" />
-            </Link>
-            {displayInfo.detail.metadata.length > 0 ? (
-              <Button
+              {confirmed ? 'Confirmed' : 'Pending'}
+            </Badge>
+            <Text color="gray.500">{displayInfo.timestamp}</Text>
+          </HStack>
+        </DetailRow>
+
+        {counterparty ? (
+          <DetailRow label={counterparty.direction}>
+            <VStack spacing={0} align="flex-end">
+              {counterparty.addresses.slice(0, 3).map((addr) => (
+                <HStack key={addr} spacing={1} justify="flex-end">
+                  <Link
+                    href={explorer.address ? explorer.address + addr : undefined}
+                    isExternal
+                    color="blue.400"
+                  >
+                    {truncateMiddle(addr)}
+                  </Link>
+                  <CopyButton value={addr} label="Copy address" />
+                </HStack>
+              ))}
+              {counterparty.addresses.length > 3 ? (
+                <Text color="gray.500">
+                  +{counterparty.addresses.length - 3} more
+                </Text>
+              ) : null}
+            </VStack>
+          </DetailRow>
+        ) : null}
+
+        {outgoing ? (
+          <>
+            <DetailRow label="Network fee" align="center">
+              <UnitDisplay
                 display="inline-block"
-                colorScheme="gray"
-                size="xs"
-                fontSize="10px"
-                p="2px 4px"
-                height="revert"
-                m="0 5px"
-                onClick={() => viewMetadata(displayInfo.detail.metadata)}
-              >
-                See Metadata
-              </Button>
-            ) : (
-              ''
-            )}
+                quantity={info.fees}
+                decimals={6}
+                symbol={settings.adaSymbol}
+              />
+            </DetailRow>
+            {deposit ? (
+              <DetailRow label={deposit > 0 ? 'Deposit' : 'Refund'} align="center">
+                <UnitDisplay
+                  display="inline-block"
+                  quantity={deposit > 0 ? info.deposit : deposit * -1}
+                  decimals={6}
+                  symbol={settings.adaSymbol}
+                />
+              </DetailRow>
+            ) : null}
+          </>
+        ) : null}
+
+        <DetailRow label="Transaction ID" align="center">
+          <HStack spacing={1} justify="flex-end">
+            <Link
+              href={explorer.tx ? explorer.tx + displayInfo.txHash : undefined}
+              isExternal
+              color="blue.400"
+            >
+              {truncateMiddle(displayInfo.txHash)} <ExternalLinkIcon mx="1px" />
+            </Link>
+            <CopyButton value={displayInfo.txHash} label="Copy transaction ID" />
+          </HStack>
+        </DetailRow>
+
+        {confirmed ? (
+          <DetailRow label="On-chain" align="center">
+            <HStack spacing={3} justify="flex-end" color="gray.500" flexWrap="wrap">
+              {blockHeight !== undefined ? (
+                <Text>Block {Number(blockHeight).toLocaleString('en-US')}</Text>
+              ) : null}
+              {epochNo !== undefined && epochNo !== null ? (
+                <Text>Epoch {epochNo}</Text>
+              ) : null}
+              {absSlot !== undefined && absSlot !== null ? (
+                <Text>Slot {Number(absSlot).toLocaleString('en-US')}</Text>
+              ) : null}
+            </HStack>
+          </DetailRow>
+        ) : null}
+
+        {displayInfo.extra.length > 0 ? (
+          <DetailRow label="Activity" align="center">
+            <Text fontWeight="semibold">{getTxExtra(displayInfo.extra)}</Text>
+          </DetailRow>
+        ) : null}
+
+        {displayInfo.detail.metadata.length > 0 ? (
+          <Box textAlign="right">
+            <Button
+              colorScheme="blue"
+              variant="outline"
+              size="xs"
+              onClick={() => viewMetadata(displayInfo.detail.metadata)}
+            >
+              See Metadata
+            </Button>
           </Box>
-        </Box>
-        <Box>
-          <Box
-            display="flex"
-            flexDirection="vertical"
-            textAlign="right"
-            pl="10px"
-            color="gray.500"
-            fontSize="xs"
-            fontWeight="400"
-            minWidth="75px"
-          >
-            {displayInfo.timestamp}
-          </Box>
-        </Box>
-      </Box>
-      {displayInfo.extra.length > 0 ? (
-        <Box display="flex" flexDirection="vertical" mt="10px">
-          <Box>
-            <Box color="gray.700" fontSize="sm" fontWeight="bold">
-              Transaction Extra
-            </Box>
-            <Box>
-              <Text
-                fontSize={12}
-                fontWeight="semibold"
-                color={colorMode.extraDetail}
-              >
-                {getTxExtra(displayInfo.extra)}
-              </Text>
-            </Box>
-          </Box>
-        </Box>
-      ) : (
-        ''
-      )}
-    </>
+        ) : null}
+      </VStack>
+    </Box>
   );
 };
 
@@ -442,6 +515,8 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
     displayLovelace = null;
   }
 
+  const counterparty = getCounterparty(type, detail, currentAddr, addresses);
+
   const result = {
     txHash: txHash,
     detail: detail,
@@ -449,6 +524,7 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
     timestamp: getTimestamp(date),
     type: type,
     extra: extra,
+    counterparty: counterparty,
     amounts: amounts,
     lovelace: displayLovelace,
     assets: assets.map((asset) => {
@@ -692,6 +768,83 @@ const getTxExtra = (extra) =>
     index < array.length - 1 ? txTypeLabel[item] + ', ' : txTypeLabel[item]
   );
 
+const isOwnAddress = (address, addresses, ownCreds) => {
+  if (!address) return false;
+  if (Array.isArray(addresses) && addresses.includes(address)) return true;
+  return matchesAnyCredential(address, ownCreds);
+};
+
+// Derive the external counterparty: the recipient(s) we paid on an outgoing tx,
+// or the sender(s) that funded an incoming tx. Own/change addresses are skipped.
+const getCounterparty = (type, detail, currentAddr, addresses) => {
+  if (!detail || !detail.utxos) return null;
+  if (type === 'self') return null;
+
+  const ownCreds = getAddressCredentials(currentAddr);
+  const incoming = ['internalIn', 'externalIn'].includes(type);
+  const source = incoming ? detail.utxos.inputs : detail.utxos.outputs;
+  if (!Array.isArray(source)) return null;
+
+  const seen = new Set();
+  const external = [];
+  for (const utxo of source) {
+    const addr = utxo && utxo.address;
+    if (!addr || isOwnAddress(addr, addresses, ownCreds) || seen.has(addr)) {
+      continue;
+    }
+    seen.add(addr);
+    external.push(addr);
+  }
+
+  if (external.length === 0) return null;
+  return { direction: incoming ? 'From' : 'To', addresses: external };
+};
+
+const truncateMiddle = (value, lead = 12, tail = 8) => {
+  if (typeof value !== 'string' || value.length <= lead + tail + 1) return value;
+  return `${value.slice(0, lead)}…${value.slice(-tail)}`;
+};
+
+const explorerBase = (network) => {
+  switch (network.id) {
+    case NETWORK_ID.mainnet:
+      return { tx: 'https://cardanoscan.io/transaction/', address: 'https://cardanoscan.io/address/' };
+    case NETWORK_ID.preprod:
+      return {
+        tx: 'https://testnet.cardanoscan.io/transaction/',
+        address: 'https://testnet.cardanoscan.io/address/',
+      };
+    case NETWORK_ID.preview:
+      return { tx: 'https://preview.cexplorer.io/tx/', address: 'https://preview.cexplorer.io/address/' };
+    case NETWORK_ID.testnet:
+      return { tx: 'https://testnet.cexplorer.io/tx/', address: 'https://testnet.cexplorer.io/address/' };
+    default:
+      return { tx: '', address: '' };
+  }
+};
+
+const CopyButton = ({ value, label }) => {
+  const { hasCopied, onCopy } = useClipboard(value || '');
+  return (
+    <Tooltip label={hasCopied ? 'Copied' : label || 'Copy'} closeOnClick={false} fontSize="xs">
+      <IconButton
+        aria-label={label || 'Copy'}
+        icon={hasCopied ? <CheckIcon color="green.400" /> : <CopyIcon />}
+        size="xs"
+        variant="ghost"
+        onClick={onCopy}
+      />
+    </Tooltip>
+  );
+};
+
 export default Transaction;
 
-export { calculateAmount, matchesAnyCredential, getAddressCredentials, getTxType };
+export {
+  calculateAmount,
+  matchesAnyCredential,
+  getAddressCredentials,
+  getTxType,
+  getCounterparty,
+  truncateMiddle,
+};

@@ -18,12 +18,19 @@ import {
   Tooltip,
   useToast,
 } from '@chakra-ui/react';
-import { ArrowBackIcon, ExternalLinkIcon, RepeatIcon } from '@chakra-ui/icons';
+import {
+  ArrowBackIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ExternalLinkIcon,
+  RepeatIcon,
+} from '@chakra-ui/icons';
 import {
   MdHowToVote,
   MdOutlineGavel,
   MdBlock,
   MdOutlineVerified,
+  MdHistory,
 } from 'react-icons/md';
 import { useStoreState } from 'easy-peasy';
 
@@ -46,6 +53,7 @@ import {
 } from '../../../api/extension/wallet';
 import {
   fetchDRepRegistration,
+  fetchDRepVotes,
   fetchGovernanceOverview,
   normalizeDrepKeyHash,
 } from '../../../api/governance';
@@ -70,6 +78,34 @@ const voteKindLabel = (kind) => {
   if (kind === 'yes') return 'Vote Yes';
   if (kind === 'no') return 'Vote No';
   return 'Abstain';
+};
+
+const voteResultLabel = (kind) => {
+  if (kind === 'yes') return 'Yes';
+  if (kind === 'no') return 'No';
+  if (kind === 'abstain') return 'Abstain';
+  return 'Unknown';
+};
+
+const voteResultColor = (kind) => {
+  if (kind === 'yes') return 'green';
+  if (kind === 'no') return 'red';
+  if (kind === 'abstain') return 'blue';
+  return 'gray';
+};
+
+const formatVoteTime = (value) => {
+  if (!value) return '';
+  const asNumber = Number(value);
+  const date = Number.isFinite(asNumber)
+    ? new Date(asNumber * (asNumber > 1e12 ? 1 : 1000))
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 };
 
 const toReadableLabel = (value) => {
@@ -220,10 +256,19 @@ const Governance = () => {
     checked: false,
     isRegistered: false,
     drepId: '',
+    drepIdLegacy: '',
     drepKeyHashHex: '',
   });
+  const [votesState, setVotesState] = React.useState({
+    isLoading: false,
+    votes: [],
+    source: '',
+    error: '',
+  });
+  const [voteNonce, setVoteNonce] = React.useState(0);
   const [voteTxState, setVoteTxState] = React.useState(emptyTxState);
   const [expandedProposalIds, setExpandedProposalIds] = React.useState({});
+  const [selectedProposalId, setSelectedProposalId] = React.useState('');
 
   const sortedProposals = React.useMemo(() => {
     const statusPriority = {
@@ -259,6 +304,7 @@ const Governance = () => {
         if (signal?.aborted) return;
 
         setExpandedProposalIds({});
+        setSelectedProposalId('');
         setGovernanceState({
           source: result.source,
           fallbackReason: result.fallbackReason || '',
@@ -270,6 +316,7 @@ const Governance = () => {
       } catch (error) {
         if (signal?.aborted) return;
         setExpandedProposalIds({});
+        setSelectedProposalId('');
         setGovernanceState({
           source: '',
           fallbackReason: '',
@@ -292,7 +339,13 @@ const Governance = () => {
   // Detect whether this wallet is itself a registered DRep (enables voting).
   React.useEffect(() => {
     const controller = new AbortController();
-    setDrepState({ checked: false, isRegistered: false, drepId: '', drepKeyHashHex: '' });
+    setDrepState({
+      checked: false,
+      isRegistered: false,
+      drepId: '',
+      drepIdLegacy: '',
+      drepKeyHashHex: '',
+    });
     (async () => {
       try {
         const ids = await getAccountDRepId();
@@ -304,15 +357,61 @@ const Governance = () => {
           checked: true,
           isRegistered: Boolean(registration.registered),
           drepId: registration.drepId || ids.drepIdCip129 || '',
+          drepIdLegacy: ids.drepIdLegacy || '',
           drepKeyHashHex: ids.drepKeyHashHex || '',
         });
       } catch (error) {
         if (controller.signal.aborted) return;
-        setDrepState({ checked: true, isRegistered: false, drepId: '', drepKeyHashHex: '' });
+        setDrepState({
+          checked: true,
+          isRegistered: false,
+          drepId: '',
+          drepIdLegacy: '',
+          drepKeyHashHex: '',
+        });
       }
     })();
     return () => controller.abort();
   }, [networkId]);
+
+  // Load this DRep's own vote history (only when registered). Refetched after
+  // each successful vote via voteNonce.
+  React.useEffect(() => {
+    if (!drepState.isRegistered || !drepState.drepId) {
+      setVotesState({ isLoading: false, votes: [], source: '', error: '' });
+      return undefined;
+    }
+    const controller = new AbortController();
+    setVotesState((previous) => ({ ...previous, isLoading: true, error: '' }));
+    (async () => {
+      try {
+        const result = await fetchDRepVotes(
+          networkId,
+          {
+            drepIdCip129: drepState.drepId,
+            drepIdLegacy: drepState.drepIdLegacy,
+          },
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted) return;
+        setVotesState({
+          isLoading: false,
+          votes: result.votes,
+          source: result.source,
+          error: '',
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setVotesState({
+          isLoading: false,
+          votes: [],
+          source: '',
+          error: error.message || 'Unable to load voting history',
+        });
+      }
+    })();
+    return () => controller.abort();
+  }, [networkId, drepState.isRegistered, drepState.drepId, drepState.drepIdLegacy, voteNonce]);
 
   const showTxError = (heading, message) => {
     toast({
@@ -451,6 +550,11 @@ const Governance = () => {
       ...previous,
       [proposalId]: !previous[proposalId],
     }));
+  };
+
+  // Accordion behaviour: opening one proposal closes any other.
+  const toggleProposalSelection = (proposalId) => {
+    setSelectedProposalId((current) => (current === proposalId ? '' : proposalId));
   };
 
   const copyProposalId = async (proposalId) => {
@@ -780,41 +884,78 @@ const Governance = () => {
                 const hasReadableBody = hasSummary || hasMotivation || hasRationale;
                 const canToggleSummary = shouldCollapseProposalNarrative(proposal);
                 const votable = canVoteOnProposal(proposal);
+                const isOpen = selectedProposalId === proposal.id;
 
                 return (
                   <Box
                     key={proposal.id}
-                    p={4}
                     rounded="2xl"
                     borderWidth="1px"
-                    borderColor="whiteAlpha.200"
+                    borderColor={isOpen ? 'blue.400' : 'whiteAlpha.200'}
                     bg="whiteAlpha.100"
+                    overflow="hidden"
                   >
-                    <Flex align="start" justify="space-between" gap={2} mb={2}>
-                      <HStack spacing={2} flexWrap="wrap">
-                        <Badge colorScheme={proposalTypeColor(proposal.type)}>
-                          {toReadableLabel(proposal.type)}
-                        </Badge>
-                        <Badge colorScheme={proposalStatusColor(proposal.status)}>
-                          {toReadableLabel(proposal.status)}
-                        </Badge>
-                      </HStack>
+                    {/* Compact header — click to expand (accordion) */}
+                    <Flex
+                      as="button"
+                      type="button"
+                      width="100%"
+                      textAlign="left"
+                      align="center"
+                      justify="space-between"
+                      gap={3}
+                      p={4}
+                      onClick={() => toggleProposalSelection(proposal.id)}
+                      _hover={{ bg: 'whiteAlpha.200' }}
+                      aria-expanded={isOpen}
+                    >
+                      <Box minW={0}>
+                        <HStack spacing={2} mb={1} flexWrap="wrap">
+                          <Badge colorScheme={proposalTypeColor(proposal.type)}>
+                            {toReadableLabel(proposal.type)}
+                          </Badge>
+                          <Badge colorScheme={proposalStatusColor(proposal.status)}>
+                            {toReadableLabel(proposal.status)}
+                          </Badge>
+                        </HStack>
+                        <Text fontWeight="bold" isTruncated>
+                          {proposal.title}
+                        </Text>
+                        {!isOpen ? (
+                          <Text color="whiteAlpha.600" fontSize="xs">
+                            Voting closes: {formatEpoch(proposal.expiresAfterEpoch)}
+                          </Text>
+                        ) : null}
+                      </Box>
+                      <Icon
+                        as={isOpen ? ChevronUpIcon : ChevronDownIcon}
+                        boxSize={5}
+                        color="whiteAlpha.700"
+                        flexShrink={0}
+                      />
+                    </Flex>
+
+                    {isOpen ? (
+                    <Box
+                      px={4}
+                      pb={4}
+                      borderTopWidth="1px"
+                      borderColor="whiteAlpha.200"
+                    >
+                    <Flex align="center" justify="space-between" gap={2} mt={3} mb={2}>
+                      <Text color="whiteAlpha.600" fontSize="xs" wordBreak="break-all">
+                        {truncateMiddle(proposal.id, 14, 10)}
+                      </Text>
                       <Button
                         size="xs"
                         variant="ghost"
                         color="whiteAlpha.800"
+                        flexShrink={0}
                         onClick={() => void copyProposalId(proposal.id)}
                       >
                         Copy ID
                       </Button>
                     </Flex>
-
-                    <Text fontWeight="bold" mb={1}>
-                      {proposal.title}
-                    </Text>
-                    <Text color="whiteAlpha.600" fontSize="xs" mb={2}>
-                      {truncateMiddle(proposal.id, 14, 10)}
-                    </Text>
 
                     {hasReadableBody ? (
                       <Box mb={1}>
@@ -1023,6 +1164,8 @@ const Governance = () => {
                         )}
                       </Box>
                     ) : null}
+                    </Box>
+                    ) : null}
                   </Box>
                 );
               })}
@@ -1033,6 +1176,89 @@ const Governance = () => {
             </Text>
           )}
         </Box>
+
+        {/* Your Voting History (only shown when this wallet is a registered DRep) */}
+        {drepState.isRegistered ? (
+          <Box
+            rounded="3xl"
+            bg="whiteAlpha.50"
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            p={{ base: 5, md: 6 }}
+          >
+            <Flex align="center" justify="space-between" gap={3} mb={3} flexWrap="wrap">
+              <HStack spacing={2}>
+                <Icon as={MdHistory} boxSize={5} color="blue.200" />
+                <Text fontSize="xl" fontWeight="black">
+                  Your Voting History
+                </Text>
+              </HStack>
+              <Button
+                size="sm"
+                leftIcon={<RepeatIcon />}
+                variant="ghost"
+                color="whiteAlpha.800"
+                onClick={() => setVoteNonce((nonce) => nonce + 1)}
+                isLoading={votesState.isLoading}
+              >
+                Refresh
+              </Button>
+            </Flex>
+
+            {votesState.isLoading ? (
+              <Flex justify="center" py={8}>
+                <Spinner color="blue.400" speed="0.65s" />
+              </Flex>
+            ) : votesState.error ? (
+              <Alert status="error" rounded="2xl" bg="red.900" color="white">
+                <AlertIcon />
+                <Text fontSize="sm">{votesState.error}</Text>
+              </Alert>
+            ) : votesState.votes.length > 0 ? (
+              <Stack spacing={2}>
+                {votesState.votes.map((voteRow, voteIndex) => (
+                  <Flex
+                    key={`${voteRow.id}-${voteIndex}`}
+                    p={3}
+                    rounded="xl"
+                    bg="whiteAlpha.100"
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                    align="center"
+                    justify="space-between"
+                    gap={3}
+                  >
+                    <Box minW={0}>
+                      <Text fontWeight="semibold" isTruncated>
+                        {voteRow.proposalType
+                          ? toReadableLabel(voteRow.proposalType)
+                          : 'Governance action'}
+                      </Text>
+                      <Text color="whiteAlpha.600" fontSize="xs" isTruncated>
+                        {voteRow.proposalId
+                          ? truncateMiddle(voteRow.proposalId, 12, 8)
+                          : voteRow.txHash
+                            ? `tx ${truncateMiddle(voteRow.txHash, 10, 6)}`
+                            : ''}
+                        {formatVoteTime(voteRow.blockTime)
+                          ? ` · ${formatVoteTime(voteRow.blockTime)}`
+                          : ''}
+                      </Text>
+                    </Box>
+                    <Badge colorScheme={voteResultColor(voteRow.vote)} flexShrink={0}>
+                      {voteResultLabel(voteRow.vote)}
+                    </Badge>
+                  </Flex>
+                ))}
+              </Stack>
+            ) : (
+              <Text color="whiteAlpha.700" fontSize="sm">
+                No votes recorded yet for your DRep. Votes appear here a few
+                minutes after they are confirmed on-chain.
+              </Text>
+            )}
+          </Box>
+        ) : null}
       </Stack>
 
       <ConfirmModal
@@ -1086,6 +1312,10 @@ const Governance = () => {
               status: 'success',
               duration: 4500,
             });
+            if (voteTxState.kind === 'vote') {
+              // Give the chain a moment, then refresh vote history.
+              setTimeout(() => setVoteNonce((nonce) => nonce + 1), 4000);
+            }
           } else if (result === ERROR.fullMempool) {
             showTxError('Transaction failed', 'Mempool is full, please retry in a moment.');
           } else {

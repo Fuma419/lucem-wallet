@@ -589,6 +589,75 @@ export const fetchDRepRegistration = async (networkId, ids = {}, options = {}) =
   return { registered: false, source: '', drep: null, drepId: candidates[0] };
 };
 
+const normalizeVoteKind = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized.includes('yes')) return 'yes';
+  if (normalized.includes('abstain')) return 'abstain';
+  if (normalized.includes('no')) return 'no';
+  return normalized || 'unknown';
+};
+
+const normalizeVoteRow = (row) => {
+  const proposalId = firstString(
+    row.proposal_id,
+    row.gov_action_id,
+    row.governance_action_id,
+    row.action_id
+  );
+  const txHash = firstString(row.vote_tx_hash, row.tx_hash);
+  const blockTime =
+    row.block_time || row.block_time_iso || row.time || row.timestamp || null;
+  return {
+    id: proposalId || txHash || `${row.cert_index ?? ''}`,
+    proposalId,
+    vote: normalizeVoteKind(row.vote),
+    txHash,
+    blockTime,
+    proposalType: firstString(row.proposal_type, row.gov_action_type),
+  };
+};
+
+/**
+ * Fetch the vote history cast by this wallet's DRep credential.
+ * Tries Blockfrost (GET /governance/dreps/{drep_id}/votes) then Koios
+ * (/drep_votes). Returns { votes: [...normalized], source }.
+ */
+export const fetchDRepVotes = async (networkId, ids = {}, options = {}) => {
+  const candidates = [ids.drepIdCip129, ids.drepIdLegacy].filter(
+    (value) => typeof value === 'string' && value.trim()
+  );
+  if (candidates.length === 0) {
+    return { votes: [], source: '' };
+  }
+
+  for (const drepId of candidates) {
+    const rows = await fetchBlockfrostJsonMaybe(
+      networkId,
+      `/governance/dreps/${encodeURIComponent(drepId)}/votes`,
+      options.signal
+    );
+    if (Array.isArray(rows)) {
+      return { votes: rows.map(normalizeVoteRow), source: 'blockfrost' };
+    }
+  }
+
+  try {
+    const rows = await koiosRequestEnhanced(
+      `/drep_votes?_drep_id=${encodeURIComponent(candidates[0])}`,
+      {},
+      undefined,
+      options.signal
+    );
+    if (Array.isArray(rows)) {
+      return { votes: rows.map(normalizeVoteRow), source: 'koios' };
+    }
+  } catch {
+    /* ignore — treat as no history */
+  }
+
+  return { votes: [], source: '' };
+};
+
 export const fetchGovernanceOverview = async (
   networkId,
   options = { proposalLimit: 12, drepLimit: 20 }

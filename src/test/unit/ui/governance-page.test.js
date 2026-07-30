@@ -8,8 +8,8 @@ describe('governance page and wallet network button wiring', () => {
       'utf8'
     );
 
-    expect(css).toMatch(/\.button\.network-mainnet,\s*[\s\S]*background:\s*rgba\(120,\s*120,\s*120/);
-    expect(css).toMatch(/\.button\.network-mainnet\[data-active\][\s\S]*rgba\(206,\s*250,\s*0/);
+    expect(css).toMatch(/\.button\.network-mainnet,\s*[\s\S]*background:\s*#2b2b2b/);
+    expect(css).toMatch(/\.button\.network-mainnet\[data-active\][\s\S]*background:\s*#cefa00/);
     expect(css).toMatch(/\.button\.network-preview\[data-active\][\s\S]*box-shadow:\s*0 0 14px rgba\(206,\s*250,\s*0/);
   });
 

@@ -491,7 +491,8 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
         `/drep_list?limit=${drepLimit}&offset=0`,
         {},
         undefined,
-        options.signal
+        options.signal,
+        networkId
       );
     } catch (koiosError) {
       fallbackReason = `${fallbackReason}. Koios DRep fallback failed (${koiosError.message})`;
@@ -513,13 +514,13 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
   };
 };
 
-const fetchKoiosGovernance = async (options) => {
+const fetchKoiosGovernance = async (networkId, options) => {
   const proposalLimit = Math.max(1, Math.min(options.proposalLimit ?? 12, 50));
   const drepLimit = Math.max(1, Math.min(options.drepLimit ?? 20, 50));
 
   const [proposalList, drepList] = await Promise.all([
-    koiosRequestEnhanced(`/proposal_list?limit=${proposalLimit}&offset=0`, {}, undefined, options.signal),
-    koiosRequestEnhanced(`/drep_list?limit=${drepLimit}&offset=0`, {}, undefined, options.signal),
+    koiosRequestEnhanced(`/proposal_list?limit=${proposalLimit}&offset=0`, {}, undefined, options.signal, networkId),
+    koiosRequestEnhanced(`/drep_list?limit=${drepLimit}&offset=0`, {}, undefined, options.signal, networkId),
   ]);
 
   return {
@@ -563,7 +564,8 @@ export const fetchDRepRegistration = async (networkId, ids = {}, options = {}) =
       '/drep_info',
       { 'Content-Type': 'application/json' },
       { _drep_ids: candidates },
-      options.signal
+      options.signal,
+      networkId
     );
     const row = Array.isArray(rows)
       ? rows.find(
@@ -646,7 +648,8 @@ export const fetchDRepVotes = async (networkId, ids = {}, options = {}) => {
       `/drep_votes?_drep_id=${encodeURIComponent(candidates[0])}`,
       {},
       undefined,
-      options.signal
+      options.signal,
+      networkId
     );
     if (Array.isArray(rows)) {
       return { votes: rows.map(normalizeVoteRow), source: 'koios' };
@@ -670,7 +673,7 @@ export const fetchGovernanceOverview = async (
     blockfrostError = error;
   }
 
-  const koiosResult = await fetchKoiosGovernance(options);
+  const koiosResult = await fetchKoiosGovernance(networkId, options);
   const proposals = await enrichProposalsWithBlockfrostMetadata(
     networkId,
     koiosResult.proposals,

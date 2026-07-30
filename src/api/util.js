@@ -581,8 +581,8 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
   return undefined;
 }
 
-export async function koiosRequest(endpoint, headers, body, signal) {
-  const network = await getNetwork();
+export async function koiosRequest(endpoint, headers, body, signal, networkOverride) {
+  const network = networkOverride ? { id: networkOverride } : await getNetwork();
   const networkKey = normalizeNetworkKey(network);
   const blockfrostProjectId = resolveBlockfrostProjectId(networkKey);
   let blockfrostError = null;
@@ -2232,7 +2232,7 @@ export const convertKoiosResponse = (response, endpoint) => {
 };
 
 // Enhanced Koios request with response conversion
-export async function koiosRequestEnhanced(endpoint, headers, body, signal) {
+export async function koiosRequestEnhanced(endpoint, headers, body, signal, networkOverride) {
   // Handle test networks that don't support certain endpoints
   let actualEndpoint = endpoint;
   let actualBody = body;
@@ -2256,7 +2256,7 @@ export async function koiosRequestEnhanced(endpoint, headers, body, signal) {
     actualEndpoint = `/asset_addresses?_asset_policy=${assetId.substring(0, 56)}&_asset_name=${assetId.substring(56)}`;
   }
   
-  const response = await koiosRequest(actualEndpoint, actualHeaders, actualBody, signal);
+  const response = await koiosRequest(actualEndpoint, actualHeaders, actualBody, signal, networkOverride);
   
   // Convert response based on the original endpoint
   return convertKoiosResponse(response, endpoint);

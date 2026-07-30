@@ -123,16 +123,33 @@ const titleFromUrl = (value) => {
   }
 };
 
+const CONCLUDED_PROPOSAL_STATUSES = new Set([
+  'ratified',
+  'enacted',
+  'expired',
+  'dropped',
+]);
+
+const hasEpochValue = (value) =>
+  value !== null && value !== undefined && value !== '';
+
 const toStatus = (entry) => {
   if (entry == null || typeof entry !== 'object') return 'unknown';
   if (typeof entry.status === 'string' && entry.status.trim()) {
     return entry.status.trim();
   }
-  if (entry.ratified === true) return 'ratified';
-  if (entry.expired === true) return 'expired';
-  if (entry.enacted === true) return 'enacted';
+  // Koios/Blockfrost expose governance-action lifecycle as the epoch in which
+  // each transition happened (null while it has not happened). A proposal is
+  // only open for voting until it is enacted, ratified, expired, or dropped.
+  if (entry.enacted === true || hasEpochValue(entry.enacted_epoch)) return 'enacted';
+  if (entry.ratified === true || hasEpochValue(entry.ratified_epoch)) return 'ratified';
+  if (entry.expired === true || hasEpochValue(entry.expired_epoch)) return 'expired';
+  if (entry.dropped === true || hasEpochValue(entry.dropped_epoch)) return 'dropped';
   return 'active';
 };
+
+const isProposalOpenForVoting = (status) =>
+  !CONCLUDED_PROPOSAL_STATUSES.has(String(status || '').toLowerCase());
 
 const toSortableStake = (value) => {
   try {
@@ -253,11 +270,13 @@ const normalizeProposal = (proposal, index) => {
     }
   }
   const govActionId = firstString(proposal.id, proposal.proposal_id, proposal.gov_action_id);
+  const status = toStatus(proposal);
 
   return {
     id,
     type: type || 'unknown',
-    status: toStatus(proposal),
+    status,
+    isOpenForVoting: isProposalOpenForVoting(status),
     title,
     summary,
     rationale,
@@ -310,6 +329,11 @@ const normalizeDrep = (drep, index) => {
 
 const normalizeProposals = (list) =>
   asArray(list).map((proposal, index) => normalizeProposal(proposal, index));
+
+// Only proposals whose voting window is still open can accept a vote; concluded
+// governance actions (enacted/ratified/expired/dropped) are rejected by the node.
+const normalizeVotableProposals = (list) =>
+  normalizeProposals(list).filter((proposal) => proposal.isOpenForVoting);
 
 const normalizeDreps = (list) =>
   asArray(list)
@@ -399,6 +423,58 @@ const resolveProposalMetadataPath = (proposal) => {
     return `/governance/proposals/${encodeURIComponent(gid)}/metadata`;
   }
   return '';
+};
+
+// Blockfrost's proposal LIST endpoint omits lifecycle epochs, so we must fetch
+// the per-proposal detail to know whether voting is still open.
+const resolveProposalDetailPath = (proposal) => {
+  if (
+    proposal.txHash &&
+    proposal.certIndex !== null &&
+    proposal.certIndex !== undefined
+  ) {
+    return `/governance/proposals/${proposal.txHash}/${proposal.certIndex}`;
+  }
+  const gid = firstString(proposal.govActionId);
+  if (gid && gid.startsWith(GOV_ACTION_BECH32_PREFIX)) {
+    return `/governance/proposals/${encodeURIComponent(gid)}`;
+  }
+  return '';
+};
+
+// Drop governance actions that are already enacted/ratified/expired/dropped so
+// the UI never offers a vote the node will reject. Fails open (keeps the
+// proposal) when the detail lookup is unavailable.
+const filterBlockfrostVotableProposals = async (
+  networkId,
+  proposals,
+  options = {}
+) => {
+  const concurrency = Math.max(1, Math.min(options.metadataConcurrency ?? 4, 8));
+  const signal = options.signal;
+  const kept = [];
+
+  for (let offset = 0; offset < proposals.length; offset += concurrency) {
+    const slice = proposals.slice(offset, offset + concurrency);
+    const checked = await Promise.all(
+      slice.map(async (proposal) => {
+        const path = resolveProposalDetailPath(proposal);
+        if (!path) return proposal;
+
+        const detail = await fetchBlockfrostJsonMaybe(networkId, path, signal);
+        if (!detail || typeof detail !== 'object') return proposal;
+
+        const status = toStatus(detail);
+        return { ...proposal, status, isOpenForVoting: isProposalOpenForVoting(status) };
+      })
+    );
+
+    for (const proposal of checked) {
+      if (proposal.isOpenForVoting) kept.push(proposal);
+    }
+  }
+
+  return kept;
 };
 
 const mergeBlockfrostMetadataIntoProposal = (proposal, payload) => {
@@ -500,9 +576,14 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
     }
   }
 
+  const votableProposals = await filterBlockfrostVotableProposals(
+    networkId,
+    normalizeVotableProposals(proposalList),
+    options
+  );
   const proposals = await enrichProposalsWithBlockfrostMetadata(
     networkId,
-    normalizeProposals(proposalList),
+    votableProposals,
     options
   );
 
@@ -525,7 +606,7 @@ const fetchKoiosGovernance = async (networkId, options) => {
 
   return {
     source: 'koios',
-    proposals: normalizeProposals(proposalList),
+    proposals: normalizeVotableProposals(proposalList),
     dreps: normalizeDreps(drepList),
   };
 };

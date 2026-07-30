@@ -126,6 +126,19 @@ describe('governance API service', () => {
         status: 200,
         statusText: 'OK',
         json: async () => ({
+          tx_hash: txHash,
+          cert_index: 1,
+          enacted_epoch: null,
+          ratified_epoch: null,
+          expired_epoch: null,
+          dropped_epoch: null,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({
           url: 'https://example.test/proposal.json',
           hash: 'e'.repeat(64),
           json_metadata: {
@@ -149,10 +162,72 @@ describe('governance API service', () => {
     expect(result.proposals[0].summary).toBe('Resolved abstract');
     expect(result.proposals[0].rationale).toBe('Resolved rationale');
     expect(result.proposals[0].motivation).toBe('Resolved motivation');
-    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(global.fetch).toHaveBeenCalledTimes(4);
     expect(global.fetch.mock.calls[2][0]).toContain(
+      `/governance/proposals/${txHash}/1`
+    );
+    expect(global.fetch.mock.calls[3][0]).toContain(
       `/governance/proposals/${txHash}/1/metadata`
     );
+  });
+
+  test('hides enacted governance actions from the Blockfrost votable list', async () => {
+    provider.api.key.mockReturnValue({
+      project_id: 'koios_token',
+      blockfrost_project_id: 'bf_live_key',
+    });
+    const enactedTx = 'a'.repeat(64);
+    const openTx = 'b'.repeat(64);
+
+    global.fetch
+      // proposal list
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => [
+          { id: 'gov_action_enacted', tx_hash: enactedTx, cert_index: 0 },
+          { id: 'gov_action_open', tx_hash: openTx, cert_index: 0 },
+        ],
+      })
+      // drep list
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => [],
+      })
+      // detail for enacted proposal
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ tx_hash: enactedTx, enacted_epoch: 1370, ratified_epoch: 1369 }),
+      })
+      // detail for open proposal
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ tx_hash: openTx, enacted_epoch: null, expired_epoch: null }),
+      })
+      // metadata enrichment for the surviving open proposal
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ json_metadata: { body: { title: 'Still open' } } }),
+      });
+
+    const result = await fetchGovernanceOverview('preview', {
+      proposalLimit: 5,
+      drepLimit: 5,
+    });
+
+    expect(result.source).toBe('blockfrost');
+    expect(result.proposals).toHaveLength(1);
+    expect(result.proposals[0].txHash).toBe(openTx);
+    expect(result.proposals[0].isOpenForVoting).toBe(true);
   });
 
   test('falls back to Koios when Blockfrost key is missing', async () => {

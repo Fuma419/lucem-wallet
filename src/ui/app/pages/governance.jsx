@@ -31,8 +31,10 @@ import ConfirmModal from '../components/confirmModal';
 import UnitDisplay from '../components/unitDisplay';
 import {
   createTab,
+  getAccountDRepId,
   getCurrentAccount,
   getDelegation,
+  isHW,
   openKeystoneSignTxTab,
 } from '../../../api/extension';
 import {
@@ -40,12 +42,17 @@ import {
   signAndSubmit,
   signAndSubmitHW,
   voteDelegationTx,
+  voteTx,
 } from '../../../api/extension/wallet';
-import { fetchGovernanceOverview, normalizeDrepKeyHash } from '../../../api/governance';
+import {
+  fetchDRepRegistration,
+  fetchGovernanceOverview,
+  normalizeDrepKeyHash,
+} from '../../../api/governance';
 import { ERROR, HW, TAB } from '../../../config/config';
 
 const sourceBadgeColor = (source) =>
-  source === 'blockfrost' ? 'green' : 'purple';
+  source === 'blockfrost' ? 'green' : 'orange';
 
 const truncateMiddle = (value, head = 12, tail = 8) => {
   if (!value || typeof value !== 'string') return '';
@@ -57,6 +64,12 @@ const voteLabel = (type) => {
   if (type === 'always_abstain') return 'Always Abstain';
   if (type === 'always_no_confidence') return 'Always No Confidence';
   return 'DRep Key Hash';
+};
+
+const voteKindLabel = (kind) => {
+  if (kind === 'yes') return 'Vote Yes';
+  if (kind === 'no') return 'Vote No';
+  return 'Abstain';
 };
 
 const toReadableLabel = (value) => {
@@ -113,7 +126,21 @@ const shouldCollapseProposalNarrative = (proposal) => {
   return parts.length > 280;
 };
 
-const DelegateActionCard = ({ icon, title, text, buttonLabel, colorScheme, onClick, isLoading, isDisabled }) => (
+const canVoteOnProposal = (proposal) =>
+  Boolean(proposal.txHash) &&
+  proposal.certIndex !== null &&
+  proposal.certIndex !== undefined;
+
+const DelegateActionCard = ({
+  icon,
+  title,
+  text,
+  buttonLabel,
+  colorScheme,
+  onClick,
+  isLoading,
+  isDisabled,
+}) => (
   <Box
     borderWidth="1px"
     borderColor="whiteAlpha.200"
@@ -126,7 +153,7 @@ const DelegateActionCard = ({ icon, title, text, buttonLabel, colorScheme, onCli
     <HStack spacing={3} align="start">
       <Flex
         rounded="xl"
-        bg="yellow.400"
+        bg="blue.400"
         color="gray.900"
         boxSize="10"
         align="center"
@@ -145,7 +172,7 @@ const DelegateActionCard = ({ icon, title, text, buttonLabel, colorScheme, onCli
     <Button
       mt={4}
       width="full"
-      colorScheme={colorScheme || 'yellow'}
+      colorScheme={colorScheme || 'blue'}
       variant="outline"
       onClick={onClick}
       isLoading={isLoading}
@@ -155,6 +182,19 @@ const DelegateActionCard = ({ icon, title, text, buttonLabel, colorScheme, onCli
     </Button>
   </Box>
 );
+
+const emptyTxState = {
+  tx: null,
+  fee: '',
+  account: null,
+  ready: false,
+  kind: '',
+  keyHashes: [],
+  title: '',
+  detailLabel: '',
+  detailValue: '',
+  targetDrep: '',
+};
 
 const Governance = () => {
   const navigate = useNavigate();
@@ -167,6 +207,7 @@ const Governance = () => {
 
   const [drepIdInput, setDrepIdInput] = React.useState('');
   const [isBuildingTx, setIsBuildingTx] = React.useState(false);
+  const [votingKey, setVotingKey] = React.useState('');
   const [governanceState, setGovernanceState] = React.useState({
     source: '',
     fallbackReason: '',
@@ -175,14 +216,13 @@ const Governance = () => {
     isLoading: true,
     error: '',
   });
-  const [voteTxState, setVoteTxState] = React.useState({
-    tx: null,
-    fee: '',
-    account: null,
-    ready: false,
-    voteType: '',
-    targetDrep: '',
+  const [drepState, setDrepState] = React.useState({
+    checked: false,
+    isRegistered: false,
+    drepId: '',
+    drepKeyHashHex: '',
   });
+  const [voteTxState, setVoteTxState] = React.useState(emptyTxState);
   const [expandedProposalIds, setExpandedProposalIds] = React.useState({});
 
   const sortedProposals = React.useMemo(() => {
@@ -249,6 +289,61 @@ const Governance = () => {
     return () => controller.abort();
   }, [loadGovernance]);
 
+  // Detect whether this wallet is itself a registered DRep (enables voting).
+  React.useEffect(() => {
+    const controller = new AbortController();
+    setDrepState({ checked: false, isRegistered: false, drepId: '', drepKeyHashHex: '' });
+    (async () => {
+      try {
+        const ids = await getAccountDRepId();
+        const registration = await fetchDRepRegistration(networkId, ids, {
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setDrepState({
+          checked: true,
+          isRegistered: Boolean(registration.registered),
+          drepId: registration.drepId || ids.drepIdCip129 || '',
+          drepKeyHashHex: ids.drepKeyHashHex || '',
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setDrepState({ checked: true, isRegistered: false, drepId: '', drepKeyHashHex: '' });
+      }
+    })();
+    return () => controller.abort();
+  }, [networkId]);
+
+  const showTxError = (heading, message) => {
+    toast({
+      status: 'error',
+      duration: 6000,
+      render: ({ onClose }) => (
+        <Alert
+          status="error"
+          rounded="xl"
+          bg="red.900"
+          color="white"
+          cursor="pointer"
+          _hover={{ opacity: 0.85 }}
+          onClick={() => {
+            navigator.clipboard.writeText(message);
+            toast({ title: 'Copied', status: 'info', duration: 1200 });
+            onClose();
+          }}
+          title="Tap to copy"
+          p={4}
+        >
+          <AlertIcon />
+          <Box>
+            <Text fontWeight="bold" fontSize="sm">{heading}</Text>
+            <Text fontSize="xs">{message}</Text>
+          </Box>
+        </Alert>
+      ),
+    });
+  };
+
   const prepareVoteDelegation = async (voteType, keyHashHex = '') => {
     setIsBuildingTx(true);
 
@@ -273,42 +368,66 @@ const Governance = () => {
         fee: tx.body().fee().toString(),
         account: currentAccount,
         ready: true,
-        voteType,
+        kind: 'delegation',
+        keyHashes: [currentAccount.paymentKeyHash, currentAccount.stakeKeyHash],
+        title: 'Confirm Vote Delegation',
+        detailLabel: 'Delegation target',
+        detailValue: voteLabel(voteType),
         targetDrep: keyHashHex,
       });
 
       confirmRef.current?.openModal(currentAccount.index);
     } catch (error) {
-      const errMsg = error.message || 'Transaction preparation failed';
-      toast({
-        status: 'error',
-        duration: 6000,
-        render: ({ onClose }) => (
-          <Alert
-            status="error"
-            rounded="xl"
-            bg="red.900"
-            color="white"
-            cursor="pointer"
-            _hover={{ opacity: 0.85 }}
-            onClick={() => {
-              navigator.clipboard.writeText(errMsg);
-              toast({ title: 'Copied', status: 'info', duration: 1200 });
-              onClose();
-            }}
-            title="Tap to copy"
-            p={4}
-          >
-            <AlertIcon />
-            <Box>
-              <Text fontWeight="bold" fontSize="sm">Unable to build vote delegation</Text>
-              <Text fontSize="xs">{errMsg}</Text>
-            </Box>
-          </Alert>
-        ),
-      });
+      showTxError('Unable to build vote delegation', error.message || 'Transaction preparation failed');
     } finally {
       setIsBuildingTx(false);
+    }
+  };
+
+  const prepareVote = async (proposal, voteKind) => {
+    if (!drepState.isRegistered || !drepState.drepKeyHashHex) return;
+    if (!canVoteOnProposal(proposal)) return;
+
+    setVotingKey(`${proposal.id}:${voteKind}`);
+    try {
+      const currentAccount = await getCurrentAccount();
+      if (!currentAccount?.paymentKeyHash) {
+        throw new Error('Current account is missing signing key hashes');
+      }
+      if (isHW(currentAccount.index)) {
+        throw new Error(
+          'Hardware wallet DRep voting is not supported yet. Use a software (password) wallet to cast votes.'
+        );
+      }
+
+      const protocolParameters = await initTx();
+      const tx = await voteTx(currentAccount, protocolParameters, {
+        drepKeyHashHex: drepState.drepKeyHashHex,
+        proposalTxHash: proposal.txHash,
+        proposalIndex: proposal.certIndex,
+        voteKind,
+      });
+
+      setVoteTxState({
+        tx,
+        fee: tx.body().fee().toString(),
+        account: currentAccount,
+        ready: true,
+        kind: 'vote',
+        keyHashes: [currentAccount.paymentKeyHash, drepState.drepKeyHashHex],
+        title: 'Confirm DRep Vote',
+        detailLabel: 'Vote',
+        detailValue: `${voteKindLabel(voteKind)} — ${
+          proposal.title || truncateMiddle(proposal.id, 12, 8)
+        }`,
+        targetDrep: '',
+      });
+
+      confirmRef.current?.openModal(currentAccount.index);
+    } catch (error) {
+      showTxError('Unable to build vote', error.message || 'Transaction preparation failed');
+    } finally {
+      setVotingKey('');
     }
   };
 
@@ -376,36 +495,47 @@ const Governance = () => {
             Wallet
           </Button>
           <HStack spacing={2}>
+            {drepState.isRegistered ? (
+              <Badge colorScheme="blue">You're a DRep</Badge>
+            ) : null}
             {governanceState.source ? (
-              <Tooltip label={governanceState.fallbackReason || ''} hasArrow>
+              <Tooltip
+                label={
+                  governanceState.fallbackReason ||
+                  (isBlockfrost
+                    ? 'Live governance data from Blockfrost'
+                    : 'Limited data — configure Blockfrost for full metadata')
+                }
+                hasArrow
+              >
                 <Badge colorScheme={sourceBadgeColor(governanceState.source)}>
-                  {isBlockfrost ? 'Blockfrost' : 'Koios fallback'}
+                  {isBlockfrost ? 'Live' : 'Limited'}
                 </Badge>
               </Tooltip>
             ) : null}
-            <Badge colorScheme="yellow">{networkId}</Badge>
+            <Badge colorScheme="cyan">{networkId}</Badge>
           </HStack>
         </Flex>
 
-        {/* Hero header — mirrors the Stake Center layout */}
+        {/* Hero header — condensed for the popup viewport */}
         <Box
           rounded="3xl"
-          p={{ base: 5, md: 7 }}
+          p={{ base: 4, md: 6 }}
           bg="whiteAlpha.50"
           borderWidth="1px"
           borderColor="whiteAlpha.200"
         >
-          <Flex direction={{ base: 'column', md: 'row' }} gap={5} justify="space-between">
+          <Flex direction={{ base: 'column', md: 'row' }} gap={4} justify="space-between">
             <Box maxW="650px">
-              <Badge colorScheme="yellow" mb={3}>
+              <Badge colorScheme="blue" mb={2}>
                 Voting Center
               </Badge>
-              <Text fontSize={{ base: '3xl', md: '5xl' }} fontWeight="black" lineHeight="1">
+              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="black" lineHeight="1.05">
                 Delegate your voting power, keep your keys.
               </Text>
-              <Text color="whiteAlpha.800" mt={4} fontSize="sm">
-                Build and sign an on-chain vote delegation certificate with the same secure
-                password or hardware wallet flow used everywhere else in Lucem.
+              <Text color="whiteAlpha.800" mt={2} fontSize="xs" noOfLines={2}>
+                Build and sign on-chain governance transactions with the same secure password
+                or hardware wallet flow used everywhere else in Lucem.
               </Text>
             </Box>
             <Box
@@ -417,7 +547,7 @@ const Governance = () => {
               p={4}
             >
               <HStack spacing={3}>
-                <Flex rounded="2xl" bg="yellow.400" color="gray.900" boxSize="12" align="center" justify="center">
+                <Flex rounded="2xl" bg="blue.400" color="gray.900" boxSize="12" align="center" justify="center">
                   <Icon as={isBlockfrost ? MdOutlineVerified : MdHowToVote} boxSize={7} />
                 </Flex>
                 <Box>
@@ -425,11 +555,11 @@ const Governance = () => {
                     Governance data
                   </Text>
                   <Text fontWeight="bold">
-                    {isBlockfrost ? 'Live via Blockfrost' : 'Koios fallback'}
+                    {isBlockfrost ? 'Live and complete' : 'Limited data'}
                   </Text>
                 </Box>
               </HStack>
-              <Stack spacing={3} mt={5} fontSize="sm">
+              <Stack spacing={2} mt={4} fontSize="sm">
                 <Flex justify="space-between">
                   <Text color="whiteAlpha.700">Network</Text>
                   <Text fontWeight="semibold" textTransform="capitalize">{networkId}</Text>
@@ -439,8 +569,14 @@ const Governance = () => {
                   <Text fontWeight="semibold">{governanceState.proposals.length}</Text>
                 </Flex>
                 <Flex justify="space-between">
-                  <Text color="whiteAlpha.700">Top DReps</Text>
-                  <Text fontWeight="semibold">{governanceState.dreps.length}</Text>
+                  <Text color="whiteAlpha.700">Your DRep</Text>
+                  <Text fontWeight="semibold" color={drepState.isRegistered ? 'blue.200' : 'whiteAlpha.700'}>
+                    {!drepState.checked
+                      ? 'Checking…'
+                      : drepState.isRegistered
+                        ? 'Registered'
+                        : 'Not registered'}
+                  </Text>
                 </Flex>
               </Stack>
             </Box>
@@ -512,11 +648,11 @@ const Governance = () => {
                 onChange={(event) => setDrepIdInput(event.target.value)}
                 bg="whiteAlpha.100"
                 borderColor="whiteAlpha.200"
-                focusBorderColor="yellow.400"
+                focusBorderColor="blue.400"
                 _placeholder={{ color: 'whiteAlpha.500' }}
               />
               <Button
-                colorScheme="yellow"
+                colorScheme="blue"
                 px={8}
                 onClick={() => void handleCustomDrepDelegation()}
                 isDisabled={!drepIdInput.trim()}
@@ -545,7 +681,7 @@ const Governance = () => {
                     justify="space-between"
                     gap={3}
                     transition="all 0.18s ease"
-                    _hover={{ borderColor: 'yellow.500', bg: 'whiteAlpha.200' }}
+                    _hover={{ borderColor: 'blue.500', bg: 'whiteAlpha.200' }}
                   >
                     <Box minW={0}>
                       <Text fontWeight="semibold" isTruncated>
@@ -558,7 +694,7 @@ const Governance = () => {
                     </Box>
                     <Button
                       size="sm"
-                      colorScheme="yellow"
+                      colorScheme="blue"
                       variant="outline"
                       flexShrink={0}
                       onClick={() => {
@@ -584,9 +720,16 @@ const Governance = () => {
           borderColor="whiteAlpha.200"
           p={{ base: 5, md: 6 }}
         >
-          <Text fontSize="xl" fontWeight="black" mb={2}>
-            Active Governance Proposals
-          </Text>
+          <Flex align="center" justify="space-between" gap={3} mb={2} flexWrap="wrap">
+            <Text fontSize="xl" fontWeight="black">
+              Active Governance Proposals
+            </Text>
+            {drepState.isRegistered ? (
+              <Badge colorScheme="blue" variant="subtle">
+                Voting enabled — you are a DRep
+              </Badge>
+            ) : null}
+          </Flex>
           <Text fontSize="xs" color="whiteAlpha.700" mb={2}>
             Titles and descriptions come from on-chain anchors (CIP-108). Blockfrost resolves
             proposal metadata when a project id is configured; Koios may include{' '}
@@ -596,7 +739,7 @@ const Governance = () => {
             inline.
           </Text>
           <Link
-            color="yellow.200"
+            color="blue.200"
             fontSize="xs"
             display="inline-flex"
             alignItems="center"
@@ -614,7 +757,7 @@ const Governance = () => {
 
           {governanceState.isLoading ? (
             <Flex justify="center" py={10}>
-              <Spinner color="yellow.400" speed="0.65s" />
+              <Spinner color="blue.400" speed="0.65s" />
             </Flex>
           ) : governanceState.error ? (
             <Alert status="error" rounded="2xl" bg="red.900" color="white">
@@ -636,6 +779,7 @@ const Governance = () => {
                 );
                 const hasReadableBody = hasSummary || hasMotivation || hasRationale;
                 const canToggleSummary = shouldCollapseProposalNarrative(proposal);
+                const votable = canVoteOnProposal(proposal);
 
                 return (
                   <Box
@@ -729,7 +873,7 @@ const Governance = () => {
                           <Button
                             size="xs"
                             variant="link"
-                            colorScheme="yellow"
+                            colorScheme="blue"
                             onClick={() => toggleProposalSummary(proposal.id)}
                           >
                             {summaryExpanded ? 'Show less' : 'Read full proposal text'}
@@ -772,7 +916,7 @@ const Governance = () => {
                           {proposal.references.map((reference, referenceIndex) => (
                             <Link
                               key={`${proposal.id}-ref-${referenceIndex}`}
-                              color="yellow.200"
+                              color="blue.200"
                               fontSize="xs"
                               wordBreak="break-word"
                               onClick={() => {
@@ -816,7 +960,7 @@ const Governance = () => {
                         mt={2}
                         display="inline-flex"
                         alignItems="center"
-                        color="yellow.200"
+                        color="blue.200"
                         fontSize="xs"
                         onClick={() =>
                           window.open(proposal.url, '_blank', 'noopener,noreferrer')
@@ -829,6 +973,56 @@ const Governance = () => {
                         No proposal anchor URL available.
                       </Text>
                     )}
+
+                    {drepState.isRegistered ? (
+                      <Box
+                        mt={3}
+                        pt={3}
+                        borderTopWidth="1px"
+                        borderColor="whiteAlpha.200"
+                      >
+                        <Text fontSize="xs" fontWeight="semibold" color="blue.200" mb={2}>
+                          Cast your DRep vote
+                        </Text>
+                        {votable ? (
+                          <HStack spacing={2}>
+                            <Button
+                              size="sm"
+                              colorScheme="green"
+                              flex={1}
+                              onClick={() => void prepareVote(proposal, 'yes')}
+                              isLoading={votingKey === `${proposal.id}:yes`}
+                            >
+                              Yes
+                            </Button>
+                            <Button
+                              size="sm"
+                              colorScheme="red"
+                              flex={1}
+                              onClick={() => void prepareVote(proposal, 'no')}
+                              isLoading={votingKey === `${proposal.id}:no`}
+                            >
+                              No
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorScheme="blue"
+                              flex={1}
+                              onClick={() => void prepareVote(proposal, 'abstain')}
+                              isLoading={votingKey === `${proposal.id}:abstain`}
+                            >
+                              Abstain
+                            </Button>
+                          </HStack>
+                        ) : (
+                          <Text fontSize="xs" color="whiteAlpha.500">
+                            Voting needs a governance action id (tx hash + index), which the
+                            current data source didn't provide for this proposal.
+                          </Text>
+                        )}
+                      </Box>
+                    ) : null}
                   </Box>
                 );
               })}
@@ -844,15 +1038,17 @@ const Governance = () => {
       <ConfirmModal
         ref={confirmRef}
         ready={voteTxState.ready}
-        title="Confirm Vote Delegation"
+        title={voteTxState.title || 'Confirm Transaction'}
         sign={async (password, hw) => {
           const txHex = Buffer.from(voteTxState.tx.to_bytes()).toString('hex');
-          const keyHashes = [
-            voteTxState.account.paymentKeyHash,
-            voteTxState.account.stakeKeyHash,
-          ];
+          const keyHashes = voteTxState.keyHashes;
 
           if (hw) {
+            if (voteTxState.kind === 'vote') {
+              throw new Error(
+                'Hardware wallet DRep voting is not supported yet. Use a software (password) wallet to cast votes.'
+              );
+            }
             if (hw.device === HW.trezor) {
               return createTab(TAB.trezorTx, `?tx=${txHex}`);
             }
@@ -882,79 +1078,26 @@ const Governance = () => {
         onConfirm={(status, result) => {
           if (status === true) {
             toast({
-              title: 'Vote delegation submitted',
-              description: 'Your governance delegation transaction was sent.',
+              title: voteTxState.kind === 'vote' ? 'Vote submitted' : 'Vote delegation submitted',
+              description:
+                voteTxState.kind === 'vote'
+                  ? 'Your governance vote transaction was sent.'
+                  : 'Your governance delegation transaction was sent.',
               status: 'success',
               duration: 4500,
             });
           } else if (result === ERROR.fullMempool) {
-            const errMsg = 'Mempool is full, please retry in a moment.';
-            toast({
-              status: 'error',
-              duration: 6000,
-              render: ({ onClose }) => (
-                <Alert
-                  status="error"
-                  rounded="xl"
-                  bg="red.900"
-                  color="white"
-                  cursor="pointer"
-                  _hover={{ opacity: 0.85 }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(errMsg);
-                    toast({ title: 'Copied', status: 'info', duration: 1200 });
-                    onClose();
-                  }}
-                  title="Tap to copy"
-                  p={4}
-                >
-                  <AlertIcon />
-                  <Box>
-                    <Text fontWeight="bold" fontSize="sm">Transaction failed</Text>
-                    <Text fontSize="xs">{errMsg}</Text>
-                  </Box>
-                </Alert>
-              ),
-            });
+            showTxError('Transaction failed', 'Mempool is full, please retry in a moment.');
           } else {
-            const errMsg = 'Unable to submit vote delegation transaction.';
-            toast({
-              status: 'error',
-              duration: 6000,
-              render: ({ onClose }) => (
-                <Alert
-                  status="error"
-                  rounded="xl"
-                  bg="red.900"
-                  color="white"
-                  cursor="pointer"
-                  _hover={{ opacity: 0.85 }}
-                  onClick={() => {
-                    navigator.clipboard.writeText(errMsg);
-                    toast({ title: 'Copied', status: 'info', duration: 1200 });
-                    onClose();
-                  }}
-                  title="Tap to copy"
-                  p={4}
-                >
-                  <AlertIcon />
-                  <Box>
-                    <Text fontWeight="bold" fontSize="sm">Transaction failed</Text>
-                    <Text fontSize="xs">{errMsg}</Text>
-                  </Box>
-                </Alert>
-              ),
-            });
+            const message =
+              (result && result.message) ||
+              (voteTxState.kind === 'vote'
+                ? 'Unable to submit vote transaction.'
+                : 'Unable to submit vote delegation transaction.');
+            showTxError('Transaction failed', String(message));
           }
           confirmRef.current?.closeModal();
-          setVoteTxState({
-            tx: null,
-            fee: '',
-            account: null,
-            ready: false,
-            voteType: '',
-            targetDrep: '',
-          });
+          setVoteTxState(emptyTxState);
         }}
         info={
           <Box
@@ -965,10 +1108,10 @@ const Governance = () => {
             flexDirection="column"
           >
             <Text fontSize="sm" mb={2} textAlign="center">
-              Delegation target: {voteLabel(voteTxState.voteType)}
+              {voteTxState.detailLabel || 'Detail'}: {voteTxState.detailValue}
             </Text>
             {voteTxState.targetDrep ? (
-              <Text fontSize="xs" color="gray.500" mb={2}>
+              <Text fontSize="xs" color="gray.500" mb={2} wordBreak="break-all" textAlign="center">
                 {voteTxState.targetDrep}
               </Text>
             ) : null}

@@ -331,6 +331,94 @@ export const voteDelegationTx = async (
   }
 };
 
+/**
+ * Build a governance vote transaction. The current wallet votes as a DRep on a
+ * single governance action. Must be witnessed by the DRep key (role-3) — pass
+ * `[account.paymentKeyHash, drepKeyHashHex]` as keyHashes when signing.
+ *
+ * @param {object} account
+ * @param {object} protocolParameters
+ * @param {object} vote
+ * @param {string} vote.drepKeyHashHex   raw 28-byte DRep key hash (hex)
+ * @param {string} vote.proposalTxHash   governance action tx hash (64 hex)
+ * @param {number} vote.proposalIndex    governance action cert index
+ * @param {'yes'|'no'|'abstain'} vote.voteKind
+ */
+export const voteTx = async (account, protocolParameters, vote) => {
+  await Loader.load();
+
+  const { drepKeyHashHex, proposalTxHash, proposalIndex, voteKind } = vote || {};
+  if (!drepKeyHashHex) throw new Error('Missing DRep key hash for vote');
+  if (!proposalTxHash || proposalIndex === null || proposalIndex === undefined) {
+    throw new Error('This proposal is missing a governance action id and cannot be voted on');
+  }
+
+  const voteKindEnum = {
+    yes: Loader.Cardano.VoteKind.Yes,
+    no: Loader.Cardano.VoteKind.No,
+    abstain: Loader.Cardano.VoteKind.Abstain,
+  }[voteKind];
+  if (voteKindEnum === undefined) throw new Error(`Unknown vote kind: ${voteKind}`);
+
+  let selectionRetries = RETRIES;
+
+  while (selectionRetries > 0) {
+    try {
+      const txBuilder = Loader.Cardano.TransactionBuilder.new(
+        createCslTransactionBuilderConfig(Loader.Cardano, protocolParameters)
+      );
+
+      const drepCredential = Loader.Cardano.Credential.from_keyhash(
+        Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(drepKeyHashHex, 'hex'))
+      );
+      const voter = Loader.Cardano.Voter.new_drep_credential(drepCredential);
+
+      const governanceActionId = Loader.Cardano.GovernanceActionId.new(
+        Loader.Cardano.TransactionHash.from_bytes(
+          Buffer.from(proposalTxHash, 'hex')
+        ),
+        proposalIndex
+      );
+
+      const votingBuilder = Loader.Cardano.VotingBuilder.new();
+      votingBuilder.add(
+        voter,
+        governanceActionId,
+        Loader.Cardano.VotingProcedure.new(voteKindEnum)
+      );
+      txBuilder.set_voting_builder(votingBuilder);
+
+      txBuilder.set_ttl_bignum(
+        Loader.Cardano.BigNum.from_str(String(ttlSlotBound(protocolParameters)))
+      );
+
+      const utxos = await getUtxos();
+      if (!utxos || utxos.length === 0) {
+        throw new Error('No UTxOs available to pay voting fee');
+      }
+      const changeAddress = Loader.Cardano.Address.from_bech32(account.paymentAddr);
+
+      const utxoCollection = Loader.Cardano.TransactionUnspentOutputs.new();
+      utxos.forEach((utxo) => utxoCollection.add(utxo));
+      txBuilder.add_inputs_from(
+        utxoCollection,
+        Loader.Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset
+      );
+      txBuilder.add_change_if_needed(changeAddress);
+
+      const txBody = txBuilder.build();
+      const tx = Loader.Cardano.Transaction.new(
+        txBody,
+        Loader.Cardano.TransactionWitnessSet.new()
+      );
+      return toCanonicalTransactionCip21(Loader.Cardano, tx);
+    } catch (e) {
+      console.error('Error building vote transaction:', e);
+      selectionRetries = retryOrThrow(e, selectionRetries, 'Vote transaction');
+    }
+  }
+};
+
 export const withdrawalTx = async (account, delegation, protocolParameters, utxos) => {
   try {
     await Loader.load();

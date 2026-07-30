@@ -235,7 +235,33 @@ describe('governance API service', () => {
       '/drep_list?limit=20&offset=0',
       {},
       undefined,
-      undefined
+      undefined,
+      'preview'
+    );
+  });
+
+  test('scopes Koios proposal fetch to the requested network', async () => {
+    koiosRequestEnhanced
+      .mockResolvedValueOnce([{ proposal_id: 'preprod-proposal' }])
+      .mockResolvedValueOnce([]);
+
+    await fetchGovernanceOverview('preprod', { proposalLimit: 5, drepLimit: 5 });
+
+    expect(koiosRequestEnhanced).toHaveBeenNthCalledWith(
+      1,
+      '/proposal_list?limit=5&offset=0',
+      {},
+      undefined,
+      undefined,
+      'preprod'
+    );
+    expect(koiosRequestEnhanced).toHaveBeenNthCalledWith(
+      2,
+      '/drep_list?limit=5&offset=0',
+      {},
+      undefined,
+      undefined,
+      'preprod'
     );
   });
 

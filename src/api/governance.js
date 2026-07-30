@@ -470,18 +470,34 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
   const proposalLimit = Math.max(1, Math.min(options.proposalLimit ?? 12, 50));
   const drepLimit = Math.max(1, Math.min(options.drepLimit ?? 20, 50));
 
-  const [proposalList, drepList] = await Promise.all([
-    fetchBlockfrostJson(
-      networkId,
-      `/governance/proposals?order=desc&count=${proposalLimit}&page=1`,
-      options.signal
-    ),
-    fetchBlockfrostJson(
+  const proposalList = await fetchBlockfrostJson(
+    networkId,
+    `/governance/proposals?order=desc&count=${proposalLimit}&page=1`,
+    options.signal
+  );
+
+  let drepList = [];
+  let fallbackReason = '';
+  try {
+    drepList = await fetchBlockfrostJson(
       networkId,
       `/governance/dreps?order=desc&count=${drepLimit}&page=1`,
       options.signal
-    ),
-  ]);
+    );
+  } catch (error) {
+    fallbackReason = `Blockfrost DRep list unavailable; using Koios DRep list instead (${error.message})`;
+    try {
+      drepList = await koiosRequestEnhanced(
+        `/drep_list?limit=${drepLimit}&offset=0`,
+        {},
+        undefined,
+        options.signal
+      );
+    } catch (koiosError) {
+      fallbackReason = `${fallbackReason}. Koios DRep fallback failed (${koiosError.message})`;
+      drepList = [];
+    }
+  }
 
   const proposals = await enrichProposalsWithBlockfrostMetadata(
     networkId,
@@ -493,6 +509,7 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
     source: 'blockfrost',
     proposals,
     dreps: normalizeDreps(drepList),
+    fallbackReason,
   };
 };
 

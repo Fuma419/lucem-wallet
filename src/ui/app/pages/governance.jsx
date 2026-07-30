@@ -3,24 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   AlertIcon,
-  Box,
-  Flex,
-  Text,
-  Button,
-  Input,
-  VStack,
-  Heading,
-  useToast,
-  IconButton,
-  Spinner,
-  HStack,
   Badge,
-  Tooltip,
+  Box,
+  Button,
+  Flex,
+  HStack,
+  Icon,
+  Input,
   Link,
   SimpleGrid,
-  useColorModeValue,
+  Spinner,
+  Stack,
+  Text,
+  Tooltip,
+  useToast,
 } from '@chakra-ui/react';
-import { ChevronLeftIcon, RepeatIcon } from '@chakra-ui/icons';
+import { ArrowBackIcon, ExternalLinkIcon, RepeatIcon } from '@chakra-ui/icons';
+import {
+  MdHowToVote,
+  MdOutlineGavel,
+  MdBlock,
+  MdOutlineVerified,
+} from 'react-icons/md';
 import { useStoreState } from 'easy-peasy';
 
 import ConfirmModal from '../components/confirmModal';
@@ -109,37 +113,54 @@ const shouldCollapseProposalNarrative = (proposal) => {
   return parts.length > 280;
 };
 
-const addFourPoint = (baseSize) => `calc(${baseSize} + 4pt)`;
-
-const votingFontSize = {
-  xs: addFourPoint('var(--chakra-fontSizes-xs)'),
-  sm: addFourPoint('var(--chakra-fontSizes-sm)'),
-  headingSm: addFourPoint('1rem'),
-  headingMd: addFourPoint('1.25rem'),
-};
+const DelegateActionCard = ({ icon, title, text, buttonLabel, colorScheme, onClick, isLoading, isDisabled }) => (
+  <Box
+    borderWidth="1px"
+    borderColor="whiteAlpha.200"
+    bg="whiteAlpha.100"
+    rounded="2xl"
+    p={4}
+    display="flex"
+    flexDirection="column"
+  >
+    <HStack spacing={3} align="start">
+      <Flex
+        rounded="xl"
+        bg="yellow.400"
+        color="gray.900"
+        boxSize="10"
+        align="center"
+        justify="center"
+        flexShrink={0}
+      >
+        <Icon as={icon} boxSize={5} />
+      </Flex>
+      <Box>
+        <Text fontWeight="bold">{title}</Text>
+        <Text fontSize="xs" color="whiteAlpha.700" mt={1}>
+          {text}
+        </Text>
+      </Box>
+    </HStack>
+    <Button
+      mt={4}
+      width="full"
+      colorScheme={colorScheme || 'yellow'}
+      variant="outline"
+      onClick={onClick}
+      isLoading={isLoading}
+      isDisabled={isDisabled}
+    >
+      {buttonLabel}
+    </Button>
+  </Box>
+);
 
 const Governance = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const confirmRef = React.useRef();
   const settings = useStoreState((state) => state.settings.settings);
-
-  const pageBg = useColorModeValue('gray.50', 'black');
-  const cardBg = useColorModeValue('white', 'rgba(16, 16, 20, 0.95)');
-  const insetBg = useColorModeValue('gray.100', 'rgba(255, 255, 255, 0.05)');
-  const insetBgTight = useColorModeValue('gray.50', 'rgba(255, 255, 255, 0.04)');
-  const listRowBg = useColorModeValue('gray.100', 'rgba(255, 255, 255, 0.03)');
-  const heading = useColorModeValue('gray.900', 'white');
-  const body = useColorModeValue('gray.700', 'gray.300');
-  const muted = useColorModeValue('gray.600', 'gray.400');
-  const subtle = useColorModeValue('gray.600', 'gray.500');
-  const border = useColorModeValue('gray.200', 'whiteAlpha.300');
-  const inputFg = useColorModeValue('gray.900', 'white');
-  const linkAccent = useColorModeValue('cyan.700', 'cyan.300');
-  const cardBorder = useColorModeValue('gray.200', 'rgba(140, 140, 180, 0.35)');
-  const softRowBorder = useColorModeValue('gray.200', 'rgba(255, 255, 255, 0.08)');
-  const proposalBorder = useColorModeValue('gray.200', 'rgba(255, 255, 255, 0.12)');
-  const errText = useColorModeValue('red.600', 'red.300');
 
   const networkId = settings?.network?.id || 'mainnet';
   const adaSymbol = settings?.adaSymbol || (networkId === 'mainnet' ? '₳' : 't₳');
@@ -332,444 +353,493 @@ const Governance = () => {
     }
   };
 
+  const isBlockfrost = governanceState.source === 'blockfrost';
+
   return (
-    <>
-      <Box
-        minH="100vh"
-        sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
-        bg={pageBg}
-      >
-        <Box className="lucem-wallet-main-column" px={{ base: 3, md: 4 }} pb={6}>
-          <Flex
-            align="center"
-            justify="space-between"
-            pt="calc(env(safe-area-inset-top, 0px) + 1rem)"
-            pb={4}
+    <Box
+      data-testid="governance-page"
+      minH="100vh"
+      sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
+      bg="black"
+      color="white"
+      px={{ base: 4, md: 6 }}
+      py={5}
+    >
+      <Stack spacing={5} maxW="1100px" mx="auto">
+        <Flex align="center" justify="space-between" gap={3}>
+          <Button
+            leftIcon={<ArrowBackIcon />}
+            variant="ghost"
+            color="whiteAlpha.800"
+            onClick={() => navigate('/wallet')}
           >
-            <HStack spacing={2}>
-              <IconButton
-                icon={<ChevronLeftIcon />}
-                onClick={() => navigate('/wallet')}
-                variant="ghost"
-                aria-label="Back"
-                color={heading}
-              />
-              <Heading size="md" color={heading} fontSize={votingFontSize.headingMd}>
-                Voting
-              </Heading>
-            </HStack>
-            <HStack spacing={2}>
-              {governanceState.source ? (
-                <Tooltip label={governanceState.fallbackReason || ''} hasArrow>
-                  <Badge
-                    colorScheme={sourceBadgeColor(governanceState.source)}
-                    fontSize={votingFontSize.xs}
-                  >
-                    {governanceState.source === 'blockfrost'
-                      ? 'Blockfrost'
-                      : 'Koios fallback'}
-                  </Badge>
-                </Tooltip>
-              ) : null}
-              <Badge colorScheme="cyan" fontSize={votingFontSize.xs}>
-                {networkId}
+            Wallet
+          </Button>
+          <HStack spacing={2}>
+            {governanceState.source ? (
+              <Tooltip label={governanceState.fallbackReason || ''} hasArrow>
+                <Badge colorScheme={sourceBadgeColor(governanceState.source)}>
+                  {isBlockfrost ? 'Blockfrost' : 'Koios fallback'}
+                </Badge>
+              </Tooltip>
+            ) : null}
+            <Badge colorScheme="yellow">{networkId}</Badge>
+          </HStack>
+        </Flex>
+
+        {/* Hero header — mirrors the Stake Center layout */}
+        <Box
+          rounded="3xl"
+          p={{ base: 5, md: 7 }}
+          bg="whiteAlpha.50"
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+        >
+          <Flex direction={{ base: 'column', md: 'row' }} gap={5} justify="space-between">
+            <Box maxW="650px">
+              <Badge colorScheme="yellow" mb={3}>
+                Voting Center
               </Badge>
-            </HStack>
+              <Text fontSize={{ base: '3xl', md: '5xl' }} fontWeight="black" lineHeight="1">
+                Delegate your voting power, keep your keys.
+              </Text>
+              <Text color="whiteAlpha.800" mt={4} fontSize="sm">
+                Build and sign an on-chain vote delegation certificate with the same secure
+                password or hardware wallet flow used everywhere else in Lucem.
+              </Text>
+            </Box>
+            <Box
+              minW={{ base: 'full', md: '270px' }}
+              rounded="2xl"
+              bg="blackAlpha.400"
+              borderWidth="1px"
+              borderColor="whiteAlpha.200"
+              p={4}
+            >
+              <HStack spacing={3}>
+                <Flex rounded="2xl" bg="yellow.400" color="gray.900" boxSize="12" align="center" justify="center">
+                  <Icon as={isBlockfrost ? MdOutlineVerified : MdHowToVote} boxSize={7} />
+                </Flex>
+                <Box>
+                  <Text fontSize="xs" color="whiteAlpha.700">
+                    Governance data
+                  </Text>
+                  <Text fontWeight="bold">
+                    {isBlockfrost ? 'Live via Blockfrost' : 'Koios fallback'}
+                  </Text>
+                </Box>
+              </HStack>
+              <Stack spacing={3} mt={5} fontSize="sm">
+                <Flex justify="space-between">
+                  <Text color="whiteAlpha.700">Network</Text>
+                  <Text fontWeight="semibold" textTransform="capitalize">{networkId}</Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="whiteAlpha.700">Proposals</Text>
+                  <Text fontWeight="semibold">{governanceState.proposals.length}</Text>
+                </Flex>
+                <Flex justify="space-between">
+                  <Text color="whiteAlpha.700">Top DReps</Text>
+                  <Text fontWeight="semibold">{governanceState.dreps.length}</Text>
+                </Flex>
+              </Stack>
+            </Box>
+          </Flex>
+        </Box>
+
+        {/* Delegate Voting Power */}
+        <Box
+          rounded="3xl"
+          bg="whiteAlpha.50"
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+          p={{ base: 5, md: 6 }}
+        >
+          <Flex align="center" justify="space-between" mb={4} gap={3}>
+            <Text fontSize="xl" fontWeight="black">
+              Delegate Voting Power
+            </Text>
+            <Button
+              size="sm"
+              leftIcon={<RepeatIcon />}
+              variant="ghost"
+              color="whiteAlpha.800"
+              onClick={() => void loadGovernance()}
+              isLoading={governanceState.isLoading}
+            >
+              Refresh
+            </Button>
           </Flex>
 
-          <VStack spacing={4} align="stretch">
-            <Box
-              bg={cardBg}
-              borderWidth="1px"
-              borderColor={cardBorder}
-              rounded="xl"
-              p={4}
-            >
-              <Flex align="center" justify="space-between" mb={3}>
-                <Heading size="sm" color={heading} fontSize={votingFontSize.headingSm}>
-                  Delegate Voting Power
-                </Heading>
-                <Button
-                  size="xs"
-                  fontSize={votingFontSize.xs}
-                  leftIcon={<RepeatIcon />}
-                  variant="ghost"
-                  color={body}
-                  onClick={() => void loadGovernance()}
-                  isLoading={governanceState.isLoading}
-                >
-                  Refresh
-                </Button>
-              </Flex>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <DelegateActionCard
+              icon={MdOutlineGavel}
+              title="Always Abstain"
+              text="Delegate voting power so your stake always abstains from governance actions."
+              buttonLabel="Delegate to Always Abstain"
+              onClick={() => void prepareVoteDelegation('always_abstain')}
+              isLoading={isBuildingTx}
+            />
+            <DelegateActionCard
+              icon={MdBlock}
+              title="Always No Confidence"
+              text="Delegate voting power to a permanent no-confidence position on-chain."
+              buttonLabel="Delegate to Always No Confidence"
+              colorScheme="red"
+              onClick={() => void prepareVoteDelegation('always_no_confidence')}
+              isLoading={isBuildingTx}
+            />
+          </SimpleGrid>
 
-              <Text fontSize={votingFontSize.sm} color={body} mb={3}>
-                Build and sign an on-chain vote delegation certificate for this wallet.
-              </Text>
-
-              <VStack spacing={2} align="stretch">
-                <Button
-                  size="sm"
-                  fontSize={votingFontSize.sm}
-                  colorScheme="blue"
-                  onClick={() => void prepareVoteDelegation('always_abstain')}
-                  isLoading={isBuildingTx}
-                >
-                  Delegate to Always Abstain
-                </Button>
-                <Button
-                  size="sm"
-                  fontSize={votingFontSize.sm}
-                  colorScheme="orange"
-                  onClick={() => void prepareVoteDelegation('always_no_confidence')}
-                  isLoading={isBuildingTx}
-                >
-                  Delegate to Always No Confidence
-                </Button>
-                <Flex gap={2}>
-                  <Input
-                    placeholder="DRep key hash (56 hex chars)"
-                    value={drepIdInput}
-                    onChange={(event) => setDrepIdInput(event.target.value)}
-                    size="sm"
-                    fontSize={votingFontSize.sm}
-                    bg={insetBg}
-                    borderColor={border}
-                    color={inputFg}
-                    _placeholder={{ color: muted }}
-                  />
-                  <Button
-                    size="sm"
-                    fontSize={votingFontSize.sm}
-                    colorScheme="purple"
-                    onClick={() => void handleCustomDrepDelegation()}
-                    isDisabled={!drepIdInput.trim()}
-                    isLoading={isBuildingTx}
-                  >
-                    Delegate
-                  </Button>
-                </Flex>
-              </VStack>
-
-              {governanceState.dreps.length > 0 && (
-                <Box mt={4}>
-                  <Text fontSize={votingFontSize.xs} color={muted} mb={2}>
-                    Quick pick from top DReps
-                  </Text>
-                  <VStack spacing={2} align="stretch">
-                    {governanceState.dreps.slice(0, 5).map((drep) => (
-                      <Flex
-                        key={drep.id}
-                        p={2}
-                        rounded="md"
-                        bg={insetBgTight}
-                        borderWidth="1px"
-                        borderColor={softRowBorder}
-                        align="center"
-                        justify="space-between"
-                      >
-                        <Box minW={0} mr={2}>
-                          <Text color={heading} fontSize={votingFontSize.sm} isTruncated>
-                            {drep.name || truncateMiddle(drep.id)}
-                          </Text>
-                          <Text color={muted} fontSize={votingFontSize.xs}>
-                            {truncateMiddle(drep.id)} {drep.votingPower ? `| ${drep.votingPower} lovelace` : ''}
-                          </Text>
-                        </Box>
-                        <Button
-                          size="xs"
-                          fontSize={votingFontSize.xs}
-                          colorScheme="purple"
-                          onClick={() => {
-                            setDrepIdInput(drep.keyHashHex);
-                            void prepareVoteDelegation('key_hash', drep.keyHashHex);
-                          }}
-                          isDisabled={!drep.keyHashHex}
-                        >
-                          Use
-                        </Button>
-                      </Flex>
-                    ))}
-                  </VStack>
-                </Box>
-              )}
-            </Box>
-
-            <Box
-              bg={cardBg}
-              borderWidth="1px"
-              borderColor={cardBorder}
-              rounded="xl"
-              p={4}
-            >
-              <Heading size="sm" color={heading} mb={3} fontSize={votingFontSize.headingSm}>
-                Active Governance Proposals
-              </Heading>
-              <Text fontSize={votingFontSize.xs} color={muted} mb={3}>
-                Titles and descriptions come from on-chain anchors (CIP-108). Blockfrost resolves
-                proposal metadata when a project id is configured; Koios may include{' '}
-                <Text as="span" fontWeight="semibold">
-                  meta_json
-                </Text>{' '}
-                inline.
-              </Text>
-              <Link
-                color={linkAccent}
-                fontSize={votingFontSize.xs}
-                display="inline-block"
-                mb={4}
-                onClick={() =>
-                  window.open(
-                    'https://developers.cardano.org/docs/governance/cardano-governance/governance-actions/',
-                    '_blank',
-                    'noopener,noreferrer'
-                  )
-                }
+          <Box
+            mt={4}
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+            bg="whiteAlpha.100"
+            rounded="2xl"
+            p={4}
+          >
+            <Text fontWeight="bold" mb={1}>
+              Delegate to a specific DRep
+            </Text>
+            <Text fontSize="xs" color="whiteAlpha.700" mb={3}>
+              Paste a 56-character hex DRep key hash to delegate your vote.
+            </Text>
+            <Flex gap={2} direction={{ base: 'column', sm: 'row' }}>
+              <Input
+                placeholder="DRep key hash (56 hex chars)"
+                value={drepIdInput}
+                onChange={(event) => setDrepIdInput(event.target.value)}
+                bg="whiteAlpha.100"
+                borderColor="whiteAlpha.200"
+                focusBorderColor="yellow.400"
+                _placeholder={{ color: 'whiteAlpha.500' }}
+              />
+              <Button
+                colorScheme="yellow"
+                px={8}
+                onClick={() => void handleCustomDrepDelegation()}
+                isDisabled={!drepIdInput.trim()}
+                isLoading={isBuildingTx}
               >
-                Learn governance action types
-              </Link>
+                Delegate
+              </Button>
+            </Flex>
+          </Box>
 
-              {governanceState.isLoading ? (
-                <Flex justify="center" py={8}>
-                  <Spinner />
-                </Flex>
-              ) : governanceState.error ? (
-                <Text color={errText} fontSize={votingFontSize.sm}>
-                  {governanceState.error}
-                </Text>
-              ) : sortedProposals.length > 0 ? (
-                <VStack spacing={3} align="stretch">
-                  {sortedProposals.map((proposal) => {
-                    const summaryExpanded = Boolean(expandedProposalIds[proposal.id]);
-                    const hasSummary = Boolean(
-                      proposal.summary && String(proposal.summary).trim()
-                    );
-                    const hasMotivation = Boolean(
-                      proposal.motivation && String(proposal.motivation).trim()
-                    );
-                    const hasRationale = Boolean(
-                      proposal.rationale && String(proposal.rationale).trim()
-                    );
-                    const hasReadableBody = hasSummary || hasMotivation || hasRationale;
-                    const canToggleSummary = shouldCollapseProposalNarrative(proposal);
+          {governanceState.dreps.length > 0 && (
+            <Box mt={5}>
+              <Text fontSize="sm" fontWeight="bold" color="whiteAlpha.800" mb={3}>
+                Quick pick from top DReps
+              </Text>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                {governanceState.dreps.slice(0, 6).map((drep) => (
+                  <Flex
+                    key={drep.id}
+                    p={3}
+                    rounded="2xl"
+                    bg="whiteAlpha.100"
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                    align="center"
+                    justify="space-between"
+                    gap={3}
+                    transition="all 0.18s ease"
+                    _hover={{ borderColor: 'yellow.500', bg: 'whiteAlpha.200' }}
+                  >
+                    <Box minW={0}>
+                      <Text fontWeight="semibold" isTruncated>
+                        {drep.name || truncateMiddle(drep.id)}
+                      </Text>
+                      <Text color="whiteAlpha.600" fontSize="xs" isTruncated>
+                        {truncateMiddle(drep.id)}
+                        {drep.votingPower ? ` | ${drep.votingPower} lovelace` : ''}
+                      </Text>
+                    </Box>
+                    <Button
+                      size="sm"
+                      colorScheme="yellow"
+                      variant="outline"
+                      flexShrink={0}
+                      onClick={() => {
+                        setDrepIdInput(drep.keyHashHex);
+                        void prepareVoteDelegation('key_hash', drep.keyHashHex);
+                      }}
+                      isDisabled={!drep.keyHashHex}
+                    >
+                      Use
+                    </Button>
+                  </Flex>
+                ))}
+              </SimpleGrid>
+            </Box>
+          )}
+        </Box>
 
-                    return (
-                      <Box
-                        key={proposal.id}
-                        p={3}
-                        rounded="md"
-                        borderWidth="1px"
-                        borderColor={proposalBorder}
-                        bg={listRowBg}
+        {/* Active Governance Proposals */}
+        <Box
+          rounded="3xl"
+          bg="whiteAlpha.50"
+          borderWidth="1px"
+          borderColor="whiteAlpha.200"
+          p={{ base: 5, md: 6 }}
+        >
+          <Text fontSize="xl" fontWeight="black" mb={2}>
+            Active Governance Proposals
+          </Text>
+          <Text fontSize="xs" color="whiteAlpha.700" mb={2}>
+            Titles and descriptions come from on-chain anchors (CIP-108). Blockfrost resolves
+            proposal metadata when a project id is configured; Koios may include{' '}
+            <Text as="span" fontWeight="semibold">
+              meta_json
+            </Text>{' '}
+            inline.
+          </Text>
+          <Link
+            color="yellow.200"
+            fontSize="xs"
+            display="inline-flex"
+            alignItems="center"
+            mb={4}
+            onClick={() =>
+              window.open(
+                'https://developers.cardano.org/docs/governance/cardano-governance/governance-actions/',
+                '_blank',
+                'noopener,noreferrer'
+              )
+            }
+          >
+            Learn governance action types <ExternalLinkIcon mx="2px" />
+          </Link>
+
+          {governanceState.isLoading ? (
+            <Flex justify="center" py={10}>
+              <Spinner color="yellow.400" speed="0.65s" />
+            </Flex>
+          ) : governanceState.error ? (
+            <Alert status="error" rounded="2xl" bg="red.900" color="white">
+              <AlertIcon />
+              <Text fontSize="sm">{governanceState.error}</Text>
+            </Alert>
+          ) : sortedProposals.length > 0 ? (
+            <Stack spacing={3}>
+              {sortedProposals.map((proposal) => {
+                const summaryExpanded = Boolean(expandedProposalIds[proposal.id]);
+                const hasSummary = Boolean(
+                  proposal.summary && String(proposal.summary).trim()
+                );
+                const hasMotivation = Boolean(
+                  proposal.motivation && String(proposal.motivation).trim()
+                );
+                const hasRationale = Boolean(
+                  proposal.rationale && String(proposal.rationale).trim()
+                );
+                const hasReadableBody = hasSummary || hasMotivation || hasRationale;
+                const canToggleSummary = shouldCollapseProposalNarrative(proposal);
+
+                return (
+                  <Box
+                    key={proposal.id}
+                    p={4}
+                    rounded="2xl"
+                    borderWidth="1px"
+                    borderColor="whiteAlpha.200"
+                    bg="whiteAlpha.100"
+                  >
+                    <Flex align="start" justify="space-between" gap={2} mb={2}>
+                      <HStack spacing={2} flexWrap="wrap">
+                        <Badge colorScheme={proposalTypeColor(proposal.type)}>
+                          {toReadableLabel(proposal.type)}
+                        </Badge>
+                        <Badge colorScheme={proposalStatusColor(proposal.status)}>
+                          {toReadableLabel(proposal.status)}
+                        </Badge>
+                      </HStack>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        color="whiteAlpha.800"
+                        onClick={() => void copyProposalId(proposal.id)}
                       >
-                        <Flex align="start" justify="space-between" gap={2} mb={1}>
-                          <HStack spacing={2} flexWrap="wrap">
-                            <Badge
-                              colorScheme={proposalTypeColor(proposal.type)}
-                              fontSize={votingFontSize.xs}
+                        Copy ID
+                      </Button>
+                    </Flex>
+
+                    <Text fontWeight="bold" mb={1}>
+                      {proposal.title}
+                    </Text>
+                    <Text color="whiteAlpha.600" fontSize="xs" mb={2}>
+                      {truncateMiddle(proposal.id, 14, 10)}
+                    </Text>
+
+                    {hasReadableBody ? (
+                      <Box mb={1}>
+                        {hasSummary ? (
+                          <Text
+                            color="whiteAlpha.900"
+                            fontSize="sm"
+                            whiteSpace="pre-wrap"
+                            mb={hasMotivation || hasRationale ? 2 : 1}
+                            noOfLines={summaryExpanded || !canToggleSummary ? undefined : 4}
+                          >
+                            {proposal.summary}
+                          </Text>
+                        ) : null}
+                        {hasMotivation ? (
+                          <Box mb={hasRationale ? 2 : 1}>
+                            <Text
+                              color="whiteAlpha.600"
+                              fontSize="xs"
+                              fontWeight="semibold"
+                              mb={0.5}
                             >
-                              {toReadableLabel(proposal.type)}
-                            </Badge>
-                            <Badge
-                              colorScheme={proposalStatusColor(proposal.status)}
-                              fontSize={votingFontSize.xs}
+                              Motivation
+                            </Text>
+                            <Text
+                              color="whiteAlpha.900"
+                              fontSize="sm"
+                              whiteSpace="pre-wrap"
+                              noOfLines={summaryExpanded || !canToggleSummary ? undefined : 3}
                             >
-                              {toReadableLabel(proposal.status)}
-                            </Badge>
-                          </HStack>
+                              {proposal.motivation}
+                            </Text>
+                          </Box>
+                        ) : null}
+                        {hasRationale ? (
+                          <Box mb={1}>
+                            <Text
+                              color="whiteAlpha.600"
+                              fontSize="xs"
+                              fontWeight="semibold"
+                              mb={0.5}
+                            >
+                              Rationale
+                            </Text>
+                            <Text
+                              color="whiteAlpha.900"
+                              fontSize="sm"
+                              whiteSpace="pre-wrap"
+                              noOfLines={summaryExpanded || !canToggleSummary ? undefined : 3}
+                            >
+                              {proposal.rationale}
+                            </Text>
+                          </Box>
+                        ) : null}
+                        {canToggleSummary && (
                           <Button
                             size="xs"
-                            fontSize={votingFontSize.xs}
-                            variant="ghost"
-                            color={body}
-                            onClick={() => void copyProposalId(proposal.id)}
+                            variant="link"
+                            colorScheme="yellow"
+                            onClick={() => toggleProposalSummary(proposal.id)}
                           >
-                            Copy ID
+                            {summaryExpanded ? 'Show less' : 'Read full proposal text'}
                           </Button>
-                        </Flex>
-
-                        <Text color={heading} fontWeight="bold" fontSize={votingFontSize.sm} mb={1}>
-                          {proposal.title}
-                        </Text>
-                        <Text color={muted} fontSize={votingFontSize.xs} mb={2}>
-                          {truncateMiddle(proposal.id, 14, 10)}
-                        </Text>
-
-                        {hasReadableBody ? (
-                          <Box mb={1}>
-                            {hasSummary ? (
-                              <Text
-                                color={body}
-                                fontSize={votingFontSize.sm}
-                                whiteSpace="pre-wrap"
-                                mb={hasMotivation || hasRationale ? 2 : 1}
-                                noOfLines={
-                                  summaryExpanded || !canToggleSummary ? undefined : 4
-                                }
-                              >
-                                {proposal.summary}
-                              </Text>
-                            ) : null}
-                            {hasMotivation ? (
-                              <Box mb={hasRationale ? 2 : 1}>
-                                <Text
-                                  color={subtle}
-                                  fontSize={votingFontSize.xs}
-                                  fontWeight="semibold"
-                                  mb={0.5}
-                                >
-                                  Motivation
-                                </Text>
-                                <Text
-                                  color={body}
-                                  fontSize={votingFontSize.sm}
-                                  whiteSpace="pre-wrap"
-                                  noOfLines={
-                                    summaryExpanded || !canToggleSummary ? undefined : 3
-                                  }
-                                >
-                                  {proposal.motivation}
-                                </Text>
-                              </Box>
-                            ) : null}
-                            {hasRationale ? (
-                              <Box mb={1}>
-                                <Text
-                                  color={subtle}
-                                  fontSize={votingFontSize.xs}
-                                  fontWeight="semibold"
-                                  mb={0.5}
-                                >
-                                  Rationale
-                                </Text>
-                                <Text
-                                  color={body}
-                                  fontSize={votingFontSize.sm}
-                                  whiteSpace="pre-wrap"
-                                  noOfLines={
-                                    summaryExpanded || !canToggleSummary ? undefined : 3
-                                  }
-                                >
-                                  {proposal.rationale}
-                                </Text>
-                              </Box>
-                            ) : null}
-                            {canToggleSummary && (
-                              <Button
-                                size="xs"
-                                fontSize={votingFontSize.xs}
-                                variant="link"
-                                colorScheme="cyan"
-                                onClick={() => toggleProposalSummary(proposal.id)}
-                              >
-                                {summaryExpanded ? 'Show less' : 'Read full proposal text'}
-                              </Button>
-                            )}
-                          </Box>
-                        ) : (
-                          <Text color={subtle} fontSize={votingFontSize.sm} mb={1}>
-                            No proposal description loaded yet. Add a Blockfrost project id
-                            (env{' '}
-                            <Text as="span" fontFamily="mono" fontSize="xs">
-                              BLOCKFROST_PROJECT_ID_PREPROD
-                            </Text>{' '}
-                            / Preview / Mainnet, or{' '}
-                            <Text as="span" fontFamily="mono" fontSize="xs">
-                              BLOCKFROST_PROJECT_ID_*
-                            </Text>{' '}
-                            in secrets) — it must not be your Koios API key. Or open the anchor link
-                            below when present.
-                          </Text>
-                        )}
-
-                        {proposal.authors && proposal.authors.length > 0 ? (
-                          <Text color={subtle} fontSize={votingFontSize.xs} mb={2}>
-                            Authors: {proposal.authors.join(', ')}
-                          </Text>
-                        ) : null}
-
-                        {proposal.references && proposal.references.length > 0 ? (
-                          <Box mt={1} mb={1}>
-                            <Text
-                              color={subtle}
-                              fontSize={votingFontSize.xs}
-                              fontWeight="semibold"
-                              mb={1}
-                            >
-                              References
-                            </Text>
-                            <VStack align="stretch" spacing={1}>
-                              {proposal.references.map((reference, referenceIndex) => (
-                                <Link
-                                  key={`${proposal.id}-ref-${referenceIndex}`}
-                                  color={linkAccent}
-                                  fontSize={votingFontSize.xs}
-                                  wordBreak="break-word"
-                                  onClick={() => {
-                                    const target = reference.uri || reference.label;
-                                    if (target && /^https?:\/\//i.test(target)) {
-                                      window.open(target, '_blank', 'noopener,noreferrer');
-                                    }
-                                  }}
-                                >
-                                  {reference.label || reference.uri || 'Link'}
-                                  {reference.uri &&
-                                  reference.label &&
-                                  reference.uri !== reference.label
-                                    ? ` — ${reference.uri}`
-                                    : ''}
-                                </Link>
-                              ))}
-                            </VStack>
-                          </Box>
-                        ) : null}
-
-                        <SimpleGrid
-                          columns={{ base: 1, md: 2 }}
-                          spacing={1}
-                          mt={2}
-                          color={muted}
-                          fontSize={votingFontSize.xs}
-                        >
-                          <Text>Submitted: {formatEpoch(proposal.submittedEpoch)}</Text>
-                          <Text>Voting closes: {formatEpoch(proposal.expiresAfterEpoch)}</Text>
-                        </SimpleGrid>
-
-                        {proposal.anchorHash ? (
-                          <Text color={subtle} fontSize={votingFontSize.xs} mt={1}>
-                            Anchor hash: {truncateMiddle(proposal.anchorHash, 14, 10)}
-                          </Text>
-                        ) : null}
-
-                        {proposal.url ? (
-                          <Link
-                            mt={2}
-                            display="inline-block"
-                            color={linkAccent}
-                            fontSize={votingFontSize.xs}
-                            onClick={() =>
-                              window.open(proposal.url, '_blank', 'noopener,noreferrer')
-                            }
-                          >
-                            Open proposal details
-                          </Link>
-                        ) : (
-                          <Text color={subtle} fontSize={votingFontSize.xs} mt={2}>
-                            No proposal anchor URL available.
-                          </Text>
                         )}
                       </Box>
-                    );
-                  })}
-                </VStack>
-              ) : (
-                <Text color={body} fontSize={votingFontSize.sm}>
-                  No proposals returned by the current network API.
-                </Text>
-              )}
-            </Box>
-          </VStack>
+                    ) : (
+                      <Text color="whiteAlpha.600" fontSize="sm" mb={1}>
+                        No proposal description loaded yet. Add a Blockfrost project id
+                        (env{' '}
+                        <Text as="span" fontFamily="mono" fontSize="xs">
+                          BLOCKFROST_PROJECT_ID_PREPROD
+                        </Text>{' '}
+                        / Preview / Mainnet, or{' '}
+                        <Text as="span" fontFamily="mono" fontSize="xs">
+                          BLOCKFROST_PROJECT_ID_*
+                        </Text>{' '}
+                        in secrets) — it must not be your Koios API key. Or open the anchor link
+                        below when present.
+                      </Text>
+                    )}
+
+                    {proposal.authors && proposal.authors.length > 0 ? (
+                      <Text color="whiteAlpha.600" fontSize="xs" mb={2}>
+                        Authors: {proposal.authors.join(', ')}
+                      </Text>
+                    ) : null}
+
+                    {proposal.references && proposal.references.length > 0 ? (
+                      <Box mt={1} mb={1}>
+                        <Text
+                          color="whiteAlpha.600"
+                          fontSize="xs"
+                          fontWeight="semibold"
+                          mb={1}
+                        >
+                          References
+                        </Text>
+                        <Stack align="stretch" spacing={1}>
+                          {proposal.references.map((reference, referenceIndex) => (
+                            <Link
+                              key={`${proposal.id}-ref-${referenceIndex}`}
+                              color="yellow.200"
+                              fontSize="xs"
+                              wordBreak="break-word"
+                              onClick={() => {
+                                const target = reference.uri || reference.label;
+                                if (target && /^https?:\/\//i.test(target)) {
+                                  window.open(target, '_blank', 'noopener,noreferrer');
+                                }
+                              }}
+                            >
+                              {reference.label || reference.uri || 'Link'}
+                              {reference.uri &&
+                              reference.label &&
+                              reference.uri !== reference.label
+                                ? ` — ${reference.uri}`
+                                : ''}
+                            </Link>
+                          ))}
+                        </Stack>
+                      </Box>
+                    ) : null}
+
+                    <SimpleGrid
+                      columns={{ base: 1, md: 2 }}
+                      spacing={1}
+                      mt={2}
+                      color="whiteAlpha.600"
+                      fontSize="xs"
+                    >
+                      <Text>Submitted: {formatEpoch(proposal.submittedEpoch)}</Text>
+                      <Text>Voting closes: {formatEpoch(proposal.expiresAfterEpoch)}</Text>
+                    </SimpleGrid>
+
+                    {proposal.anchorHash ? (
+                      <Text color="whiteAlpha.600" fontSize="xs" mt={1}>
+                        Anchor hash: {truncateMiddle(proposal.anchorHash, 14, 10)}
+                      </Text>
+                    ) : null}
+
+                    {proposal.url ? (
+                      <Link
+                        mt={2}
+                        display="inline-flex"
+                        alignItems="center"
+                        color="yellow.200"
+                        fontSize="xs"
+                        onClick={() =>
+                          window.open(proposal.url, '_blank', 'noopener,noreferrer')
+                        }
+                      >
+                        Open proposal details <ExternalLinkIcon mx="2px" />
+                      </Link>
+                    ) : (
+                      <Text color="whiteAlpha.600" fontSize="xs" mt={2}>
+                        No proposal anchor URL available.
+                      </Text>
+                    )}
+                  </Box>
+                );
+              })}
+            </Stack>
+          ) : (
+            <Text color="whiteAlpha.700" fontSize="sm">
+              No proposals returned by the current network API.
+            </Text>
+          )}
         </Box>
-      </Box>
+      </Stack>
 
       <ConfirmModal
         ref={confirmRef}
@@ -894,16 +964,16 @@ const Governance = () => {
             justifyContent="center"
             flexDirection="column"
           >
-            <Text fontSize={votingFontSize.sm} mb={2} textAlign="center">
+            <Text fontSize="sm" mb={2} textAlign="center">
               Delegation target: {voteLabel(voteTxState.voteType)}
             </Text>
             {voteTxState.targetDrep ? (
-              <Text fontSize={votingFontSize.xs} color={subtle} mb={2}>
+              <Text fontSize="xs" color="gray.500" mb={2}>
                 {voteTxState.targetDrep}
               </Text>
             ) : null}
             <HStack spacing={1}>
-              <Text fontWeight="bold" fontSize={votingFontSize.sm}>
+              <Text fontWeight="bold" fontSize="sm">
                 Fee:
               </Text>
               <UnitDisplay
@@ -915,7 +985,7 @@ const Governance = () => {
           </Box>
         }
       />
-    </>
+    </Box>
   );
 };
 

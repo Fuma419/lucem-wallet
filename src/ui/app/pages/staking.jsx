@@ -443,7 +443,10 @@ const Staking = () => {
     }
     : null;
   const rewards = toBigInt(delegation?.rewards);
-  const activeLabel = poolLabel(activePool);
+  const activeLabel =
+    activePool?.ticker ||
+    activePool?.name ||
+    (activePool ? shortPoolId(activePool) : 'your pool');
 
   return (
     <Box
@@ -474,13 +477,13 @@ const Staking = () => {
         >
           <Flex direction={{ base: 'column', md: 'row' }} gap={5} justify="space-between">
             <Box maxW="650px">
-              <Badge colorScheme="yellow" mb={3}>
+              <Badge colorScheme="yellow" mb={2}>
                 Stake Center
               </Badge>
-              <Text fontSize={{ base: '3xl', md: '5xl' }} fontWeight="black" lineHeight="1">
+              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="black" lineHeight="1.05">
                 Make your ADA work while you keep custody.
               </Text>
-              <Text color="whiteAlpha.800" mt={4} fontSize="sm">
+              <Text color="whiteAlpha.800" mt={2} fontSize="xs" noOfLines={2}>
                 Choose a pool, preview the deposit and fee, then sign with the same secure
                 password or hardware wallet flow used everywhere else in Lucem.
               </Text>

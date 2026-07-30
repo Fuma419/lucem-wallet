@@ -529,6 +529,66 @@ const fetchKoiosGovernance = async (options) => {
   };
 };
 
+/**
+ * Check whether the current wallet's DRep credential is registered on-chain.
+ * Tries Blockfrost first (GET /governance/dreps/{drep_id} → 404 when not
+ * registered), then falls back to Koios /drep_info. Returns a normalized shape.
+ */
+export const fetchDRepRegistration = async (networkId, ids = {}, options = {}) => {
+  const candidates = [ids.drepIdCip129, ids.drepIdLegacy].filter(
+    (value) => typeof value === 'string' && value.trim()
+  );
+  if (candidates.length === 0) {
+    return { registered: false, source: '', drep: null, drepId: '' };
+  }
+
+  for (const drepId of candidates) {
+    const payload = await fetchBlockfrostJsonMaybe(
+      networkId,
+      `/governance/dreps/${encodeURIComponent(drepId)}`,
+      options.signal
+    );
+    if (payload && (payload.drep_id || payload.hex || payload.active !== undefined)) {
+      return {
+        registered: payload.active !== false,
+        source: 'blockfrost',
+        drep: payload,
+        drepId,
+      };
+    }
+  }
+
+  try {
+    const rows = await koiosRequestEnhanced(
+      '/drep_info',
+      { 'Content-Type': 'application/json' },
+      { _drep_ids: candidates },
+      options.signal
+    );
+    const row = Array.isArray(rows)
+      ? rows.find(
+          (entry) =>
+            entry &&
+            (entry.registered === true ||
+              entry.registered === 't' ||
+              entry.registered === 'true')
+        )
+      : null;
+    if (row) {
+      return {
+        registered: true,
+        source: 'koios',
+        drep: row,
+        drepId: firstString(row.drep_id, candidates[0]),
+      };
+    }
+  } catch {
+    /* ignore — treat as not registered */
+  }
+
+  return { registered: false, source: '', drep: null, drepId: candidates[0] };
+};
+
 export const fetchGovernanceOverview = async (
   networkId,
   options = { proposalLimit: 12, drepLimit: 20 }

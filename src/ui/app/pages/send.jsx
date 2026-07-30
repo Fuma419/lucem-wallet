@@ -956,17 +956,20 @@ const Send = () => {
                   (value.sendAll && !sendAllRiskAccepted)
                 }
                 colorScheme="yellow"
-                bgGradient="linear(to-r, yellow.300, orange.300)"
+                bg="yellow.400"
                 color="gray.900"
                 fontWeight="black"
                 _hover={{
-                  bgGradient: 'linear(to-r, yellow.200, orange.200)',
+                  bg: 'yellow.300',
                   transform: 'translateY(-1px)',
                 }}
+                _active={{ bg: 'yellow.500' }}
                 _disabled={{
-                  opacity: 0.45,
+                  bg: 'whiteAlpha.200',
+                  color: 'whiteAlpha.500',
                   cursor: 'not-allowed',
                   transform: 'none',
+                  opacity: 1,
                 }}
                 onClick={() => {
                   const idx = account.current?.index;

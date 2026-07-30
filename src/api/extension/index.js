@@ -813,6 +813,39 @@ export const getPubDRepKey = async () => {
   return deriveAccountDRepPublicKeyHex(currentAccount.publicKey);
 };
 
+/**
+ * Derive this account's DRep identity (CIP-105 role-3 key).
+ * Returns the raw key-hash hex (used as the voting credential / required signer)
+ * plus the CIP-129 and legacy CIP-105 bech32 ids used to query registration.
+ */
+export const getAccountDRepId = async () => {
+  await Loader.load();
+  const currentAccount = await getCurrentAccount();
+  if (!currentAccount?.publicKey) {
+    throw APIError.InternalError;
+  }
+  const drepRawKey = Loader.Cardano.Bip32PublicKey.from_hex(currentAccount.publicKey)
+    .derive(3)
+    .derive(0)
+    .to_raw_key();
+  const drepKeyHash = drepRawKey.hash();
+  const drepKeyHashHex = Buffer.from(drepKeyHash.to_bytes()).toString('hex');
+  const drep = Loader.Cardano.DRep.new_key_hash(drepKeyHash);
+  let drepIdCip129 = '';
+  let drepIdLegacy = '';
+  try {
+    drepIdCip129 = drep.to_bech32(true);
+  } catch (e) {
+    drepIdCip129 = '';
+  }
+  try {
+    drepIdLegacy = drep.to_bech32(false);
+  } catch (e) {
+    drepIdLegacy = '';
+  }
+  return { drepKeyHashHex, drepIdCip129, drepIdLegacy };
+};
+
 export const getRegisteredPubStakeKeys = async () => {
   await Loader.load();
   const currentAccount = await getCurrentAccount();

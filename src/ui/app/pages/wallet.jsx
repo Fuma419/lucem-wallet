@@ -63,6 +63,7 @@ import {
   Tooltip,
   Collapse,
   IconButton,
+  Skeleton,
 } from '@chakra-ui/react';
 import {
   SettingsIcon,
@@ -765,26 +766,43 @@ const Wallet = () => {
             gap={1}
           >
             <Flex align="center" justify="center" flexWrap="wrap" gap={1}>
-              <UnitDisplay
-                className="lineClamp"
-                fontSize={{ base: 'xl', md: '2xl' }}
-                fontWeight="bold"
-                quantity={
-                  state.account &&
+              <Skeleton
+                isLoaded={
+                  Boolean(state.account) &&
                   state.account.lovelace !== null &&
                   state.account.lovelace !== undefined
-                    ? (
-                        bigIntLovelace(state.account.lovelace) -
-                        bigIntLovelace(state.account.minAda) -
-                        bigIntLovelace(
-                          state.account.collateral?.lovelace
-                        )
-                      ).toString()
-                    : undefined
                 }
-                decimals={6}
-                symbol={settings.adaSymbol}
-              />
+                borderRadius="md"
+                startColor="whiteAlpha.200"
+                endColor="whiteAlpha.400"
+                minW={
+                  state.account && state.account.lovelace != null ? undefined : '7rem'
+                }
+                minH={
+                  state.account && state.account.lovelace != null ? undefined : '1.75rem'
+                }
+              >
+                <UnitDisplay
+                  className="lineClamp"
+                  fontSize={{ base: 'xl', md: '2xl' }}
+                  fontWeight="bold"
+                  quantity={
+                    state.account &&
+                    state.account.lovelace !== null &&
+                    state.account.lovelace !== undefined
+                      ? (
+                          bigIntLovelace(state.account.lovelace) -
+                          bigIntLovelace(state.account.minAda) -
+                          bigIntLovelace(
+                            state.account.collateral?.lovelace
+                          )
+                        ).toString()
+                      : undefined
+                  }
+                  decimals={6}
+                  symbol={settings.adaSymbol}
+                />
+              </Skeleton>
               {state.account &&
               (state.account.assets.length > 0 || state.account.collateral) ? (
                 <Tooltip

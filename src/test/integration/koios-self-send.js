@@ -16,6 +16,32 @@ const PROVIDER = {
   koios: 'koios',
 };
 
+// Mainnet endpoints. Live transaction tests must never touch these unless the
+// caller explicitly opts in with LUCEM_ALLOW_MAINNET_INTEGRATION=1.
+const MAINNET_ENDPOINT_RE = /(api\.koios\.rest|cardano-mainnet\.blockfrost\.io)/i;
+
+/**
+ * Guard: refuse to build/submit a live transaction against mainnet.
+ * Integration transaction tests are Preview/Preprod only by policy.
+ * @param {string} baseUrl   provider base URL used for submit
+ * @param {string} [bech32]  derived sender address (mainnet uses addr1..., testnet addr_test1...)
+ */
+function assertTestnetOnly(baseUrl, bech32) {
+  if (process.env.LUCEM_ALLOW_MAINNET_INTEGRATION === '1') return;
+  const mainnetUrl = MAINNET_ENDPOINT_RE.test(String(baseUrl || ''));
+  const mainnetAddr =
+    typeof bech32 === 'string' &&
+    bech32.startsWith('addr1') &&
+    !bech32.startsWith('addr_test');
+  if (mainnetUrl || mainnetAddr) {
+    throw new Error(
+      'Refusing to run a live transaction test against mainnet. ' +
+        'Integration transaction tests run on Preview/Preprod only. ' +
+        'Set LUCEM_ALLOW_MAINNET_INTEGRATION=1 to explicitly override.'
+    );
+  }
+}
+
 function authHeaders(providerType, apiKey) {
   const h = {
     Accept: 'application/json',
@@ -382,6 +408,8 @@ async function buildSignSubmitAccountTransfer(opts) {
   const recipient = deriveAccountAddress(mnemonic.trim(), 1);
   const { address, bech32, paymentKey } = sender;
 
+  assertTestnetOnly(baseUrl, bech32);
+
   if (bech32 === recipient.bech32) {
     throw new Error('Sender and recipient must be different addresses.');
   }
@@ -549,6 +577,7 @@ async function waitForTxInAccountHistory(opts) {
 
 module.exports = {
   PROVIDER,
+  assertTestnetOnly,
   buildSignSubmitAccountTransfer,
   buildSignSubmitSelfTransfer: buildSignSubmitAccountTransfer,
   deriveAccountAddress,

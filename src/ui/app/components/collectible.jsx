@@ -8,6 +8,8 @@ import {
 import React from 'react';
 import './styles.css';
 import { getAsset } from '../../../api/extension';
+import provider from '../../../config/provider';
+import { withIpfsGateway } from '../../../api/util';
 
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
@@ -25,14 +27,25 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
   const [showInfo, setShowInfo] = React.useState(false);
 
   const fetchMetadata = async () => {
-    const detailedConstructedAsset = await getAsset(asset.unit);
-    const detailedAsset = {
-      ...detailedConstructedAsset,
-      quantity: asset.quantity,
-      fingerprint: asset.fingerprint ?? detailedConstructedAsset.fingerprint,
-    };
-    if (!isMounted.current) return;
-    setToken(detailedAsset);
+    try {
+      const detailedConstructedAsset = await getAsset(asset.unit);
+      const detailedAsset = {
+        ...detailedConstructedAsset,
+        quantity: asset.quantity,
+        fingerprint: asset.fingerprint ?? detailedConstructedAsset.fingerprint,
+      };
+      if (!isMounted.current) return;
+      setToken(detailedAsset);
+    } catch (error) {
+      if (!isMounted.current) return;
+      // Always leave a renderable tile — never hang on a skeleton.
+      setToken({
+        ...asset,
+        name: asset.name || asset.displayName || '?',
+        displayName: asset.displayName || asset.name || 'Asset',
+        image: '',
+      });
+    }
   };
 
   React.useEffect(() => {
@@ -72,17 +85,9 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
           {!token ? (
             <Skeleton width="210px" height="210px" />
           ) : (
-            <Image
-              width="full"
-              rounded="sm"
+            <AssetIcon
+              name={token.displayName || token.name}
               src={token.image}
-              fallback={
-                !token.image ? (
-                  <Avatar width="210px" height="210px" name={token.name} />
-                ) : (
-                  <Fallback name={token.name} />
-                )
-              }
             />
           )}
         </Box>
@@ -136,14 +141,53 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
   );
 });
 
-const Fallback = ({ name }) => {
-  const [timedOut, setTimedOut] = React.useState(false);
-  const isMounted = useIsMounted();
+/**
+ * Always paints an identicon. When `src` is set, try the URL and rotate through
+ * IPFS gateways on load error so the tile is never a blank shimmer forever.
+ */
+const AssetIcon = ({ name, src }) => {
+  const gateways = provider.api.ipfsGateways || [provider.api.ipfs];
+  const [gatewayIndex, setGatewayIndex] = React.useState(0);
+  const [failed, setFailed] = React.useState(!src);
+
   React.useEffect(() => {
-    setTimeout(() => isMounted.current && setTimedOut(true), 30000);
-  }, []);
-  if (timedOut) return <Avatar width="210px" height="210px" name={name} />;
-  return <Skeleton width="210px" height="210px" />;
+    setGatewayIndex(0);
+    setFailed(!src);
+  }, [src]);
+
+  const resolvedSrc =
+    src && !failed ? withIpfsGateway(src, gateways[gatewayIndex] || gateways[0]) : null;
+
+  return (
+    <Box position="relative" width="210px" height="210px">
+      <Avatar
+        position="absolute"
+        inset={0}
+        width="210px"
+        height="210px"
+        name={name}
+        rounded="sm"
+      />
+      {resolvedSrc && (
+        <Image
+          position="absolute"
+          inset={0}
+          width="210px"
+          height="210px"
+          objectFit="cover"
+          rounded="sm"
+          src={resolvedSrc}
+          onError={() => {
+            if (gatewayIndex + 1 < gateways.length) {
+              setGatewayIndex((i) => i + 1);
+            } else {
+              setFailed(true);
+            }
+          }}
+        />
+      )}
+    </Box>
+  );
 };
 
 export default Collectible;

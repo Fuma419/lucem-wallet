@@ -832,24 +832,63 @@ export const convertMetadataPropToString = (src) => {
   return null;
 };
 
+/**
+ * Pull a displayable image URI from CIP-25 / CIP-68 style metadata.
+ * Prefer `image`, then `files[].src` / `files[].name` (common NFT pattern).
+ */
+export const extractMetadataImage = (meta) => {
+  if (!meta || typeof meta !== 'object') return null;
+  const candidates = [];
+  if (meta.image != null) candidates.push(meta.image);
+  if (Array.isArray(meta.files)) {
+    for (const file of meta.files) {
+      if (!file || typeof file !== 'object') continue;
+      if (file.src != null) candidates.push(file.src);
+      if (file.name != null) candidates.push(file.name);
+    }
+  }
+  for (const raw of candidates) {
+    const asString =
+      typeof raw === 'object' && raw && !Array.isArray(raw) && raw.src != null
+        ? convertMetadataPropToString(raw.src)
+        : convertMetadataPropToString(raw);
+    if (!asString) continue;
+    const src = linkToSrc(asString);
+    if (src) return src;
+  }
+  return null;
+};
+
+/** Swap the gateway prefix of an IPFS HTTP URL; no-op for non-IPFS URLs. */
+export const withIpfsGateway = (url, gatewayBase) => {
+  if (!url || typeof url !== 'string' || !gatewayBase) return url;
+  const m = url.match(/^(https?:\/\/[^/]+\/ipfs)\/(.+)$/i);
+  if (!m) return url;
+  return `${gatewayBase.replace(/\/$/, '')}/${m[2]}`;
+};
+
 export const linkToSrc = (link, base64 = false) => {
+  if (link == null || typeof link !== 'string') return null;
+  const trimmed = link.trim();
+  if (!trimmed) return null;
   const base64regex =
     /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
-  if (link.startsWith('https://')) return link;
-  else if (link.startsWith('ipfs://'))
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://'))
+    return trimmed;
+  else if (trimmed.startsWith('ipfs://'))
     return (
       provider.api.ipfs +
       '/' +
-      link.split('ipfs://')[1].split('ipfs/').slice(-1)[0]
+      trimmed.split('ipfs://')[1].split('ipfs/').slice(-1)[0]
     );
   else if (
-    (link.startsWith('Qm') && link.length === 46) ||
-    (link.startsWith('baf') && link.length === 59)
+    (trimmed.startsWith('Qm') && trimmed.length === 46) ||
+    (trimmed.startsWith('baf') && (trimmed.length === 59 || trimmed.length === 62))
   ) {
-    return provider.api.ipfs + '/' + link;
-  } else if (base64 && base64regex.test(link))
-    return 'data:image/png;base64,' + link;
-  else if (link.startsWith('data:image')) return link;
+    return provider.api.ipfs + '/' + trimmed;
+  } else if (base64 && base64regex.test(trimmed))
+    return 'data:image/png;base64,' + trimmed;
+  else if (trimmed.startsWith('data:image')) return trimmed;
   return null;
 };
 

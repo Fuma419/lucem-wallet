@@ -32,6 +32,7 @@ import {
   txToTrezor,
   linkToSrc,
   convertMetadataPropToString,
+  extractMetadataImage,
   fromAssetUnit,
   toAssetUnit,
   Data,
@@ -2453,7 +2454,15 @@ export const getAsset = async (unit) => {
   const asset = assets[unit] || {};
   const time = Date.now();
   const h1 = 6000000;
-  if (asset && asset.time && time - asset.time <= h1 && !asset.mint) {
+  // Skip cache when a prior fetch left image empty — old empty caches from
+  // broken metadata/IPFS paths would otherwise stick for ~100 minutes.
+  if (
+    asset &&
+    asset.time &&
+    time - asset.time <= h1 &&
+    !asset.mint &&
+    asset.image
+  ) {
     return asset;
   } else {
     const { policyId, name, label } = fromAssetUnit(unit);
@@ -2491,7 +2500,7 @@ export const getAsset = async (unit) => {
         const metadata = metadataDatum && Data.toJson(metadataDatum.fields[0]);
 
         asset.displayName = metadata.name;
-        asset.image = metadata.image ? linkToSrc(convertMetadataPropToString(metadata.image)) : '';
+        asset.image = extractMetadataImage(metadata) || '';
         asset.decimals = 0;
       } catch (_e) {
         asset.displayName = asset.name;
@@ -2560,9 +2569,7 @@ export const getAsset = async (unit) => {
         (registry && registry.name) ||
         asset.name;
       asset.image =
-        (onchainMetadata &&
-          onchainMetadata.image &&
-          linkToSrc(convertMetadataPropToString(onchainMetadata.image))) ||
+        extractMetadataImage(onchainMetadata) ||
         (registry && registry.logo && linkToSrc(registry.logo, true)) ||
         '';
       asset.decimals = (registry && registry.decimals) || 0;

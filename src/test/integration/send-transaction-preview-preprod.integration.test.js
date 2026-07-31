@@ -11,7 +11,9 @@ const {
   buildSignSubmitAccountTransfer,
   buildSignSubmitSelfTransfer,
   deriveAccount0Address,
+  deriveAccountAddress,
   fetchProtocolParams,
+  snapshotMainnetHistoryForMnemonic,
   waitForTxStatus,
   waitForTxInAccountHistory,
 } = require('./koios-self-send');
@@ -23,7 +25,8 @@ const {
  *   - Preprod: account 0 → account 1 (different payment address in the same wallet)
  *
  * Run locally: `npm run test:integration` with `.env` (see `.env.example`). Live tests skip if mnemonic unset.
- * Jenkins strips mainnet credentials before this suite. Mainnet submit is hard-refused.
+ * Jenkins unsets mainnet submit credentials but keeps LUCEM_MAINNET_GUARD_PROJECT_ID for a
+ * read-only post-check that mainnet history did not change.
  *
  * Env:
  *   LUCEM_INTEGRATION_PREVIEW_MNEMONIC
@@ -34,6 +37,7 @@ const {
  *   KOIOS_API_KEY_PREPROD — optional fallback Bearer
  *   LUCEM_INTEGRATION_SEND_LOVELACE — default 5000000 (5 tADA)
  *   LUCEM_INTEGRATION_POLL_TX=1 — poll /tx_status after submit
+ *   LUCEM_MAINNET_GUARD_PROJECT_ID — read-only Blockfrost mainnet project id (CI)
  */
 
 const PREVIEW_KOIOS_BASE = 'https://preview.koios.rest/api/v1';
@@ -93,6 +97,45 @@ const NETWORKS = [
     koiosApiKeyEnv: 'KOIOS_API_KEY_PREPROD',
   },
 ];
+
+const mainnetGuardKey = (
+  process.env.LUCEM_MAINNET_GUARD_PROJECT_ID ||
+  process.env.BLOCKFROST_MAINNET_PROJECT_ID ||
+  process.env.BLOCKFROST_PROJECT_ID_MAINNET ||
+  ''
+).trim();
+const guardMnemonic = (
+  process.env.LUCEM_INTEGRATION_PREVIEW_MNEMONIC ||
+  process.env.LUCEM_INTEGRATION_PREPROD_MNEMONIC ||
+  ''
+).trim();
+const describeMainnetGuard =
+  mainnetGuardKey &&
+  mainnetGuardKey.startsWith('mainnet') &&
+  guardMnemonic &&
+  validateMnemonic(guardMnemonic)
+    ? describe
+    : describe.skip;
+
+/** Filled before live submits; compared after. */
+const mainnetGuardState = { before: null };
+
+describeMainnetGuard('mainnet history guard — snapshot before live submits', () => {
+  test('record CI mnemonic mainnet-twin tip (read-only)', async () => {
+    mainnetGuardState.before = await snapshotMainnetHistoryForMnemonic(
+      guardMnemonic,
+      mainnetGuardKey
+    );
+    // eslint-disable-next-line no-console
+    console.log(
+      `CI_MAINNET_GUARD_BEFORE addr=${mainnetGuardState.before.bech32} latest=${
+        mainnetGuardState.before.latestTxHash || '(none)'
+      }`
+    );
+    expect(mainnetGuardState.before.bech32).toMatch(/^addr1/);
+    expect(mainnetGuardState.before.bech32).not.toMatch(/^addr_test/);
+  });
+});
 
 NETWORKS.forEach(
   ({
@@ -213,3 +256,28 @@ NETWORKS.forEach(
   });
 }
 );
+
+describeMainnetGuard('mainnet history guard — verify after live submits', () => {
+  test('CI mnemonic mainnet twin tip is unchanged', async () => {
+    expect(mainnetGuardState.before).toBeTruthy();
+    const after = await snapshotMainnetHistoryForMnemonic(
+      guardMnemonic,
+      mainnetGuardKey
+    );
+    // eslint-disable-next-line no-console
+    console.log(
+      `CI_MAINNET_GUARD_AFTER addr=${after.bech32} latest=${after.latestTxHash || '(none)'}`
+    );
+    expect(after.bech32).toBe(mainnetGuardState.before.bech32);
+    expect(after.latestTxHash).toBe(mainnetGuardState.before.latestTxHash);
+  });
+
+  test('derived mainnet address is not the testnet payment address', () => {
+    const testnet = deriveAccountAddress(guardMnemonic, 0, 0).bech32;
+    const mainnet = deriveAccountAddress(guardMnemonic, 0, 1).bech32;
+    expect(testnet).toMatch(/^addr_test1/);
+    expect(mainnet).toMatch(/^addr1/);
+    expect(mainnet).not.toBe(testnet);
+  });
+});
+

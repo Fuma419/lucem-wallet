@@ -94,7 +94,7 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 | **Preview** | Self-send: account 0 → same address |
 | **Preprod** | Account 0 → account 1 (different address in the wallet) |
 
-Uses ADA-only UTxOs. Mnemonic is **BIP-39: space-separated words, whole phrase in double quotes** in `.env` — see **`.env.example`**. `npm run test:integration` loads `.env` via `dotenv`.
+Uses ADA-only UTxOs on a **dedicated testnet-only mnemonic** (do not reuse a seed that holds mainnet ADA). Mnemonic is **BIP-39: space-separated words, whole phrase in double quotes** in `.env` — see **`.env.example`**. `npm run test:integration` loads `.env` via `dotenv`. CI also snapshots the mnemonic’s mainnet-twin address before/after submits and asserts history did not change.
 
 **GitHub Actions** does not run live integration by default. Local runs use `.env` only; Jenkins runs Preview + Preprod with `lucem-wallet-dotenv`.
 

@@ -112,7 +112,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
                   onLoad={(txHash, txDetail) => {
                     txObject[txHash] = txDetail;
                   }}
-                  key={index}
+                  key={txHash}
                   txHash={txHash}
                   detail={history.details[txHash]}
                   currentAddr={currentAddr}

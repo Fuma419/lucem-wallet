@@ -15,6 +15,12 @@ const dummyStore = createStore({
   },
   network: { network: 'mainnet' },
   account: { account: { name: 'Test' } },
+  globalModel: {
+    sendStore: {
+      value: { assets: [] },
+      setValue: action(() => {}),
+    },
+  },
 });
 
 jest.mock('../../../api/extension', () => {

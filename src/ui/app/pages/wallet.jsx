@@ -81,7 +81,6 @@ import QrCode from '../components/qrCode';
 import provider from '../../../config/provider';
 import UnitDisplay from '../components/unitDisplay';
 import { onAccountChange } from '../../../api/extension';
-import AssetsViewer from '../components/assetsViewer';
 import HistoryViewer from '../components/historyViewer';
 import Copy from '../components/copy';
 import About from '../components/about';
@@ -93,7 +92,6 @@ import { NETWORK_ID, TAB, STORAGE, NODE } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
-import { GiToken } from 'react-icons/gi';
 import { MdHowToVote, MdOutlineHowToReg, MdRefresh } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
@@ -1031,13 +1029,6 @@ const Wallet = () => {
         >
           <TabList>
             <Tab mr={2}>
-              <Icon as={GiToken} boxSize={5} />
-            </Tab>
-            <Tab
-              mr={2}
-              onClick={() => {
-              }}
-            >
               <Icon as={RxTokens} boxSize={5} />
             </Tab>
             <Tab>
@@ -1051,26 +1042,25 @@ const Wallet = () => {
           </TabList>
           <TabPanels>
             <TabPanel>
-              <AssetsViewer
-                assets={
-                  state.account == null
-                    ? undefined
-                    : (state.account.ft ?? [])
-                }
-              />
-            </TabPanel>
-            <TabPanel>
               <CollectiblesViewer
                 assets={
                   state.account == null
                     ? undefined
-                    : (state.account.nft ?? [])
+                    : [
+                        ...(state.account.ft ?? []).filter(
+                          (asset) => asset.unit !== 'lovelace'
+                        ),
+                        ...(state.account.nft ?? []),
+                      ]
                 }
                 onUpdateAvatar={() => getData({ skipUpdate: true })}
               />
             </TabPanel>
             <TabPanel>
               <HistoryViewer
+                key={`${settings.network.id}:${
+                  (state.account && state.account.paymentAddr) || ''
+                }`}
                 network={state.network}
                 history={state.account && state.account.history}
                 currentAddr={state.account && state.account.paymentAddr}

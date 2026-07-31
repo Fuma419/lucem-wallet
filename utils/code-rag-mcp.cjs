@@ -36,10 +36,16 @@ const DEFAULT_EXCLUDED_DIRS = new Set([
 
 const DEFAULT_INCLUDE_PATHS = [
   "src",
-  ".github/workflows",
+  "docs",
+  "e2e",
   "utils",
+  ".github/workflows",
+  ".cursor/rules",
+  ".cursor/skills",
   "package.json",
   "README.md",
+  "AGENTS.md",
+  "Jenkinsfile",
 ];
 
 const MAX_FILE_BYTES = 1024 * 1024; // 1MB

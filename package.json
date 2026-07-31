@@ -17,7 +17,10 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:screenshots": "LUCEM_SKIP_SERVE=1 npm run build:webpack && playwright test e2e/screenshots.spec.js",
-    "test:screenshots:only": "playwright test e2e/screenshots.spec.js"
+    "test:screenshots:only": "playwright test e2e/screenshots.spec.js",
+    "rag:index": "node utils/code-rag-mcp.cjs index",
+    "rag:status": "node utils/code-rag-mcp.cjs status",
+    "rag:query": "node utils/code-rag-mcp.cjs query"
   },
   "dependencies": {
     "@cardano-foundation/ledgerjs-hw-app-cardano": "^7.1.3",

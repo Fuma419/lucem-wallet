@@ -2,15 +2,25 @@ const fs = require('fs');
 const path = require('path');
 
 describe('governance page and wallet network button wiring', () => {
-  test('network button CSS uses gray inactive + yellow active indicator', () => {
+  test('network button CSS matches translucent FAB tray treatment', () => {
     const css = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/styles.css'),
       'utf8'
     );
 
-    expect(css).toMatch(/\.button\.network-mainnet,\s*[\s\S]*background:\s*#2b2b2b/);
-    expect(css).toMatch(/\.button\.network-mainnet\[data-active\][\s\S]*background:\s*#cefa00/);
-    expect(css).toMatch(/\.button\.network-preview\[data-active\][\s\S]*box-shadow:\s*0 0 14px rgba\(206,\s*250,\s*0/);
+    expect(css).toMatch(/\.button\.network-mainnet[\s\S]*opacity:\s*0\.85/);
+    expect(css).toMatch(
+      /\.button\.network-mainnet\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(206,\s*250,\s*0/
+    );
+    expect(css).toMatch(
+      /\.button\.network-preprod\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(0,\s*245,\s*255/
+    );
+    expect(css).toMatch(
+      /\.button\.network-preview[\s\S]*radial-gradient\([\s\S]*rgba\(220,\s*27,\s*250/
+    );
+    expect(css).toMatch(
+      /\.button\.network-mainnet\[data-active\][\s\S]*opacity:\s*1\s*!important/
+    );
   });
 
   test('wallet network tray buttons use per-network class names with no shadow', () => {

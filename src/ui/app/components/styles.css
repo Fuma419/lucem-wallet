@@ -437,65 +437,127 @@ html[data-theme='light'] .lucem-settings-shell {
   }
 }
 
-/* Network Switcher Buttons: inactive gray, active yellow glow */
+/* Network tray options — same translucent FAB treatment as vote/stake/settings */
 .button.network-mainnet,
 .button.network-preprod,
 .button.network-preview,
 .button.network-testnet {
   font-family: 'Barlow', sans-serif;
-  opacity: 1;
+  opacity: 0.85;
   letter-spacing: 2px;
-  background: #2b2b2b;
-  border: thin solid rgba(150, 150, 150, 0.6);
   color: white;
   transition: all 0.3s ease;
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
-.button.network-mainnet:hover,
-.button.network-preprod:hover,
+.button.network-mainnet {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 0.5), rgba(0, 0, 0, 0.5));
+  border: thin solid rgba(206, 250, 0, 1);
+  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75);
+}
+
+.button.network-preprod {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 0.5), rgba(0, 0, 0, 0.5));
+  border: thin solid rgba(0, 245, 255, 1);
+  box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75);
+}
+
+.button.network-preview,
+.button.network-testnet {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 0.5), rgba(0, 0, 0, 0.5));
+  border: thin solid rgba(220, 27, 250, 1);
+  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+}
+
+.button.network-mainnet:hover {
+  opacity: 1;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, 0.5));
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
+  transform: none;
+}
+
+.button.network-preprod:hover {
+  opacity: 1;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, 0.5));
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.9);
+  transform: none;
+}
+
 .button.network-preview:hover,
 .button.network-testnet:hover {
-  background: #3a3a3a;
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  opacity: 1;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, 0.5));
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9);
   transform: none;
+}
+
+.button.network-mainnet[data-active],
+.button.network-mainnet:focus-visible {
+  opacity: 1 !important;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, 0.5)) !important;
+  border-color: rgba(206, 250, 0, 1) !important;
+  box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9) !important;
+  color: white !important;
+  transform: none !important;
+}
+
+.button.network-preprod[data-active],
+.button.network-preprod:focus-visible {
+  opacity: 1 !important;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, 0.5)) !important;
+  border-color: rgba(0, 245, 255, 1) !important;
+  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.9) !important;
+  color: white !important;
+  transform: none !important;
+}
+
+.button.network-preview[data-active],
+.button.network-testnet[data-active],
+.button.network-preview:focus-visible,
+.button.network-testnet:focus-visible {
+  opacity: 1 !important;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, 0.5)) !important;
+  border-color: rgba(220, 27, 250, 1) !important;
+  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9) !important;
+  color: white !important;
+  transform: none !important;
 }
 
 html[data-theme='light'] .button.network-mainnet,
 html[data-theme='light'] .button.network-preprod,
 html[data-theme='light'] .button.network-preview,
 html[data-theme='light'] .button.network-testnet {
-  opacity: 1;
-  background: #e6e6e6;
-  border: thin solid rgba(105, 105, 105, 0.55);
-  color: #252525;
+  opacity: 0.85;
+  color: #111;
+}
+
+html[data-theme='light'] .button.network-mainnet {
+  background: rgba(206, 250, 0, 0.55);
+  border: thin solid rgba(160, 190, 0, 0.9);
+  box-shadow: 0 0 12px rgba(206, 250, 0, 0.35);
+}
+
+html[data-theme='light'] .button.network-preprod {
+  background: rgba(0, 245, 255, 0.45);
+  border: thin solid rgba(0, 180, 190, 0.9);
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.3);
+}
+
+html[data-theme='light'] .button.network-preview,
+html[data-theme='light'] .button.network-testnet {
+  background: rgba(220, 27, 250, 0.4);
+  border: thin solid rgba(180, 20, 210, 0.9);
+  box-shadow: 0 0 12px rgba(220, 27, 250, 0.3);
 }
 
 html[data-theme='light'] .button.network-mainnet:hover,
 html[data-theme='light'] .button.network-preprod:hover,
 html[data-theme='light'] .button.network-preview:hover,
-html[data-theme='light'] .button.network-testnet:hover {
-  background: #d7d7d7;
-  color: #141414;
-}
-
-.button.network-mainnet:hover,
-.button.network-preprod:hover,
-.button.network-preview:hover,
-.button.network-testnet:hover,
-.button.network-mainnet:focus-visible,
-.button.network-preprod:focus-visible,
-.button.network-preview:focus-visible,
-.button.network-testnet:focus-visible,
-.button.network-mainnet[data-active],
-.button.network-preprod[data-active],
-.button.network-preview[data-active],
-.button.network-testnet[data-active] {
-  transform: none !important;
-  opacity: 1 !important;
-  background: #cefa00 !important;
-  border-color: #cefa00 !important;
-  box-shadow: 0 0 14px rgba(206, 250, 0, 0.5) !important;
-  color: #111 !important;
+html[data-theme='light'] .button.network-testnet:hover,
+html[data-theme='light'] .button.network-mainnet[data-active],
+html[data-theme='light'] .button.network-preprod[data-active],
+html[data-theme='light'] .button.network-preview[data-active],
+html[data-theme='light'] .button.network-testnet[data-active] {
+  opacity: 1;
+  color: #111;
 }
 

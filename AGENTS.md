@@ -169,15 +169,16 @@ Jest uses `@emurgo/cardano-serialization-lib-nodejs` mapping and `testPathIgnore
 
 ### Agent ship policy (PR, auto-merge, fix until merged)
 
-Same policy as **`.cursor/rules/git-push-policy.mdc`** (always-on). Summary:
+Same policy as **`.cursor/rules/git-push-policy.mdc`** (always-on) and **`.cursor/skills/pr-follow-through/SKILL.md`**. Summary:
 
 1. **Branch** from up-to-date `main`: prefer **`agent/<topic>`**, or `fix/<issue>` / `feat/<topic>`.
-2. Run **`NODE_ENV=test npx jest`** and **`npm run build:webpack`** (local parity for CI) before push.
+2. Run **`NODE_ENV=test npx jest`** and **`npm run build:webpack`** (local parity for CI) before push. When changing CSS/UI contracts covered by unit tests, update those tests in the same commit.
 3. **Commit and push** to `origin` on that branch only (never directly to `main`).
-4. **Open a PR** to `main` (`gh pr create` or confirm **`Agent Auto PR`** created/updated it). Do not treat the task as finished until a PR exists.
-5. **Wait for CI** and **auto-merge**; if merge does not complete, fix failing checks, resolve reviews, fix conflicts, and push again until merged.
+4. **Open a PR** to `main` (`gh pr create` or confirm **`Agent Auto PR`** created/updated it). Enable **auto-merge** when available.
+5. **Stay on the task until merge:** poll `gh pr checks` / Jenkins PR job; on failure, read the failing stage log, fix, push, and re-poll. If the PR is behind `main` or conflicted, merge/rebase `main` and re-run CI. Do **not** stop after “PR opened” or “CI started.”
+6. Only treat the work as finished when the PR is **`MERGED`** (or the user explicitly stops babysitting).
 
-**Definition of done:** changes are **merged to `main`**, not only pushed to a branch.
+**Definition of done:** changes are **merged to `main`**, not only pushed to a branch or sitting in an open PR.
 
 ### GitHub token helper
 

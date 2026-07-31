@@ -63,8 +63,8 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
         alignItems="center"
         justifyContent="center"
         flexDirection="column"
-        width="160px"
-        height="160px"
+        width="100%"
+        sx={{ aspectRatio: '1 / 1' }}
         overflow="hidden"
         rounded="3xl"
         background={background}
@@ -77,13 +77,18 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
       >
         <Box
           filter={showInfo && 'brightness(0.6)'}
+          position="absolute"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
           width="180%"
+          height="180%"
           display="flex"
           alignItems="center"
           justifyContent="center"
         >
           {!token ? (
-            <Skeleton width="210px" height="210px" />
+            <Skeleton width="100%" height="100%" />
           ) : (
             <AssetIcon
               name={token.displayName || token.name}
@@ -95,23 +100,24 @@ const Collectible = React.forwardRef(({ asset }, ref) => {
           <Box
             width="full"
             position="absolute"
-            bottom={0}
             left={0}
+            right={0}
             style={{
               transition: '0.2s',
-              bottom: showInfo ? '130px' : '0',
+              bottom: showInfo ? '0' : '-100%',
             }}
           >
             <Box
-              position="absolute"
               width="full"
-              height="130px"
+              minH="70%"
+              py={4}
               background="white"
               display="flex"
               alignItems="center"
               justifyContent="center"
               flexDirection="column"
               color="black"
+              position="relative"
             >
               <Box
                 overflow="hidden"
@@ -159,12 +165,12 @@ const AssetIcon = ({ name, src }) => {
     src && !failed ? withIpfsGateway(src, gateways[gatewayIndex] || gateways[0]) : null;
 
   return (
-    <Box position="relative" width="210px" height="210px">
+    <Box position="relative" width="100%" height="100%">
       <Avatar
         position="absolute"
         inset={0}
-        width="210px"
-        height="210px"
+        width="100%"
+        height="100%"
         name={name}
         rounded="sm"
       />
@@ -172,8 +178,8 @@ const AssetIcon = ({ name, src }) => {
         <Image
           position="absolute"
           inset={0}
-          width="210px"
-          height="210px"
+          width="100%"
+          height="100%"
           objectFit="cover"
           rounded="sm"
           src={resolvedSrc}

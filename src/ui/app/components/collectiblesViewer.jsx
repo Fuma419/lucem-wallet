@@ -261,15 +261,17 @@ export const CollectibleModal = React.forwardRef(({ onUpdateAvatar }, ref) => {
 
 const AssetsGrid = React.forwardRef(({ assets }, ref) => {
   return (
-    <Box
-      width="full"
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-    >
-      <SimpleGrid columns={3} spacing={7}>
+    <Box width="full" px={1} pb={6}>
+      <SimpleGrid
+        columns={3}
+        spacing={2}
+        width="full"
+        // Fluid cells: each tile fills its column and the grid grows
+        // downward as more assets are added (no fixed 160px overflow).
+        gridAutoRows="1fr"
+      >
         {assets.map((asset, index) => (
-          <Box key={index}>
+          <Box key={asset.unit || index} minW={0} w="100%">
             <LazyLoadComponent>
               <Collectible ref={ref} asset={asset} />
             </LazyLoadComponent>

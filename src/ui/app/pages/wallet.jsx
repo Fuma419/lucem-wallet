@@ -266,6 +266,15 @@ const Wallet = () => {
   const [menu, setMenu] = React.useState(false);
   const [isTrayOpen, setIsTrayOpen] = React.useState(false);
   const [isNetworkTrayOpen, setIsNetworkTrayOpen] = React.useState(false);
+
+  // Stable identity so tray toggles (and other re-renders) don't remount/refetch the assets grid.
+  const collectibleAssets = React.useMemo(() => {
+    if (state.account == null) return undefined;
+    return [
+      ...(state.account.ft ?? []).filter((asset) => asset.unit !== 'lovelace'),
+      ...(state.account.nft ?? []),
+    ];
+  }, [state.account]);
   const aboutRef = React.useRef();
   const deletAccountRef = React.useRef();
   const refreshTimeoutRef = React.useRef(null);
@@ -1043,16 +1052,7 @@ const Wallet = () => {
           <TabPanels>
             <TabPanel>
               <CollectiblesViewer
-                assets={
-                  state.account == null
-                    ? undefined
-                    : [
-                        ...(state.account.ft ?? []).filter(
-                          (asset) => asset.unit !== 'lovelace'
-                        ),
-                        ...(state.account.nft ?? []),
-                      ]
-                }
+                assets={collectibleAssets}
                 onUpdateAvatar={() => getData({ skipUpdate: true })}
               />
             </TabPanel>

@@ -29,22 +29,29 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
       setFinal(false);
       return;
     }
-    await new Promise((res, rej) => setTimeout(() => res(), 10));
-    slice = slice.concat(
-      history.confirmed.slice((page - 1) * BATCH, page * BATCH)
-    );
+    try {
+      await new Promise((res, rej) => setTimeout(() => res(), 10));
+      slice = slice.concat(
+        history.confirmed.slice((page - 1) * BATCH, page * BATCH)
+      );
 
-    if (slice.length < page * BATCH) {
-      const txs = await getTransactions(page, BATCH);
+      if (slice.length < page * BATCH) {
+        const txs = await getTransactions(page, BATCH);
 
-      if (txs.length <= 0) {
-        setFinal(true);
-      } else {
-        slice = Array.from(new Set(slice.concat(txs.map((tx) => tx.txHash))));
-        await setTransactions(slice);
+        if (txs.length <= 0) {
+          setFinal(true);
+        } else {
+          slice = Array.from(new Set(slice.concat(txs.map((tx) => tx.txHash))));
+          await setTransactions(slice);
+        }
       }
+      if (slice.length < page * BATCH) setFinal(true);
+    } catch (error) {
+      // Never leave the spinner running forever if a provider call fails/hangs;
+      // surface whatever we already have (or an empty "No History" state).
+      console.warn('Failed to load transaction history:', error?.message || error);
+      setFinal(true);
     }
-    if (slice.length < page * BATCH) setFinal(true);
     setHistorySlice(slice);
   };
 

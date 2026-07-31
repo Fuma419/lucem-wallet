@@ -370,12 +370,33 @@ export const getFullBalance = async () => {
 };
 
 export const getTransactions = async (paginate = 1, count = 10) => {
-  const currentAccount = await getCurrentAccount();
   const stakeAddress = await getRewardAddress();
-  
+
   const request = KOIOS_REQUESTS.getAccountTxs(stakeAddress, 0);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
+  // Bound the Koios direct-path response (mainnet accounts can have thousands of
+  // txs; an unbounded fetch is slow/huge and makes the history "load forever").
+  // `order`/`limit` are PostgREST reserved params Koios honours; the Blockfrost
+  // adapter ignores them and self-caps at 100.
+  const boundedEndpoint = `${request.endpoint}&order=block_height.desc&limit=100`;
+
+  // Never let a hung/slow provider stall the history spinner indefinitely.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let result;
+  try {
+    result = await koiosRequest(
+      boundedEndpoint,
+      {},
+      request.body,
+      controller.signal
+    );
+  } catch (error) {
+    console.warn('getTransactions failed:', error?.message || error);
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+
   if (!result || result.error) return [];
   
   let processedTransactions = result.map(tx => ({

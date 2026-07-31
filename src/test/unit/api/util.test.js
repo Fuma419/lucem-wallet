@@ -1,8 +1,10 @@
 import {
   assetsToValue,
   convertMetadataPropToString,
+  extractMetadataImage,
   linkToSrc,
   valueToAssets,
+  withIpfsGateway,
 } from '../../../api/util';
 import Loader from '../../../api/loader';
 import provider from '../../../config/provider';
@@ -123,5 +125,47 @@ describe('test linkToSrc', () => {
     expect(convertMetadataPropToString(null)).toBeNull();
     expect(convertMetadataPropToString(42)).toBeNull();
     expect(convertMetadataPropToString({ a: 1 })).toBeNull();
+  });
+  test('expect null for null/undefined input', () => {
+    expect(linkToSrc(null)).toBe(null);
+    expect(linkToSrc(undefined)).toBe(null);
+    expect(linkToSrc('')).toBe(null);
+  });
+});
+
+describe('extractMetadataImage', () => {
+  test('reads CIP-25 image string', () => {
+    const src = extractMetadataImage({
+      name: 'Sun',
+      image: 'ipfs://QmVSameQt9i37hdrLwMSfoAg1aVKrjtBtuDHeQTgyVhUXC',
+    });
+    expect(src).toEqual(
+      provider.api.ipfs + '/' + 'QmVSameQt9i37hdrLwMSfoAg1aVKrjtBtuDHeQTgyVhUXC'
+    );
+  });
+
+  test('falls back to files[].src when image missing', () => {
+    const src = extractMetadataImage({
+      name: 'Moon',
+      files: [
+        {
+          name: 'art',
+          mediaType: 'image/png',
+          src: 'ipfs://QmVSameQt9i37hdrLwMSfoAg1aVKrjtBtuDHeQTgyVhUXC',
+        },
+      ],
+    });
+    expect(src).toContain('QmVSameQt9i37hdrLwMSfoAg1aVKrjtBtuDHeQTgyVhUXC');
+  });
+
+  test('withIpfsGateway swaps gateway host', () => {
+    const url =
+      'https://ipfs.io/ipfs/QmVSameQt9i37hdrLwMSfoAg1aVKrjtBtuDHeQTgyVhUXC';
+    expect(withIpfsGateway(url, 'https://dweb.link/ipfs')).toEqual(
+      'https://dweb.link/ipfs/QmVSameQt9i37hdrLwMSfoAg1aVKrjtBtuDHeQTgyVhUXC'
+    );
+    expect(
+      withIpfsGateway('https://example.com/art.png', 'https://dweb.link/ipfs')
+    ).toEqual('https://example.com/art.png');
   });
 });

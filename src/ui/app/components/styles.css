@@ -561,3 +561,48 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   color: #111;
 }
 
+/* Top-of-wallet testnet banner — same accents as network tray buttons; hidden on mainnet in JSX */
+.network-banner {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  width: 100%;
+  opacity: 0.85;
+  color: white;
+  padding: calc(0.35rem + env(safe-area-inset-top, 0px)) 0.75rem 0.35rem;
+}
+
+.network-banner-preprod {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 0.5), rgba(0, 0, 0, 0.5));
+  border-bottom: thin solid rgba(0, 245, 255, 1);
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.45);
+}
+
+.network-banner-preview,
+.network-banner-testnet {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 0.5), rgba(0, 0, 0, 0.5));
+  border-bottom: thin solid rgba(220, 27, 250, 1);
+  box-shadow: 0 0 12px rgba(220, 27, 250, 0.45);
+}
+
+html[data-theme='light'] .network-banner {
+  opacity: 0.9;
+  color: #111;
+}
+
+html[data-theme='light'] .network-banner-preprod {
+  background: rgba(0, 245, 255, 0.45);
+  border-bottom: thin solid rgba(0, 180, 190, 0.9);
+  box-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+}
+
+html[data-theme='light'] .network-banner-preview,
+html[data-theme='light'] .network-banner-testnet {
+  background: rgba(220, 27, 250, 0.4);
+  border-bottom: thin solid rgba(180, 20, 210, 0.9);
+  box-shadow: 0 0 10px rgba(220, 27, 250, 0.3);
+}
+

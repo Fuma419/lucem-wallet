@@ -35,6 +35,24 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toMatch(/shadow="none"/);
   });
 
+  test('wallet shows colored testnet banner and hides it on mainnet', () => {
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),
+      'utf8'
+    );
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/styles.css'),
+      'utf8'
+    );
+
+    expect(walletSrc).toContain('testnetBanner');
+    expect(walletSrc).toContain('NETWORK_ID.mainnet');
+    expect(walletSrc).toContain('wallet-network-banner');
+    expect(walletSrc).toMatch(/network-banner-\$\{testnetBanner\.id\}/);
+    expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*245,\s*255/);
+    expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(220,\s*27,\s*250/);
+  });
+
   test('governance page uses API-backed governance loading and confirm modal signing flow', () => {
     const governanceSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/pages/governance.jsx'),

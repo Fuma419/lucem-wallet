@@ -28,6 +28,8 @@ const {
   matchesAnyCredential,
   getAddressCredentials,
   getTxType,
+  getCounterparty,
+  truncateMiddle,
 } = require('../../../ui/app/components/transaction');
 
 function makeBaseAddress(paymentKeyHex, stakeKeyHex, networkId = 0) {
@@ -132,6 +134,64 @@ describe('calculateAmount — receive', () => {
     const amounts = calculateAmount(addr0, uTxOList, true);
     const lovelace = amounts.find((a) => a.unit === 'lovelace');
     expect(BigInt(lovelace.quantity)).toBe(5000000n);
+  });
+});
+
+describe('getCounterparty', () => {
+  test('returns external recipient (To) for an outgoing tx, skipping change', () => {
+    const detail = {
+      utxos: {
+        inputs: [{ address: addr0 }],
+        outputs: [{ address: externalAddr }, { address: addr0 }],
+      },
+    };
+    const cp = getCounterparty('externalOut', detail, addr0, [addr0, addr1]);
+    expect(cp).toEqual({ direction: 'To', addresses: [externalAddr] });
+  });
+
+  test('returns external sender (From) for an incoming tx', () => {
+    const detail = {
+      utxos: {
+        inputs: [{ address: externalAddr }],
+        outputs: [{ address: addr0 }, { address: externalAddr }],
+      },
+    };
+    const cp = getCounterparty('externalIn', detail, addr0, [addr0, addr1]);
+    expect(cp).toEqual({ direction: 'From', addresses: [externalAddr] });
+  });
+
+  test('returns null for a self transfer', () => {
+    const detail = {
+      utxos: { inputs: [{ address: addr0 }], outputs: [{ address: addr0 }] },
+    };
+    expect(getCounterparty('self', detail, addr0, [addr0])).toBeNull();
+  });
+
+  test('dedupes repeated counterparty addresses', () => {
+    const detail = {
+      utxos: {
+        inputs: [{ address: addr0 }],
+        outputs: [
+          { address: externalAddr },
+          { address: externalAddr },
+          { address: addr0 },
+        ],
+      },
+    };
+    const cp = getCounterparty('externalOut', detail, addr0, [addr0]);
+    expect(cp.addresses).toEqual([externalAddr]);
+  });
+});
+
+describe('truncateMiddle', () => {
+  test('shortens long strings with an ellipsis', () => {
+    const hash = 'a'.repeat(64);
+    const out = truncateMiddle(hash, 12, 8);
+    expect(out).toBe(`${'a'.repeat(12)}…${'a'.repeat(8)}`);
+  });
+
+  test('leaves short strings unchanged', () => {
+    expect(truncateMiddle('short')).toBe('short');
   });
 });
 

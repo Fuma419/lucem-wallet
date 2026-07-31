@@ -196,10 +196,14 @@ describe('history transaction amount display', () => {
       require('path').join(__dirname, '../../ui/app/components/transaction.jsx'),
       'utf8'
     );
+    // The `!== undefined && !== null` guard is what keeps BigInt 0 visible
+    // (0 is neither null nor undefined, so it still renders as "0").
     expect(txSrc).toMatch(
       /displayInfo\.lovelace !== undefined[\s\S]{0,80}displayInfo\.lovelace !== null/
     );
-    expect(txSrc).toContain('quantity={displayInfo.lovelace.toString()}');
+    // Amount magnitude is derived from displayInfo.lovelace (absolute value +
+    // explicit sign); zero net lovelace still renders through this path.
+    expect(txSrc).toMatch(/displayInfo\.lovelace[\s\S]{0,120}\.toString\(\)/);
   });
 
   test('should expose transaction flow label mapping for user clarity', () => {

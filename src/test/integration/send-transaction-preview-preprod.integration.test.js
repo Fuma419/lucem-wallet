@@ -142,9 +142,27 @@ NETWORKS.forEach(
 
     let submittedHash;
 
+    test('submit target is Preview/Preprod only (never mainnet)', () => {
+      expect(txBaseUrl).toMatch(
+        /(preview|preprod)\.koios\.rest|cardano-(preview|preprod)\.blockfrost\.io/i
+      );
+      expect(txBaseUrl).not.toMatch(
+        /api\.koios\.rest|cardano-mainnet\.blockfrost\.io/i
+      );
+      // Greppable CI signal: prove which network this suite will hit.
+      // eslint-disable-next-line no-console
+      console.log(
+        `CI_LIVE_TX_TARGET network=${name} provider=${providerType} url=${txBaseUrl}`
+      );
+    });
+
     test(
       `submits signed 5 tADA ${transferLabel}; optional /tx_status poll (LUCEM_INTEGRATION_POLL_TX=1)`,
       async () => {
+        // eslint-disable-next-line no-console
+        console.log(
+          `CI_LIVE_TX_SUBMIT network=${name} provider=${providerType} url=${txBaseUrl}`
+        );
         const hash = await buildTransfer({
           providerType,
           baseUrl: txBaseUrl,
@@ -154,6 +172,8 @@ NETWORKS.forEach(
         });
         expect(hash).toMatch(TX_HASH_RE);
         submittedHash = hash;
+        // eslint-disable-next-line no-console
+        console.log(`CI_LIVE_TX_HASH network=${name} hash=${hash}`);
         if (shouldPollTx()) {
           const status = await waitForTxStatus({
             baseUrl: koiosBaseUrl,

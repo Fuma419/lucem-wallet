@@ -246,7 +246,7 @@ const Wallet = () => {
   const floatingNetworkToggleProps = {
     ...walletFabBase,
     color: fabColor,
-    ...fabSettings,
+    ...fabToggle,
   };
 
   const networkOptions = [
@@ -503,7 +503,7 @@ const Wallet = () => {
             </Collapse>
             <Button
               {...floatingNetworkToggleProps}
-              className={fabSettingsClass}
+              className={fabToggleClass}
               onClick={() => setIsNetworkTrayOpen(!isNetworkTrayOpen)}
               aria-label="Toggle network menu"
             >

@@ -244,7 +244,7 @@ async function fetchProtocolParams(base, apiKey, providerType = PROVIDER.koios) 
   };
 }
 
-function deriveAccountAddress(mnemonicPhrase, accountIndex = 0) {
+function deriveAccountAddress(mnemonicPhrase, accountIndex = 0, networkId = 0) {
   if (!validateMnemonic(mnemonicPhrase)) {
     throw new Error('Invalid BIP-39 mnemonic');
   }
@@ -259,7 +259,6 @@ function deriveAccountAddress(mnemonicPhrase, accountIndex = 0) {
     .derive(harden(accountIndex));
   const paymentKey = accountKey.derive(0).derive(0).to_raw_key();
   const stakeKey = accountKey.derive(2).derive(0).to_raw_key();
-  const networkId = 0;
   const baseAddr = Cardano.BaseAddress.new(
     networkId,
     Cardano.Credential.from_keyhash(paymentKey.to_public().hash()),
@@ -458,18 +457,23 @@ async function buildSignSubmitAccountTransfer(opts) {
     sendLovelace,
     providerType = PROVIDER.koios,
     recipientAccountIndex = 1,
+    recipientBech32: recipientBech32Opt,
   } = opts;
   const sender = deriveAccountAddress(mnemonic.trim(), 0);
-  const recipient = deriveAccountAddress(mnemonic.trim(), recipientAccountIndex);
+  const recipient = recipientBech32Opt
+    ? {
+        address: Cardano.Address.from_bech32(String(recipientBech32Opt).trim()),
+        bech32: String(recipientBech32Opt).trim(),
+      }
+    : deriveAccountAddress(mnemonic.trim(), recipientAccountIndex);
   const { address, bech32, paymentKey } = sender;
 
   assertTestnetOnly(baseUrl, bech32, { apiKey, providerType });
   assertTestnetOnly(baseUrl, recipient.bech32, { apiKey, providerType });
 
-  // recipientAccountIndex 0 == sender: a genuine same-address self-transfer
-  // (output + change both return to account 0, so the wallet labels it "Self
-  // transfer"). Only enforce distinct addresses for a real account→account move.
-  const isSelfTransfer = recipientAccountIndex === 0;
+  // recipientAccountIndex 0 == sender (and no external recipient): genuine self-transfer.
+  const isSelfTransfer =
+    !recipientBech32Opt && recipientAccountIndex === 0;
   if (!isSelfTransfer && bech32 === recipient.bech32) {
     throw new Error('Sender and recipient must be different addresses.');
   }
@@ -644,6 +648,45 @@ async function buildSignSubmitSelfTransfer(opts) {
   return buildSignSubmitAccountTransfer({ ...opts, recipientAccountIndex: 0 });
 }
 
+const MAINNET_BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
+
+/**
+ * Read-only: latest tx hash on Cardano mainnet for a bech32 address, or null if
+ * the address has never been seen. Used only to prove CI did not touch mainnet.
+ */
+async function fetchLatestMainnetTxHash(bech32, apiKey) {
+  if (!apiKey || !String(apiKey).startsWith('mainnet')) {
+    throw new Error(
+      'Mainnet history guard requires BLOCKFROST_MAINNET_PROJECT_ID / LUCEM_MAINNET_GUARD_PROJECT_ID'
+    );
+  }
+  const path = `/addresses/${encodeURIComponent(bech32)}/transactions?order=desc&count=1`;
+  const r = await fetch(`${MAINNET_BLOCKFROST_BASE}${path}`, {
+    headers: { project_id: apiKey, Accept: 'application/json' },
+  });
+  if (r.status === 404) return null;
+  const text = await r.text();
+  if (!r.ok) {
+    throw new Error(`mainnet history guard ${r.status}: ${text.slice(0, 300)}`);
+  }
+  const rows = JSON.parse(text);
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  return rows[0].tx_hash || null;
+}
+
+/**
+ * Derive the mainnet twin of the CI test mnemonic and snapshot its tip.
+ * Call before live testnet submits; compare after.
+ */
+async function snapshotMainnetHistoryForMnemonic(mnemonic, apiKey) {
+  const { bech32 } = deriveAccountAddress(mnemonic.trim(), 0, 1);
+  if (!bech32.startsWith('addr1') || bech32.startsWith('addr_test')) {
+    throw new Error(`Expected mainnet addr1…, got ${bech32.slice(0, 20)}`);
+  }
+  const latestTxHash = await fetchLatestMainnetTxHash(bech32, apiKey);
+  return { bech32, latestTxHash };
+}
+
 module.exports = {
   PROVIDER,
   assertTestnetOnly,
@@ -652,6 +695,8 @@ module.exports = {
   deriveAccountAddress,
   deriveAccount0Address,
   fetchProtocolParams,
+  fetchLatestMainnetTxHash,
+  snapshotMainnetHistoryForMnemonic,
   normalizeSubmitTxHash,
   waitForTxStatus,
   waitForTxInAccountHistory,

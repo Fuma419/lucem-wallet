@@ -82,20 +82,29 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 | Build | `npm run build` |
 | Dev server | `npm start` (localhost:3000) |
 | Test (unit, no live chain) | `NODE_ENV=test npx jest` |
-| Integration (Preprod live self-send; local `.env`) | `npm run test:integration` |
+| Integration (Preview self-send + Preprod 0→1; never mainnet) | `npm run test:integration` |
 | Playwright (needs `build/`) | `npm run test:screenshots:only` or `npm run test:e2e` |
 | Lint | `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx` |
 | Deploy web | `vercel deploy --prod --token $VERCEL_TOKEN --scope my-team-5c660a1c --yes` |
 
-**Preprod send integration tests** (`src/test/integration/send-transaction-preview-preprod.integration.test.js`): not run by default Jest. They call Koios **Preprod** and submit a small **tADA self-transfer** from **account 0** (CIP-1852), using only **ADA-only** UTxOs. Mnemonic is **BIP-39: space-separated words, whole phrase in double quotes** in `.env` — see **`.env.example`**. `npm run test:integration` loads `.env` via `dotenv`.
+**Live send integration tests** (`src/test/integration/send-transaction-preview-preprod.integration.test.js`): not run by default Jest. **Cardano mainnet is forbidden** (URL allowlist + `addr_test1` + Blockfrost key prefix; Jenkins unsets mainnet credentials). Only the two testnets:
 
-**GitHub Actions** does not run live Preprod integration by default (`ci.yml` has a commented template if you enable it later with repo secrets). Local runs use `.env` only.
+| Network | Transfer |
+|---------|----------|
+| **Preview** | Self-send: account 0 → same address |
+| **Preprod** | Account 0 → account 1 (different address in the wallet) |
+
+Uses ADA-only UTxOs. Mnemonic is **BIP-39: space-separated words, whole phrase in double quotes** in `.env` — see **`.env.example`**. `npm run test:integration` loads `.env` via `dotenv`.
+
+**GitHub Actions** does not run live integration by default. Local runs use `.env` only; Jenkins runs Preview + Preprod with `lucem-wallet-dotenv`.
 
 | Variable | Purpose |
 |----------|---------|
+| `LUCEM_INTEGRATION_PREVIEW_MNEMONIC` | 12/15/24 words; funded Preview account 0 |
 | `LUCEM_INTEGRATION_PREPROD_MNEMONIC` | 12/15/24 words; funded Preprod account 0 |
-| `KOIOS_API_KEY_PREPROD` | Optional Bearer token for Koios |
-| `LUCEM_INTEGRATION_SEND_LOVELACE` | Optional amount (default `3000000`) |
+| `BLOCKFROST_PREVIEW_PROJECT_ID` / `BLOCKFROST_PREPROD_PROJECT_ID` | Preferred submit provider (key must match network prefix) |
+| `KOIOS_API_KEY_PREVIEW` / `KOIOS_API_KEY_PREPROD` | Optional Bearer fallback |
+| `LUCEM_INTEGRATION_SEND_LOVELACE` | Optional amount (default `5000000`) |
 | `LUCEM_INTEGRATION_POLL_TX=1` | After submit, poll Koios `/tx_status` until visible (optional) |
 | `LUCEM_RUN_INTEGRATION=1` | Set automatically by `npm run test:integration` |
 

@@ -17,12 +17,13 @@ const {
 } = require('./koios-self-send');
 
 /**
- * Live testnet transfers (CIP-1852, ADA-only UTxOs), Blockfrost first / Koios fallback:
- *   - Preview:  same-address self-transfer (account 0 -> 0) → "Self transfer"
- *   - Preprod:  account 0 -> account 1 transfer
+ * Live testnet transfers only (never Cardano mainnet). CIP-1852, ADA-only UTxOs,
+ * Blockfrost first / Koios fallback:
+ *   - Preview: same-address self-transfer (account 0 → 0)
+ *   - Preprod: account 0 → account 1 (different payment address in the same wallet)
  *
  * Run locally: `npm run test:integration` with `.env` (see `.env.example`). Live tests skip if mnemonic unset.
- * To run on GitHub Actions later, add a workflow step + repo secrets; see commented block in `ci.yml`.
+ * Jenkins strips mainnet credentials before this suite. Mainnet submit is hard-refused.
  *
  * Env:
  *   LUCEM_INTEGRATION_PREVIEW_MNEMONIC

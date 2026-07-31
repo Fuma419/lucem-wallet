@@ -16,29 +16,76 @@ const PROVIDER = {
   koios: 'koios',
 };
 
-// Mainnet endpoints. Live transaction tests must never touch these unless the
-// caller explicitly opts in with LUCEM_ALLOW_MAINNET_INTEGRATION=1.
-const MAINNET_ENDPOINT_RE = /(api\.koios\.rest|cardano-mainnet\.blockfrost\.io)/i;
+// Live CI transaction tests may ONLY talk to Preview/Preprod. Mainnet (and any
+// other host) is refused. Local override LUCEM_ALLOW_MAINNET_INTEGRATION=1 is
+// ignored under CI (Jenkins / GitHub Actions / CI=true).
+const TESTNET_ENDPOINT_RE =
+  /(preview|preprod)\.koios\.rest|cardano-(preview|preprod)\.blockfrost\.io/i;
+const MAINNET_ENDPOINT_RE =
+  /(^https?:\/\/api\.koios\.rest(\/|$)|cardano-mainnet\.blockfrost\.io)/i;
+
+function isCiEnvironment() {
+  return Boolean(
+    process.env.CI === 'true' ||
+      process.env.CI === '1' ||
+      process.env.JENKINS_URL ||
+      process.env.GITHUB_ACTIONS ||
+      process.env.BUILD_ID
+  );
+}
 
 /**
- * Guard: refuse to build/submit a live transaction against mainnet.
- * Integration transaction tests are Preview/Preprod only by policy.
- * @param {string} baseUrl   provider base URL used for submit
- * @param {string} [bech32]  derived sender address (mainnet uses addr1..., testnet addr_test1...)
+ * Guard: refuse to build/submit a live transaction outside Preview/Preprod.
+ * @param {string} baseUrl   provider base URL used for submit / queries
+ * @param {string} [bech32]  derived sender address (must be addr_test1...)
+ * @param {{ apiKey?: string, providerType?: string }} [opts]
  */
-function assertTestnetOnly(baseUrl, bech32) {
-  if (process.env.LUCEM_ALLOW_MAINNET_INTEGRATION === '1') return;
-  const mainnetUrl = MAINNET_ENDPOINT_RE.test(String(baseUrl || ''));
-  const mainnetAddr =
-    typeof bech32 === 'string' &&
-    bech32.startsWith('addr1') &&
-    !bech32.startsWith('addr_test');
-  if (mainnetUrl || mainnetAddr) {
+function assertTestnetOnly(baseUrl, bech32, opts = {}) {
+  const allowMainnetOverride =
+    process.env.LUCEM_ALLOW_MAINNET_INTEGRATION === '1' && !isCiEnvironment();
+  if (allowMainnetOverride) return;
+
+  const url = String(baseUrl || '');
+  if (MAINNET_ENDPOINT_RE.test(url) || !TESTNET_ENDPOINT_RE.test(url)) {
     throw new Error(
-      'Refusing to run a live transaction test against mainnet. ' +
-        'Integration transaction tests run on Preview/Preprod only. ' +
-        'Set LUCEM_ALLOW_MAINNET_INTEGRATION=1 to explicitly override.'
+      'Refusing to run a live transaction test outside Preview/Preprod. ' +
+        `Got base URL: ${url || '(empty)'}. ` +
+        'CI integration submits only on the two testnets.'
     );
+  }
+
+  if (typeof bech32 === 'string' && bech32.length > 0) {
+    if (!bech32.startsWith('addr_test1')) {
+      throw new Error(
+        'Refusing to run a live transaction test with a non-testnet address. ' +
+          'Sender must be addr_test1... (Preview/Preprod).'
+      );
+    }
+  }
+
+  const { apiKey, providerType } = opts;
+  if (
+    providerType === PROVIDER.blockfrost &&
+    typeof apiKey === 'string' &&
+    apiKey.length > 0
+  ) {
+    const key = apiKey.trim().toLowerCase();
+    if (key.startsWith('mainnet')) {
+      throw new Error(
+        'Refusing Blockfrost mainnet project id in live integration tests.'
+      );
+    }
+    const urlLower = url.toLowerCase();
+    if (urlLower.includes('preview') && !key.startsWith('preview')) {
+      throw new Error(
+        'Blockfrost project id must start with "preview" for Preview submits.'
+      );
+    }
+    if (urlLower.includes('preprod') && !key.startsWith('preprod')) {
+      throw new Error(
+        'Blockfrost project id must start with "preprod" for Preprod submits.'
+      );
+    }
   }
 }
 
@@ -76,6 +123,7 @@ async function requestJson({ providerType, base, path, method = 'GET', body, api
 }
 
 async function submitTx(providerType, base, txHex, apiKey) {
+  assertTestnetOnly(base, undefined, { apiKey, providerType });
   const path = providerType === PROVIDER.blockfrost ? '/tx/submit' : '/submittx';
   const h = { ...authHeaders(providerType, apiKey), 'Content-Type': 'application/cbor' };
   const r = await fetch(`${base}${path}`, {
@@ -415,7 +463,8 @@ async function buildSignSubmitAccountTransfer(opts) {
   const recipient = deriveAccountAddress(mnemonic.trim(), recipientAccountIndex);
   const { address, bech32, paymentKey } = sender;
 
-  assertTestnetOnly(baseUrl, bech32);
+  assertTestnetOnly(baseUrl, bech32, { apiKey, providerType });
+  assertTestnetOnly(baseUrl, recipient.bech32, { apiKey, providerType });
 
   // recipientAccountIndex 0 == sender: a genuine same-address self-transfer
   // (output + change both return to account 0, so the wallet labels it "Self

@@ -220,6 +220,11 @@ pipeline {
             set -a
             . "${LUCEM_ENV_FILE}"
             set +a
+            # Live submits: Preview (self-send) + Preprod (account0→account1) only.
+            # Strip mainnet credentials so a miswired test cannot reach Cardano mainnet.
+            unset BLOCKFROST_MAINNET_PROJECT_ID BLOCKFROST_PROJECT_ID_MAINNET \
+              KOIOS_API_KEY_MAINNET LUCEM_ALLOW_MAINNET_INTEGRATION \
+              LUCEM_INTEGRATION_MAINNET_MNEMONIC || true
             npm run test:integration --if-present || echo "TEMP: integration tests failed but are non-gating"
           '''
         }

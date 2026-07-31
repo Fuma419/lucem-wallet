@@ -140,7 +140,10 @@ const Fallback = ({ name }) => {
   const [timedOut, setTimedOut] = React.useState(false);
   const isMounted = useIsMounted();
   React.useEffect(() => {
-    setTimeout(() => isMounted.current && setTimedOut(true), 30000);
+    // Flaky IPFS gateways can stall for a long time; don't shimmer forever.
+    // Fall back to a clean identicon quickly so the grid always shows icons.
+    const t = setTimeout(() => isMounted.current && setTimedOut(true), 6000);
+    return () => clearTimeout(t);
   }, []);
   if (timedOut) return <Avatar width="210px" height="210px" name={name} />;
   return <Skeleton width="210px" height="210px" />;

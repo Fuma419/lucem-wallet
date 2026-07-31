@@ -19,6 +19,166 @@ const { test } = require('@playwright/test');
 const defaultOut = path.join(__dirname, 'screenshots', 'output');
 const OUT_DIR = process.env.LUCEM_SCREENSHOT_DIR || defaultOut;
 
+// --- Mock on-chain assets for the "Assets grid renders icons" screenshot ---
+// Inline SVG data-URIs keep image rendering deterministic (no external IPFS),
+// while still exercising the real getAsset() metadata-parsing path.
+const iconDataUri = (bg, label) =>
+  'data:image/svg+xml;base64,' +
+  Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">` +
+      `<rect width="200" height="200" rx="24" fill="${bg}"/>` +
+      `<text x="100" y="118" font-size="64" text-anchor="middle" ` +
+      `font-family="sans-serif" fill="#0b0b0b">${label}</text></svg>`
+  ).toString('base64');
+
+const ASSET_POLICY = '11'.repeat(28);
+const MOCK_ASSETS = [
+  { name: 'Lucem Sun', color: '#C5FF0A', glyph: 'S' },
+  { name: 'Blue Moon', color: '#3B82F6', glyph: 'M' },
+  { name: 'Red Comet', color: '#F87171', glyph: 'C' },
+  { name: 'Gold Star', color: '#FBBF24', glyph: '*' },
+  { name: 'Green Leaf', color: '#34D399', glyph: 'L' },
+  { name: 'Violet Orb', color: '#A78BFA', glyph: 'O' },
+].map((a) => {
+  const nameHex = Buffer.from(a.name).toString('hex');
+  return {
+    ...a,
+    nameHex,
+    unit: ASSET_POLICY + nameHex,
+    image: iconDataUri(a.color, a.glyph),
+  };
+});
+
+const assetByUnit = (unit) =>
+  MOCK_ASSETS.find((a) => a.unit === unit || a.unit === (unit || '').toLowerCase());
+
+/**
+ * Route handler that serves a wallet holding {@link MOCK_ASSETS}. UTxOs carry
+ * the tokens (so the account derives them) and both the Koios `/asset_info`
+ * and Blockfrost `/assets/{unit}` shapes return an inline image — whichever
+ * metadata path the build uses, the grid resolves an icon.
+ */
+async function mockAssetsKoios(page) {
+  const paymentAddr =
+    'addr_test1qq02xt0z2e7cyd8dg05zlpclhqnpdx6eektgegdsq7nq0whmnjrwgrd2f8txn9g78zh5futgtyn4ctjekjdu9wdpkk8qcz65ed';
+  const pool = {
+    pool_id_bech32: 'pool1hodlrtest',
+    pool_id_hex: '11'.repeat(28),
+    margin: '0.02',
+    fixed_cost: '340000000',
+    pledge: '1000000000',
+    active_stake: '5000000000',
+    live_saturation: '0.2',
+    block_count: 42,
+    meta_json: {
+      ticker: 'HODLR',
+      name: 'THE HODLR',
+      description: 'For long-term holders.',
+      homepage: 'https://example.com',
+    },
+  };
+  // Koios-shaped asset rows on the UTxO, plus Blockfrost `amount[]` entries so
+  // whichever provider the build uses derives the tokens.
+  const koiosAssetList = MOCK_ASSETS.map((a) => ({
+    policy_id: ASSET_POLICY,
+    asset_name: a.nameHex,
+    quantity: '1',
+    fingerprint: 'asset1' + a.nameHex.slice(0, 38),
+  }));
+  const blockfrostAmount = [
+    { unit: 'lovelace', quantity: '50000000' },
+    ...MOCK_ASSETS.map((a) => ({ unit: a.unit, quantity: '1' })),
+  ];
+
+  await page.route('**/*', async (route) => {
+    const url = route.request().url();
+    const requestUrl = decodeURIComponent(url);
+    if (
+      !url.includes('koios.rest') &&
+      !url.includes('/api/koios') &&
+      !url.includes('blockfrost.io')
+    ) {
+      await route.continue();
+      return;
+    }
+    const isBf = requestUrl.includes('blockfrost');
+
+    let body = [];
+    // --- asset metadata (checked first so it wins over generic /assets match) ---
+    if (isBf && requestUrl.includes('/assets/')) {
+      const unit = requestUrl.split('/assets/')[1].split(/[/?#]/)[0];
+      const a = assetByUnit(unit);
+      body = a
+        ? {
+            asset: unit,
+            policy_id: ASSET_POLICY,
+            asset_name: a.nameHex,
+            fingerprint: 'asset1' + a.nameHex.slice(0, 38),
+            quantity: '1',
+            onchain_metadata: { name: a.name, image: a.image },
+            onchain_metadata_standard: 'CIP25v1',
+            metadata: null,
+          }
+        : null;
+    } else if (!isBf && requestUrl.includes('/asset_info')) {
+      let requested = [];
+      try {
+        requested =
+          JSON.parse(route.request().postData() || '{}')._asset_list || [];
+      } catch (e) {
+        requested = [];
+      }
+      body = requested
+        .map((unit) => assetByUnit(unit))
+        .filter(Boolean)
+        .map((a) => ({
+          policy_id: ASSET_POLICY,
+          asset_name: a.nameHex,
+          asset_name_ascii: a.name,
+          fingerprint: 'asset1' + a.nameHex.slice(0, 38),
+          total_supply: '1',
+          minting_tx_metadata: {
+            721: {
+              [ASSET_POLICY]: { [a.name]: { name: a.name, image: a.image } },
+            },
+          },
+          token_registry_metadata: null,
+        }));
+    } else if (requestUrl.includes('/tip') || requestUrl.includes('/blocks/latest')) {
+      body = isBf
+        ? { slot: 1000000, height: 500000, hash: 'aa'.repeat(32), epoch: 100, epoch_slot: 5000, time: Math.floor(Date.now() / 1000) }
+        : [{ abs_slot: '1000000', block_height: 500000 }];
+    } else if (requestUrl.includes('/epoch_params') || requestUrl.includes('/epochs/latest/parameters')) {
+      const p = { min_fee_a: 44, min_fee_b: 155381, pool_deposit: '500000000', key_deposit: '2000000', coins_per_utxo_size: '4310', max_val_size: 5000, max_tx_size: '16384', collateral_percent: 150, max_collateral_inputs: 3, price_mem: '0.0577', price_step: '0.0000721' };
+      body = isBf ? p : [p];
+    } else if (requestUrl.includes('/account_info') || requestUrl.includes('/accounts/stake')) {
+      body = isBf
+        ? { active: true, pool_id: pool.pool_id_bech32, controlled_amount: '50000000', withdrawable_amount: '0' }
+        : [{ delegated_pool: pool.pool_id_bech32, status: 'registered', withdrawable_amount: '0', controlled_amount: '50000000' }];
+    } else if (requestUrl.includes('/address_utxos') || (requestUrl.includes('/addresses/') && requestUrl.includes('/utxos'))) {
+      body = isBf
+        ? [{ tx_hash: 'aa'.repeat(32), tx_index: 0, output_index: 0, block: 'bb'.repeat(32), amount: blockfrostAmount, address: paymentAddr }]
+        : [{ tx_hash: 'aa'.repeat(32), tx_index: 0, output_index: 0, value: '50000000', asset_list: koiosAssetList, address: paymentAddr }];
+    } else if (requestUrl.includes('/address_info')) {
+      body = [{ address: paymentAddr, balance: '50000000', utxo_set: [{ tx_hash: 'aa'.repeat(32), output_index: 0, value: '50000000', asset_list: koiosAssetList }] }];
+    } else if (requestUrl.includes('/account_txs') || (requestUrl.includes('/accounts/') && requestUrl.includes('/transactions'))) {
+      // A non-empty history is required so updateAccount() doesn't short-circuit
+      // its "nothing changed" guard and actually refreshes the balance/assets.
+      body = isBf ? [{ tx_hash: 'bb'.repeat(32) }] : [{ tx_hash: 'bb'.repeat(32), block_height: 499990 }];
+    } else if (requestUrl.includes('/pool_list') || requestUrl.match(/\/pools(\?|$)/)) {
+      body = [{ pool_id_bech32: pool.pool_id_bech32 }];
+    } else if (requestUrl.includes('/pool_info') || requestUrl.includes('/pools/pool1')) {
+      body = requestUrl.includes('/metadata') ? pool.meta_json : isBf ? pool : [pool];
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(body),
+    });
+  });
+}
+
 /** @param {import('@playwright/test').Page} page */
 async function waitFonts(page) {
   await page.evaluate(() => document.fonts.ready);
@@ -39,8 +199,8 @@ async function shot(page, name, opts = {}) {
   console.log(`Wrote ${file}`);
 }
 
-async function seedTestWallet(page, persistedRoute = '/wallet') {
-  await page.evaluate(async (routePath) => {
+async function seedTestWallet(page, persistedRoute = '/wallet', opts = {}) {
+  await page.evaluate(async ({ routePath, forceUpdate }) => {
     const DB_NAME = 'lucem-wallet';
     const STORE_NAME = 'storage';
     await new Promise((resolve) => {
@@ -76,6 +236,9 @@ async function seedTestWallet(page, persistedRoute = '/wallet') {
         rewardAddr,
         collateral: null,
         recentSendToAddresses: [],
+        // When set, forces updateAccount() to refresh balance/assets from the
+        // mocked provider instead of short-circuiting on the seeded values.
+        ...(forceUpdate ? { forceUpdate: true } : {}),
       },
     };
 
@@ -96,13 +259,13 @@ async function seedTestWallet(page, persistedRoute = '/wallet') {
 
     window.localStorage.setItem(
       '[EasyPeasyStore][0][globalModel]',
-      JSON.stringify({
+        JSON.stringify({
         data: {
           routeStore: { route: routePath },
         },
       })
     );
-  }, persistedRoute);
+  }, { routePath: persistedRoute, forceUpdate: !!opts.forceUpdate });
 }
 
 async function mockSendKoios(page) {
@@ -535,5 +698,25 @@ test.describe('capture seeded wallet pages', () => {
     await page.waitForTimeout(3000);
     await waitFonts(page);
     await shot(page, '16-governance');
+  });
+
+  test('17 wallet — assets grid renders icons', async ({ page }) => {
+    test.setTimeout(90_000);
+    await mockAssetsKoios(page);
+    await page.goto('/mainPopup.html', { waitUntil: 'domcontentloaded' });
+    await seedTestWallet(page, '/wallet', { forceUpdate: true });
+    await page.goto('/mainPopup.html', { waitUntil: 'domcontentloaded' });
+
+    await page.getByTestId('wallet-send').waitFor({ state: 'visible', timeout: 60_000 });
+    // The Assets tab is the default panel; wait for at least one rendered icon
+    // (data-URI <img>) before capturing.
+    await page
+      .locator('img[src^="data:image"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 })
+      .catch(() => {});
+    await page.waitForTimeout(1500);
+    await waitFonts(page);
+    await shot(page, '17-wallet-assets');
   });
 });

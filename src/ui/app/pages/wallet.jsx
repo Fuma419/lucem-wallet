@@ -255,6 +255,18 @@ const Wallet = () => {
     { id: NETWORK_ID.preview, label: 'Preview' },
   ];
 
+  const activeNetworkId = settings.network?.id;
+  const testnetBanner =
+    activeNetworkId && activeNetworkId !== NETWORK_ID.mainnet
+      ? networkOptions.find((option) => option.id === activeNetworkId) || {
+          id: activeNetworkId,
+          label:
+            activeNetworkId === NETWORK_ID.testnet
+              ? 'Testnet'
+              : String(activeNetworkId),
+        }
+      : null;
+
   const [isFetching, setIsFetching] = React.useState(false);
   const [state, setState] = React.useState({
     account: null,
@@ -435,6 +447,17 @@ const Wallet = () => {
           overflow="visible"
           pb={{ base: 4, md: 6 }}
         >
+          {testnetBanner ? (
+            <Box
+              className={`network-banner network-banner-${testnetBanner.id}`}
+              role="status"
+              aria-label={`Connected to ${testnetBanner.label}`}
+              data-testid="wallet-network-banner"
+            >
+              {testnetBanner.label}
+            </Box>
+          ) : null}
+
           {/* Icon row — flow layout (no absolute stacking over balance). */}
           <Flex
             zIndex={2}

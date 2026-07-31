@@ -561,10 +561,15 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   color: #111;
 }
 
-/* Top-of-wallet testnet banner — same accents as network tray buttons; hidden on mainnet in JSX */
+/* Overlay testnet banner — does not consume layout height / shift content */
 .network-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
   font-family: 'Barlow', sans-serif;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -572,7 +577,8 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   width: 100%;
   opacity: 0.85;
   color: white;
-  padding: calc(0.35rem + env(safe-area-inset-top, 0px)) 0.75rem 0.35rem;
+  padding: 0.3rem 0.75rem;
+  pointer-events: none;
 }
 
 .network-banner-preprod {

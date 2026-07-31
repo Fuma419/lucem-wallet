@@ -49,6 +49,7 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toContain('NETWORK_ID.mainnet');
     expect(walletSrc).toContain('wallet-network-banner');
     expect(walletSrc).toMatch(/network-banner-\$\{testnetBanner\.id\}/);
+    expect(css).toMatch(/\.network-banner[\s\S]*position:\s*absolute/);
     expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*245,\s*255/);
     expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(220,\s*27,\s*250/);
   });

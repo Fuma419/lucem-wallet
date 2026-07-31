@@ -3,6 +3,7 @@ import { ChevronDownIcon } from '@chakra-ui/icons';
 import React from 'react';
 import { File } from 'react-kawaii';
 import {
+  getNetwork,
   getTransactions,
   setTransactions,
   setTxDetail,
@@ -20,44 +21,73 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
   const [page, setPage] = React.useState(1);
   const [final, setFinal] = React.useState(false);
   const [loadNext, setLoadNext] = React.useState(false);
+  const loadGenRef = React.useRef(0);
+
+  const resetPaging = React.useCallback(() => {
+    loadGenRef.current += 1;
+    slice = [];
+    txObject = {};
+    setHistorySlice(null);
+    setPage(1);
+    setFinal(false);
+    setLoadNext(false);
+  }, []);
 
   const getTxs = async () => {
     if (!history) {
-      slice = [];
-      setHistorySlice(null);
-      setPage(1);
-      setFinal(false);
+      resetPaging();
       return;
     }
+    const gen = ++loadGenRef.current;
+    const networkId = network?.id;
     try {
-      await new Promise((res, rej) => setTimeout(() => res(), 10));
+      await new Promise((res) => setTimeout(() => res(), 10));
+      if (gen !== loadGenRef.current) return;
+
       slice = slice.concat(
         history.confirmed.slice((page - 1) * BATCH, page * BATCH)
       );
 
       if (slice.length < page * BATCH) {
         const txs = await getTransactions(page, BATCH);
+        if (gen !== loadGenRef.current) return;
 
         if (txs.length <= 0) {
           setFinal(true);
         } else {
           slice = Array.from(new Set(slice.concat(txs.map((tx) => tx.txHash))));
-          await setTransactions(slice);
+          // Never write history for a different network than the one on screen.
+          const storedNetwork = await getNetwork();
+          if (
+            gen === loadGenRef.current &&
+            networkId &&
+            storedNetwork?.id === networkId
+          ) {
+            await setTransactions(slice);
+          }
         }
       }
+      if (gen !== loadGenRef.current) return;
       if (slice.length < page * BATCH) setFinal(true);
     } catch (error) {
+      if (gen !== loadGenRef.current) return;
       // Never leave the spinner running forever if a provider call fails/hangs;
       // surface whatever we already have (or an empty "No History" state).
       console.warn('Failed to load transaction history:', error?.message || error);
       setFinal(true);
     }
-    setHistorySlice(slice);
+    if (gen === loadGenRef.current) {
+      setHistorySlice(slice);
+    }
   };
 
   React.useEffect(() => {
+    resetPaging();
+  }, [network?.id, currentAddr, resetPaging]);
+
+  React.useEffect(() => {
     getTxs();
-  }, [history, page]);
+  }, [history, page, network?.id, currentAddr]);
 
   React.useEffect(() => {
     const storeTx = setInterval(() => {
@@ -65,13 +95,10 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
       setTimeout(() => setTxDetail(txObject));
     }, 1000);
     return () => {
-      slice = [];
-      setHistorySlice(null);
-      setPage(1);
-      setFinal(false);
+      resetPaging();
       clearInterval(storeTx);
     };
-  }, []);
+  }, [resetPaging]);
 
   React.useEffect(() => {
     if (!historySlice) return;
@@ -104,7 +131,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
             onClick={() => {
             }}
           >
-            {historySlice.map((txHash, index) => {
+            {historySlice.map((txHash) => {
               if (!history.details[txHash]) history.details[txHash] = {};
 
               return (

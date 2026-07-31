@@ -111,6 +111,7 @@ import {
   removeCollateral,
   setTransactions,
   updateRecentSentToAddress,
+  mergeConfirmedWithApi,
 } from '../../../../api/extension';
 import { ERROR, NETWORK_ID, NODE, STORAGE } from '../../../../config/config';
 
@@ -592,6 +593,53 @@ describe('setTransactions', () => {
     const accounts = await getStorage(STORAGE.accounts);
     const network = await getNetwork();
     expect(accounts[0][network.id].history.confirmed).toEqual(txs);
+  });
+});
+
+describe('mergeConfirmedWithApi', () => {
+  test('no-ops when API head already matches confirmed head', () => {
+    const confirmed = ['main_a', 'main_b'];
+    const api = ['main_a', 'main_b', 'main_c'];
+    expect(mergeConfirmedWithApi(confirmed, api)).toBe(confirmed);
+  });
+
+  test('drops foreign hashes poisoned ahead of real mainnet history', () => {
+    const confirmed = [
+      'preview_leak_1',
+      'preview_leak_2',
+      'main_a',
+      'main_b',
+      'preview_leak_3',
+    ];
+    const api = ['main_a', 'main_b', 'main_c'];
+    expect(mergeConfirmedWithApi(confirmed, api)).toEqual([
+      'main_a',
+      'main_b',
+      'main_c',
+    ]);
+  });
+
+  test('keeps leading optimistic pending hashes not yet in API', () => {
+    const confirmed = ['optimistic_local', 'main_a', 'main_b'];
+    const api = ['main_a', 'main_b'];
+    expect(mergeConfirmedWithApi(confirmed, api)).toEqual([
+      'optimistic_local',
+      'main_a',
+      'main_b',
+    ]);
+  });
+
+  test('replace option trusts API only', () => {
+    const confirmed = ['optimistic_local', 'preview_leak', 'main_a'];
+    const api = ['main_a', 'main_b'];
+    expect(mergeConfirmedWithApi(confirmed, api, { replace: true })).toEqual([
+      'main_a',
+      'main_b',
+    ]);
+  });
+
+  test('returns previous list when API is empty', () => {
+    expect(mergeConfirmedWithApi(['a'], [])).toEqual(['a']);
   });
 });
 

@@ -45,10 +45,9 @@ const CollectiblesViewer = ({ assets, onUpdateAvatar }) => {
       setSearch('');
       return;
     }
-    setAssetsArray(null);
+    // Keep showing current tiles while filtering — clearing to null flashes a center spinner
+    // on unrelated parent re-renders (e.g. tray open/close).
     await new Promise((res, rej) => setTimeout(() => res(), 10));
-    const assetsArray = [];
-    let i = 0;
     const filter = (asset) =>
       search
         ? asset.name.toLowerCase().includes(search.toLowerCase()) ||

@@ -2530,24 +2530,42 @@ export const getAsset = async (unit) => {
         result = {};
         asset.mint = true;
       }
-      const onchainMetadata =
+      // Blockfrost shape: per-asset CIP-25 in `onchain_metadata`.
+      let onchainMetadata =
         result.onchain_metadata &&
         ((result.onchain_metadata.version === 2 &&
           result.onchain_metadata?.[`0x${policyId}`]?.[`0x${name}`]) ||
           result.onchain_metadata);
+      // Koios shape: CIP-25 lives in the full minting-tx metadata under label
+      // 721 → policy → asset name; off-chain token registry data in
+      // `token_registry_metadata`. Field names differ from Blockfrost, so map
+      // them here when the Blockfrost-style fields are absent.
+      if (!onchainMetadata && result.minting_tx_metadata) {
+        const cip25 =
+          result.minting_tx_metadata['721'] || result.minting_tx_metadata[721];
+        const byPolicy = cip25 && (cip25[policyId] || cip25[`0x${policyId}`]);
+        if (byPolicy && typeof byPolicy === 'object') {
+          const nameAscii = Buffer.from(name, 'hex').toString('utf8');
+          onchainMetadata =
+            byPolicy[nameAscii] ||
+            byPolicy[name] ||
+            byPolicy[`0x${name}`] ||
+            Object.values(byPolicy)[0] ||
+            null;
+        }
+      }
+      const registry = result.metadata || result.token_registry_metadata || null;
       asset.displayName =
         (onchainMetadata && onchainMetadata.name) ||
-        (result.metadata && result.metadata.name) ||
+        (registry && registry.name) ||
         asset.name;
       asset.image =
         (onchainMetadata &&
           onchainMetadata.image &&
           linkToSrc(convertMetadataPropToString(onchainMetadata.image))) ||
-        (result.metadata &&
-          result.metadata.logo &&
-          linkToSrc(result.metadata.logo, true)) ||
+        (registry && registry.logo && linkToSrc(registry.logo, true)) ||
         '';
-      asset.decimals = (result.metadata && result.metadata.decimals) || 0;
+      asset.decimals = (registry && registry.decimals) || 0;
       if (!asset.name) {
         if (asset.displayName) asset.name = asset.displayName[0];
         else asset.name = '-';

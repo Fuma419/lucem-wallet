@@ -513,6 +513,26 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
       }));
   }
 
+  // --- /asset_info: token/NFT metadata (name, image/logo, decimals) ---
+  if (endpoint === '/asset_info' && body && Array.isArray(body._asset_list)) {
+    const rows = [];
+    for (const unit of body._asset_list) {
+      try {
+        // Blockfrost `/assets/{unit}` already returns { onchain_metadata,
+        // metadata, fingerprint, ... }, which getAsset consumes directly.
+        const asset = await fetchBlockfrostJson(
+          networkKey,
+          `/assets/${unit}`,
+          signal
+        );
+        if (asset) rows.push(asset);
+      } catch (error) {
+        if (!String(error.message || '').includes('404')) throw error;
+      }
+    }
+    return rows;
+  }
+
   // --- /address_utxos: wallet balance + UTxO fetching ---
   if (endpoint === '/address_utxos' && body && Array.isArray(body._addresses)) {
     const rows = [];
@@ -2187,6 +2207,15 @@ export const koiosEndpoints = {
 export const convertKoiosResponse = (response, endpoint) => {
   if (!response) {
     return response;
+  }
+
+  // `koiosRequestEnhanced` passes the *concrete* endpoint (e.g.
+  // `/assets/<policyId+assetNameHex>`), so the template-style switch cases
+  // below (`/assets/{asset_id}`) never match. Handle asset info by prefix and
+  // unwrap the single-element array that Koios `/asset_info` (and the
+  // Blockfrost adapter) return, so callers get a single asset object.
+  if (endpoint.startsWith('/assets/') && !endpoint.includes('/addresses')) {
+    return Array.isArray(response) ? response[0] : response;
   }
 
   // Handle different response formats based on endpoint

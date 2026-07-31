@@ -1071,6 +1071,9 @@ const Wallet = () => {
             </TabPanel>
             <TabPanel>
               <HistoryViewer
+                key={`${settings.network.id}:${
+                  (state.account && state.account.paymentAddr) || ''
+                }`}
                 network={state.network}
                 history={state.account && state.account.history}
                 currentAddr={state.account && state.account.paymentAddr}

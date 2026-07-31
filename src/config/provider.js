@@ -89,7 +89,11 @@ const networkToBlockfrostProjectId = {
 
 export default {
   api: {
-    ipfs: 'https://ipfs.blockfrost.dev/ipfs', // Keep this for now as it's still useful
+    // Public IPFS gateway used to resolve NFT/token art (ipfs:// + raw CIDs).
+    // The former `ipfs.blockfrost.dev` gateway was deprecated and now returns
+    // 504s, so every ipfs-hosted image failed to load. `ipfs.io` is the
+    // canonical, path-style Protocol Labs gateway.
+    ipfs: 'https://ipfs.io/ipfs',
     base: (node = NODE.mainnet) => node,
     header: { [getEnvVar('NAMI_HEADER', secrets.NAMI_HEADER) || 'dummy']: version },
     key: (network = 'mainnet') => ({

@@ -86,6 +86,14 @@ const useIsMounted = () => {
   return isMounted;
 };
 
+const withTimeout = (promise, ms) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timed out loading transaction')), ms)
+    ),
+  ]);
+
 const Transaction = ({
   txHash,
   detail,
@@ -95,6 +103,7 @@ const Transaction = ({
   onLoad,
 }) => {
   const [displayInfo, setDisplayInfo] = React.useState(null);
+  const [failed, setFailed] = React.useState(false);
   const isMounted = useIsMounted();
 
   const settings = useStoreState((state) => state.settings.settings);
@@ -106,12 +115,31 @@ const Transaction = ({
   };
 
   const getTxDetail = async () => {
-    if (!displayInfo) {
-      let txDetail = await updateTxInfo(txHash);
+    if (displayInfo || failed) return;
+    try {
+      const txDetail = await withTimeout(updateTxInfo(txHash), 25000);
       onLoad(txHash, txDetail);
       if (!isMounted.current) return;
-      const newDisplayInfo = genDisplayInfo(txHash, txDetail, currentAddr, addresses);
+      const newDisplayInfo = genDisplayInfo(
+        txHash,
+        txDetail,
+        currentAddr,
+        addresses
+      );
+      if (!newDisplayInfo) {
+        // Incomplete/undecodable detail: fall back instead of an endless skeleton.
+        setFailed(true);
+        return;
+      }
       setDisplayInfo(newDisplayInfo);
+    } catch (error) {
+      if (!isMounted.current) return;
+      console.warn(
+        'Failed to load transaction detail',
+        txHash,
+        error?.message || error
+      );
+      setFailed(true);
     }
   };
 
@@ -131,7 +159,7 @@ const Transaction = ({
               timeStyle="round-minute"
             />
           </Box>
-        ) : (
+        ) : failed ? null : (
           <Skeleton width="34%" height="22px" rounded="md" />
         )}
         {displayInfo ? (
@@ -254,6 +282,8 @@ const Transaction = ({
             </Box>
             <AccordionIcon color="yellow.500" mr={5} fontSize={20} />
           </AccordionButton>
+        ) : failed ? (
+          <TxFallback txHash={txHash} network={network} />
         ) : (
           <Skeleton width="100%" height="72px" rounded="md" />
         )}
@@ -282,6 +312,35 @@ const Transaction = ({
         </Box>
       </VStack>
     </AccordionItem>
+  );
+};
+
+const TxFallback = ({ txHash, network }) => {
+  const explorer = explorerBase(network);
+  return (
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      bg="gray.900"
+      borderRadius={20}
+      px={4}
+      py={3}
+      width="70%"
+      maxWidth="70%"
+    >
+      <Text fontSize="xs" color="gray.500">
+        Details unavailable
+      </Text>
+      <Link
+        href={explorer.tx ? explorer.tx + txHash : undefined}
+        isExternal
+        color="blue.400"
+        fontSize="xs"
+      >
+        {truncateMiddle(txHash)} <ExternalLinkIcon mx="1px" />
+      </Link>
+    </Box>
   );
 };
 

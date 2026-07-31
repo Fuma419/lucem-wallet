@@ -9,6 +9,7 @@ const { validateMnemonic } = require('bip39');
 const {
   PROVIDER,
   buildSignSubmitAccountTransfer,
+  buildSignSubmitSelfTransfer,
   deriveAccount0Address,
   fetchProtocolParams,
   waitForTxStatus,
@@ -16,8 +17,9 @@ const {
 } = require('./koios-self-send');
 
 /**
- * Preview + Preprod: live transfer from account 0 -> account 1 (CIP-1852), ADA-only UTxOs.
- * Provider order: Blockfrost first, Koios fallback.
+ * Live testnet transfers (CIP-1852, ADA-only UTxOs), Blockfrost first / Koios fallback:
+ *   - Preview:  same-address self-transfer (account 0 -> 0) → "Self transfer"
+ *   - Preprod:  account 0 -> account 1 transfer
  *
  * Run locally: `npm run test:integration` with `.env` (see `.env.example`). Live tests skip if mnemonic unset.
  * To run on GitHub Actions later, add a workflow step + repo secrets; see commented block in `ci.yml`.
@@ -68,6 +70,9 @@ const resolveKoiosKey = (envKey) => {
 const NETWORKS = [
   {
     name: 'Preview',
+    // Preview exercises a genuine same-address self-transfer (account 0 -> 0),
+    // which the wallet history labels "Self transfer".
+    transferKind: 'self',
     koiosBaseUrl: PREVIEW_KOIOS_BASE,
     blockfrostBaseUrl: PREVIEW_BLOCKFROST_BASE,
     mnemonicEnv: 'LUCEM_INTEGRATION_PREVIEW_MNEMONIC',
@@ -77,6 +82,8 @@ const NETWORKS = [
   },
   {
     name: 'Preprod',
+    // Preprod stays an account 0 -> account 1 transfer.
+    transferKind: 'account',
     koiosBaseUrl: PREPROD_KOIOS_BASE,
     blockfrostBaseUrl: PREPROD_BLOCKFROST_BASE,
     mnemonicEnv: 'LUCEM_INTEGRATION_PREPROD_MNEMONIC',
@@ -89,6 +96,7 @@ const NETWORKS = [
 NETWORKS.forEach(
   ({
     name,
+    transferKind,
     koiosBaseUrl,
     blockfrostBaseUrl,
     mnemonicEnv,
@@ -107,7 +115,15 @@ NETWORKS.forEach(
   const txApiKey = providerType === PROVIDER.blockfrost ? blockfrostApiKey : koiosApiKey;
   const describeLive = phrase && validateMnemonic(phrase) ? describe : describe.skip;
 
-  describeLive(`${name} — 5 tADA account0->account1 transfer (Blockfrost preferred)`, () => {
+  const isSelfTransfer = transferKind === 'self';
+  const buildTransfer = isSelfTransfer
+    ? buildSignSubmitSelfTransfer
+    : buildSignSubmitAccountTransfer;
+  const transferLabel = isSelfTransfer
+    ? 'account0 self-transfer'
+    : 'account0->account1 transfer';
+
+  describeLive(`${name} — 5 tADA ${transferLabel} (Blockfrost preferred)`, () => {
     test('mnemonic is valid BIP-39', () => {
       expect(validateMnemonic(phrase)).toBe(true);
     });
@@ -126,9 +142,9 @@ NETWORKS.forEach(
     let submittedHash;
 
     test(
-      'submits signed 5 tADA account0->account1 transfer; optional /tx_status poll (LUCEM_INTEGRATION_POLL_TX=1)',
+      `submits signed 5 tADA ${transferLabel}; optional /tx_status poll (LUCEM_INTEGRATION_POLL_TX=1)`,
       async () => {
-        const hash = await buildSignSubmitAccountTransfer({
+        const hash = await buildTransfer({
           providerType,
           baseUrl: txBaseUrl,
           apiKey: txApiKey,

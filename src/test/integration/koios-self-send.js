@@ -403,14 +403,25 @@ async function waitForTxStatus(opts) {
  * @returns {Promise<string>} submitted tx hash / id from Koios
  */
 async function buildSignSubmitAccountTransfer(opts) {
-  const { baseUrl, apiKey, mnemonic, sendLovelace, providerType = PROVIDER.koios } = opts;
+  const {
+    baseUrl,
+    apiKey,
+    mnemonic,
+    sendLovelace,
+    providerType = PROVIDER.koios,
+    recipientAccountIndex = 1,
+  } = opts;
   const sender = deriveAccountAddress(mnemonic.trim(), 0);
-  const recipient = deriveAccountAddress(mnemonic.trim(), 1);
+  const recipient = deriveAccountAddress(mnemonic.trim(), recipientAccountIndex);
   const { address, bech32, paymentKey } = sender;
 
   assertTestnetOnly(baseUrl, bech32);
 
-  if (bech32 === recipient.bech32) {
+  // recipientAccountIndex 0 == sender: a genuine same-address self-transfer
+  // (output + change both return to account 0, so the wallet labels it "Self
+  // transfer"). Only enforce distinct addresses for a real account→account move.
+  const isSelfTransfer = recipientAccountIndex === 0;
+  if (!isSelfTransfer && bech32 === recipient.bech32) {
     throw new Error('Sender and recipient must be different addresses.');
   }
 
@@ -575,11 +586,20 @@ async function waitForTxInAccountHistory(opts) {
   );
 }
 
+/**
+ * Same-address self-transfer: account 0 → account 0. On-chain this is a single
+ * tx whose inputs and outputs (payment + change) all belong to account 0, so
+ * the wallet history classifies it as "Self transfer".
+ */
+async function buildSignSubmitSelfTransfer(opts) {
+  return buildSignSubmitAccountTransfer({ ...opts, recipientAccountIndex: 0 });
+}
+
 module.exports = {
   PROVIDER,
   assertTestnetOnly,
   buildSignSubmitAccountTransfer,
-  buildSignSubmitSelfTransfer: buildSignSubmitAccountTransfer,
+  buildSignSubmitSelfTransfer,
   deriveAccountAddress,
   deriveAccount0Address,
   fetchProtocolParams,

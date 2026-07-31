@@ -93,13 +93,13 @@ const CollectiblesViewer = ({ assets, onUpdateAvatar }) => {
           >
             <Box height="2" />
             <Text fontWeight="bold" color="GrayText">
-              No Collectibles
+              No Assets
             </Text>
           </Box>
         ) : (
           <>
             <Box textAlign="center" fontSize="sm" opacity={0.4}>
-              {total} {total == 1 ? 'Collectible' : 'Collectibles'}
+              {total} {total == 1 ? 'Asset' : 'Assets'}
             </Box>
             <Box h="5" />
             <AssetsGrid assets={assetsArray} ref={ref} />

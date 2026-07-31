@@ -1,0 +1,37 @@
+# Keep Cursor / agent indexing lean; secrets and generated noise stay out.
+node_modules/
+build/
+coverage/
+test-results/
+playwright-report/
+dist/
+.next/
+.vercel/
+
+# Generated WASM and local RAG artifacts
+src/wasm/
+.cursor/rag/
+.cursor/models/
+
+# Secrets / local env (never index)
+secrets.*.js
+!secrets.testing.js
+.env
+.env.*
+!.env.example
+
+# Large / binary assets
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.webp
+**/*.ico
+**/*.wasm
+**/*.map
+package-lock.json
+
+# Misc noise
+**/*.log
+**/*.tgz
+.git/

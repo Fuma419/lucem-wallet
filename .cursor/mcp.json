@@ -3,7 +3,9 @@
     "code-rag": {
       "type": "stdio",
       "command": "node",
-      "args": ["${workspaceFolder}/utils/code-rag-mcp.cjs"],
+      "args": [
+        "${workspaceFolder}/utils/code-rag-mcp.cjs"
+      ],
       "env": {
         "CODE_RAG_BASE_DIR": "${workspaceFolder}",
         "CODE_RAG_INDEX_PATH": "${workspaceFolder}/.cursor/rag/code-index.json"
@@ -11,12 +13,13 @@
     },
     "jenkins": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@alexsarrell/jenkins-mcp-server"],
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/utils/jenkins-mcp-wrapper.sh"
+      ],
       "env": {
         "JENKINS_URL": "http://192.168.68.143:8080",
-        "JENKINS_USER": "admin",
-        "JENKINS_API_TOKEN": "${env:JENKINS_API_TOKEN}"
+        "JENKINS_USER": "bzawodni"
       }
     }
   }

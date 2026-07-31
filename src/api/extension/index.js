@@ -2627,19 +2627,55 @@ export const updateBalance = async (currentAccount, network) => {
   return true;
 };
 
-const updateTransactions = async (currentAccount, network) => {
+/**
+ * Rebuild confirmed history from the provider list.
+ * Keeps a short leading run of local-only hashes (optimistic prependTxHash)
+ * and drops cross-network pollution (several foreign hashes shoved ahead of
+ * a tx that already exists in the API response).
+ *
+ * @param {string[]} confirmed
+ * @param {string[]} apiHashes
+ * @param {{ replace?: boolean }} [opts] - when replace=true, trust API only
+ * @returns {string[]}
+ */
+export const mergeConfirmedWithApi = (confirmed, apiHashes, opts = {}) => {
+  if (!Array.isArray(apiHashes) || apiHashes.length <= 0) {
+    return Array.isArray(confirmed) ? confirmed : [];
+  }
+  if (opts.replace) return apiHashes;
+
+  const prev = Array.isArray(confirmed) ? confirmed : [];
+  if (prev[0] === apiHashes[0]) return prev;
+
+  const apiSet = new Set(apiHashes);
+  const pending = [];
+  for (const hash of prev) {
+    if (apiSet.has(hash)) break;
+    pending.push(hash);
+  }
+
+  // Several local-only hashes in front of a known API tx ⇒ poisoned list
+  // from a network-switch race. A single pending hash is optimistic submit.
+  if (pending.length > 1 && prev.includes(apiHashes[0])) {
+    return apiHashes;
+  }
+
+  return [...pending, ...apiHashes];
+};
+
+const updateTransactions = async (currentAccount, network, { replace = false } = {}) => {
   const transactions = await getTransactions();
+  if (transactions.length <= 0) return false;
+  const apiHashes = transactions.map((tx) => tx.txHash);
+  const confirmed = currentAccount[network.id].history.confirmed;
+  const next = mergeConfirmedWithApi(confirmed, apiHashes, { replace });
   if (
-    transactions.length <= 0 ||
-    currentAccount[network.id].history.confirmed.includes(
-      transactions[0].txHash
-    )
-  )
+    next.length === confirmed.length &&
+    next.every((hash, i) => hash === confirmed[i])
+  ) {
     return false;
-  let txHashes = transactions.map((tx) => tx.txHash);
-  txHashes = txHashes.concat(currentAccount[network.id].history.confirmed);
-  const txSet = new Set(txHashes);
-  currentAccount[network.id].history.confirmed = Array.from(txSet);
+  }
+  currentAccount[network.id].history.confirmed = next;
   return true;
 };
 
@@ -2705,7 +2741,7 @@ export const updateAccount = async (forceUpdate = false) => {
   const currentAccount = accounts[currentIndex];
   const network = await getNetwork();
 
-  await updateTransactions(currentAccount, network);
+  await updateTransactions(currentAccount, network, { replace: forceUpdate });
 
   const isFirstLoad = currentAccount[network.id].lovelace == null;
   if (

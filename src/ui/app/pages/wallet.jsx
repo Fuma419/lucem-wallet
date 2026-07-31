@@ -11,6 +11,7 @@ import {
   getNativeAccounts,
   getNetwork,
   isHW,
+  setNetwork,
   switchAccount,
   updateAccount,
   getStorage,
@@ -148,19 +149,25 @@ const Wallet = () => {
   const settings = useStoreState((state) => state.settings.settings);
   const setSettings = useStoreActions((actions) => actions.settings.setSettings);
 
-  const setWalletNetwork = (nextId) => {
+  const setWalletNetwork = async (nextId) => {
+    const nextNetwork = {
+      ...settings.network,
+      id: nextId,
+      node: NODE[nextId],
+    };
+    // Drop stale account/history immediately so HistoryViewer cannot persist
+    // the previous network's tx hashes into the newly selected network.
+    setState((s) => ({
+      ...s,
+      account: null,
+      network: { id: nextId, node: NODE[nextId] },
+    }));
+    await setNetwork(nextNetwork);
     setSettings({
       ...settings,
-      network: {
-        ...settings.network,
-        id: nextId,
-        node: NODE[nextId],
-      },
+      network: nextNetwork,
     });
-
-    setTimeout(() => {
-      getData();
-    }, 100);
+    await getData({ forceUpdate: true });
   };
   const { colorMode } = useColorMode();
   const avatarBg = useColorModeValue('gray.100', 'gray.900');

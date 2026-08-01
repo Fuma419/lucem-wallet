@@ -127,6 +127,35 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
   });
 
+  test('settings page is a flat single screen without nested settings routes', () => {
+    const settingsSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/settings.jsx'),
+      'utf8'
+    );
+    const mainSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/indexMain.jsx'),
+      'utf8'
+    );
+    const legalSrc = fs.readFileSync(
+      path.join(__dirname, '../../features/settings/legal/LegalSettings.tsx'),
+      'utf8'
+    );
+
+    expect(settingsSrc).toContain('data-testid="settings-page"');
+    expect(settingsSrc).toContain('Whitelisted sites');
+    expect(settingsSrc).toContain('<LegalSettings');
+    expect(settingsSrc).not.toContain('<Routes');
+    expect(settingsSrc).not.toContain('General settings');
+    expect(settingsSrc).not.toContain("navigate('general')");
+    expect(settingsSrc).not.toContain("navigate('whitelisted')");
+    expect(settingsSrc).not.toContain("navigate('legal')");
+    expect(mainSrc).toContain('path="/settings"');
+    expect(mainSrc).not.toContain('path="/settings/*"');
+    expect(legalSrc).toContain('Terms of Use');
+    expect(legalSrc).toContain('Privacy Policy');
+    expect(legalSrc).not.toContain('SettingsPageTitle');
+  });
+
   test('enable.jsx should use safe-area footer padding for action buttons', () => {
     const enableSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/enable.jsx'),

@@ -82,6 +82,34 @@ describe('governance page and wallet network button wiring', () => {
     expect(governanceSrc).toContain('Learn governance action types');
     expect(governanceSrc).toContain('Read full proposal text');
     expect(governanceSrc).toContain('Copy ID');
+    expect(governanceSrc).toContain('useSurfaceColors');
+    expect(governanceSrc).toContain('bg={pageBg}');
+    expect(governanceSrc).toContain('bg={panelBg}');
+  });
+});
+
+describe('staking and governance theme surfaces', () => {
+  test('shared surface hook elevates dark panels above page background', () => {
+    const hookSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/hooks/useSurfaceColors.js'),
+      'utf8'
+    );
+    expect(hookSrc).toContain("useColorModeValue('gray.100', 'black')");
+    expect(hookSrc).toContain("useColorModeValue('white', 'gray.700')");
+    expect(hookSrc).toContain("useColorModeValue('gray.100', 'gray.600')");
+  });
+
+  test('stake center page uses theme-aware page and panel backgrounds', () => {
+    const stakingSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/staking.jsx'),
+      'utf8'
+    );
+    expect(stakingSrc).toContain('useSurfaceColors');
+    expect(stakingSrc).toContain('bg={pageBg}');
+    expect(stakingSrc).toContain('color={pageFg}');
+    expect(stakingSrc).toContain('bg={panelBg}');
+    expect(stakingSrc).not.toMatch(/bg="black"/);
+    expect(stakingSrc).not.toContain("useColorModeValue('gray.900', 'gray.900')");
   });
 });
 

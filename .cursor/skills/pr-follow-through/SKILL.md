@@ -33,4 +33,4 @@ description: >-
 
 - Always-on rule: `.cursor/rules/git-push-policy.mdc`
 - CI babysit details: Cursor `babysit` skill
-- Local gates before push: `.cursor/skills/commit-scope-discipline/SKILL.md`
+- Commit scope (no local webpack — Jenkins builds): `.cursor/skills/commit-scope-discipline/SKILL.md`

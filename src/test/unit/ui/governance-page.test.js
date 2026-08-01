@@ -21,6 +21,12 @@ describe('governance page and wallet network button wiring', () => {
     expect(css).toMatch(
       /\.button\.network-mainnet\[data-active\][\s\S]*opacity:\s*1\s*!important/
     );
+    expect(css).toMatch(
+      /html\[data-theme='light'\]\s*\.button\.network-mainnet[\s\S]*color:\s*white/
+    );
+    expect(css).toMatch(
+      /html\[data-theme='light'\]\s*\.button\.network-mainnet\s*\{[\s\S]*radial-gradient/
+    );
   });
 
   test('wallet network tray buttons use per-network class names with no shadow', () => {
@@ -33,6 +39,8 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
     expect(walletSrc).toContain('data-active=');
     expect(walletSrc).toMatch(/shadow="none"/);
+    expect(walletSrc).toContain('wallet-network-tray-backdrop');
+    expect(walletSrc).toContain('blackAlpha.700');
   });
 
   test('wallet shows colored testnet banner and hides it on mainnet', () => {

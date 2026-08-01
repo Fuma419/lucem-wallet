@@ -174,14 +174,14 @@ Jest uses `@emurgo/cardano-serialization-lib-nodejs` mapping and `testPathIgnore
 
 ### Validation cadence
 - **During iteration:** validate only changed files (single-file lint, single test suite).
-- **Before commit:** run repo-wide gates once: `NODE_ENV=test npx jest`, `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx`, `npm run build`.
+- **Before push (optional local):** `NODE_ENV=test npx jest` for fast feedback. Do **not** run local webpack/`npm run build` — Jenkins owns Build / Unit / Functional.
 
 ### Agent ship policy (PR, auto-merge, fix until merged)
 
 Same policy as **`.cursor/rules/git-push-policy.mdc`** (always-on) and **`.cursor/skills/pr-follow-through/SKILL.md`**. Summary:
 
 1. **Branch** from up-to-date `main`: prefer **`agent/<topic>`**, or `fix/<issue>` / `feat/<topic>`.
-2. Run **`NODE_ENV=test npx jest`** and **`npm run build:webpack`** (local parity for CI) before push. When changing CSS/UI contracts covered by unit tests, update those tests in the same commit.
+2. Optionally run **`NODE_ENV=test npx jest`** locally. Rely on **Jenkins** for build and full CI — do not run `npm run build` / `build:webpack` before push. When changing CSS/UI contracts covered by unit tests, update those tests in the same commit.
 3. **Commit and push** to `origin` on that branch only (never directly to `main`).
 4. **Open a PR** to `main` (`gh pr create` or confirm **`Agent Auto PR`** created/updated it). Enable **auto-merge** when available.
 5. **Stay on the task until merge:** poll `gh pr checks` / Jenkins PR job; on failure, read the failing stage log, fix, push, and re-poll. If the PR is behind `main` or conflicted, merge/rebase `main` and re-run CI. Do **not** stop after “PR opened” or “CI started.”

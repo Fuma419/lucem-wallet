@@ -16,11 +16,13 @@ import Main from './index';
 import { Box, Spinner } from '@chakra-ui/react';
 import Welcome from './app/pages/welcome';
 import Wallet from './app/pages/wallet';
+import Accounts from './app/pages/accounts';
 import { hasStoredAccounts } from '../api/extension';
 import Settings from './app/pages/settings';
 import Send from './app/pages/send';
 import Governance from './app/pages/governance';
 import Staking from './app/pages/staking';
+import WalletShell from './app/components/walletShell';
 import { useStoreActions, useStoreState } from 'easy-peasy';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
 import PreventHistoryBack from './app/components/PreventHistoryBack';
@@ -143,32 +145,23 @@ const App = () => {
       <PreventHistoryBack />
       <Routes>
         <Route path="/welcome" element={<Welcome />} />
-        <Route path="/settings" element={<Settings />} />
         <Route path="/send" element={<Send />} />
-        <Route path="/staking" element={
-          <WalletEntryGate>
-            <TermsAndPrivacyProvider>
-              <Staking />
-            </TermsAndPrivacyProvider>
-          </WalletEntryGate>
-        } />
-        <Route path="/governance" element={
-          <WalletEntryGate>
-            <TermsAndPrivacyProvider>
-              <Governance />
-            </TermsAndPrivacyProvider>
-          </WalletEntryGate>
-        } />
         <Route
-          path="*"
           element={
             <WalletEntryGate>
               <TermsAndPrivacyProvider>
-                <Wallet />
+                <WalletShell />
               </TermsAndPrivacyProvider>
             </WalletEntryGate>
           }
-        />
+        >
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/accounts" element={<Accounts />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/staking" element={<Staking />} />
+          <Route path="/governance" element={<Governance />} />
+          <Route path="*" element={<Wallet />} />
+        </Route>
       </Routes>
     </div>
   );

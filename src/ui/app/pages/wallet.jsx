@@ -1,20 +1,12 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  createAccount,
-  createTab,
-  deleteAccount,
   displayUnit,
   getAccounts,
   getCurrentAccountIndex,
   getDelegation,
-  getNativeAccounts,
   getNetwork,
-  isHW,
-  setNetwork,
-  switchAccount,
   updateAccount,
-  getStorage,
 } from '../../../api/extension';
 import { bigIntLovelace } from '../../../api/lovelace-scalar';
 import {
@@ -25,31 +17,8 @@ import {
   Button,
   Box,
   Flex,
-  Stack,
   Text,
   Icon,
-  Input,
-  InputGroup,
-  InputRightElement,
-  Menu,
-  MenuButton,
-  MenuDivider,
-  MenuGroup,
-  MenuItem,
-  MenuList,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalHeader,
-  ModalOverlay,
-  useDisclosure,
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogOverlay,
   Popover,
   PopoverTrigger,
   PopoverContent,
@@ -62,43 +31,26 @@ import {
   TabPanels,
   TabPanel,
   Tooltip,
-  Collapse,
   IconButton,
   Skeleton,
 } from '@chakra-ui/react';
 import {
-  SettingsIcon,
-  AddIcon,
-  StarIcon,
-  DeleteIcon,
   CopyIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
   InfoOutlineIcon,
 } from '@chakra-ui/icons';
-import { Scrollbars } from '../components/scrollbar';
 import QrCode from '../components/qrCode';
 import provider from '../../../config/provider';
 import UnitDisplay from '../components/unitDisplay';
 import { onAccountChange } from '../../../api/extension';
 import HistoryViewer from '../components/historyViewer';
 import Copy from '../components/copy';
-import About from '../components/about';
-import { useStoreState, useStoreActions } from 'easy-peasy';
+import { useStoreState } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
 import { currencyToSymbol, fromAssetUnit } from '../../../api/util';
-import TransactionBuilder from '../components/transactionBuilder';
-import { NETWORK_ID, TAB, STORAGE, NODE } from '../../../config/config';
-import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
+import { NETWORK_ID } from '../../../config/config';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
-import {
-  MdAccountBalanceWallet,
-  MdHowToVote,
-  MdOutlineHowToReg,
-  MdRefresh,
-} from 'react-icons/md';
+import { MdRefresh } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorMode, useColorModeValue } from '@chakra-ui/react';
@@ -125,19 +77,6 @@ const walletHeaderOrbShellProps = {
   flexShrink: 0,
 };
 
-const walletFabBase = {
-  rounded: 'full',
-  shadow: 'md',
-  boxSize: { base: '12', sm: '13', md: '14' },
-  minW: { base: '12', sm: '13', md: '14' },
-  minH: { base: '12', sm: '13', md: '14' },
-  p: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: 'white',
-};
-
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
   React.useEffect(() => {
@@ -152,28 +91,6 @@ const Wallet = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const settings = useStoreState((state) => state.settings.settings);
-  const setSettings = useStoreActions((actions) => actions.settings.setSettings);
-
-  const setWalletNetwork = async (nextId) => {
-    const nextNetwork = {
-      ...settings.network,
-      id: nextId,
-      node: NODE[nextId],
-    };
-    // Drop stale account/history immediately so HistoryViewer cannot persist
-    // the previous network's tx hashes into the newly selected network.
-    setState((s) => ({
-      ...s,
-      account: null,
-      network: { id: nextId, node: NODE[nextId] },
-    }));
-    await setNetwork(nextNetwork);
-    setSettings({
-      ...settings,
-      network: nextNetwork,
-    });
-    await getData({ forceUpdate: true });
-  };
   const { colorMode } = useColorMode();
   const avatarBg = useColorModeValue('gray.100', 'gray.900');
   const panelBg = useColorModeValue('gray.100', 'black');
@@ -183,100 +100,7 @@ const Wallet = () => {
   const receiveBtnClass =
     colorMode === 'dark' ? 'button import-wallet' : undefined;
   const sendBtnClass = colorMode === 'dark' ? 'button new-wallet' : undefined;
-  const fabVoteClass = colorMode === 'dark' ? 'button fab-vote' : undefined;
-  const fabStakeClass = colorMode === 'dark' ? 'button fab-stake' : undefined;
-  const fabAccountsClass = colorMode === 'dark' ? 'button fab-accounts' : undefined;
-  const fabSettingsClass = colorMode === 'dark' ? 'button fab-settings' : undefined;
-  const fabToggleClass = colorMode === 'dark' ? 'button fab-toggle' : undefined;
   const actionBtnColor = colorMode === 'dark' ? 'white' : 'black';
-
-  const fabVote = useColorModeValue(
-    {
-      bg: 'cyan.500',
-      borderWidth: '2px',
-      borderColor: 'cyan.700',
-      _hover: { bg: 'cyan.600' },
-    },
-    {
-      bg: 'cyan.700',
-      borderWidth: '2px',
-      borderColor: 'cyan.300',
-      boxShadow: '0 0 14px rgba(0, 245, 255, 0.35)',
-      _hover: { bg: 'cyan.600' },
-    }
-  );
-  const fabStake = useColorModeValue(
-    {
-      bg: 'yellow.500',
-      borderWidth: '2px',
-      borderColor: 'yellow.700',
-      _hover: { bg: 'yellow.600' },
-    },
-    {
-      bg: 'yellow.600',
-      borderWidth: '2px',
-      borderColor: 'yellow.400',
-      boxShadow: '0 0 14px rgba(206, 250, 0, 0.35)',
-      _hover: { bg: 'yellow.500' },
-    }
-  );
-  const fabAccounts = useColorModeValue(
-    {
-      bg: 'orange.500',
-      borderWidth: '2px',
-      borderColor: 'orange.700',
-      _hover: { bg: 'orange.600' },
-    },
-    {
-      bg: 'orange.600',
-      borderWidth: '2px',
-      borderColor: 'orange.300',
-      boxShadow: '0 0 14px rgba(255, 140, 0, 0.35)',
-      _hover: { bg: 'orange.500' },
-    }
-  );
-  const fabSettings = useColorModeValue(
-    {
-      bg: 'purple.500',
-      borderWidth: '2px',
-      borderColor: 'purple.700',
-      _hover: { bg: 'purple.600' },
-    },
-    {
-      bg: 'purple.600',
-      borderWidth: '2px',
-      borderColor: 'purple.300',
-      boxShadow: '0 0 14px rgba(220, 27, 250, 0.35)',
-      _hover: { bg: 'purple.500' },
-    }
-  );
-  const fabToggle = useColorModeValue(
-    {
-      bg: 'blue.500',
-      borderWidth: '2px',
-      borderColor: 'blue.700',
-      _hover: { bg: 'blue.600' },
-    },
-    {
-      bg: 'blue.600',
-      borderWidth: '2px',
-      borderColor: 'blue.300',
-      boxShadow: '0 0 14px rgba(0, 122, 255, 0.35)',
-      _hover: { bg: 'blue.500' },
-    }
-  );
-
-  const fabColor = colorMode === 'dark' ? 'white' : 'black';
-  const floatingVoteProps = { ...walletFabBase, color: fabColor, ...fabVote };
-  const floatingStakeProps = { ...walletFabBase, color: fabColor, ...fabStake };
-  const floatingAccountsProps = { ...walletFabBase, color: fabColor, ...fabAccounts };
-  const floatingSettingsProps = { ...walletFabBase, color: fabColor, ...fabSettings };
-  const floatingToggleProps = { ...walletFabBase, color: fabColor, ...fabToggle };
-  const floatingNetworkToggleProps = {
-    ...walletFabBase,
-    color: fabColor,
-    ...fabSettings,
-  };
 
   const networkOptions = [
     { id: NETWORK_ID.mainnet, label: 'Mainnet' },
@@ -304,11 +128,8 @@ const Wallet = () => {
     delegation: null,
     network: { id: '', node: '' },
   });
-  const [menu, setMenu] = React.useState(false);
-  const [isTrayOpen, setIsTrayOpen] = React.useState(false);
-  const [isNetworkTrayOpen, setIsNetworkTrayOpen] = React.useState(false);
 
-  // Stable identity so tray toggles (and other re-renders) don't remount/refetch the assets grid.
+  // Stable identity so re-renders don't remount/refetch the assets grid.
   const collectibleAssets = React.useMemo(() => {
     if (state.account == null) return undefined;
     return [
@@ -316,8 +137,6 @@ const Wallet = () => {
       ...(state.account.nft ?? []),
     ];
   }, [state.account]);
-  const aboutRef = React.useRef();
-  const deletAccountRef = React.useRef();
   const refreshTimeoutRef = React.useRef(null);
   const lastRefreshRef = React.useRef(Date.now());
   const [info, setInfo] = React.useState({
@@ -326,7 +145,6 @@ const Wallet = () => {
     paymentAddr: '',
     accounts: {},
   }); // for quicker displaying
-  const builderRef = React.useRef();
   const fiatPrice = React.useRef(0);
 
   const getData = async ({ forceUpdate = false, skipUpdate = false } = {}) => {
@@ -515,317 +333,6 @@ const Wallet = () => {
               </Box>
             </Box>
           </Flex>
-
-          {/* Dim page behind open trays so FABs / network options stay readable on light UIs */}
-          {isNetworkTrayOpen || isTrayOpen ? (
-            <Box
-              position="fixed"
-              inset={0}
-              zIndex={3}
-              bg="blackAlpha.700"
-              onClick={() => {
-                setIsNetworkTrayOpen(false);
-                setIsTrayOpen(false);
-              }}
-              aria-hidden="true"
-              data-testid="wallet-tray-backdrop"
-            />
-          ) : null}
-
-          {/* Lower left tray — network switcher with collapse toggle */}
-          <Box
-            zIndex={4}
-            position="fixed"
-            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-            left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"
-            display="flex"
-            flexDirection="column"
-            alignItems="flex-start"
-            justifyContent="flex-end"
-            gap={2}
-          >
-            <Collapse in={isNetworkTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
-              <Stack spacing={2} mb={2} alignItems="stretch">
-                {networkOptions.map((networkOption) => (
-                  <Button
-                    key={networkOption.id}
-                    w="128px"
-                    h="40px"
-                    data-active={
-                      settings.network.id === networkOption.id ? 'true' : undefined
-                    }
-                    className={`button network-${networkOption.id} ${
-                      isFetching && settings.network.id === networkOption.id
-                        ? 'is-loading'
-                        : ''
-                    }`}
-                    size="sm"
-                    rounded="lg"
-                    shadow="none"
-                    flexShrink={0}
-                    variant="unstyled"
-                    onClick={() => {
-                      if (settings.network.id !== networkOption.id) {
-                        setWalletNetwork(networkOption.id);
-                      }
-                      setIsNetworkTrayOpen(false);
-                    }}
-                  >
-                    {networkOption.label}
-                  </Button>
-                ))}
-              </Stack>
-            </Collapse>
-            <Button
-              {...floatingNetworkToggleProps}
-              className={fabSettingsClass}
-              onClick={() => setIsNetworkTrayOpen(!isNetworkTrayOpen)}
-              aria-label="Toggle network menu"
-            >
-              <Icon as={isNetworkTrayOpen ? ChevronDownIcon : ChevronUpIcon} boxSize={8} />
-            </Button>
-          </Box>
-
-          {/* Lower right tray — respect safe area on notched devices */}
-          <Box
-            zIndex={4}
-            position="fixed"
-            bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-            right="calc(env(safe-area-inset-right, 0px) + 1.5rem)"
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            justifyContent="flex-end"
-            gap={2}
-          >
-            <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
-              <Stack spacing={2} mb={2} alignItems="center">
-                {state.delegation && (
-                  <Stack
-                    data-testid="wallet-delegation"
-                    spacing={2}
-                    alignItems="center"
-                  >
-                    <Tooltip label="Vote" hasArrow placement="left">
-                      <Button
-                        {...floatingVoteProps}
-                        className={fabVoteClass}
-                        onClick={() => navigate('/governance')}
-                        aria-label="Open voting"
-                      >
-                        <Icon as={MdHowToVote} boxSize={6} />
-                      </Button>
-                    </Tooltip>
-                    <Tooltip
-                      label={state.delegation.active ? 'Stake Center' : 'Delegate'}
-                      hasArrow
-                      placement="left"
-                    >
-                      <Button
-                        {...floatingStakeProps}
-                        className={fabStakeClass}
-                        onClick={() => navigate('/staking')}
-                        aria-label="Open stake center"
-                      >
-                        <Icon as={MdOutlineHowToReg} boxSize={6} />
-                      </Button>
-                    </Tooltip>
-                  </Stack>
-                )}
-
-                <Menu
-                  isOpen={menu}
-                  autoSelect={false}
-                  onOpen={() => setMenu(true)}
-                  onClose={() => setMenu(false)}
-                  placement="left-end"
-                >
-                  <Tooltip label="Accounts" hasArrow placement="left">
-                    <MenuButton
-                      as={Button}
-                      {...floatingAccountsProps}
-                      className={fabAccountsClass}
-                      aria-label="Open accounts"
-                    >
-                      <Icon as={MdAccountBalanceWallet} boxSize={6} />
-                    </MenuButton>
-                  </Tooltip>
-                  <MenuList fontSize="md">
-                    <MenuGroup title="Accounts">
-                      <Scrollbars
-                        style={{ width: '100%' }}
-                        autoHeight
-                        autoHeightMax={210}
-                      >
-                        {Object.keys(info.accounts).map((accountIndex) => {
-                          const accountInfo = info.accounts[accountIndex];
-                          const account =
-                            state.accounts && state.accounts[accountIndex];
-                          return (
-                            <MenuItem
-                              isDisabled={!state.account}
-                              position="relative"
-                              key={accountIndex}
-                              onClick={async (e) => {
-                                if (
-                                  info.currentIndex === accountInfo.index ||
-                                  !state.account
-                                ) {
-                                  return;
-                                }
-                                await switchAccount(accountIndex);
-                              }}
-                            >
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                width="full"
-                              >
-                                <Box
-                                  width={'30px'}
-                                  height={'30px'}
-                                  mr="12px"
-                                  display={'flex'}
-                                  alignItems={'center'}
-                                  justifyContent={'center'}
-                                >
-                                  <AvatarLoader
-                                    avatar={accountInfo.avatar}
-                                    width={'30px'}
-                                  />
-                                </Box>
-
-                                <Box
-                                  display="flex"
-                                  alignItems="center"
-                                  width="full"
-                                >
-                                  <Box display="flex" flexDirection="column">
-                                    <Box height="1.5" />
-                                    <Text
-                                      mb="-1"
-                                      fontWeight="bold"
-                                      fontSize="14px"
-                                      isTruncated={true}
-                                      maxWidth="210px"
-                                    >
-                                      {accountInfo.name}
-                                    </Text>
-                                    {account ? (
-                                      account[state.network.id].lovelace !==
-                                        null &&
-                                      account[state.network.id].lovelace !==
-                                        undefined ? (
-                                        <UnitDisplay
-                                          quantity={(
-                                            bigIntLovelace(
-                                              account[state.network.id].lovelace
-                                            ) -
-                                            bigIntLovelace(
-                                              account[state.network.id].minAda
-                                            ) -
-                                            bigIntLovelace(
-                                              account[state.network.id]
-                                                .collateral?.lovelace
-                                            )
-                                          ).toString()}
-                                          decimals={6}
-                                          symbol={settings.adaSymbol}
-                                        />
-                                      ) : (
-                                        <Text fontWeight="light">
-                                          Select to load...
-                                        </Text>
-                                      )
-                                    ) : (
-                                      <Text>...</Text>
-                                    )}
-                                  </Box>
-                                  {info.currentIndex === accountInfo.index && (
-                                    <>
-                                      <Box width="4" />
-                                      <StarIcon />
-                                      <Box width="4" />
-                                    </>
-                                  )}
-                                  {isHW(accountInfo.index) && (
-                                    <Box ml="auto" mr="2">
-                                      HW
-                                    </Box>
-                                  )}
-                                </Box>
-                              </Stack>
-                            </MenuItem>
-                          );
-                        })}
-                      </Scrollbars>
-                    </MenuGroup>
-                    <MenuDivider />
-
-                    <MenuItem
-                      icon={<AddIcon />}
-                      onClick={() => {
-                        navigate('/welcome');
-                      }}
-                    >
-                      New Wallet
-                    </MenuItem>
-                    {state.account &&
-                      state.accounts &&
-                      (isHW(state.account.index) ||
-                        state.account.index >=
-                          Object.keys(getNativeAccounts(state.accounts))
-                            .length -
-                            1) &&
-                      Object.keys(state.accounts).length > 1 && (
-                        <MenuItem
-                          color="red.300"
-                          icon={<DeleteIcon />}
-                          onClick={() => {
-                            deletAccountRef.current.openModal();
-                          }}
-                        >
-                          Delete Account
-                        </MenuItem>
-                      )}
-                    <MenuDivider />
-                    <MenuItem
-                      icon={<Icon as={FaRegFileCode} w={3} h={3} />}
-                      onClick={() => {
-                        builderRef.current.initCollateral(state.account);
-                      }}
-                    >
-                      {' '}
-                      Collateral
-                    </MenuItem>
-                    <MenuDivider />
-                    <MenuItem onClick={() => aboutRef.current.openModal()}>
-                      About
-                    </MenuItem>
-                  </MenuList>
-                </Menu>
-
-                <Tooltip label="Settings" hasArrow placement="left">
-                  <Button
-                    {...floatingSettingsProps}
-                    className={fabSettingsClass}
-                    onClick={() => navigate('/settings')}
-                    aria-label="Open settings"
-                  >
-                    <SettingsIcon boxSize={6} />
-                  </Button>
-                </Tooltip>
-              </Stack>
-            </Collapse>
-            <Button
-              {...floatingToggleProps}
-              className={fabToggleClass}
-              onClick={() => setIsTrayOpen(!isTrayOpen)}
-              aria-label="Toggle action menu"
-            >
-              <Icon as={isTrayOpen ? ChevronDownIcon : ChevronUpIcon} boxSize={8} />
-            </Button>
-          </Box>
 
           <Box px={{ base: 3, md: 4 }} pb={1} flexShrink={0} textAlign="center">
             <Text
@@ -1151,82 +658,11 @@ const Wallet = () => {
           </TabPanels>
         </Tabs>
         </Box>
+        {/* Clearance for fixed lower trays from WalletShell */}
+        <Box pb="calc(5.5rem + env(safe-area-inset-bottom, 0px))" flexShrink={0} />
       </Box>
-      <DeleteAccountModal
-        name={state.account && state.account.name}
-        ref={deletAccountRef}
-      />
-      <TransactionBuilder
-        ref={builderRef}
-        onConfirm={() => schedulePostTxRefresh()}
-      />
-      <About ref={aboutRef} />
     </>
   );
 };
-
-const DeleteAccountModal = React.forwardRef((props, ref) => {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const cancelRef = React.useRef();
-
-  React.useImperativeHandle(ref, () => ({
-    openModal() {
-      onOpen();
-    },
-  }));
-
-  return (
-    <AlertDialog
-      size="xs"
-      isOpen={isOpen}
-      leastDestructiveRef={cancelRef}
-      onClose={onClose}
-      isCentered
-    >
-      <AlertDialogOverlay>
-        <AlertDialogContent>
-          <AlertDialogHeader fontSize="md" fontWeight="bold">
-            Delete current account
-          </AlertDialogHeader>
-
-          <AlertDialogBody>
-            <Text fontSize="sm">
-              Are you sure you want to delete <b>{props.name}</b>?
-            </Text>
-          </AlertDialogBody>
-
-          <AlertDialogFooter>
-            <Button ref={cancelRef} onClick={onClose} mr={3}>
-              Cancel
-            </Button>
-            <Button
-              isDisabled={isLoading}
-              isLoading={isLoading}
-              colorScheme="red"
-              onClick={async () => {
-                setIsLoading(true);
-                try {
-                  await deleteAccount();
-                  const remaining = await getAccounts();
-                  const firstKey = Object.keys(remaining)[0];
-                  if (firstKey !== undefined) {
-                    await switchAccount(isNaN(firstKey) ? firstKey : parseInt(firstKey));
-                  }
-                } catch (e) {
-                  console.error('Delete account error:', e);
-                }
-                onClose();
-                setIsLoading(false);
-              }}
-            >
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialogOverlay>
-    </AlertDialog>
-  );
-});
 
 export default Wallet;

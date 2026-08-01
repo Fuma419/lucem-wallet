@@ -608,6 +608,7 @@ const Governance = () => {
       color={pageFg}
       px={{ base: 4, md: 6 }}
       py={5}
+      pb="calc(6.5rem + env(safe-area-inset-bottom, 0px))"
     >
       <Stack spacing={5} maxW="1100px" mx="auto">
         <Flex align="center" justify="space-between" gap={3}>

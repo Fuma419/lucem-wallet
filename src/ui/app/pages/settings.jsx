@@ -237,7 +237,7 @@ const Settings = () => {
         overflowY="auto"
         w="full"
         px={{ base: 4, md: 5 }}
-        pb="calc(1.5rem + env(safe-area-inset-bottom, 0px))"
+        pb="calc(6.5rem + env(safe-area-inset-bottom, 0px))"
       >
         <Box w="full" maxW="sm" mx="auto" pt={1}>
           <SettingsSectionTitle>Account</SettingsSectionTitle>

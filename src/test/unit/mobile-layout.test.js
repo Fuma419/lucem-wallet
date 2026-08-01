@@ -47,9 +47,13 @@ describe('mobile layout - no hardcoded overflow widths', () => {
       path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
       'utf8'
     );
+    const traysSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/walletTrays.jsx'),
+      'utf8'
+    );
     expect(walletSrc).toMatch(/data-testid="wallet-receive"/);
     expect(walletSrc).toMatch(/data-testid="wallet-send"/);
-    expect(walletSrc).toMatch(/data-testid="wallet-delegation"/);
+    expect(traysSrc).toMatch(/data-testid="wallet-delegation"/);
   });
 
   test('wallet.jsx hero should not use minHeight token 52 (too short; caused absolute overlap)', () => {

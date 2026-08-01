@@ -17,11 +17,15 @@ describe('wallet refresh state retention', () => {
       path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),
       'utf8'
     );
+    const traysSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/walletTrays.jsx'),
+      'utf8'
+    );
     expect(walletSrc).toMatch(/\{state\.delegation && \(/);
     expect(walletSrc).toMatch(
       /quantity=\{\s*state\.account[\s\S]{0,260}state\.account\.lovelace !== null[\s\S]{0,260}\?\s*\(/
     );
-    expect(walletSrc).not.toMatch(
+    expect(traysSrc).not.toMatch(
       /\{isFetching &&[\s\S]{0,200}data-testid="wallet-delegation"/
     );
     expect(walletSrc).not.toMatch(

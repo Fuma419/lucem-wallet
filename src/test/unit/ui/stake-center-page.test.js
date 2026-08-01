@@ -3,13 +3,13 @@ const path = require('path');
 
 describe('stake center page wiring', () => {
   test('wallet stake action routes to the dedicated stake center', () => {
-    const walletSrc = fs.readFileSync(
-      path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),
+    const traysSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/walletTrays.jsx'),
       'utf8'
     );
 
-    expect(walletSrc).toContain("navigate('/staking')");
-    expect(walletSrc).toContain('aria-label="Open stake center"');
+    expect(traysSrc).toContain("go('/staking')");
+    expect(traysSrc).toContain('aria-label="Open stake center"');
   });
 
   test('main router exposes the stake center route', () => {

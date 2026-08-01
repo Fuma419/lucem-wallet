@@ -30,18 +30,18 @@ describe('governance page and wallet network button wiring', () => {
   });
 
   test('wallet network tray buttons use per-network class names with no shadow', () => {
-    const walletSrc = fs.readFileSync(
-      path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),
+    const traysSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/walletTrays.jsx'),
       'utf8'
     );
 
-    expect(walletSrc).toContain('networkOptions.map((networkOption)');
-    expect(walletSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
-    expect(walletSrc).toContain('data-active=');
-    expect(walletSrc).toMatch(/shadow="none"/);
-    expect(walletSrc).toContain('wallet-tray-backdrop');
-    expect(walletSrc).toContain('blackAlpha.700');
-    expect(walletSrc).toMatch(/isNetworkTrayOpen \|\| isTrayOpen/);
+    expect(traysSrc).toContain('networkOptions.map((networkOption)');
+    expect(traysSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
+    expect(traysSrc).toContain('data-active=');
+    expect(traysSrc).toMatch(/shadow="none"/);
+    expect(traysSrc).toContain('wallet-tray-backdrop');
+    expect(traysSrc).toContain('blackAlpha.700');
+    expect(traysSrc).toMatch(/isNetworkTrayOpen \|\| isTrayOpen/);
   });
 
   test('wallet shows colored testnet banner and hides it on mainnet', () => {

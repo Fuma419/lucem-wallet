@@ -19,7 +19,6 @@ import {
   Spinner,
   Stack,
   Text,
-  useColorModeValue,
   useToast,
 } from '@chakra-ui/react';
 import {
@@ -57,6 +56,7 @@ import {
 } from '../../../api/extension/wallet';
 import ConfirmModal from '../components/confirmModal';
 import UnitDisplay from '../components/unitDisplay';
+import useSurfaceColors from '../hooks/useSurfaceColors';
 
 const LOVELACE_PER_ADA = 1000000n;
 const MIN_REWARD_WITHDRAWAL = 2000000n;
@@ -113,25 +113,35 @@ const actionCopy = {
   },
 };
 
-const Metric = ({ label, value }) => (
-  <Box
-    borderWidth="1px"
-    borderColor="whiteAlpha.200"
-    rounded="xl"
-    bg="whiteAlpha.100"
-    px={3}
-    py={2}
-  >
-    <Text fontSize="2xs" textTransform="uppercase" color="whiteAlpha.700">
-      {label}
-    </Text>
-    <Text fontSize="sm" fontWeight="bold">
-      {value}
-    </Text>
-  </Box>
-);
+const Metric = ({ label, value }) => {
+  const { panelBorder, metricBg, mutedFg } = useSurfaceColors();
+  return (
+    <Box
+      borderWidth="1px"
+      borderColor={panelBorder}
+      rounded="xl"
+      bg={metricBg}
+      px={3}
+      py={2}
+    >
+      <Text fontSize="2xs" textTransform="uppercase" color={mutedFg}>
+        {label}
+      </Text>
+      <Text fontSize="sm" fontWeight="bold">
+        {value}
+      </Text>
+    </Box>
+  );
+};
 
 const PoolCard = ({ pool, selected, onSelect }) => {
+  const {
+    panelBorder,
+    poolIdleBg,
+    poolIdleFg,
+    poolIdleHover,
+    progressTrack,
+  } = useSurfaceColors();
   const saturation = Math.max(0, Math.min(Number(pool.liveSaturation || 0), 1));
   return (
     <Box
@@ -141,16 +151,16 @@ const PoolCard = ({ pool, selected, onSelect }) => {
       width="full"
       onClick={() => onSelect(pool)}
       borderWidth="1px"
-      borderColor={selected ? 'yellow.300' : 'whiteAlpha.200'}
-      bg={selected ? 'yellow.400' : 'whiteAlpha.100'}
-      color={selected ? 'gray.900' : 'white'}
+      borderColor={selected ? 'yellow.300' : panelBorder}
+      bg={selected ? 'yellow.400' : poolIdleBg}
+      color={selected ? 'gray.900' : poolIdleFg}
       rounded="2xl"
       p={4}
       transition="all 0.18s ease"
       _hover={{
         transform: 'translateY(-2px)',
         borderColor: selected ? 'yellow.300' : 'yellow.500',
-        bg: selected ? 'yellow.300' : 'whiteAlpha.200',
+        bg: selected ? 'yellow.300' : poolIdleHover,
       }}
     >
       <Flex align="start" justify="space-between" gap={3}>
@@ -178,7 +188,7 @@ const PoolCard = ({ pool, selected, onSelect }) => {
           size="sm"
           rounded="full"
           colorScheme={saturation > 0.9 ? 'red' : 'yellow'}
-          bg={selected ? 'blackAlpha.200' : 'whiteAlpha.200'}
+          bg={selected ? 'blackAlpha.200' : progressTrack}
         />
         <SimpleGrid columns={2} spacing={2}>
           <Metric label="Margin" value={percent(pool.margin)} />
@@ -189,55 +199,61 @@ const PoolCard = ({ pool, selected, onSelect }) => {
   );
 };
 
-const ActionCard = ({ icon, title, text, onClick, isDisabled, isLoading }) => (
-  <Box
-    borderWidth="1px"
-    borderColor="whiteAlpha.200"
-    bg="whiteAlpha.100"
-    rounded="2xl"
-    p={4}
-  >
-    <HStack spacing={3} align="start">
-      <Flex
-        rounded="xl"
-        bg="yellow.400"
-        color="gray.900"
-        boxSize="10"
-        align="center"
-        justify="center"
-        flexShrink={0}
-      >
-        <Icon as={icon} boxSize={5} />
-      </Flex>
-      <Box>
-        <Text fontWeight="bold">{title}</Text>
-        <Text fontSize="xs" color="whiteAlpha.700" mt={1}>
-          {text}
-        </Text>
-      </Box>
-    </HStack>
-    <Button
-      mt={4}
-      width="full"
-      colorScheme="yellow"
-      variant="outline"
-      onClick={onClick}
-      isDisabled={isDisabled}
-      isLoading={isLoading}
+const ActionCard = ({ icon, title, text, onClick, isDisabled, isLoading }) => {
+  const { panelBorder, cardBg, mutedFg } = useSurfaceColors();
+  return (
+    <Box
+      borderWidth="1px"
+      borderColor={panelBorder}
+      bg={cardBg}
+      rounded="2xl"
+      p={4}
     >
-      Start
-    </Button>
-  </Box>
-);
-
-const PreviewRow = ({ label, value, children }) => (
-  <Flex justify="space-between" gap={4} fontSize="sm">
-    <Text color="whiteAlpha.700">{label}</Text>
-    <Box textAlign="right" fontWeight="semibold">
-      {children || value}
+      <HStack spacing={3} align="start">
+        <Flex
+          rounded="xl"
+          bg="yellow.400"
+          color="gray.900"
+          boxSize="10"
+          align="center"
+          justify="center"
+          flexShrink={0}
+        >
+          <Icon as={icon} boxSize={5} />
+        </Flex>
+        <Box>
+          <Text fontWeight="bold">{title}</Text>
+          <Text fontSize="xs" color={mutedFg} mt={1}>
+            {text}
+          </Text>
+        </Box>
+      </HStack>
+      <Button
+        mt={4}
+        width="full"
+        colorScheme="yellow"
+        variant="outline"
+        onClick={onClick}
+        isDisabled={isDisabled}
+        isLoading={isLoading}
+      >
+        Start
+      </Button>
     </Box>
-  </Flex>
-);
+  );
+};
+
+const PreviewRow = ({ label, value, children }) => {
+  const { mutedFg } = useSurfaceColors();
+  return (
+    <Flex justify="space-between" gap={4} fontSize="sm">
+      <Text color={mutedFg}>{label}</Text>
+      <Box textAlign="right" fontWeight="semibold">
+        {children || value}
+      </Box>
+    </Flex>
+  );
+};
 
 const Staking = () => {
   const navigate = useNavigate();
@@ -259,7 +275,21 @@ const Staking = () => {
   const [showPoolSearch, setShowPoolSearch] = React.useState(true);
   const didAutoSelect = React.useRef(false);
   const [submittedTx, setSubmittedTx] = React.useState('');
-  const panelBg = useColorModeValue('gray.900', 'gray.900');
+  const {
+    pageBg,
+    pageFg,
+    panelBg,
+    panelBorder,
+    cardBg,
+    insetBg,
+    mutedFg,
+    softFg,
+    ghostColor,
+    inputBg,
+    inputBorder,
+    subtleFg,
+    yellowLink,
+  } = useSurfaceColors();
 
   const loadStakeState = React.useCallback(async () => {
     setIsLoading(true);
@@ -452,8 +482,8 @@ const Staking = () => {
     <Box
       data-testid="stake-center-page"
       minH="100vh"
-      bg="black"
-      color="white"
+      bg={pageBg}
+      color={pageFg}
       px={{ base: 4, md: 6 }}
       py={5}
     >
@@ -462,7 +492,7 @@ const Staking = () => {
           alignSelf="flex-start"
           leftIcon={<ArrowBackIcon />}
           variant="ghost"
-          color="whiteAlpha.800"
+          color={ghostColor}
           onClick={() => navigate('/wallet')}
         >
           Wallet
@@ -471,9 +501,9 @@ const Staking = () => {
         <Box
           rounded="3xl"
           p={{ base: 5, md: 7 }}
-          bg="whiteAlpha.50"
+          bg={panelBg}
           borderWidth="1px"
-          borderColor="whiteAlpha.200"
+          borderColor={panelBorder}
         >
           <Flex direction={{ base: 'column', md: 'row' }} gap={5} justify="space-between">
             <Box maxW="650px">
@@ -483,7 +513,7 @@ const Staking = () => {
               <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="black" lineHeight="1.05">
                 Make your ADA work while you keep custody.
               </Text>
-              <Text color="whiteAlpha.800" mt={2} fontSize="xs" noOfLines={2}>
+              <Text color={softFg} mt={2} fontSize="xs" noOfLines={2}>
                 Choose a pool, preview the deposit and fee, then sign with the same secure
                 password or hardware wallet flow used everywhere else in Lucem.
               </Text>
@@ -491,9 +521,9 @@ const Staking = () => {
             <Box
               minW={{ base: 'full', md: '270px' }}
               rounded="2xl"
-              bg="blackAlpha.400"
+              bg={insetBg}
               borderWidth="1px"
-              borderColor="whiteAlpha.200"
+              borderColor={panelBorder}
               p={4}
             >
               <HStack spacing={3}>
@@ -501,7 +531,7 @@ const Staking = () => {
                   <Icon as={delegation?.active ? MdOutlineVerified : MdOutlineHowToReg} boxSize={7} />
                 </Flex>
                 <Box>
-                  <Text fontSize="xs" color="whiteAlpha.700">
+                  <Text fontSize="xs" color={mutedFg}>
                     Current status
                   </Text>
                   <Text fontWeight="bold">
@@ -555,8 +585,8 @@ const Staking = () => {
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
           <Box
             borderWidth="1px"
-            borderColor="whiteAlpha.200"
-            bg="whiteAlpha.100"
+            borderColor={panelBorder}
+            bg={cardBg}
             rounded="2xl"
             p={4}
           >
@@ -574,7 +604,7 @@ const Staking = () => {
               </Flex>
               <Box flex={1}>
                 <Text fontWeight="bold">{delegation?.active ? 'Change Pool' : 'Delegate'}</Text>
-                <Text fontSize="xs" color="whiteAlpha.700" mt={1}>
+                <Text fontSize="xs" color={mutedFg} mt={1}>
                   Search by ticker or pool id.
                 </Text>
               </Box>
@@ -605,7 +635,7 @@ const Staking = () => {
               <Box mt={3}>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none">
-                    <SearchIcon color="whiteAlpha.600" />
+                    <SearchIcon color={subtleFg} />
                   </InputLeftElement>
                   <Input
                     id="stake-pool-search"
@@ -613,8 +643,8 @@ const Staking = () => {
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); didAutoSelect.current = true; }}
                     placeholder="Search ticker or pool id"
-                    bg="whiteAlpha.100"
-                    borderColor="whiteAlpha.200"
+                    bg={inputBg}
+                    borderColor={inputBorder}
                     focusBorderColor="yellow.400"
                   />
                 </InputGroup>
@@ -648,7 +678,7 @@ const Staking = () => {
                     />
                   ))}
                   {!isPoolsLoading && pools.length === 0 && (
-                    <Box textAlign="center" color="whiteAlpha.700" py={4}>
+                    <Box textAlign="center" color={mutedFg} py={4}>
                       No stake pools found.
                     </Box>
                   )}
@@ -681,7 +711,7 @@ const Staking = () => {
               rounded="3xl"
               bg={panelBg}
               borderWidth="1px"
-              borderColor="whiteAlpha.200"
+              borderColor={panelBorder}
               p={5}
             >
               <Text fontSize="xl" fontWeight="black">
@@ -697,18 +727,18 @@ const Staking = () => {
                       <Link
                         href={(selectedPool || activePool).homepage}
                         isExternal
-                        color="yellow.200"
+                        color={yellowLink}
                         fontSize="xs"
                       >
                         Website <ExternalLinkIcon mx="2px" />
                       </Link>
                     )}
                   </HStack>
-                  <Text fontSize="sm" color="whiteAlpha.800">
+                  <Text fontSize="sm" color={softFg}>
                     {(selectedPool || activePool)?.description || 'No description published.'}
                   </Text>
                   <HStack spacing={2}>
-                    <Text fontSize="xs" color="whiteAlpha.700" noOfLines={1}>
+                    <Text fontSize="xs" color={mutedFg} noOfLines={1}>
                       {shortPoolId(selectedPool || activePool)}
                     </Text>
                     <Button
@@ -729,13 +759,13 @@ const Staking = () => {
                   </SimpleGrid>
                 </Stack>
               ) : (
-                <Box mt={4} color="whiteAlpha.700" fontSize="sm">
+                <Box mt={4} color={mutedFg} fontSize="sm">
                   Select a pool to see metadata, fees, saturation, pledge, and the transaction preview.
                 </Box>
               )}
             </Box>
 
-            <Box rounded="3xl" bg={panelBg} borderWidth="1px" borderColor="whiteAlpha.200" p={5}>
+            <Box rounded="3xl" bg={panelBg} borderWidth="1px" borderColor={panelBorder} p={5}>
               <HStack spacing={2} mb={4}>
                 <InfoOutlineIcon color="yellow.300" />
                 <Text fontSize="xl" fontWeight="black">
@@ -743,7 +773,7 @@ const Staking = () => {
                 </Text>
               </HStack>
               {isBuilding && (
-                <Flex align="center" gap={3} color="whiteAlpha.800">
+                <Flex align="center" gap={3} color={softFg}>
                   <Spinner size="sm" color="yellow.400" />
                   <Text fontSize="sm">Preparing transaction...</Text>
                 </Flex>
@@ -763,7 +793,7 @@ const Staking = () => {
                     <PreviewRow label="Returned deposit" value={ada(txPreview.returnedDeposit)} />
                   )}
                   <PreviewRow label="Network fee" value={ada(txPreview.fee)} />
-                  <Alert status="info" rounded="xl" bg="whiteAlpha.100" color="white">
+                  <Alert status="info" rounded="xl" bg={cardBg} color={pageFg}>
                     <AlertIcon />
                     <AlertDescription fontSize="xs">
                       Delegation becomes active after upcoming epoch boundaries. Rewards are never locked,
@@ -779,7 +809,7 @@ const Staking = () => {
                   </Button>
                 </Stack>
               ) : !isBuilding && (
-                <Text fontSize="sm" color="whiteAlpha.700">
+                <Text fontSize="sm" color={mutedFg}>
                   Select a pool or choose a rewards action to preview costs before signing.
                 </Text>
               )}

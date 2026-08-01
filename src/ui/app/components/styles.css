@@ -562,7 +562,7 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   color: white;
 }
 
-/* Overlay testnet U-badge — hugs the network name; no full-width bar / layout shift */
+/* Overlay testnet rectangle badge — hugs the network name; no full-width bar / layout shift */
 .network-banner {
   position: absolute;
   top: 0;
@@ -581,16 +581,17 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   color: white;
   padding: 0.28rem 0.9rem 0.4rem;
   pointer-events: none;
-  /* U-shape: open at the top edge, closed left/right/bottom around the label */
-  border-top: none;
+  /* Rectangle: closed on all four sides around the label */
+  border-top: thin solid transparent;
   border-left: thin solid transparent;
   border-right: thin solid transparent;
   border-bottom: thin solid transparent;
-  border-radius: 0 0 0.85rem 0.85rem;
+  border-radius: 0;
 }
 
 .network-banner-preprod {
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 0.5), rgba(0, 0, 0, 0.5));
+  border-top-color: rgba(0, 245, 255, 1);
   border-left-color: rgba(0, 245, 255, 1);
   border-right-color: rgba(0, 245, 255, 1);
   border-bottom-color: rgba(0, 245, 255, 1);
@@ -600,6 +601,7 @@ html[data-theme='light'] .button.network-testnet[data-active] {
 .network-banner-preview,
 .network-banner-testnet {
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 0.5), rgba(0, 0, 0, 0.5));
+  border-top-color: rgba(220, 27, 250, 1);
   border-left-color: rgba(220, 27, 250, 1);
   border-right-color: rgba(220, 27, 250, 1);
   border-bottom-color: rgba(220, 27, 250, 1);
@@ -613,6 +615,7 @@ html[data-theme='light'] .network-banner {
 
 html[data-theme='light'] .network-banner-preprod {
   background: rgba(0, 245, 255, 0.45);
+  border-top-color: rgba(0, 180, 190, 0.9);
   border-left-color: rgba(0, 180, 190, 0.9);
   border-right-color: rgba(0, 180, 190, 0.9);
   border-bottom-color: rgba(0, 180, 190, 0.9);
@@ -622,6 +625,7 @@ html[data-theme='light'] .network-banner-preprod {
 html[data-theme='light'] .network-banner-preview,
 html[data-theme='light'] .network-banner-testnet {
   background: rgba(220, 27, 250, 0.4);
+  border-top-color: rgba(180, 20, 210, 0.9);
   border-left-color: rgba(180, 20, 210, 0.9);
   border-right-color: rgba(180, 20, 210, 0.9);
   border-bottom-color: rgba(180, 20, 210, 0.9);

@@ -60,7 +60,9 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toMatch(/network-banner-\$\{testnetBanner\.id\}/);
     expect(css).toMatch(/\.network-banner[\s\S]*position:\s*absolute/);
     expect(css).toMatch(/\.network-banner[\s\S]*width:\s*auto/);
-    expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*0\s+0\s+0\.85rem\s+0\.85rem/);
+    // Rectangle badge: closed top border + square corners (not the old U-shape)
+    expect(css).toMatch(/\.network-banner[\s\S]*border-top:\s*thin\s+solid/);
+    expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*0;/);
     expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*245,\s*255/);
     expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(220,\s*27,\s*250/);
   });

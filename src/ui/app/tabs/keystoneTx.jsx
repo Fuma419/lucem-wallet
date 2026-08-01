@@ -32,6 +32,7 @@ import {
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
 import KeystoneSDK from '@keystonehq/keystone-sdk';
+import { ensureCameraPermission } from '../../../platform/capacitor';
 
 const Phase = {
   load: 'load',
@@ -275,7 +276,17 @@ const App = () => {
                 <Button
                   type="button"
                   className="button hw-wallet"
-                  onClick={() => setPhase(Phase.scan)}
+                  onClick={async () => {
+                    setError('');
+                    const ok = await ensureCameraPermission();
+                    if (!ok) {
+                      setError(
+                        'Camera access is required to scan the Keystone signature. Enable the camera permission for Lucem in your device settings.'
+                      );
+                      return;
+                    }
+                    setPhase(Phase.scan);
+                  }}
                 >
                   Scan signature from Keystone
                 </Button>

@@ -43,6 +43,16 @@ function isExtensionRuntime() {
   );
 }
 
+/** Packaged mobile app (Capacitor) exposes a native `window.Capacitor` bridge. */
+function isCapacitorNativeRuntime() {
+  return (
+    typeof window !== 'undefined' &&
+    !!window.Capacitor &&
+    typeof window.Capacitor.isNativePlatform === 'function' &&
+    window.Capacitor.isNativePlatform()
+  );
+}
+
 /** Extension: call Koios directly (host_permissions). Web/PWA: same-origin proxy avoids CORS. */
 function getKoiosBaseUrl(networkKey) {
   const direct = {
@@ -56,6 +66,11 @@ function getKoiosBaseUrl(networkKey) {
     return direct.mainnet;
   }
   if (isExtensionRuntime()) {
+    return base;
+  }
+  // Packaged mobile app: there is no same-origin proxy. Call Koios directly;
+  // CapacitorHttp routes the request through native networking (bypasses CORS).
+  if (isCapacitorNativeRuntime()) {
     return base;
   }
   if (typeof window !== 'undefined' && window.location && window.location.origin) {

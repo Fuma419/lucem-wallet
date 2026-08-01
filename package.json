@@ -15,6 +15,11 @@
     "test": "NODE_ENV=test jest",
     "test:integration": "LUCEM_RUN_INTEGRATION=1 NODE_ENV=test jest src/test/integration --runInBand --testTimeout=180000",
     "test:functional": "NODE_ENV=test jest src/test/functional",
+    "mobile:build": "LUCEM_SKIP_SERVE=1 npm run build:webpack",
+    "mobile:sync": "npm run mobile:build && npx cap sync",
+    "mobile:android": "npm run mobile:sync && npx cap open android",
+    "mobile:ios": "npm run mobile:sync && npx cap open ios",
+    "mobile:assets": "npx @capacitor/assets generate --iconBackgroundColor '#000000' --splashBackgroundColor '#000000'",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:screenshots": "LUCEM_SKIP_SERVE=1 npm run build:webpack && playwright test e2e/screenshots.spec.js",
@@ -24,6 +29,12 @@
     "rag:query": "node utils/code-rag-mcp.cjs query"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.8",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/core": "^7.6.8",
+    "@capacitor/ios": "^7.6.8",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.6",
     "@cardano-foundation/ledgerjs-hw-app-cardano": "^7.1.3",
     "@cardano-sdk/core": "^0.39.2",
     "@chakra-ui/icons": "^2.1.1",
@@ -70,6 +81,8 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@babel/preset-env": "^7.23.8",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.6.8",
     "@emurgo/cardano-serialization-lib-nodejs": "15.0.3",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@playwright/test": "^1.59.1",

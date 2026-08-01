@@ -456,16 +456,16 @@ html[data-theme='light'] .lucem-settings-shell {
 }
 
 .button.network-preprod {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 0.5), rgba(0, 0, 0, 0.5));
-  border: thin solid rgba(0, 245, 255, 1);
-  box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 0.5), rgba(0, 0, 0, 0.5));
+  border: thin solid rgba(0, 122, 255, 1);
+  box-shadow: 0px 0px 15px rgba(0, 122, 255, 0.75);
 }
 
 .button.network-preview,
 .button.network-testnet {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 0.5), rgba(0, 0, 0, 0.5));
-  border: thin solid rgba(220, 27, 250, 1);
-  box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 221, 0, 0.5), rgba(0, 0, 0, 0.5));
+  border: thin solid rgba(255, 221, 0, 1);
+  box-shadow: 0px 0px 15px rgba(255, 221, 0, 0.75);
 }
 
 .button.network-mainnet:hover {
@@ -477,16 +477,16 @@ html[data-theme='light'] .lucem-settings-shell {
 
 .button.network-preprod:hover {
   opacity: 1;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, 0.5));
-  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.9);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 1), rgba(0, 0, 0, 0.5));
+  box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9);
   transform: none;
 }
 
 .button.network-preview:hover,
 .button.network-testnet:hover {
   opacity: 1;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, 0.5));
-  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 221, 0, 1), rgba(0, 0, 0, 0.5));
+  box-shadow: 0px 0px 25px rgba(255, 221, 0, 0.9);
   transform: none;
 }
 
@@ -503,9 +503,9 @@ html[data-theme='light'] .lucem-settings-shell {
 .button.network-preprod[data-active],
 .button.network-preprod:focus-visible {
   opacity: 1 !important;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 1), rgba(0, 0, 0, 0.5)) !important;
-  border-color: rgba(0, 245, 255, 1) !important;
-  box-shadow: 0px 0px 25px rgba(0, 245, 255, 0.9) !important;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 1), rgba(0, 0, 0, 0.5)) !important;
+  border-color: rgba(0, 122, 255, 1) !important;
+  box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9) !important;
   color: white !important;
   transform: none !important;
 }
@@ -515,9 +515,9 @@ html[data-theme='light'] .lucem-settings-shell {
 .button.network-preview:focus-visible,
 .button.network-testnet:focus-visible {
   opacity: 1 !important;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 1), rgba(0, 0, 0, 0.5)) !important;
-  border-color: rgba(220, 27, 250, 1) !important;
-  box-shadow: 0px 0px 25px rgba(220, 27, 250, 0.9) !important;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 221, 0, 1), rgba(0, 0, 0, 0.5)) !important;
+  border-color: rgba(255, 221, 0, 1) !important;
+  box-shadow: 0px 0px 25px rgba(255, 221, 0, 0.9) !important;
   color: white !important;
   transform: none !important;
 }
@@ -538,16 +538,16 @@ html[data-theme='light'] .button.network-mainnet {
 }
 
 html[data-theme='light'] .button.network-preprod {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 0.65), rgba(0, 0, 0, 0.72));
-  border: thin solid rgba(0, 245, 255, 1);
-  box-shadow: 0px 0px 18px rgba(0, 245, 255, 0.85);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 0.65), rgba(0, 0, 0, 0.72));
+  border: thin solid rgba(0, 122, 255, 1);
+  box-shadow: 0px 0px 18px rgba(0, 122, 255, 0.85);
 }
 
 html[data-theme='light'] .button.network-preview,
 html[data-theme='light'] .button.network-testnet {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 0.65), rgba(0, 0, 0, 0.72));
-  border: thin solid rgba(220, 27, 250, 1);
-  box-shadow: 0px 0px 18px rgba(220, 27, 250, 0.85);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 221, 0, 0.65), rgba(0, 0, 0, 0.72));
+  border: thin solid rgba(255, 221, 0, 1);
+  box-shadow: 0px 0px 18px rgba(255, 221, 0, 0.85);
 }
 
 html[data-theme='light'] .button.network-mainnet:hover,
@@ -581,31 +581,31 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   color: white;
   padding: 0.28rem 0.9rem 0.4rem;
   pointer-events: none;
-  /* Rectangle: closed on all four sides around the label */
+  /* Rounded badge that matches the Send/Receive button shape (lg radius + soft shadow) */
   border-top: thin solid transparent;
   border-left: thin solid transparent;
   border-right: thin solid transparent;
   border-bottom: thin solid transparent;
-  border-radius: 0;
+  border-radius: 0.5rem;
 }
 
 .network-banner-preprod {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, 0.5), rgba(0, 0, 0, 0.5));
-  border-top-color: rgba(0, 245, 255, 1);
-  border-left-color: rgba(0, 245, 255, 1);
-  border-right-color: rgba(0, 245, 255, 1);
-  border-bottom-color: rgba(0, 245, 255, 1);
-  box-shadow: 0 6px 14px rgba(0, 245, 255, 0.35);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 0.5), rgba(0, 0, 0, 0.5));
+  border-top-color: rgba(0, 122, 255, 1);
+  border-left-color: rgba(0, 122, 255, 1);
+  border-right-color: rgba(0, 122, 255, 1);
+  border-bottom-color: rgba(0, 122, 255, 1);
+  box-shadow: 0 6px 14px rgba(0, 122, 255, 0.35);
 }
 
 .network-banner-preview,
 .network-banner-testnet {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, 0.5), rgba(0, 0, 0, 0.5));
-  border-top-color: rgba(220, 27, 250, 1);
-  border-left-color: rgba(220, 27, 250, 1);
-  border-right-color: rgba(220, 27, 250, 1);
-  border-bottom-color: rgba(220, 27, 250, 1);
-  box-shadow: 0 6px 14px rgba(220, 27, 250, 0.35);
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 221, 0, 0.5), rgba(0, 0, 0, 0.5));
+  border-top-color: rgba(255, 221, 0, 1);
+  border-left-color: rgba(255, 221, 0, 1);
+  border-right-color: rgba(255, 221, 0, 1);
+  border-bottom-color: rgba(255, 221, 0, 1);
+  box-shadow: 0 6px 14px rgba(255, 221, 0, 0.35);
 }
 
 html[data-theme='light'] .network-banner {
@@ -614,21 +614,21 @@ html[data-theme='light'] .network-banner {
 }
 
 html[data-theme='light'] .network-banner-preprod {
-  background: rgba(0, 245, 255, 0.45);
-  border-top-color: rgba(0, 180, 190, 0.9);
-  border-left-color: rgba(0, 180, 190, 0.9);
-  border-right-color: rgba(0, 180, 190, 0.9);
-  border-bottom-color: rgba(0, 180, 190, 0.9);
-  box-shadow: 0 4px 12px rgba(0, 245, 255, 0.28);
+  background: rgba(0, 122, 255, 0.45);
+  border-top-color: rgba(0, 90, 200, 0.9);
+  border-left-color: rgba(0, 90, 200, 0.9);
+  border-right-color: rgba(0, 90, 200, 0.9);
+  border-bottom-color: rgba(0, 90, 200, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.28);
 }
 
 html[data-theme='light'] .network-banner-preview,
 html[data-theme='light'] .network-banner-testnet {
-  background: rgba(220, 27, 250, 0.4);
-  border-top-color: rgba(180, 20, 210, 0.9);
-  border-left-color: rgba(180, 20, 210, 0.9);
-  border-right-color: rgba(180, 20, 210, 0.9);
-  border-bottom-color: rgba(180, 20, 210, 0.9);
-  box-shadow: 0 4px 12px rgba(220, 27, 250, 0.28);
+  background: rgba(255, 221, 0, 0.4);
+  border-top-color: rgba(200, 160, 0, 0.9);
+  border-left-color: rgba(200, 160, 0, 0.9);
+  border-right-color: rgba(200, 160, 0, 0.9);
+  border-bottom-color: rgba(200, 160, 0, 0.9);
+  box-shadow: 0 4px 12px rgba(255, 221, 0, 0.28);
 }
 

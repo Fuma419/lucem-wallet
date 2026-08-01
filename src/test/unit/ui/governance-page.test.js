@@ -13,10 +13,10 @@ describe('governance page and wallet network button wiring', () => {
       /\.button\.network-mainnet\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(206,\s*250,\s*0/
     );
     expect(css).toMatch(
-      /\.button\.network-preprod\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(0,\s*245,\s*255/
+      /\.button\.network-preprod\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(0,\s*122,\s*255/
     );
     expect(css).toMatch(
-      /\.button\.network-preview[\s\S]*radial-gradient\([\s\S]*rgba\(220,\s*27,\s*250/
+      /\.button\.network-preview[\s\S]*radial-gradient\([\s\S]*rgba\(255,\s*221,\s*0/
     );
     expect(css).toMatch(
       /\.button\.network-mainnet\[data-active\][\s\S]*opacity:\s*1\s*!important/
@@ -60,11 +60,12 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toMatch(/network-banner-\$\{testnetBanner\.id\}/);
     expect(css).toMatch(/\.network-banner[\s\S]*position:\s*absolute/);
     expect(css).toMatch(/\.network-banner[\s\S]*width:\s*auto/);
-    // Rectangle badge: closed top border + square corners (not the old U-shape)
+    // Rounded badge matching the Send/Receive button shape (not the old U-shape/rectangle)
     expect(css).toMatch(/\.network-banner[\s\S]*border-top:\s*thin\s+solid/);
-    expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*0;/);
-    expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*245,\s*255/);
-    expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(220,\s*27,\s*250/);
+    expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*0\.5rem/);
+    // Testnet indicators use blue (preprod) and yellow (preview) so each differs from the neon buttons
+    expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*122,\s*255/);
+    expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(255,\s*221,\s*0/);
   });
 
   test('governance page uses API-backed governance loading and confirm modal signing flow', () => {

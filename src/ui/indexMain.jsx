@@ -24,6 +24,7 @@ import Staking from './app/pages/staking';
 import { useStoreActions, useStoreState } from 'easy-peasy';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
 import PreventHistoryBack from './app/components/PreventHistoryBack';
+import { initNativeShell } from '../platform/capacitor';
 
 /**
  * OS / browser back gestures (e.g. iOS swipe-back) restore a prior history entry such as
@@ -181,5 +182,9 @@ root.render(
       </Router>
     </Main>
 );
+
+// Configure the native (Capacitor) shell when running as an iOS/Android app;
+// no-op in the browser extension and web builds.
+initNativeShell();
 
 if (module.hot) module.hot.accept();

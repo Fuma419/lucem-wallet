@@ -143,7 +143,17 @@ const webAdapter = {
     /** After full data wipe: land on /welcome (rewrites to mainPopup.html) without stacked SPA paths */
     reloadToWalletBootstrap: () => {
       if (typeof window !== 'undefined') {
-        window.location.replace(`${window.location.origin}/welcome`);
+        const isNative =
+          !!window.Capacitor &&
+          typeof window.Capacitor.isNativePlatform === 'function' &&
+          window.Capacitor.isNativePlatform();
+        // A packaged app has no server to rewrite /welcome -> app shell, so
+        // reload the bundled entry (index.html) and let bootstrap route to
+        // /welcome; the web/extension build keeps the same-origin /welcome path.
+        const target = isNative
+          ? `${window.location.origin}/index.html`
+          : `${window.location.origin}/welcome`;
+        window.location.replace(target);
       }
       return Promise.resolve(true);
     },

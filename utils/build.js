@@ -106,6 +106,22 @@ webpack(config, function (err, stats) {
     fs.writeFileSync(buildInfoPath, JSON.stringify(buildInfo, null, 2));
     writeLocalPreviewServeConfig(path.join(__dirname, '..', 'build'));
 
+    // Capacitor loads `index.html` from webDir; the wallet entry is
+    // mainPopup.html. Copy it so the same build/ doubles as the native app root.
+    try {
+      var buildDir = path.join(__dirname, '..', 'build');
+      var mainPopupHtml = path.join(buildDir, 'mainPopup.html');
+      if (fs.existsSync(mainPopupHtml)) {
+        fs.copyFileSync(mainPopupHtml, path.join(buildDir, 'index.html'));
+        console.log('📱 Copied mainPopup.html → index.html (Capacitor webDir root)');
+      }
+    } catch (copyErr) {
+      console.warn(
+        'Could not create build/index.html for Capacitor:',
+        copyErr.message
+      );
+    }
+
     // Clear console and show build completion message
     console.clear();
     console.log('\n');

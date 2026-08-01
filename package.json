@@ -19,7 +19,7 @@
     "mobile:sync": "npm run mobile:build && npx cap sync",
     "mobile:android": "npm run mobile:sync && npx cap open android",
     "mobile:ios": "npm run mobile:sync && npx cap open ios",
-    "mobile:assets": "npx @capacitor/assets generate --iconBackgroundColor '#000000' --splashBackgroundColor '#000000'",
+    "mobile:assets": "npx --yes @capacitor/assets generate --iconBackgroundColor '#000000' --splashBackgroundColor '#000000'",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:screenshots": "LUCEM_SKIP_SERVE=1 npm run build:webpack && playwright test e2e/screenshots.spec.js",
@@ -81,7 +81,6 @@
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@babel/preset-env": "^7.23.8",
-    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.6.8",
     "@emurgo/cardano-serialization-lib-nodejs": "15.0.3",
     "@modelcontextprotocol/sdk": "^1.29.0",

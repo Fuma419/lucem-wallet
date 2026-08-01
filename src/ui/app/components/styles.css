@@ -268,6 +268,18 @@ html[data-theme='light'] .lucem-settings-shell {
   border-radius: 9999px;
 }
 
+.button.fab-accounts {
+  opacity: .85;
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 140, 0, .5), rgba(0, 0, 0, .5));
+  border: thin solid rgba(255, 140, 0, 1);
+  box-shadow: 0px 0px 15px rgba(255, 140, 0, 0.75);
+  border-radius: 9999px;
+}
+
+.button.fab-accounts[data-active] {
+  box-shadow: 0px 0px 25px rgba(255, 140, 0, 0.9) !important;
+}
+
 .button.fab-settings {
   opacity: .85;
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, .5), rgba(0, 0, 0, .5));
@@ -314,6 +326,11 @@ html[data-theme='light'] .lucem-settings-shell {
 .button.fab-stake:hover {
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, .5));
   box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
+}
+
+.button.fab-accounts:hover {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 140, 0, 1), rgba(0, 0, 0, .5));
+  box-shadow: 0px 0px 25px rgba(255, 140, 0, 0.9);
 }
 
 .button.fab-settings:hover {

@@ -93,7 +93,12 @@ import { NETWORK_ID, TAB, STORAGE, NODE } from '../../../config/config';
 import { FaGamepad, FaRegFileCode } from 'react-icons/fa';
 import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
-import { MdHowToVote, MdOutlineHowToReg, MdRefresh } from 'react-icons/md';
+import {
+  MdAccountBalanceWallet,
+  MdHowToVote,
+  MdOutlineHowToReg,
+  MdRefresh,
+} from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorMode, useColorModeValue } from '@chakra-ui/react';
@@ -180,6 +185,7 @@ const Wallet = () => {
   const sendBtnClass = colorMode === 'dark' ? 'button new-wallet' : undefined;
   const fabVoteClass = colorMode === 'dark' ? 'button fab-vote' : undefined;
   const fabStakeClass = colorMode === 'dark' ? 'button fab-stake' : undefined;
+  const fabAccountsClass = colorMode === 'dark' ? 'button fab-accounts' : undefined;
   const fabSettingsClass = colorMode === 'dark' ? 'button fab-settings' : undefined;
   const fabToggleClass = colorMode === 'dark' ? 'button fab-toggle' : undefined;
   const actionBtnColor = colorMode === 'dark' ? 'white' : 'black';
@@ -212,6 +218,21 @@ const Wallet = () => {
       borderColor: 'yellow.400',
       boxShadow: '0 0 14px rgba(206, 250, 0, 0.35)',
       _hover: { bg: 'yellow.500' },
+    }
+  );
+  const fabAccounts = useColorModeValue(
+    {
+      bg: 'orange.500',
+      borderWidth: '2px',
+      borderColor: 'orange.700',
+      _hover: { bg: 'orange.600' },
+    },
+    {
+      bg: 'orange.600',
+      borderWidth: '2px',
+      borderColor: 'orange.300',
+      boxShadow: '0 0 14px rgba(255, 140, 0, 0.35)',
+      _hover: { bg: 'orange.500' },
     }
   );
   const fabSettings = useColorModeValue(
@@ -248,6 +269,7 @@ const Wallet = () => {
   const fabColor = colorMode === 'dark' ? 'white' : 'black';
   const floatingVoteProps = { ...walletFabBase, color: fabColor, ...fabVote };
   const floatingStakeProps = { ...walletFabBase, color: fabColor, ...fabStake };
+  const floatingAccountsProps = { ...walletFabBase, color: fabColor, ...fabAccounts };
   const floatingSettingsProps = { ...walletFabBase, color: fabColor, ...fabSettings };
   const floatingToggleProps = { ...walletFabBase, color: fabColor, ...fabToggle };
   const floatingNetworkToggleProps = {
@@ -618,171 +640,181 @@ const Wallet = () => {
                   onClose={() => setMenu(false)}
                   placement="left-end"
                 >
-                  <MenuButton
-                    as={Button}
-                    {...floatingSettingsProps}
-                    className={fabSettingsClass}
-                  >
-                <SettingsIcon boxSize={6} />
-              </MenuButton>
-              <MenuList fontSize="md">
-                <MenuGroup title="Accounts">
-                  <Scrollbars
-                    style={{ width: '100%' }}
-                    autoHeight
-                    autoHeightMax={210}
-                  >
-                    {Object.keys(info.accounts).map((accountIndex) => {
-                      const accountInfo = info.accounts[accountIndex];
-                      const account =
-                        state.accounts && state.accounts[accountIndex];
-                      return (
-                        <MenuItem
-                          isDisabled={!state.account}
-                          position="relative"
-                          key={accountIndex}
-                          onClick={async (e) => {
-                            if (
-                              info.currentIndex === accountInfo.index ||
-                              !state.account
-                            ) {
-                              return;
-                            }
-                            await switchAccount(accountIndex);
-                          }}
-                        >
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            width="full"
-                          >
-                            <Box
-                              width={'30px'}
-                              height={'30px'}
-                              mr="12px"
-                              display={'flex'}
-                              alignItems={'center'}
-                              justifyContent={'center'}
+                  <Tooltip label="Accounts" hasArrow placement="left">
+                    <MenuButton
+                      as={Button}
+                      {...floatingAccountsProps}
+                      className={fabAccountsClass}
+                      aria-label="Open accounts"
+                    >
+                      <Icon as={MdAccountBalanceWallet} boxSize={6} />
+                    </MenuButton>
+                  </Tooltip>
+                  <MenuList fontSize="md">
+                    <MenuGroup title="Accounts">
+                      <Scrollbars
+                        style={{ width: '100%' }}
+                        autoHeight
+                        autoHeightMax={210}
+                      >
+                        {Object.keys(info.accounts).map((accountIndex) => {
+                          const accountInfo = info.accounts[accountIndex];
+                          const account =
+                            state.accounts && state.accounts[accountIndex];
+                          return (
+                            <MenuItem
+                              isDisabled={!state.account}
+                              position="relative"
+                              key={accountIndex}
+                              onClick={async (e) => {
+                                if (
+                                  info.currentIndex === accountInfo.index ||
+                                  !state.account
+                                ) {
+                                  return;
+                                }
+                                await switchAccount(accountIndex);
+                              }}
                             >
-                              <AvatarLoader
-                                avatar={accountInfo.avatar}
-                                width={'30px'}
-                              />
-                            </Box>
-
-                            <Box
-                              display="flex"
-                              alignItems="center"
-                              width="full"
-                            >
-                              <Box display="flex" flexDirection="column">
-                                <Box height="1.5" />
-                                <Text
-                                  mb="-1"
-                                  fontWeight="bold"
-                                  fontSize="14px"
-                                  isTruncated={true}
-                                  maxWidth="210px"
+                              <Stack
+                                direction="row"
+                                alignItems="center"
+                                width="full"
+                              >
+                                <Box
+                                  width={'30px'}
+                                  height={'30px'}
+                                  mr="12px"
+                                  display={'flex'}
+                                  alignItems={'center'}
+                                  justifyContent={'center'}
                                 >
-                                  {accountInfo.name}
-                                </Text>
-                                {account ? (
-                                  account[state.network.id].lovelace !== null &&
-                                  account[state.network.id].lovelace !==
-                                    undefined ? (
-                                    <UnitDisplay
-                                      quantity={(
-                                        bigIntLovelace(
-                                          account[state.network.id].lovelace
-                                        ) -
-                                        bigIntLovelace(
-                                          account[state.network.id].minAda
-                                        ) -
-                                        bigIntLovelace(
-                                          account[state.network.id].collateral
-                                            ?.lovelace
-                                        )
-                                      ).toString()}
-                                      decimals={6}
-                                      symbol={settings.adaSymbol}
-                                    />
-                                  ) : (
-                                    <Text fontWeight="light">
-                                      Select to load...
-                                    </Text>
-                                  )
-                                ) : (
-                                  <Text>...</Text>
-                                )}
-                              </Box>
-                              {info.currentIndex === accountInfo.index && (
-                                <>
-                                  <Box width="4" />
-                                  <StarIcon />
-                                  <Box width="4" />
-                                </>
-                              )}
-                              {isHW(accountInfo.index) && (
-                                <Box ml="auto" mr="2">
-                                  HW
+                                  <AvatarLoader
+                                    avatar={accountInfo.avatar}
+                                    width={'30px'}
+                                  />
                                 </Box>
-                              )}
-                            </Box>
-                          </Stack>
-                        </MenuItem>
-                      );
-                    })}
-                  </Scrollbars>
-                </MenuGroup>
-                <MenuDivider />
 
-                <MenuItem
-                  icon={<AddIcon />}
-                  onClick={() => {
-                    navigate('/welcome');
-                  }}
-                >
-                  New Wallet
-                </MenuItem>
-                {state.account &&
-                  state.accounts &&
-                  (isHW(state.account.index) ||
-                    state.account.index >=
-                      Object.keys(getNativeAccounts(state.accounts)).length -
-                        1) &&
-                  Object.keys(state.accounts).length > 1 && (
+                                <Box
+                                  display="flex"
+                                  alignItems="center"
+                                  width="full"
+                                >
+                                  <Box display="flex" flexDirection="column">
+                                    <Box height="1.5" />
+                                    <Text
+                                      mb="-1"
+                                      fontWeight="bold"
+                                      fontSize="14px"
+                                      isTruncated={true}
+                                      maxWidth="210px"
+                                    >
+                                      {accountInfo.name}
+                                    </Text>
+                                    {account ? (
+                                      account[state.network.id].lovelace !==
+                                        null &&
+                                      account[state.network.id].lovelace !==
+                                        undefined ? (
+                                        <UnitDisplay
+                                          quantity={(
+                                            bigIntLovelace(
+                                              account[state.network.id].lovelace
+                                            ) -
+                                            bigIntLovelace(
+                                              account[state.network.id].minAda
+                                            ) -
+                                            bigIntLovelace(
+                                              account[state.network.id]
+                                                .collateral?.lovelace
+                                            )
+                                          ).toString()}
+                                          decimals={6}
+                                          symbol={settings.adaSymbol}
+                                        />
+                                      ) : (
+                                        <Text fontWeight="light">
+                                          Select to load...
+                                        </Text>
+                                      )
+                                    ) : (
+                                      <Text>...</Text>
+                                    )}
+                                  </Box>
+                                  {info.currentIndex === accountInfo.index && (
+                                    <>
+                                      <Box width="4" />
+                                      <StarIcon />
+                                      <Box width="4" />
+                                    </>
+                                  )}
+                                  {isHW(accountInfo.index) && (
+                                    <Box ml="auto" mr="2">
+                                      HW
+                                    </Box>
+                                  )}
+                                </Box>
+                              </Stack>
+                            </MenuItem>
+                          );
+                        })}
+                      </Scrollbars>
+                    </MenuGroup>
+                    <MenuDivider />
+
                     <MenuItem
-                      color="red.300"
-                      icon={<DeleteIcon />}
+                      icon={<AddIcon />}
                       onClick={() => {
-                        deletAccountRef.current.openModal();
+                        navigate('/welcome');
                       }}
                     >
-                      Delete Account
+                      New Wallet
                     </MenuItem>
-                  )}
-                <MenuDivider />
-                <MenuItem
-                  icon={<Icon as={FaRegFileCode} w={3} h={3} />}
-                  onClick={() => {
-                    builderRef.current.initCollateral(state.account);
-                  }}
-                >
-                  {' '}
-                  Collateral
-                </MenuItem>
-                <MenuDivider />
-                <MenuItem
-                  onClick={() => navigate('/settings')}
-                  icon={<SettingsIcon />}
-                >
-                  Settings
-                </MenuItem>
-                <MenuItem onClick={() => aboutRef.current.openModal()}>
-                  About
-                </MenuItem>
-              </MenuList>
-            </Menu>
+                    {state.account &&
+                      state.accounts &&
+                      (isHW(state.account.index) ||
+                        state.account.index >=
+                          Object.keys(getNativeAccounts(state.accounts))
+                            .length -
+                            1) &&
+                      Object.keys(state.accounts).length > 1 && (
+                        <MenuItem
+                          color="red.300"
+                          icon={<DeleteIcon />}
+                          onClick={() => {
+                            deletAccountRef.current.openModal();
+                          }}
+                        >
+                          Delete Account
+                        </MenuItem>
+                      )}
+                    <MenuDivider />
+                    <MenuItem
+                      icon={<Icon as={FaRegFileCode} w={3} h={3} />}
+                      onClick={() => {
+                        builderRef.current.initCollateral(state.account);
+                      }}
+                    >
+                      {' '}
+                      Collateral
+                    </MenuItem>
+                    <MenuDivider />
+                    <MenuItem onClick={() => aboutRef.current.openModal()}>
+                      About
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
+
+                <Tooltip label="Settings" hasArrow placement="left">
+                  <Button
+                    {...floatingSettingsProps}
+                    className={fabSettingsClass}
+                    onClick={() => navigate('/settings')}
+                    aria-label="Open settings"
+                  >
+                    <SettingsIcon boxSize={6} />
+                  </Button>
+                </Tooltip>
               </Stack>
             </Collapse>
             <Button

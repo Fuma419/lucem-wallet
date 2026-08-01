@@ -494,9 +494,22 @@ const Wallet = () => {
             </Box>
           </Flex>
 
+          {/* Dim page behind network options so neon labels stay readable on light UIs */}
+          {isNetworkTrayOpen ? (
+            <Box
+              position="fixed"
+              inset={0}
+              zIndex={3}
+              bg="blackAlpha.700"
+              onClick={() => setIsNetworkTrayOpen(false)}
+              aria-hidden="true"
+              data-testid="wallet-network-tray-backdrop"
+            />
+          ) : null}
+
           {/* Lower left tray — network switcher with collapse toggle */}
           <Box
-            zIndex={2}
+            zIndex={4}
             position="fixed"
             bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
             left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"

@@ -39,8 +39,9 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
     expect(walletSrc).toContain('data-active=');
     expect(walletSrc).toMatch(/shadow="none"/);
-    expect(walletSrc).toContain('wallet-network-tray-backdrop');
+    expect(walletSrc).toContain('wallet-tray-backdrop');
     expect(walletSrc).toContain('blackAlpha.700');
+    expect(walletSrc).toMatch(/isNetworkTrayOpen \|\| isTrayOpen/);
   });
 
   test('wallet shows colored testnet banner and hides it on mainnet', () => {

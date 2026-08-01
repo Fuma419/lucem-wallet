@@ -4,23 +4,6 @@ import { ChevronRightIcon } from '@chakra-ui/icons';
 import PrivacyPolicy from '../../../ui/app/components/privacyPolicy';
 import TermsOfUse from '../../../ui/app/components/termsOfUse';
 
-function SettingsPageTitle({ children }: { children: React.ReactNode }) {
-  const titleColor = useColorModeValue('gray.900', 'white');
-  return (
-    <Text
-      textAlign="center"
-      fontSize="xl"
-      fontWeight="bold"
-      color={titleColor}
-      letterSpacing="tight"
-      mb={6}
-      mt={1}
-    >
-      {children}
-    </Text>
-  );
-}
-
 function SettingsListNavItem({
   label,
   onClick,
@@ -57,26 +40,24 @@ function SettingsListNavItem({
   );
 }
 
+/** Terms / Privacy rows for the flat Settings page (modals, not nested routes). */
 export const LegalSettings = () => {
   const termsRef = useRef<{ openModal: () => void }>();
   const privacyPolicyRef = useRef<{ openModal: () => void }>();
   return (
     <>
-      <Box w="full" maxW="md" mx="auto" pt={1}>
-        <SettingsPageTitle>Legal</SettingsPageTitle>
-        <Flex direction="column" gap={2} w="full">
-          <SettingsListNavItem
-            label="Terms of Use"
-            onClick={() => termsRef.current?.openModal()}
-          />
-          <SettingsListNavItem
-            label="Privacy Policy"
-            onClick={() => privacyPolicyRef.current?.openModal()}
-          />
-        </Flex>
-        <PrivacyPolicy ref={privacyPolicyRef} />
-        <TermsOfUse ref={termsRef} />
-      </Box>
+      <Flex direction="column" gap={2} w="full">
+        <SettingsListNavItem
+          label="Terms of Use"
+          onClick={() => termsRef.current?.openModal()}
+        />
+        <SettingsListNavItem
+          label="Privacy Policy"
+          onClick={() => privacyPolicyRef.current?.openModal()}
+        />
+      </Flex>
+      <PrivacyPolicy ref={privacyPolicyRef} />
+      <TermsOfUse ref={termsRef} />
     </>
   );
 };

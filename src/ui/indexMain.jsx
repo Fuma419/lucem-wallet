@@ -142,7 +142,7 @@ const App = () => {
       <PreventHistoryBack />
       <Routes>
         <Route path="/welcome" element={<Welcome />} />
-        <Route path="/settings/*" element={<Settings />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/send" element={<Send />} />
         <Route path="/staking" element={
           <WalletEntryGate>

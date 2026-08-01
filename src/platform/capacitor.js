@@ -31,6 +31,40 @@ function nativePlugin(name) {
 }
 
 /**
+ * Ensure the OS camera permission is granted before a WebView `getUserMedia`
+ * call (Keystone QR scanning). On Android the WebView only receives the camera
+ * stream once the app already holds the runtime permission, so we pre-request
+ * it via the Camera plugin; iOS answers the same prompt from its Info.plist
+ * usage string. On web / extension there is nothing to pre-grant — the browser
+ * shows its own prompt when `getUserMedia` runs — so this resolves to `true`.
+ *
+ * Returns `true` when scanning may proceed, `false` only when a native prompt
+ * was explicitly denied.
+ */
+export async function ensureCameraPermission() {
+  if (!isNativePlatform()) return true;
+
+  const camera = nativePlugin('Camera');
+  // No plugin registered: let `getUserMedia` attempt (and prompt) on its own.
+  if (!camera || typeof camera.checkPermissions !== 'function') return true;
+
+  try {
+    let status = await camera.checkPermissions();
+    if (
+      status &&
+      status.camera !== 'granted' &&
+      typeof camera.requestPermissions === 'function'
+    ) {
+      status = await camera.requestPermissions({ permissions: ['camera'] });
+    }
+    return !!status && status.camera === 'granted';
+  } catch (_) {
+    // Permission API unavailable/errored: don't block; let getUserMedia try.
+    return true;
+  }
+}
+
+/**
  * Configure native chrome (status bar + splash) and the Android hardware back
  * button. No-op on web / extension.
  */

@@ -58,6 +58,7 @@ import {
 } from '../../../api/keystone-cardano';
 import { MdBluetooth } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
+import { ensureCameraPermission } from '../../../platform/capacitor';
 
 const ledgerBleRequestOptions = () => {
   const uuids = getBluetoothServiceUuids();
@@ -405,8 +406,15 @@ const ConnectHW = ({ onConfirm }) => {
           alignItems="center"
           justifyContent="center"
           rightIcon={<ChevronRightIcon />}
-          onClick={() => {
+          onClick={async () => {
             setScanError('');
+            const ok = await ensureCameraPermission();
+            if (!ok) {
+              setScanError(
+                'Camera access is required to scan the Keystone QR. Enable the camera permission for Lucem in your device settings.'
+              );
+              return;
+            }
             setKeystoneStep('scanReply');
           }}
         >

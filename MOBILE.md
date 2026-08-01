@@ -8,8 +8,10 @@ is absent, so the app runs through the web platform adapter
 rewrite. Configuration lives in [`capacitor.config.ts`](capacitor.config.ts).
 
 v1 scope is the core software wallet (create/restore, balances, receive, send,
-staking, governance). Hardware wallets (native Bluetooth) and the CIP-30 dApp
-connector are a later phase; see "Deferred" below.
+staking, governance) plus the **Keystone** air-gapped hardware wallet, which is
+QR/camera-based (no Bluetooth or USB) and works inside the WebView. Ledger
+(native Bluetooth), Trezor, and the CIP-30 dApp connector are a later phase; see
+"Deferred" below.
 
 ## Prerequisites
 
@@ -53,12 +55,42 @@ npm run mobile:assets
 
 Run on a device/emulator from Android Studio / Xcode (or `npx cap run android`).
 Smoke test end to end: create wallet, restore, view balance (Koios), send,
-staking, governance.
+staking, governance, and connect a Keystone + sign a transaction (see below).
 
 Networking note: a packaged app has no Vercel `/api/koios/*` proxy, so
 [`src/api/util.js`](src/api/util.js) calls Koios directly on native, and
 `CapacitorHttp` (enabled in the config) routes fetch/XHR through native
 networking to avoid WebView CORS.
+
+## Keystone (air-gapped hardware wallet)
+
+Keystone needs the phone camera to scan the device's animated QR — both when
+connecting (`hwTab.html`, "Connect Hardware Wallet" > Keystone) and when signing
+(`keystoneTx.html`). The UI uses the WebView's `getUserMedia`; on native we
+pre-request the OS camera permission via `ensureCameraPermission()` in
+[`src/platform/capacitor.js`](src/platform/capacitor.js) (a no-op on web /
+extension, where the browser prompts on its own) so the WebView stream is
+allowed. The generated native projects must declare the camera permission —
+`npx cap sync` does not add these for you:
+
+- **Android** — in `android/app/src/main/AndroidManifest.xml`:
+
+  ```xml
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-feature android:name="android.hardware.camera" android:required="false" />
+  ```
+
+- **iOS** — in `ios/App/App/Info.plist`:
+
+  ```xml
+  <key>NSCameraUsageDescription</key>
+  <string>Lucem uses the camera to scan Keystone QR codes for connecting and signing.</string>
+  ```
+
+Tip: point the camera at the Keystone screen in a well-lit spot; the animated QR
+transfers over several frames, so hold steady. Ledger (Bluetooth) and Trezor are
+not available on mobile in v1 — the hardware screen shows guidance to that effect
+on phones.
 
 ## Android release
 
@@ -89,6 +121,6 @@ networking to avoid WebView CORS.
 
 - Move the password-encrypted key from IndexedDB to iOS Keychain / Android
   Keystore + biometric unlock (add a `native` branch beside the web adapter).
-- Camera QR (receive scanning, Keystone) via `@capacitor/camera`.
-- Hardware wallets over BLE and mobile dApp connectivity (in-app dApp browser
-  injecting CIP-30, or WalletConnect / CIP-45) - each its own project.
+- Camera QR for the receive screen (scan an address into Send).
+- Ledger over BLE and Trezor on mobile, plus dApp connectivity (in-app dApp
+  browser injecting CIP-30, or WalletConnect / CIP-45) - each its own project.

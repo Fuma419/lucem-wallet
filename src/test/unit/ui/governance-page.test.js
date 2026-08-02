@@ -60,6 +60,12 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toMatch(/network-banner-\$\{testnetBanner\.id\}/);
     expect(css).toMatch(/\.network-banner[\s\S]*position:\s*absolute/);
     expect(css).toMatch(/\.network-banner[\s\S]*width:\s*auto/);
+    // Label centered in the badge (flex + equal vertical pad; letter-spacing offset)
+    expect(css).toMatch(/\.network-banner[\s\S]*display:\s*flex/);
+    expect(css).toMatch(/\.network-banner[\s\S]*align-items:\s*center/);
+    expect(css).toMatch(
+      /\.network-banner[\s\S]*padding:\s*0\.34rem\s+calc\(0\.9rem\s*-\s*0\.09em\)\s+0\.34rem\s+calc\(0\.9rem\s*\+\s*0\.09em\)/
+    );
     // Rounded badge matching the Send/Receive button shape (not the old U-shape/rectangle)
     expect(css).toMatch(/\.network-banner[\s\S]*border-top:\s*thin\s+solid/);
     expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*0\.5rem/);

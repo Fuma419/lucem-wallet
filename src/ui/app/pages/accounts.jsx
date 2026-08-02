@@ -39,6 +39,7 @@ import AvatarLoader from '../components/avatarLoader';
 import UnitDisplay from '../components/unitDisplay';
 import About from '../components/about';
 import TransactionBuilder from '../components/transactionBuilder';
+import useSurfaceColors from '../hooks/useSurfaceColors';
 
 /** Bottom clearance so list content sits above fixed trays. */
 const TRAY_CLEARANCE_PB =
@@ -51,12 +52,18 @@ const Accounts = () => {
   const deleteAccountRef = React.useRef();
   const builderRef = React.useRef();
 
-  const titleColor = useColorModeValue('gray.900', 'white');
-  const mutedColor = useColorModeValue('gray.600', 'whiteAlpha.600');
-  const rowBg = useColorModeValue('gray.100', 'whiteAlpha.50');
-  const rowBorder = useColorModeValue('gray.200', 'whiteAlpha.100');
-  const rowHover = useColorModeValue('gray.200', 'whiteAlpha.100');
+  const {
+    pageBg,
+    pageFg,
+    panelBg,
+    panelBorder,
+    cardBg,
+    cardHoverBg,
+    mutedFg,
+    ghostColor,
+  } = useSurfaceColors();
   const iconBtnHover = useColorModeValue('gray.200', 'whiteAlpha.50');
+  const currentBorder = useColorModeValue('orange.400', 'orange.300');
 
   const [currentIndex, setCurrentIndex] = React.useState(null);
   const [accountsMeta, setAccountsMeta] = React.useState({});
@@ -99,14 +106,17 @@ const Accounts = () => {
       position="relative"
       w="full"
       maxW="100%"
+      bg={pageBg}
+      color={pageFg}
       className="lucem-wallet-main-column"
       data-testid="accounts-page"
     >
-      <Flex align="center" px={{ base: 3, md: 4 }} pt={4} pb={2}>
+      <Flex align="center" px={{ base: 4, md: 6 }} pt={4} pb={2}>
         <IconButton
           rounded="md"
           onClick={() => navigate('/wallet', { replace: true })}
           variant="ghost"
+          color={ghostColor}
           _hover={{ bg: iconBtnHover }}
           icon={<ChevronLeftIcon boxSize="6" />}
           aria-label="Go back"
@@ -116,7 +126,7 @@ const Accounts = () => {
           textAlign="center"
           fontSize="xl"
           fontWeight="bold"
-          color={titleColor}
+          color={pageFg}
         >
           Accounts
         </Text>
@@ -128,152 +138,181 @@ const Accounts = () => {
         minH={0}
         overflowY="auto"
         w="full"
-        px={{ base: 4, md: 5 }}
+        px={{ base: 4, md: 6 }}
         pb={TRAY_CLEARANCE_PB}
       >
-        <Box w="full" maxW="sm" mx="auto" pt={1}>
-          <Text fontSize="sm" color={mutedColor} mb={3}>
-            Switch account or manage wallets for this device.
-          </Text>
+        <Stack spacing={4} w="full" maxW="sm" mx="auto" pt={1}>
+          <Box
+            rounded="3xl"
+            p={{ base: 4, md: 5 }}
+            bg={panelBg}
+            borderWidth="1px"
+            borderColor={panelBorder}
+            data-testid="accounts-list-panel"
+          >
+            <Text fontSize="sm" color={mutedFg} mb={3}>
+              Switch account or manage wallets for this device.
+            </Text>
 
-          <Stack spacing={2} mb={4}>
-            {Object.keys(accountsMeta).map((accountIndex) => {
-              const accountInfo = accountsMeta[accountIndex];
-              const account = accountsLive && accountsLive[accountIndex];
-              const isCurrent = currentIndex === accountInfo.index;
-              const networkSlice =
-                account && settings.network?.id
-                  ? account[settings.network.id]
-                  : null;
+            <Stack spacing={2}>
+              {Object.keys(accountsMeta).map((accountIndex) => {
+                const accountInfo = accountsMeta[accountIndex];
+                const account = accountsLive && accountsLive[accountIndex];
+                const isCurrent = currentIndex === accountInfo.index;
+                const networkSlice =
+                  account && settings.network?.id
+                    ? account[settings.network.id]
+                    : null;
 
-              return (
-                <Button
-                  key={accountIndex}
-                  variant="unstyled"
-                  h="auto"
-                  py={3}
-                  px={3}
-                  rounded="xl"
-                  bg={rowBg}
-                  borderWidth="1px"
-                  borderColor={isCurrent ? 'orange.400' : rowBorder}
-                  _hover={{ bg: rowHover }}
-                  isDisabled={busyIndex != null}
-                  isLoading={busyIndex === accountIndex}
-                  onClick={async () => {
-                    if (isCurrent || busyIndex != null) return;
-                    setBusyIndex(accountIndex);
-                    try {
-                      await switchAccount(accountIndex);
-                      await load();
-                    } catch (e) {
-                      console.error('Switch account failed', e);
-                    } finally {
-                      setBusyIndex(null);
-                    }
-                  }}
-                  data-testid={`accounts-row-${accountIndex}`}
-                >
-                  <Stack direction="row" alignItems="center" width="full">
-                    <Box
-                      width="36px"
-                      height="36px"
-                      mr={2}
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      flexShrink={0}
-                    >
-                      <AvatarLoader
-                        avatar={accountInfo.avatar}
+                return (
+                  <Button
+                    key={accountIndex}
+                    variant="unstyled"
+                    h="auto"
+                    py={3}
+                    px={3}
+                    rounded="2xl"
+                    bg={cardBg}
+                    borderWidth="1px"
+                    borderColor={isCurrent ? currentBorder : panelBorder}
+                    _hover={{ bg: cardHoverBg }}
+                    isDisabled={busyIndex != null}
+                    isLoading={busyIndex === accountIndex}
+                    onClick={async () => {
+                      if (isCurrent || busyIndex != null) return;
+                      setBusyIndex(accountIndex);
+                      try {
+                        await switchAccount(accountIndex);
+                        await load();
+                      } catch (e) {
+                        console.error('Switch account failed', e);
+                      } finally {
+                        setBusyIndex(null);
+                      }
+                    }}
+                    data-testid={`accounts-row-${accountIndex}`}
+                  >
+                    <Stack direction="row" alignItems="center" width="full">
+                      <Box
                         width="36px"
-                      />
-                    </Box>
-                    <Box display="flex" flexDirection="column" flex="1" minW={0}>
-                      <Text
-                        fontWeight="bold"
-                        fontSize="md"
-                        isTruncated
-                        textAlign="left"
-                        color={titleColor}
+                        height="36px"
+                        mr={2}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        flexShrink={0}
                       >
-                        {accountInfo.name}
-                      </Text>
-                      {networkSlice &&
-                      networkSlice.lovelace !== null &&
-                      networkSlice.lovelace !== undefined ? (
-                        <UnitDisplay
-                          quantity={(
-                            bigIntLovelace(networkSlice.lovelace) -
-                            bigIntLovelace(networkSlice.minAda) -
-                            bigIntLovelace(networkSlice.collateral?.lovelace)
-                          ).toString()}
-                          decimals={6}
-                          symbol={settings.adaSymbol}
+                        <AvatarLoader
+                          avatar={accountInfo.avatar}
+                          width="36px"
                         />
-                      ) : (
-                        <Text fontSize="sm" color={mutedColor} textAlign="left">
-                          Select to load…
+                      </Box>
+                      <Box
+                        display="flex"
+                        flexDirection="column"
+                        flex="1"
+                        minW={0}
+                      >
+                        <Text
+                          fontWeight="bold"
+                          fontSize="md"
+                          isTruncated
+                          textAlign="left"
+                          color={pageFg}
+                        >
+                          {accountInfo.name}
                         </Text>
-                      )}
-                    </Box>
-                    {isCurrent ? <StarIcon color="orange.400" /> : null}
-                    {isHW(accountInfo.index) ? (
-                      <Text fontSize="xs" fontWeight="bold" ml={1}>
-                        HW
-                      </Text>
-                    ) : null}
-                  </Stack>
-                </Button>
-              );
-            })}
-          </Stack>
+                        {networkSlice &&
+                        networkSlice.lovelace !== null &&
+                        networkSlice.lovelace !== undefined ? (
+                          <UnitDisplay
+                            quantity={(
+                              bigIntLovelace(networkSlice.lovelace) -
+                              bigIntLovelace(networkSlice.minAda) -
+                              bigIntLovelace(networkSlice.collateral?.lovelace)
+                            ).toString()}
+                            decimals={6}
+                            symbol={settings.adaSymbol}
+                          />
+                        ) : (
+                          <Text
+                            fontSize="sm"
+                            color={mutedFg}
+                            textAlign="left"
+                          >
+                            Select to load…
+                          </Text>
+                        )}
+                      </Box>
+                      {isCurrent ? (
+                        <StarIcon color={currentBorder} />
+                      ) : null}
+                      {isHW(accountInfo.index) ? (
+                        <Text fontSize="xs" fontWeight="bold" ml={1}>
+                          HW
+                        </Text>
+                      ) : null}
+                    </Stack>
+                  </Button>
+                );
+              })}
+            </Stack>
+          </Box>
 
-          <Stack spacing={2}>
-            <Button
-              leftIcon={<AddIcon />}
-              rounded="xl"
-              h="12"
-              onClick={() => navigate('/welcome')}
-            >
-              New Wallet
-            </Button>
-            {canDelete ? (
+          <Box
+            rounded="3xl"
+            p={{ base: 4, md: 5 }}
+            bg={panelBg}
+            borderWidth="1px"
+            borderColor={panelBorder}
+            data-testid="accounts-actions-panel"
+          >
+            <Stack spacing={2}>
               <Button
-                colorScheme="red"
-                variant="outline"
-                leftIcon={<DeleteIcon />}
+                leftIcon={<AddIcon />}
                 rounded="xl"
                 h="12"
-                onClick={() => deleteAccountRef.current.openModal()}
+                onClick={() => navigate('/welcome')}
               >
-                Delete Account
+                New Wallet
               </Button>
-            ) : null}
-            <Button
-              leftIcon={<Icon as={FaRegFileCode} />}
-              rounded="xl"
-              h="12"
-              variant="outline"
-              isDisabled={!currentAccount}
-              onClick={() => {
-                if (currentAccount) {
-                  builderRef.current.initCollateral(currentAccount);
-                }
-              }}
-            >
-              Collateral
-            </Button>
-            <Button
-              rounded="xl"
-              h="12"
-              variant="ghost"
-              onClick={() => aboutRef.current.openModal()}
-            >
-              About
-            </Button>
-          </Stack>
-        </Box>
+              {canDelete ? (
+                <Button
+                  colorScheme="red"
+                  variant="outline"
+                  leftIcon={<DeleteIcon />}
+                  rounded="xl"
+                  h="12"
+                  onClick={() => deleteAccountRef.current.openModal()}
+                >
+                  Delete Account
+                </Button>
+              ) : null}
+              <Button
+                leftIcon={<Icon as={FaRegFileCode} />}
+                rounded="xl"
+                h="12"
+                variant="outline"
+                isDisabled={!currentAccount}
+                onClick={() => {
+                  if (currentAccount) {
+                    builderRef.current.initCollateral(currentAccount);
+                  }
+                }}
+              >
+                Collateral
+              </Button>
+              <Button
+                rounded="xl"
+                h="12"
+                variant="ghost"
+                onClick={() => aboutRef.current.openModal()}
+              >
+                About
+              </Button>
+            </Stack>
+          </Box>
+        </Stack>
       </Box>
 
       <DeleteAccountModal
@@ -291,6 +330,7 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = React.useState(false);
   const cancelRef = React.useRef();
+  const { panelBg, pageFg } = useSurfaceColors();
 
   React.useImperativeHandle(ref, () => ({
     openModal() {
@@ -307,7 +347,12 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
       isCentered
     >
       <AlertDialogOverlay>
-        <AlertDialogContent>
+        <AlertDialogContent
+          bg={panelBg}
+          color={pageFg}
+          mx={4}
+          rounded="2xl"
+        >
           <AlertDialogHeader fontSize="md" fontWeight="bold">
             Delete current account
           </AlertDialogHeader>

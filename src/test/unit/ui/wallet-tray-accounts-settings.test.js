@@ -84,6 +84,15 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain('About');
   });
 
+  test('accounts content uses inset panels instead of edge-to-edge windows', () => {
+    expect(accountsSrc).toContain('data-testid="accounts-list-panel"');
+    expect(accountsSrc).toContain('data-testid="accounts-actions-panel"');
+    expect(accountsSrc).toContain('useSurfaceColors');
+    expect(accountsSrc).toMatch(/rounded="3xl"/);
+    expect(accountsSrc).toMatch(/px=\{\{\s*base:\s*4,\s*md:\s*6\s*\}\}/);
+    expect(accountsSrc).toMatch(/AlertDialogContent[\s\S]*mx=\{4\}/);
+  });
+
   test('dark-mode CSS defines fab-accounts alongside fab-settings', () => {
     expect(css).toMatch(/\.button\.fab-accounts[\s\S]*rgba\(255,\s*140,\s*0/);
     expect(css).toMatch(/\.button\.fab-settings[\s\S]*rgba\(220,\s*27,\s*250/);

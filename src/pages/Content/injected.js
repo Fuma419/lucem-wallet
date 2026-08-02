@@ -38,7 +38,7 @@ window.cardano = {
   signTx: (tx, partialSign) => logDeprecated() && signTx(tx, partialSign),
   submitTx: (tx) => logDeprecated() && submitTx(tx),
   getUtxos: (amount, paginate) => logDeprecated() && getUtxos(amount, paginate),
-  getCollateral: () => logDeprecated() && getCollateral(),
+  getCollateral: (params) => logDeprecated() && getCollateral(params),
   getUsedAddresses: async () => logDeprecated() && [await getAddress()],
   getUnusedAddresses: async () => logDeprecated() && [],
   getChangeAddress: () => logDeprecated() && getAddress(),
@@ -77,7 +77,7 @@ window.cardano = {
           getNetworkId: () => getNetworkId(),
           on: (eventName, callback) => on(eventName, callback),
           off: (eventName, callback) => off(eventName, callback),
-          getCollateral: () => getCollateral(),
+          getCollateral: (params) => getCollateral(params),
         };
         if (hasRequestedExtension(options, 95)) {
           api.cip95 = {

@@ -617,58 +617,63 @@ const SignTx = ({ request, controller }) => {
     const collateralInputs = tx.body().collateral_inputs();
     if (!collateralInputs) return;
 
-    // checking all wallet utxos if used as collateral
+    const collateralReturn = tx.body().collateral_return();
+    // CIP-40: collateral return lets builders use any UTxO safely.
+    if (collateralReturn) {
+      if (collateralReturn.address().to_bech32() !== account.paymentAddr) {
+        setIsLoading((l) => ({
+          ...l,
+          warning:
+            'Collateral return is being directed to another owner. Ensure you are not providing the collateral input',
+        }));
+      }
+      return;
+    }
+
     for (let i = 0; i < collateralInputs.len(); i++) {
-      const collateral = collateralInputs.get(i);
+      const collInput = collateralInputs.get(i);
+      const collHash = Buffer.from(
+        collInput.transaction_id().to_bytes()
+      ).toString('hex');
+      const collIndex = collInput.index();
+
+      const isReserved =
+        !!account.collateral &&
+        account.collateral.txHash === collHash &&
+        Number(account.collateral.txId) === Number(collIndex);
+
+      // Reserved collateral is excluded from getUtxos(); still allow it.
+      if (isReserved) continue;
+
+      let matched = null;
       for (let j = 0; j < utxos.length; j++) {
         const input = utxos[j].input();
         if (
-          Buffer.from(input.transaction_id().to_bytes()).toString('hex') ==
-            Buffer.from(collateral.transaction_id().to_bytes()).toString(
-              'hex'
-            ) &&
-          input.index() == collateral.index()
+          Buffer.from(input.transaction_id().to_bytes()).toString('hex') ===
+            collHash &&
+          input.index() === collIndex
         ) {
-          // collateral utxo is less than 50 ADA. That's also fine.
-          if (
-            utxos[j]
-              .output()
-              .amount()
-              .coin() < BigInt('50000000')
-          ) {
-            return;
-          }
-          const collateralReturn = tx.body().collateral_return();
-          // presence of collateral return means "account" collateral can be ignored
-          if (collateralReturn) {
-            // collateral return usually is paid to account's payment address, however, the DApp
-            // could be providing collateral so blocking the tx is not appropriate.
-            if (collateralReturn.address().to_bech32() !== account.paymentAddr) {
-              setIsLoading((l) => ({
-                ...l,
-                warning: 'Collateral return is being directed to another owner. Ensure you are not providing the collateral input'
-              }));
-            }
-            return;
-          }
-          if (!account.collateral) {
-            setIsLoading((l) => ({ ...l, error: 'Collateral not set' }));
-            return;
-          }
-
-          if (
-            !(
-              Buffer.from(collateral.transaction_id().to_bytes()).toString(
-                'hex'
-              ) == account.collateral.txHash &&
-              collateral.index() == account.collateral.txId
-            )
-          ) {
-            setIsLoading((l) => ({ ...l, error: 'Invalid collateral used' }));
-            return;
-          }
+          matched = utxos[j];
+          break;
         }
       }
+
+      // Not one of our spendable UTxOs — dApp-supplied collateral; do not block.
+      if (!matched) continue;
+
+      const amount = matched.output().amount();
+      const coin = BigInt(amount.coin().to_str());
+      const ma = amount.multiasset();
+      const pureAda = !ma || ma.len() === 0;
+      // Small pure-ADA UTxO is fine without a reserved collateral slot.
+      if (pureAda && coin <= BigInt('50000000')) continue;
+
+      if (!account.collateral) {
+        setIsLoading((l) => ({ ...l, error: 'Collateral not set' }));
+        return;
+      }
+      setIsLoading((l) => ({ ...l, error: 'Invalid collateral used' }));
+      return;
     }
   };
 

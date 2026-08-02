@@ -214,6 +214,12 @@ describe('dApp connector — CIP-30 injected API surface', () => {
       expect(mockWebpage.getCollateral).toHaveBeenCalledTimes(1);
     });
 
+    test('getCollateral forwards amount params', async () => {
+      const params = { amount: '1a000f4240' };
+      await api.getCollateral(params);
+      expect(mockWebpage.getCollateral).toHaveBeenCalledWith(params);
+    });
+
     test('on / off register and deregister events', () => {
       const cb = jest.fn();
       api.on('accountChange', cb);

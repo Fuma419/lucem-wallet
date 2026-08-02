@@ -19,9 +19,9 @@ import {
 } from '@chakra-ui/react';
 import {
   AddIcon,
+  CheckIcon,
   ChevronLeftIcon,
   DeleteIcon,
-  StarIcon,
 } from '@chakra-ui/icons';
 import { FaRegFileCode } from 'react-icons/fa';
 import { useStoreState } from 'easy-peasy';
@@ -61,7 +61,15 @@ const Accounts = () => {
     ghostColor,
   } = useSurfaceColors();
   const iconBtnHover = useColorModeValue('blackAlpha.100', 'whiteAlpha.100');
-  const currentAccent = useColorModeValue('orange.500', 'orange.300');
+  const currentAccent = useColorModeValue('orange.600', 'orange.300');
+  const currentRowBg = useColorModeValue(
+    'rgba(234, 136, 0, 0.14)',
+    'rgba(255, 140, 0, 0.18)'
+  );
+  const currentRowHoverBg = useColorModeValue(
+    'rgba(234, 136, 0, 0.2)',
+    'rgba(255, 140, 0, 0.26)'
+  );
 
   const [currentIndex, setCurrentIndex] = React.useState(null);
   const [accountsMeta, setAccountsMeta] = React.useState({});
@@ -147,7 +155,8 @@ const Accounts = () => {
             data-testid="accounts-list-panel"
           >
             <Text fontSize="sm" color={mutedFg} mb={3}>
-              Switch account or manage wallets for this device.
+              Switch the active account. New Wallet adds another seed or
+              hardware device.
             </Text>
 
             <Stack spacing={2}>
@@ -169,10 +178,19 @@ const Accounts = () => {
                     py={3}
                     px={3}
                     rounded="2xl"
-                    bg={cardBg}
-                    _hover={{ bg: cardHoverBg, transform: 'translateY(-1px)' }}
+                    bg={isCurrent ? currentRowBg : cardBg}
+                    _hover={{
+                      bg: isCurrent ? currentRowHoverBg : cardHoverBg,
+                      transform: 'translateY(-1px)',
+                    }}
                     isDisabled={busyIndex != null}
                     isLoading={busyIndex === accountIndex}
+                    aria-current={isCurrent ? 'true' : undefined}
+                    aria-label={
+                      isCurrent
+                        ? `${accountInfo.name}, selected`
+                        : `Switch to ${accountInfo.name}`
+                    }
                     onClick={async () => {
                       if (isCurrent || busyIndex != null) return;
                       setBusyIndex(accountIndex);
@@ -186,6 +204,7 @@ const Accounts = () => {
                       }
                     }}
                     data-testid={`accounts-row-${accountIndex}`}
+                    data-selected={isCurrent ? 'true' : undefined}
                   >
                     <Stack direction="row" alignItems="center" width="full">
                       <Box
@@ -240,7 +259,23 @@ const Accounts = () => {
                         )}
                       </Box>
                       {isCurrent ? (
-                        <StarIcon color={currentAccent} />
+                        <Flex
+                          align="center"
+                          gap={1.5}
+                          flexShrink={0}
+                          ml={2}
+                          data-testid="accounts-selected-badge"
+                        >
+                          <CheckIcon color={currentAccent} boxSize={3} />
+                          <Text
+                            fontSize="xs"
+                            fontWeight="bold"
+                            color={currentAccent}
+                            letterSpacing="0.02em"
+                          >
+                            Selected
+                          </Text>
+                        </Flex>
                       ) : null}
                       {isHW(accountInfo.index) ? (
                         <Text fontSize="xs" fontWeight="bold" ml={1}>

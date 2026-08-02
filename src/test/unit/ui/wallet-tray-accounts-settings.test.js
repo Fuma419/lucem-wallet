@@ -84,6 +84,20 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain('About');
   });
 
+  test('accounts selected row is visually and accessibly marked', () => {
+    expect(accountsSrc).toContain('data-testid="accounts-selected-badge"');
+    expect(accountsSrc).toContain('Selected');
+    expect(accountsSrc).toContain("aria-current={isCurrent ? 'true' : undefined}");
+    expect(accountsSrc).toContain("data-selected={isCurrent ? 'true' : undefined}");
+    expect(accountsSrc).toContain('currentRowBg');
+    expect(accountsSrc).toContain(
+      'Switch the active account. New Wallet adds another seed or'
+    );
+    expect(css).toMatch(
+      /\.lucem-inset-row\.is-current[\s\S]*0 0 0 2px rgba\(255,\s*140,\s*0/
+    );
+  });
+
   test('accounts content uses inset panels instead of edge-to-edge windows', () => {
     expect(accountsSrc).toContain('data-testid="accounts-list-panel"');
     expect(accountsSrc).toContain('data-testid="accounts-actions-panel"');

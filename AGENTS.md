@@ -86,6 +86,8 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 | Playwright (needs `build/`) | `npm run test:screenshots:only` or `npm run test:e2e` |
 | Lint | `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx` |
 | Deploy web | `vercel deploy --prod --token $VERCEL_TOKEN --scope my-team-5c660a1c --yes` |
+| Mobile sync (local) | `npm run mobile:sync` then `npm run mobile:android` / `mobile:ios` |
+| Mobile Android CI | `npm run mobile:android:ci` (Capacitor sync + `assembleDebug`; Jenkins stage after Unit tests) |
 
 **Live send integration tests** (`src/test/integration/send-transaction-preview-preprod.integration.test.js`): not run by default Jest. **Cardano mainnet is forbidden** (URL allowlist + `addr_test1` + Blockfrost key prefix; Jenkins unsets mainnet credentials). Only the two testnets:
 

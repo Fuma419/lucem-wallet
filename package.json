@@ -19,6 +19,7 @@
     "mobile:sync": "npm run mobile:build && npx cap sync",
     "mobile:android": "npm run mobile:sync && npx cap open android",
     "mobile:ios": "npm run mobile:sync && npx cap open ios",
+    "mobile:android:ci": "bash scripts/ci-mobile-android.sh",
     "mobile:assets": "npx --yes @capacitor/assets generate --iconBackgroundColor '#000000' --splashBackgroundColor '#000000'",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",

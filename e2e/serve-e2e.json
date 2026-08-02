@@ -8,6 +8,7 @@
     { "source": "/settings", "destination": "/mainPopup.html" },
     { "source": "/settings/*", "destination": "/mainPopup.html" },
     { "source": "/staking", "destination": "/mainPopup.html" },
-    { "source": "/governance", "destination": "/mainPopup.html" }
+    { "source": "/governance", "destination": "/mainPopup.html" },
+    { "source": "/accounts", "destination": "/mainPopup.html" }
   ]
 }

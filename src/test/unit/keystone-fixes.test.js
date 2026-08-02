@@ -156,19 +156,19 @@ describe('Keystone guards in extension/index.js', () => {
 
 // ── 6. deleteAccount flow ────────────────────────────────────────────
 
-describe('deleteAccount flow in wallet.jsx', () => {
-  const walletSrc = fs.readFileSync(
-    path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
+describe('deleteAccount flow in accounts.jsx', () => {
+  const accountsSrc = fs.readFileSync(
+    path.join(__dirname, '../../ui/app/pages/accounts.jsx'),
     'utf8'
   );
 
   test('after deleteAccount, discovers remaining accounts dynamically', () => {
-    expect(walletSrc).toMatch(/deleteAccount\(\)[\s\S]*?getAccounts\(\)/);
-    expect(walletSrc).toMatch(/Object\.keys\(remaining\)/);
+    expect(accountsSrc).toMatch(/deleteAccount\(\)[\s\S]*?getAccounts\(\)/);
+    expect(accountsSrc).toMatch(/Object\.keys\(remaining\)/);
   });
 
   test('does NOT hardcode switchAccount(0) after delete', () => {
-    const deleteSection = walletSrc.match(
+    const deleteSection = accountsSrc.match(
       /deleteAccount\(\)[\s\S]*?onClose\(\)/
     );
     expect(deleteSection).toBeTruthy();

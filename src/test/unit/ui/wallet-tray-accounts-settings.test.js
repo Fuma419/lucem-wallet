@@ -123,4 +123,37 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(css).toMatch(/\.button\.fab-accounts[\s\S]*rgba\(255,\s*140,\s*0/);
     expect(css).toMatch(/\.button\.fab-settings[\s\S]*rgba\(220,\s*27,\s*250/);
   });
+
+  test('right tray toggle becomes a Home button on tray destination pages', () => {
+    expect(traysSrc).toContain('MdHome');
+    expect(traysSrc).toContain('isOnNavPage');
+    expect(traysSrc).toMatch(
+      /navPaths\s*=\s*\[\s*'\/accounts',\s*'\/settings',\s*'\/staking',\s*'\/governance'\s*\]/
+    );
+    expect(traysSrc).toContain('data-testid="wallet-home-fab"');
+    expect(traysSrc).toContain('aria-label="Go to wallet home"');
+    expect(traysSrc).toContain("go('/wallet')");
+  });
+
+  test('tray destination pages drop their own top back arrows', () => {
+    const governanceSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/governance.jsx'),
+      'utf8'
+    );
+    const stakingSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/staking.jsx'),
+      'utf8'
+    );
+    const settingsSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/settings.jsx'),
+      'utf8'
+    );
+
+    expect(accountsSrc).not.toContain('aria-label="Go back"');
+    expect(accountsSrc).not.toContain('ChevronLeftIcon');
+    expect(settingsSrc).not.toContain('aria-label="Go back"');
+    expect(settingsSrc).not.toContain('ChevronLeftIcon');
+    expect(governanceSrc).not.toContain('ArrowBackIcon');
+    expect(stakingSrc).not.toContain('ArrowBackIcon');
+  });
 });

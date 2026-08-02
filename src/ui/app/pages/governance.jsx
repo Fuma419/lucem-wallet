@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   AlertIcon,
@@ -19,7 +18,6 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import {
-  ArrowBackIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   ExternalLinkIcon,
@@ -238,7 +236,6 @@ const emptyTxState = {
 };
 
 const Governance = () => {
-  const navigate = useNavigate();
   const toast = useToast();
   const confirmRef = React.useRef();
   const settings = useStoreState((state) => state.settings.settings);
@@ -613,15 +610,7 @@ const Governance = () => {
       pb="calc(6.5rem + env(safe-area-inset-bottom, 0px))"
     >
       <Stack spacing={5} maxW="1100px" mx="auto">
-        <Flex align="center" justify="space-between" gap={3}>
-          <Button
-            leftIcon={<ArrowBackIcon />}
-            variant="ghost"
-            color={ghostColor}
-            onClick={() => navigate('/wallet')}
-          >
-            Wallet
-          </Button>
+        <Flex align="center" justify="flex-end" gap={3}>
           <HStack spacing={2}>
             {drepState.isRegistered ? (
               <Badge colorScheme="cyan">You're a DRep</Badge>

@@ -18,6 +18,7 @@ import {
 } from '@chakra-ui/icons';
 import {
   MdAccountBalanceWallet,
+  MdHome,
   MdHowToVote,
   MdOutlineHowToReg,
   MdPublic,
@@ -202,6 +203,11 @@ const WalletTrays = ({
     if (path !== to) navigate(to);
   };
 
+  // On the tray's destination pages the toggle becomes a Home button that
+  // returns to the wallet, so per-page back arrows are no longer needed.
+  const navPaths = ['/accounts', '/settings', '/staking', '/governance'];
+  const isOnNavPage = navPaths.includes(path);
+
   return (
     <>
       {isNetworkTrayOpen || isTrayOpen ? (
@@ -348,14 +354,29 @@ const WalletTrays = ({
             </TrayActionButton>
           </Stack>
         </Collapse>
-        <Button
-          {...floatingToggleProps}
-          className={fabToggleClass}
-          onClick={() => setIsTrayOpen(!isTrayOpen)}
-          aria-label="Toggle action menu"
-        >
-          <Icon as={isTrayOpen ? ChevronDownIcon : ChevronUpIcon} boxSize={8} />
-        </Button>
+        {isOnNavPage ? (
+          <Button
+            {...floatingToggleProps}
+            className={fabToggleClass}
+            onClick={() => go('/wallet')}
+            aria-label="Go to wallet home"
+            data-testid="wallet-home-fab"
+          >
+            <Icon as={MdHome} boxSize={7} />
+          </Button>
+        ) : (
+          <Button
+            {...floatingToggleProps}
+            className={fabToggleClass}
+            onClick={() => setIsTrayOpen(!isTrayOpen)}
+            aria-label="Toggle action menu"
+          >
+            <Icon
+              as={isTrayOpen ? ChevronDownIcon : ChevronUpIcon}
+              boxSize={8}
+            />
+          </Button>
+        )}
       </Box>
     </>
   );

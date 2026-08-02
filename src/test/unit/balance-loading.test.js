@@ -91,17 +91,24 @@ describe('koiosRequest retry behavior', () => {
 describe('balance display quantity logic', () => {
   const { bigIntLovelace } = require('../../api/lovelace-scalar');
 
-  /** Mirrors wallet.jsx UnitDisplay quantity after bigIntLovelace hardening. */
-  function computeDisplayQuantity(account) {
-    if (!account) return undefined;
+  /** Mirrors wallet.jsx account ADA (UTXO balance minus locked/collateral). */
+  function computeAccountAda(account) {
+    if (!account) return null;
     if (account.lovelace !== null && account.lovelace !== undefined) {
       return (
         bigIntLovelace(account.lovelace) -
         bigIntLovelace(account.minAda) -
         bigIntLovelace(account.collateral?.lovelace)
-      ).toString();
+      );
     }
-    return undefined;
+    return null;
+  }
+
+  /** Mirrors wallet.jsx total ADA shown on the main balance (account + rewards). */
+  function computeDisplayQuantity(account, rewards = 0) {
+    const accountAda = computeAccountAda(account);
+    if (accountAda === null) return undefined;
+    return (accountAda + bigIntLovelace(rewards)).toString();
   }
 
   test('should return "0" for a newly created wallet with zero balance (number)', () => {
@@ -148,6 +155,16 @@ describe('balance display quantity logic', () => {
       collateral: { lovelace: '5000000' },
     };
     expect(computeDisplayQuantity(account)).toBe('3000000');
+  });
+
+  test('should include staking rewards in the displayed total', () => {
+    const account = {
+      lovelace: '5000000',
+      minAda: '1000000',
+      collateral: null,
+    };
+    expect(computeDisplayQuantity(account, '2500000')).toBe('6500000');
+    expect(computeAccountAda(account).toString()).toBe('4000000');
   });
 
   test('should not throw when lovelace is a stray object (truthy pre-fix bug)', () => {

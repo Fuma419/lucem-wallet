@@ -21,9 +21,13 @@ describe('wallet refresh state retention', () => {
       path.join(__dirname, '../../../ui/app/components/walletTrays.jsx'),
       'utf8'
     );
-    expect(walletSrc).toMatch(/\{state\.delegation && \(/);
+    // Total ADA (account + rewards) renders from cached state, not isFetching.
+    expect(walletSrc).toMatch(/quantity=\{displayTotalAda\}/);
     expect(walletSrc).toMatch(
-      /quantity=\{\s*state\.account[\s\S]{0,260}state\.account\.lovelace !== null[\s\S]{0,260}\?\s*\(/
+      /state\.delegation[\s\S]{0,80}bigIntLovelace\(state\.delegation\.rewards\)/
+    );
+    expect(walletSrc).toMatch(
+      /accountAdaLovelace !== null[\s\S]{0,80}\?[\s\S]{0,80}accountAdaLovelace \+ rewardsAdaLovelace/
     );
     expect(traysSrc).not.toMatch(
       /\{isFetching &&[\s\S]{0,200}data-testid="wallet-delegation"/

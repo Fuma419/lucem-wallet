@@ -273,6 +273,41 @@ const Wallet = () => {
     };
   }, []);
 
+  const accountAdaLovelace = React.useMemo(() => {
+    if (
+      !state.account ||
+      state.account.lovelace === null ||
+      state.account.lovelace === undefined
+    ) {
+      return null;
+    }
+    return (
+      bigIntLovelace(state.account.lovelace) -
+      bigIntLovelace(state.account.minAda) -
+      bigIntLovelace(state.account.collateral?.lovelace)
+    );
+  }, [state.account]);
+
+  const rewardsAdaLovelace = React.useMemo(
+    () =>
+      state.delegation
+        ? bigIntLovelace(state.delegation.rewards)
+        : 0n,
+    [state.delegation]
+  );
+
+  const displayTotalAda =
+    accountAdaLovelace !== null
+      ? (accountAdaLovelace + rewardsAdaLovelace).toString()
+      : undefined;
+
+  const fiatTotalCents =
+    accountAdaLovelace !== null
+      ? parseInt(
+          displayUnit(displayTotalAda) * state.fiatPrice * 10 ** 2
+        )
+      : undefined;
+
   return (
     <>
       <Box
@@ -356,43 +391,100 @@ const Wallet = () => {
             gap={1}
           >
             <Flex align="center" justify="center" flexWrap="wrap" gap={1}>
-              <Skeleton
-                isLoaded={
-                  Boolean(state.account) &&
-                  state.account.lovelace !== null &&
-                  state.account.lovelace !== undefined
-                }
-                borderRadius="md"
-                startColor="whiteAlpha.200"
-                endColor="whiteAlpha.400"
-                minW={
-                  state.account && state.account.lovelace != null ? undefined : '7rem'
-                }
-                minH={
-                  state.account && state.account.lovelace != null ? undefined : '1.75rem'
-                }
-              >
-                <UnitDisplay
-                  className="lineClamp"
-                  fontSize={{ base: 'xl', md: '2xl' }}
-                  fontWeight="bold"
-                  quantity={
-                    state.account &&
-                    state.account.lovelace !== null &&
-                    state.account.lovelace !== undefined
-                      ? (
-                          bigIntLovelace(state.account.lovelace) -
-                          bigIntLovelace(state.account.minAda) -
-                          bigIntLovelace(
-                            state.account.collateral?.lovelace
-                          )
-                        ).toString()
-                      : undefined
-                  }
-                  decimals={6}
-                  symbol={settings.adaSymbol}
-                />
-              </Skeleton>
+              <Popover isLazy placement="bottom" trigger="click">
+                <PopoverTrigger>
+                  <Box
+                    as="button"
+                    type="button"
+                    cursor="pointer"
+                    borderRadius="md"
+                    aria-label="Show ADA balance breakdown"
+                    data-testid="wallet-total-ada"
+                    _hover={{ bg: 'whiteAlpha.100' }}
+                    _focusVisible={{
+                      outline: '2px solid',
+                      outlineColor: 'whiteAlpha.700',
+                      outlineOffset: '2px',
+                    }}
+                    px={1}
+                  >
+                    <Skeleton
+                      isLoaded={accountAdaLovelace !== null}
+                      borderRadius="md"
+                      startColor="whiteAlpha.200"
+                      endColor="whiteAlpha.400"
+                      minW={
+                        accountAdaLovelace != null ? undefined : '7rem'
+                      }
+                      minH={
+                        accountAdaLovelace != null ? undefined : '1.75rem'
+                      }
+                    >
+                      <UnitDisplay
+                        className="lineClamp"
+                        fontSize={{ base: 'xl', md: '2xl' }}
+                        fontWeight="bold"
+                        quantity={displayTotalAda}
+                        decimals={6}
+                        symbol={settings.adaSymbol}
+                      />
+                    </Skeleton>
+                  </Box>
+                </PopoverTrigger>
+                <Portal>
+                  <PopoverContent
+                    width="auto"
+                    maxW="calc(100vw - 2rem)"
+                    data-testid="wallet-ada-breakdown"
+                  >
+                    <PopoverArrow />
+                    <PopoverBody p={3}>
+                      <Flex direction="column" gap={2} minW="12rem">
+                        <Flex
+                          align="center"
+                          justify="space-between"
+                          gap={4}
+                          data-testid="wallet-account-ada"
+                        >
+                          <Text fontSize="sm" opacity={0.85}>
+                            Account
+                          </Text>
+                          <UnitDisplay
+                            hide
+                            fontSize="sm"
+                            fontWeight="semibold"
+                            quantity={
+                              accountAdaLovelace !== null
+                                ? accountAdaLovelace.toString()
+                                : undefined
+                            }
+                            decimals={6}
+                            symbol={settings.adaSymbol}
+                          />
+                        </Flex>
+                        <Flex
+                          align="center"
+                          justify="space-between"
+                          gap={4}
+                          data-testid="wallet-rewards-balance"
+                        >
+                          <Text fontSize="sm" opacity={0.85}>
+                            Rewards
+                          </Text>
+                          <UnitDisplay
+                            hide
+                            fontSize="sm"
+                            fontWeight="semibold"
+                            quantity={rewardsAdaLovelace.toString()}
+                            decimals={6}
+                            symbol={settings.adaSymbol}
+                          />
+                        </Flex>
+                      </Flex>
+                    </PopoverBody>
+                  </PopoverContent>
+                </Portal>
+              </Popover>
               {state.account &&
               (state.account.assets.length > 0 || state.account.collateral) ? (
                 <Tooltip
@@ -458,48 +550,10 @@ const Wallet = () => {
             <UnitDisplay
               className="lineClamp"
               fontSize="md"
-              quantity={
-                state.account &&
-                state.account.lovelace !== null &&
-                state.account.lovelace !== undefined &&
-                parseInt(
-                  displayUnit(
-                    (
-                      bigIntLovelace(state.account.lovelace) -
-                      bigIntLovelace(state.account.minAda) -
-                      bigIntLovelace(
-                        state.account.collateral?.lovelace
-                      )
-                    ).toString()
-                  ) *
-                    state.fiatPrice *
-                    10 ** 2
-                )
-              }
+              quantity={fiatTotalCents}
               symbol={currencyToSymbol(settings.currency)}
               decimals={2}
             />
-            {state.delegation && (
-              <Flex
-                data-testid="wallet-rewards-balance"
-                align="center"
-                justify="center"
-                gap={1}
-                mt={1}
-              >
-                <Text fontSize="xs" opacity={0.8}>
-                  Rewards:
-                </Text>
-                <UnitDisplay
-                  hide
-                  fontSize="sm"
-                  fontWeight="semibold"
-                  quantity={bigIntLovelace(state.delegation.rewards).toString()}
-                  decimals={6}
-                  symbol={settings.adaSymbol}
-                />
-              </Flex>
-            )}
           </Flex>
 
           {/* Receive, delegation, Send — flows under balance (no overlap). */}

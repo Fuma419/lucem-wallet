@@ -530,7 +530,7 @@ const Wallet = () => {
                   }
                   rightIcon={<Icon as={BsArrowDownRight} />}
                   size="sm"
-                  rounded="lg"
+                  rounded="2xl"
                   shadow="md"
                   flexShrink={0}
                   onClick={() => {}}
@@ -599,7 +599,7 @@ const Wallet = () => {
                 _hover={
                   colorMode === 'light' ? { bg: 'purple.600' } : undefined
                 }
-                rounded="lg"
+                rounded="2xl"
                 rightIcon={<Icon as={BsArrowUpRight} />}
                 shadow="md"
                 flexShrink={0}

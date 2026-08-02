@@ -676,12 +676,12 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   /* Equal padding; extra left pad offsets trailing letter-spacing so glyphs sit centered */
   padding: 0.34rem calc(0.9rem - 0.09em) 0.34rem calc(0.9rem + 0.09em);
   pointer-events: none;
-  /* Rounded badge that matches the Send/Receive button shape (lg radius + soft shadow) */
+  /* Rounded badge that matches the Send/Receive button shape (2xl radius + soft shadow) */
   border-top: thin solid transparent;
   border-left: thin solid transparent;
   border-right: thin solid transparent;
   border-bottom: thin solid transparent;
-  border-radius: 0.5rem;
+  border-radius: 1rem;
 }
 
 .network-banner-preprod {

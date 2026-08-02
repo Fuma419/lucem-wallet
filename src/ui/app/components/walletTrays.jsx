@@ -20,6 +20,9 @@ import {
   MdAccountBalanceWallet,
   MdHowToVote,
   MdOutlineHowToReg,
+  MdPublic,
+  MdScience,
+  MdVisibility,
 } from 'react-icons/md';
 import { NETWORK_ID } from '../../../config/config';
 
@@ -58,10 +61,18 @@ const TrayActionButton = ({ label, children, ...buttonProps }) => (
   </Flex>
 );
 
+/** Icon FAB with a visible text descriptor to its right (left / network tray). */
+const TrayNetworkButton = ({ label, children, ...buttonProps }) => (
+  <Flex alignItems="center" justifyContent="flex-start" gap={2} w="100%">
+    <Button {...buttonProps}>{children}</Button>
+    <Text {...trayActionLabelProps}>{label}</Text>
+  </Flex>
+);
+
 const networkOptions = [
-  { id: NETWORK_ID.mainnet, label: 'Mainnet' },
-  { id: NETWORK_ID.preprod, label: 'Preprod' },
-  { id: NETWORK_ID.preview, label: 'Preview' },
+  { id: NETWORK_ID.mainnet, label: 'Mainnet', icon: MdPublic },
+  { id: NETWORK_ID.preprod, label: 'Preprod', icon: MdScience },
+  { id: NETWORK_ID.preview, label: 'Preview', icon: MdVisibility },
 ];
 
 /**
@@ -228,10 +239,11 @@ const WalletTrays = ({
         >
           <Stack spacing={2} mb={2} alignItems="stretch">
             {networkOptions.map((networkOption) => (
-              <Button
+              <TrayNetworkButton
                 key={networkOption.id}
-                w="128px"
-                h="40px"
+                label={networkOption.label}
+                {...walletFabBase}
+                color="white"
                 data-active={
                   networkId === networkOption.id ? 'true' : undefined
                 }
@@ -240,11 +252,10 @@ const WalletTrays = ({
                     ? 'is-loading'
                     : ''
                 }`}
-                size="sm"
-                rounded="lg"
                 shadow="none"
                 flexShrink={0}
                 variant="unstyled"
+                aria-label={`Switch to ${networkOption.label}`}
                 onClick={() => {
                   if (networkId !== networkOption.id) {
                     onNetworkSelect?.(networkOption.id);
@@ -252,8 +263,8 @@ const WalletTrays = ({
                   setIsNetworkTrayOpen(false);
                 }}
               >
-                {networkOption.label}
-              </Button>
+                <Icon as={networkOption.icon} boxSize={6} />
+              </TrayNetworkButton>
             ))}
           </Stack>
         </Collapse>

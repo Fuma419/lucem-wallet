@@ -48,6 +48,17 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).toContain('trayActionLabelProps');
   });
 
+  test('left network tray options match circular labeled FAB style', () => {
+    expect(traysSrc).toContain('TrayNetworkButton');
+    expect(traysSrc).toContain('label={networkOption.label}');
+    expect(traysSrc).toContain('MdPublic');
+    expect(traysSrc).toContain('MdScience');
+    expect(traysSrc).toContain('MdVisibility');
+    expect(css).toMatch(
+      /\.button\.network-mainnet[\s\S]*border-radius:\s*9999px/
+    );
+  });
+
   test('wallet home no longer embeds trays or accounts menu', () => {
     expect(walletSrc).not.toContain('wallet-tray-backdrop');
     expect(walletSrc).not.toContain('Open accounts');

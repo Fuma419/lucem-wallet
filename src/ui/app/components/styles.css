@@ -454,7 +454,7 @@ html[data-theme='light'] .lucem-settings-shell {
   }
 }
 
-/* Network tray options — same translucent FAB treatment as vote/stake/settings */
+/* Network tray options — circular neon FABs matching vote/stake/settings */
 .button.network-mainnet,
 .button.network-preprod,
 .button.network-preview,
@@ -464,6 +464,7 @@ html[data-theme='light'] .lucem-settings-shell {
   letter-spacing: 2px;
   color: white;
   transition: all 0.3s ease;
+  border-radius: 9999px;
 }
 
 .button.network-mainnet {

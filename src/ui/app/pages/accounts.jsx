@@ -40,6 +40,7 @@ import UnitDisplay from '../components/unitDisplay';
 import About from '../components/about';
 import TransactionBuilder from '../components/transactionBuilder';
 import useSurfaceColors from '../hooks/useSurfaceColors';
+import { isSameAccountIndex } from '../utils/accountIndex';
 
 /** Bottom clearance so list content sits above fixed trays. */
 const TRAY_CLEARANCE_PB =
@@ -163,7 +164,9 @@ const Accounts = () => {
               {Object.keys(accountsMeta).map((accountIndex) => {
                 const accountInfo = accountsMeta[accountIndex];
                 const account = accountsLive && accountsLive[accountIndex];
-                const isCurrent = currentIndex === accountInfo.index;
+                const accountKey =
+                  accountInfo?.index != null ? accountInfo.index : accountIndex;
+                const isCurrent = isSameAccountIndex(currentIndex, accountKey);
                 const networkSlice =
                   account && settings.network?.id
                     ? account[settings.network.id]
@@ -184,7 +187,7 @@ const Accounts = () => {
                       transform: 'translateY(-1px)',
                     }}
                     isDisabled={busyIndex != null}
-                    isLoading={busyIndex === accountIndex}
+                    isLoading={isSameAccountIndex(busyIndex, accountKey)}
                     aria-current={isCurrent ? 'true' : undefined}
                     aria-label={
                       isCurrent
@@ -193,9 +196,11 @@ const Accounts = () => {
                     }
                     onClick={async () => {
                       if (isCurrent || busyIndex != null) return;
-                      setBusyIndex(accountIndex);
+                      setBusyIndex(accountKey);
                       try {
-                        await switchAccount(accountIndex);
+                        // Prefer typed account.index (number for seed accounts)
+                        // so storage stays consistent for later lookups.
+                        await switchAccount(accountKey);
                         await load();
                       } catch (e) {
                         console.error('Switch account failed', e);

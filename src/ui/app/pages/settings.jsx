@@ -27,11 +27,7 @@ import {
   WrapItem,
 } from '@chakra-ui/react';
 import { useAppearancePreference } from '../../appearanceContext';
-import {
-  ChevronLeftIcon,
-  SmallCloseIcon,
-  RepeatIcon,
-} from '@chakra-ui/icons';
+import { SmallCloseIcon, RepeatIcon } from '@chakra-ui/icons';
 import React from 'react';
 import platform from '../../../platform';
 import {
@@ -40,7 +36,6 @@ import {
   getNetwork,
   getStorage,
   getWhitelisted,
-  hasStoredAccounts,
   removeWhitelisted,
   eraseLocalWalletData,
   setAccountAvatar,
@@ -209,26 +204,9 @@ const Settings = () => {
       data-testid="settings-page"
     >
       <Flex align="center" px={{ base: 3, md: 4 }} pt={4} pb={2}>
-        <IconButton
-          rounded="md"
-          onClick={async () => {
-            const hasWallet = await hasStoredAccounts();
-            if (hasWallet) {
-              navigate('/wallet', { replace: true });
-            } else {
-              navigate('/welcome', { replace: true });
-            }
-          }}
-          variant="ghost"
-          color="whiteAlpha.900"
-          _hover={{ bg: 'whiteAlpha.100' }}
-          icon={<ChevronLeftIcon boxSize="6" />}
-          aria-label="Go back"
-        />
         <Text flex="1" textAlign="center" fontSize="xl" fontWeight="bold">
           Settings
         </Text>
-        <Box w="40px" />
       </Flex>
 
       <Box

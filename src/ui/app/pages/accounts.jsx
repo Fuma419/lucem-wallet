@@ -11,18 +11,12 @@ import {
   Button,
   Flex,
   Icon,
-  IconButton,
   Stack,
   Text,
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react';
-import {
-  AddIcon,
-  CheckIcon,
-  ChevronLeftIcon,
-  DeleteIcon,
-} from '@chakra-ui/icons';
+import { AddIcon, CheckIcon, DeleteIcon } from '@chakra-ui/icons';
 import { FaRegFileCode } from 'react-icons/fa';
 import { useStoreState } from 'easy-peasy';
 import {
@@ -53,15 +47,7 @@ const Accounts = () => {
   const deleteAccountRef = React.useRef();
   const builderRef = React.useRef();
 
-  const {
-    pageBg,
-    pageFg,
-    cardBg,
-    cardHoverBg,
-    mutedFg,
-    ghostColor,
-  } = useSurfaceColors();
-  const iconBtnHover = useColorModeValue('blackAlpha.100', 'whiteAlpha.100');
+  const { pageBg, pageFg, cardBg, cardHoverBg, mutedFg } = useSurfaceColors();
   const currentAccent = useColorModeValue('orange.600', 'orange.300');
   const currentRowBg = useColorModeValue(
     'rgba(234, 136, 0, 0.14)',
@@ -119,15 +105,6 @@ const Accounts = () => {
       data-testid="accounts-page"
     >
       <Flex align="center" px={{ base: 4, md: 6 }} pt={4} pb={2}>
-        <IconButton
-          rounded="md"
-          onClick={() => navigate('/wallet', { replace: true })}
-          variant="ghost"
-          color={ghostColor}
-          _hover={{ bg: iconBtnHover }}
-          icon={<ChevronLeftIcon boxSize="6" />}
-          aria-label="Go back"
-        />
         <Text
           flex="1"
           textAlign="center"
@@ -137,7 +114,6 @@ const Accounts = () => {
         >
           Accounts
         </Text>
-        <Box w="40px" />
       </Flex>
 
       <Box

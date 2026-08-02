@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Alert,
   AlertDescription,
@@ -22,7 +21,6 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import {
-  ArrowBackIcon,
   ExternalLinkIcon,
   InfoOutlineIcon,
   SearchIcon,
@@ -256,7 +254,6 @@ const PreviewRow = ({ label, value, children }) => {
 };
 
 const Staking = () => {
-  const navigate = useNavigate();
   const toast = useToast();
   const confirmRef = React.useRef();
   const [account, setAccount] = React.useState(null);
@@ -285,7 +282,6 @@ const Staking = () => {
     insetBg,
     mutedFg,
     softFg,
-    ghostColor,
     inputBg,
     inputBorder,
     subtleFg,
@@ -490,16 +486,6 @@ const Staking = () => {
       pb="calc(6.5rem + env(safe-area-inset-bottom, 0px))"
     >
       <Stack spacing={5} maxW="1100px" mx="auto">
-        <Button
-          alignSelf="flex-start"
-          leftIcon={<ArrowBackIcon />}
-          variant="ghost"
-          color={ghostColor}
-          onClick={() => navigate('/wallet')}
-        >
-          Wallet
-        </Button>
-
         <Box
           rounded="3xl"
           p={{ base: 5, md: 7 }}

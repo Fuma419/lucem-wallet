@@ -1,0 +1,25 @@
+---
+description: Lucem Wallet — core agent conventions (always on)
+alwaysApply: true
+---
+
+# Lucem Wallet — core
+
+## Stack (short)
+
+Cardano browser extension + web app (React 18, Chakra UI, Webpack 5, Koios). Platform adapter `src/platform/` selects extension vs web. Path alias via webpack. Do not edit generated `src/wasm/`.
+
+## Agent workflow
+
+1. **Scope**: Change only what the task needs; no drive-by refactors or unrelated files.
+2. **Verify**: After substantive edits run `NODE_ENV=test npx jest` when practical. Jenkins owns Build / Unit / Integration / Functional — do not require local webpack before every push.
+3. **Ship via PR**: Open a PR to `main`, poll Jenkins statuses + auto-merge until **merged**. See **`git-push-policy.mdc`** and **`.cursor/skills/pr-follow-through/SKILL.md`** — do not push directly to `main`. Prefer `agent/<topic>` for **Agent Auto PR**.
+4. **Env / secrets**: Never commit `secrets.*.js` (except `secrets.testing.js`), `.env`, or tokens. Copy from `secrets.testing.js` / `.env.example` as needed.
+5. **CSL boundary**: Cardano SDK / non-CSL builders must become Emurgo CSL `Transaction` before `signTx` / HW encoders — see `cardano-sdk-csl-bridge.mdc` and `src/api/sdk-to-csl.js`.
+6. **Telegram**: Clarifying questions → `tg-ask`; done/blocked pings → `tg-send`. See host skills `telegram-clarify` / `telegram-notify`.
+
+## Where to look
+
+- **Rules**: `.cursor/rules/*.mdc`
+- **Commands & CI**: `AGENTS.md`, `.github/MERGE_GATE.md`
+- **Index**: root `.cursorrules`

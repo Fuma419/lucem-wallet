@@ -116,11 +116,31 @@ Uses ADA-only UTxOs on a **dedicated testnet-only mnemonic** (do not reuse a see
 
 ### CI
 
-GitHub Actions (`ci.yml`) runs on PRs/pushes to `main` with two gates:
-- **Quick checks (GitHub-hosted):** `npm ci` → `npm run test`
-- **Heavy checks (self-hosted Linux):** `npm ci` → `npm run build:webpack` → Playwright screenshots → upload `build` and `e2e-screenshots` artifacts
+**Merge gate:** Jenkins commit statuses (see **`.github/MERGE_GATE.md`**):
 
-Use this with `agent-auto-pr.yml` so agent branches auto-open PRs and enable auto-merge after checks. **GitHub settings** (below) must match that intent: agents push as your GitHub user, so rules like “approval from someone other than the last pusher” block auto-merge until you change protection or add a bypass.
+| Context | Stage |
+|---------|--------|
+| `Jenkins / Build` | webpack build |
+| `Jenkins / Unit tests` | Jest |
+| `Jenkins / Integration tests` | live Preview/Preprod sends |
+| `Jenkins / Functional tests` | Playwright |
+
+GitHub Actions `ci.yml` is diagnostics / lightweight. Optional `jenkins-multibranch-scan.yml` marks statuses pending and pings the multibranch indexer when `JENKINS_MULTIBRANCH_WEBHOOK_URL` is set.
+
+Use **`agent-auto-pr.yml`** so `agent/**` branches auto-open PRs; **`owner-auto-merge.yml`** enables auto-merge for owner PRs. Branch protection still waits for the four Jenkins statuses. **GitHub settings** (below) must match that intent: agents push as your GitHub user, so rules like “approval from someone other than the last pusher” block auto-merge until you change protection or add a bypass.
+
+### Telegram (host shared)
+
+Outbound notify and inbound multi-bot bridge live on this host — **not** in this repo:
+
+| Piece | Location |
+|-------|----------|
+| Bridge + install | `~/tg-agent-bridge` (`install.sh`, `tg-bridge`) |
+| CLIs | `tg-send`, `tg-ask`, `tg-bridge` on `PATH` |
+| Skills | `telegram-notify` (done/reminders), `telegram-clarify` (blocked decisions) |
+| Secrets | `~/.config/agent-secrets/` (never commit) |
+
+The **lucem** bot in `telegram-bots.json` drives this repo. Agents must `tg-ask` clarifying questions and may `tg-send` on merge or when blocked. Do not put tokens in chat or commits.
 
 #### GitHub: trust your own PRs, still review outsiders
 
@@ -236,4 +256,4 @@ Only servers that provide **unique** capabilities beyond native tools are config
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.
 - Never modify generated WASM files in `src/wasm/`.
-- See `.cursor/rules/cost-optimizer.mdc` and `.cursor/skills/` for detailed guidance.
+- See `.cursor/rules/cost-optimizer.mdc`, `.cursor/rules/lucem-core.mdc`, `.cursorrules`, and `.cursor/skills/` (including `lucem/SKILL.md`) for detailed guidance.

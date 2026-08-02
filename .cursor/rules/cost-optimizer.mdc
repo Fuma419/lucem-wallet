@@ -1,0 +1,23 @@
+---
+description: Prefer cheap models and tight context for routine Lucem work
+alwaysApply: true
+---
+
+# Cost optimizer
+
+## Model tier
+
+- Use the fastest/cheapest model for routine edits, searches, lint fixes, and docs.
+- Escalate to a capable model **only** for complex debugging, architecture decisions, or security-sensitive wallet/crypto logic.
+- Downgrade immediately after the complex step.
+
+## Token efficiency
+
+- Concise outputs by default; bullet lists over paragraphs.
+- Targeted file reads with `Grep`/`Glob` filters — avoid broad `**/*` scans.
+- Read large files with `offset`/`limit`; don't read entire files when only a section is needed.
+
+## Validation cadence
+
+- **During iteration:** validate only changed files (single-file lint, single test suite).
+- **Before push (optional local):** `NODE_ENV=test npx jest` for fast feedback. Do **not** run local webpack/`npm run build` — Jenkins owns Build / Unit / Integration / Functional.

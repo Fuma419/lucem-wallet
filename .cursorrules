@@ -1,0 +1,15 @@
+# Lucem Wallet — Cursor
+
+**Authoritative agent context:** `.cursor/rules/*.mdc` (scoped + always-on rules) and **`AGENTS.md`** (commands, architecture, CI).
+
+**Project skills:** `.cursor/skills/lucem/SKILL.md`, `pr-follow-through`, `commit-scope-discipline`, plus domain skills (`wallet-crypto-safety`, `koios-api-integration`, `extension-testing`, …).
+
+**After substantive edits:** run `NODE_ENV=test npx jest` when practical. Jenkins owns Build / Unit / Integration / Functional — do **not** run local webpack/`npm run build` before every push.
+
+**Shipping:** open a PR to `main`, poll Jenkins statuses + auto-merge until **merged** — see **`git-push-policy.mdc`** (never push directly to `main`). Prefer `agent/<topic>` branches so **Agent Auto PR** opens the PR.
+
+**Telegram (host shared):** clarifying questions → `tg-ask` (skill `telegram-clarify`); task-done / reminders → `tg-send` (skill `telegram-notify`). Bridge: Lucem bot → this repo via `~/tg-agent-bridge`. Never commit tokens.
+
+---
+
+Lucem: Cardano browser extension + web wallet (React 18, Chakra, Webpack 5, Koios). Platform adapter in `src/platform/`. Do not edit `src/wasm/`. Cardano SDK outputs must become Emurgo CSL before signing/HW — see `cardano-sdk-csl-bridge.mdc`.

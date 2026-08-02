@@ -93,7 +93,7 @@ const Wallet = () => {
   const settings = useStoreState((state) => state.settings.settings);
   const { colorMode } = useColorMode();
   const avatarBg = useColorModeValue('gray.100', 'gray.900');
-  const panelBg = useColorModeValue('gray.100', 'black');
+  const panelBg = useColorModeValue('#f4f6fb', '#080808');
   /** Light: solid brand tints; dark: filled cyan / gradient class handles Send. */
   const receiveButton = useColorModeValue('cyan.500', 'cyan.700');
   const sendButton = useColorModeValue('purple.500', 'yellow.600');

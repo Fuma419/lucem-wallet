@@ -88,6 +88,7 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain('data-testid="accounts-list-panel"');
     expect(accountsSrc).toContain('data-testid="accounts-actions-panel"');
     expect(accountsSrc).toContain('useSurfaceColors');
+    expect(accountsSrc).toContain('lucem-inset-surface');
     expect(accountsSrc).toMatch(/rounded="3xl"/);
     expect(accountsSrc).toMatch(/px=\{\{\s*base:\s*4,\s*md:\s*6\s*\}\}/);
     expect(accountsSrc).toMatch(/AlertDialogContent[\s\S]*mx=\{4\}/);

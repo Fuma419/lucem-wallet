@@ -1,32 +1,36 @@
 import { useColorModeValue } from '@chakra-ui/react';
 
 /**
- * Shared light/dark surface tokens for full-page flows (staking, governance).
- * Dark: elevated gray panels on near-black so cards stay readable.
- * Light: white/gray panels with dark text (pages previously ignored color mode).
+ * Shared light/dark surface tokens for full-page flows (accounts, staking, governance).
+ * Avoid Lucem gray.100/900 for page chrome — those mid-tones read too dark in light
+ * mode and too light in dark mode. Panels use soft elevation (no hard window borders).
  */
 export default function useSurfaceColors() {
   return {
-    pageBg: useColorModeValue('gray.100', 'black'),
+    pageBg: useColorModeValue('#f4f6fb', '#080808'),
     pageFg: useColorModeValue('gray.900', 'white'),
-    panelBg: useColorModeValue('white', 'gray.700'),
-    panelBorder: useColorModeValue('gray.300', 'whiteAlpha.300'),
-    cardBg: useColorModeValue('gray.100', 'gray.600'),
-    cardHoverBg: useColorModeValue('gray.200', 'gray.500'),
-    insetBg: useColorModeValue('gray.200', 'blackAlpha.400'),
+    panelBg: useColorModeValue('rgba(255, 255, 255, 0.92)', '#121212'),
+    panelBorder: useColorModeValue('transparent', 'transparent'),
+    panelShadow: useColorModeValue(
+      '0 18px 48px rgba(15, 23, 42, 0.08), 0 2px 10px rgba(15, 23, 42, 0.04)',
+      '0 22px 56px rgba(0, 0, 0, 0.55), 0 2px 12px rgba(0, 0, 0, 0.35)'
+    ),
+    cardBg: useColorModeValue('rgba(15, 23, 42, 0.04)', 'rgba(255, 255, 255, 0.04)'),
+    cardHoverBg: useColorModeValue('rgba(15, 23, 42, 0.08)', 'rgba(255, 255, 255, 0.08)'),
+    insetBg: useColorModeValue('rgba(15, 23, 42, 0.05)', 'rgba(0, 0, 0, 0.35)'),
     mutedFg: useColorModeValue('gray.600', 'whiteAlpha.700'),
     subtleFg: useColorModeValue('gray.500', 'whiteAlpha.600'),
     softFg: useColorModeValue('gray.700', 'whiteAlpha.800'),
     ghostColor: useColorModeValue('gray.700', 'whiteAlpha.800'),
-    inputBg: useColorModeValue('white', 'gray.600'),
-    inputBorder: useColorModeValue('gray.300', 'whiteAlpha.300'),
+    inputBg: useColorModeValue('white', '#1a1a1a'),
+    inputBorder: useColorModeValue('blackAlpha.100', 'whiteAlpha.100'),
     placeholder: useColorModeValue('gray.500', 'whiteAlpha.500'),
     accentLink: useColorModeValue('blue.600', 'blue.200'),
     yellowLink: useColorModeValue('yellow.700', 'yellow.200'),
-    poolIdleBg: useColorModeValue('gray.100', 'gray.600'),
+    poolIdleBg: useColorModeValue('rgba(15, 23, 42, 0.04)', 'rgba(255, 255, 255, 0.05)'),
     poolIdleFg: useColorModeValue('gray.900', 'white'),
-    poolIdleHover: useColorModeValue('gray.200', 'gray.500'),
+    poolIdleHover: useColorModeValue('rgba(15, 23, 42, 0.08)', 'rgba(255, 255, 255, 0.1)'),
     progressTrack: useColorModeValue('blackAlpha.200', 'whiteAlpha.300'),
-    metricBg: useColorModeValue('blackAlpha.50', 'whiteAlpha.200'),
+    metricBg: useColorModeValue('blackAlpha.50', 'whiteAlpha.100'),
   };
 }

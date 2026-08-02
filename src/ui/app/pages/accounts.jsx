@@ -55,15 +55,13 @@ const Accounts = () => {
   const {
     pageBg,
     pageFg,
-    panelBg,
-    panelBorder,
     cardBg,
     cardHoverBg,
     mutedFg,
     ghostColor,
   } = useSurfaceColors();
-  const iconBtnHover = useColorModeValue('gray.200', 'whiteAlpha.50');
-  const currentBorder = useColorModeValue('orange.400', 'orange.300');
+  const iconBtnHover = useColorModeValue('blackAlpha.100', 'whiteAlpha.100');
+  const currentAccent = useColorModeValue('orange.500', 'orange.300');
 
   const [currentIndex, setCurrentIndex] = React.useState(null);
   const [accountsMeta, setAccountsMeta] = React.useState({});
@@ -143,11 +141,9 @@ const Accounts = () => {
       >
         <Stack spacing={4} w="full" maxW="sm" mx="auto" pt={1}>
           <Box
+            className="lucem-inset-surface"
             rounded="3xl"
             p={{ base: 4, md: 5 }}
-            bg={panelBg}
-            borderWidth="1px"
-            borderColor={panelBorder}
             data-testid="accounts-list-panel"
           >
             <Text fontSize="sm" color={mutedFg} mb={3}>
@@ -167,15 +163,14 @@ const Accounts = () => {
                 return (
                   <Button
                     key={accountIndex}
+                    className={`lucem-inset-row${isCurrent ? ' is-current' : ''}`}
                     variant="unstyled"
                     h="auto"
                     py={3}
                     px={3}
                     rounded="2xl"
                     bg={cardBg}
-                    borderWidth="1px"
-                    borderColor={isCurrent ? currentBorder : panelBorder}
-                    _hover={{ bg: cardHoverBg }}
+                    _hover={{ bg: cardHoverBg, transform: 'translateY(-1px)' }}
                     isDisabled={busyIndex != null}
                     isLoading={busyIndex === accountIndex}
                     onClick={async () => {
@@ -245,7 +240,7 @@ const Accounts = () => {
                         )}
                       </Box>
                       {isCurrent ? (
-                        <StarIcon color={currentBorder} />
+                        <StarIcon color={currentAccent} />
                       ) : null}
                       {isHW(accountInfo.index) ? (
                         <Text fontSize="xs" fontWeight="bold" ml={1}>
@@ -260,11 +255,9 @@ const Accounts = () => {
           </Box>
 
           <Box
+            className="lucem-inset-surface"
             rounded="3xl"
             p={{ base: 4, md: 5 }}
-            bg={panelBg}
-            borderWidth="1px"
-            borderColor={panelBorder}
             data-testid="accounts-actions-panel"
           >
             <Stack spacing={2}>
@@ -330,7 +323,7 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isLoading, setIsLoading] = React.useState(false);
   const cancelRef = React.useRef();
-  const { panelBg, pageFg } = useSurfaceColors();
+  const { pageFg } = useSurfaceColors();
 
   React.useImperativeHandle(ref, () => ({
     openModal() {
@@ -348,7 +341,7 @@ const DeleteAccountModal = React.forwardRef((props, ref) => {
     >
       <AlertDialogOverlay>
         <AlertDialogContent
-          bg={panelBg}
+          className="lucem-inset-surface"
           color={pageFg}
           mx={4}
           rounded="2xl"

@@ -287,8 +287,8 @@ const theme = extendTheme({
       },
       body: {
         overflow: 'hidden',
-        bg: props.colorMode === 'dark' ? '#080808' : '#eef1f6',
-        color: props.colorMode === 'dark' ? 'gray.100' : 'gray.800',
+        bg: props.colorMode === 'dark' ? '#080808' : '#f4f6fb',
+        color: props.colorMode === 'dark' ? 'white' : 'gray.900',
         fontSize: 'md',
       },
     }),

@@ -278,6 +278,7 @@ const Governance = () => {
     pageFg,
     panelBg,
     panelBorder,
+    panelShadow,
     cardBg,
     cardHoverBg,
     insetBg,
@@ -648,8 +649,7 @@ const Governance = () => {
           rounded="3xl"
           p={{ base: 4, md: 6 }}
           bg={panelBg}
-          borderWidth="1px"
-          borderColor={panelBorder}
+          boxShadow={panelShadow}
         >
           <Flex direction={{ base: 'column', md: 'row' }} gap={4} justify="space-between">
             <Box maxW="650px">
@@ -713,8 +713,7 @@ const Governance = () => {
         <Box
           rounded="3xl"
           bg={panelBg}
-          borderWidth="1px"
-          borderColor={panelBorder}
+          boxShadow={panelShadow}
           p={{ base: 5, md: 6 }}
         >
           <Flex align="center" justify="space-between" mb={4} gap={3}>
@@ -842,8 +841,7 @@ const Governance = () => {
         <Box
           rounded="3xl"
           bg={panelBg}
-          borderWidth="1px"
-          borderColor={panelBorder}
+          boxShadow={panelShadow}
           p={{ base: 5, md: 6 }}
         >
           <Flex align="center" justify="space-between" gap={3} mb={2} flexWrap="wrap">

@@ -70,7 +70,7 @@ describe('governance page and wallet network button wiring', () => {
     );
     // Rounded badge matching the Send/Receive button shape (not the old U-shape/rectangle)
     expect(css).toMatch(/\.network-banner[\s\S]*border-top:\s*thin\s+solid/);
-    expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*0\.5rem/);
+    expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*1rem/);
     // Testnet indicators: blue (preprod) and emerald (preview) — distinct from
     // Send (purple) / Receive (cyan), mainnet lime, and Accounts orange
     expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*122,\s*255/);

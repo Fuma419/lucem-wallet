@@ -39,6 +39,15 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).not.toContain('MenuList');
   });
 
+  test('right tray action FABs show visible text descriptors', () => {
+    expect(traysSrc).toContain('TrayActionButton');
+    expect(traysSrc).toContain('label="Vote"');
+    expect(traysSrc).toContain('label="Accounts"');
+    expect(traysSrc).toContain('label="Settings"');
+    expect(traysSrc).toMatch(/label=\{delegation\.active \? 'Stake' : 'Delegate'\}/);
+    expect(traysSrc).toContain('trayActionLabelProps');
+  });
+
   test('wallet home no longer embeds trays or accounts menu', () => {
     expect(walletSrc).not.toContain('wallet-tray-backdrop');
     expect(walletSrc).not.toContain('Open accounts');

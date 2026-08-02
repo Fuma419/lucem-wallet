@@ -4,9 +4,10 @@ import {
   Box,
   Button,
   Collapse,
+  Flex,
   Icon,
   Stack,
-  Tooltip,
+  Text,
   useColorMode,
   useColorModeValue,
 } from '@chakra-ui/react';
@@ -34,6 +35,28 @@ const walletFabBase = {
   justifyContent: 'center',
   color: 'white',
 };
+
+const trayActionLabelProps = {
+  as: 'span',
+  fontFamily: "'Barlow', sans-serif",
+  fontSize: '0.7rem',
+  fontWeight: 600,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  color: 'white',
+  opacity: 0.92,
+  whiteSpace: 'nowrap',
+  userSelect: 'none',
+  pointerEvents: 'none',
+};
+
+/** Icon FAB with a visible text descriptor to its left (right tray). */
+const TrayActionButton = ({ label, children, ...buttonProps }) => (
+  <Flex alignItems="center" justifyContent="flex-end" gap={2} w="100%">
+    <Text {...trayActionLabelProps}>{label}</Text>
+    <Button {...buttonProps}>{children}</Button>
+  </Flex>
+);
 
 const networkOptions = [
   { id: NETWORK_ID.mainnet, label: 'Mainnet' },
@@ -255,71 +278,63 @@ const WalletTrays = ({
         right="calc(env(safe-area-inset-right, 0px) + 1.5rem)"
         display="flex"
         flexDirection="column"
-        alignItems="center"
+        alignItems="flex-end"
         justifyContent="flex-end"
         gap={2}
         data-testid="wallet-action-tray"
       >
         <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
-          <Stack spacing={2} mb={2} alignItems="center">
+          <Stack spacing={2} mb={2} alignItems="stretch">
             {delegation && (
               <Stack
                 data-testid="wallet-delegation"
                 spacing={2}
-                alignItems="center"
+                alignItems="stretch"
               >
-                <Tooltip label="Vote" hasArrow placement="left">
-                  <Button
-                    {...floatingVoteProps}
-                    className={fabVoteClass}
-                    data-active={path === '/governance' ? 'true' : undefined}
-                    onClick={() => go('/governance')}
-                    aria-label="Open voting"
-                  >
-                    <Icon as={MdHowToVote} boxSize={6} />
-                  </Button>
-                </Tooltip>
-                <Tooltip
-                  label={delegation.active ? 'Stake Center' : 'Delegate'}
-                  hasArrow
-                  placement="left"
+                <TrayActionButton
+                  label="Vote"
+                  {...floatingVoteProps}
+                  className={fabVoteClass}
+                  data-active={path === '/governance' ? 'true' : undefined}
+                  onClick={() => go('/governance')}
+                  aria-label="Open voting"
                 >
-                  <Button
-                    {...floatingStakeProps}
-                    className={fabStakeClass}
-                    data-active={path === '/staking' ? 'true' : undefined}
-                    onClick={() => go('/staking')}
-                    aria-label="Open stake center"
-                  >
-                    <Icon as={MdOutlineHowToReg} boxSize={6} />
-                  </Button>
-                </Tooltip>
+                  <Icon as={MdHowToVote} boxSize={6} />
+                </TrayActionButton>
+                <TrayActionButton
+                  label={delegation.active ? 'Stake' : 'Delegate'}
+                  {...floatingStakeProps}
+                  className={fabStakeClass}
+                  data-active={path === '/staking' ? 'true' : undefined}
+                  onClick={() => go('/staking')}
+                  aria-label="Open stake center"
+                >
+                  <Icon as={MdOutlineHowToReg} boxSize={6} />
+                </TrayActionButton>
               </Stack>
             )}
 
-            <Tooltip label="Accounts" hasArrow placement="left">
-              <Button
-                {...floatingAccountsProps}
-                className={fabAccountsClass}
-                data-active={path === '/accounts' ? 'true' : undefined}
-                onClick={() => go('/accounts')}
-                aria-label="Open accounts"
-              >
-                <Icon as={MdAccountBalanceWallet} boxSize={6} />
-              </Button>
-            </Tooltip>
+            <TrayActionButton
+              label="Accounts"
+              {...floatingAccountsProps}
+              className={fabAccountsClass}
+              data-active={path === '/accounts' ? 'true' : undefined}
+              onClick={() => go('/accounts')}
+              aria-label="Open accounts"
+            >
+              <Icon as={MdAccountBalanceWallet} boxSize={6} />
+            </TrayActionButton>
 
-            <Tooltip label="Settings" hasArrow placement="left">
-              <Button
-                {...floatingSettingsProps}
-                className={fabSettingsClass}
-                data-active={path === '/settings' ? 'true' : undefined}
-                onClick={() => go('/settings')}
-                aria-label="Open settings"
-              >
-                <SettingsIcon boxSize={6} />
-              </Button>
-            </Tooltip>
+            <TrayActionButton
+              label="Settings"
+              {...floatingSettingsProps}
+              className={fabSettingsClass}
+              data-active={path === '/settings' ? 'true' : undefined}
+              onClick={() => go('/settings')}
+              aria-label="Open settings"
+            >
+              <SettingsIcon boxSize={6} />
+            </TrayActionButton>
           </Stack>
         </Collapse>
         <Button

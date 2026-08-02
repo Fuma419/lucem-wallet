@@ -151,7 +151,9 @@ export function cip1852AccountPath(accountIndex) {
 }
 
 /**
- * Stored / UI label: path + which derivation profile Keystone reported.
+ * Stored / UI label: account index (the CIP-1852 path variable) + the derivation
+ * profile in the device's own wording ("Ledger" vs "Cardano Native"). Kept short
+ * so it reads well in the account list.
  * @param {number} accountIndex — 0-based CIP-1852 account index
  * @param {KeystoneDerivationProfile} [profile]
  */
@@ -160,12 +162,9 @@ export function formatKeystoneCardanoAccountLabel(
   profile = KEYSTONE_DERIVATION.standard
 ) {
   const n = Number(accountIndex);
-  const path = cip1852AccountPath(n);
   const tail =
-    profile === KEYSTONE_DERIVATION.ledger
-      ? 'Ledger-compatible'
-      : 'Cardano standard';
-  return `Keystone · Account ${n} · ${path} · ${tail}`;
+    profile === KEYSTONE_DERIVATION.ledger ? 'Ledger' : 'Cardano Native';
+  return `Keystone ${n} · ${tail}`;
 }
 
 /**

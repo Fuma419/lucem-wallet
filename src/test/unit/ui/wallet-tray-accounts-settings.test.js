@@ -90,12 +90,23 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain("aria-current={isCurrent ? 'true' : undefined}");
     expect(accountsSrc).toContain("data-selected={isCurrent ? 'true' : undefined}");
     expect(accountsSrc).toContain('currentRowBg');
+    expect(accountsSrc).toContain('isSameAccountIndex');
     expect(accountsSrc).toContain(
       'Switch the active account. New Wallet adds another seed or'
     );
     expect(css).toMatch(
       /\.lucem-inset-row\.is-current[\s\S]*0 0 0 2px rgba\(255,\s*140,\s*0/
     );
+  });
+
+  test('accounts selection compares indexes across string/number forms', () => {
+    expect(accountsSrc).toContain(
+      "import { isSameAccountIndex } from '../utils/accountIndex'"
+    );
+    expect(accountsSrc).toContain(
+      'isSameAccountIndex(currentIndex, accountKey)'
+    );
+    expect(accountsSrc).toContain('await switchAccount(accountKey)');
   });
 
   test('accounts content uses inset panels instead of edge-to-edge windows', () => {

@@ -17,8 +17,6 @@ import {
   Checkbox,
   Icon,
   Collapse,
-  Radio,
-  RadioGroup,
   Stack,
   Input,
 } from '@chakra-ui/react';
@@ -49,7 +47,6 @@ import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import {
   KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX,
-  KEYSTONE_DERIVATION,
   filterKeystoneKeysForRequestedAccounts,
   formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
@@ -130,19 +127,6 @@ const hwPanelCheckboxSx = {
   '.chakra-checkbox__control': {
     borderColor: 'rgba(255,255,255,0.38)',
     bg: 'rgba(0,0,0,0.35)',
-    _checked: {
-      bg: HW_LIME,
-      borderColor: HW_LIME,
-      color: 'gray.900',
-    },
-    _hover: { borderColor: 'rgba(206, 250, 0, 0.65)' },
-  },
-};
-
-const hwPanelRadioSx = {
-  '.chakra-radio__control': {
-    borderColor: 'rgba(255,255,255,0.38)',
-    bg: 'rgba(0,0,0,0.3)',
     _checked: {
       bg: HW_LIME,
       borderColor: HW_LIME,
@@ -282,8 +266,6 @@ const ConnectHW = ({ onConfirm }) => {
   const [keystoneAccountChecks, setKeystoneAccountChecks] = React.useState(
     () => defaultKeystoneAccountChecks()
   );
-  /** Must match Keystone ADA export: standard (default) vs Ledger-compatible */
-  const [keystoneDerivation, setKeystoneDerivation] = React.useState('standard');
 
   const keystoneRequestedIndices = React.useMemo(() => {
     return Object.keys(keystoneAccountChecks)
@@ -312,12 +294,10 @@ const ConnectHW = ({ onConfirm }) => {
   );
 
   /** animated-qr BaseQRScanner pins decode callback on mount (`useEffect([], …)`); keep latest choices here. */
-  const keystoneDerivationRef = React.useRef(keystoneDerivation);
   const keystoneRequestedIndicesRef = React.useRef(keystoneRequestedIndices);
   React.useLayoutEffect(() => {
-    keystoneDerivationRef.current = keystoneDerivation;
     keystoneRequestedIndicesRef.current = keystoneRequestedIndices;
-  }, [keystoneDerivation, keystoneRequestedIndices]);
+  }, [keystoneRequestedIndices]);
 
   if (selected === HW.keystone && keystoneStep === 'showRequest') {
     const cborHex = Buffer.from(keyDerivationUr.cbor).toString('hex');
@@ -346,28 +326,10 @@ const ConnectHW = ({ onConfirm }) => {
               ? `account ${keystoneRequestedIndices[0]}`
               : `${keystoneRequestedIndices.length} accounts (${keystoneRequestedIndices.join(', ')})`}
           </b>
-          . Use the same <b>ADA derivation</b> on the device as in Lucem (
-          {keystoneDerivation === 'ledger'
-            ? 'Ledger-compatible'
-            : 'Cardano standard'}
-          ). Open the <b>scanner</b>, scan this QR, and approve. More accounts take longer
-          on the device.
+          . Open the <b>scanner</b>, scan this QR, and approve. Lucem imports
+          whatever ADA derivation the device is set to, so the addresses always
+          match Keystone. More accounts take longer on the device.
         </Text>
-        {keystoneDerivation === 'ledger' && (
-          <Text
-            fontSize="xs"
-            color="orange.200"
-            maxW="340px"
-            mt={3}
-            fontWeight="semibold"
-            textAlign="center"
-            mx="auto"
-          >
-            Keystone defaults to Cardano standard on the approval screen. When
-            the device asks you to confirm, switch ADA to Ledger / BitBox — not
-            the default — or imported addresses will not match Ledger.
-          </Text>
-        )}
         <Box h={4} />
         <Box
           alignSelf="center"
@@ -476,15 +438,9 @@ const ConnectHW = ({ onConfirm }) => {
             handleScan={(data) => {
               try {
                 if (keystoneScanConsumedRef.current) return;
-                const deriv = keystoneDerivationRef.current;
                 const indices = keystoneRequestedIndicesRef.current;
                 const { masterFingerprint, keys } =
-                  parseKeystoneCardanoConnectUr(data, {
-                    forceExportProfile:
-                      deriv === 'ledger'
-                        ? KEYSTONE_DERIVATION.ledger
-                        : KEYSTONE_DERIVATION.standard,
-                  });
+                  parseKeystoneCardanoConnectUr(data);
                 const filtered = filterKeystoneKeysForRequestedAccounts(
                   keys,
                   indices
@@ -583,7 +539,6 @@ const ConnectHW = ({ onConfirm }) => {
             setKeystoneStep('pick');
             keystoneScanConsumedRef.current = false;
             setKeystoneAccountChecks(defaultKeystoneAccountChecks());
-            setKeystoneDerivation('standard');
             setKeystoneAdvancedOpen(false);
             setError('');
             setScanError('');
@@ -684,11 +639,10 @@ const ConnectHW = ({ onConfirm }) => {
           alignItems="center"
         >
           <Text width="100%" fontSize="sm" color="whiteAlpha.800" textAlign="center">
-            By default Lucem connects <b>account 0</b> using{' '}
-            <b>Cardano standard</b> derivation (CIP-1852). Open{' '}
-            <b>Advanced options</b> to request more accounts (at least one) or
-            Ledger-compatible keys — settings must match Keystone when you approve the
-            QR.
+            By default Lucem connects <b>account 0</b> (CIP-1852). Open{' '}
+            <b>Advanced options</b> to request more accounts. Lucem imports
+            whatever ADA derivation the device is set to, so the addresses always
+            match Keystone.
           </Text>
           <Box h={4} />
           <Button
@@ -767,48 +721,11 @@ const ConnectHW = ({ onConfirm }) => {
                   )
                 )}
               </Stack>
-              <Text fontSize="sm" fontWeight="semibold" mt={4} color="whiteAlpha.900">
-                ADA derivation (two supported paths)
-              </Text>
-              <RadioGroup
-                name="keystone-ada-derivation"
-                value={keystoneDerivation}
-                onChange={(v) =>
-                  setKeystoneDerivation(v === 'ledger' ? 'ledger' : 'standard')
-                }
-                mt={2}
-                pb={1}
-              >
-                <Stack spacing={2} color="whiteAlpha.850">
-                  <Radio
-                    value="standard"
-                    size="sm"
-                    colorScheme="yellow"
-                    sx={{
-                      ...hwPanelRadioSx,
-                      '.chakra-radio__label': { color: 'whiteAlpha.850' },
-                    }}
-                  >
-                    Cardano standard (default)
-                  </Radio>
-                  <Radio
-                    value="ledger"
-                    size="sm"
-                    colorScheme="yellow"
-                    sx={{
-                      ...hwPanelRadioSx,
-                      '.chakra-radio__label': { color: 'whiteAlpha.850' },
-                    }}
-                  >
-                    Ledger-compatible (Ledger / BitBox)
-                  </Radio>
-                </Stack>
-              </RadioGroup>
-              <Text fontSize="xs" color="whiteAlpha.650" mt={2} maxW="340px">
-                Must match the address type you export on Keystone (Ledger vs
-                standard use different keys at the same path). If a scan error says
-                the QR does not match your choice, switch this option to the other
-                type or re-export on the device so the QR tags match.
+              <Text fontSize="xs" color="whiteAlpha.650" mt={3} maxW="340px">
+                Lucem imports each account exactly as your Keystone exports it —
+                whichever ADA derivation (Cardano standard or Ledger-compatible)
+                the device is currently set to. There is nothing to match here;
+                the resulting addresses always follow the device.
               </Text>
             </Box>
           </Collapse>

@@ -91,7 +91,7 @@ const voteResultLabel = (kind) => {
 const voteResultColor = (kind) => {
   if (kind === 'yes') return 'green';
   if (kind === 'no') return 'red';
-  if (kind === 'abstain') return 'blue';
+  if (kind === 'abstain') return 'cyan';
   return 'gray';
 };
 
@@ -192,12 +192,13 @@ const DelegateActionCard = ({
       <HStack spacing={3} align="start">
         <Flex
           rounded="xl"
-          bg="blue.400"
+          bg="cyan.400"
           color="gray.900"
           boxSize="10"
           align="center"
           justify="center"
           flexShrink={0}
+          boxShadow="0 0 14px rgba(0, 245, 255, 0.45)"
         >
           <Icon as={icon} boxSize={5} />
         </Flex>
@@ -211,7 +212,7 @@ const DelegateActionCard = ({
       <Button
         mt={4}
         width="full"
-        colorScheme={colorScheme || 'blue'}
+        colorScheme={colorScheme || 'cyan'}
         variant="outline"
         onClick={onClick}
         isLoading={isLoading}
@@ -289,7 +290,7 @@ const Governance = () => {
     inputBg,
     inputBorder,
     placeholder,
-    accentLink,
+    cyanLink,
   } = useSurfaceColors();
 
   const sortedProposals = React.useMemo(() => {
@@ -623,7 +624,7 @@ const Governance = () => {
           </Button>
           <HStack spacing={2}>
             {drepState.isRegistered ? (
-              <Badge colorScheme="blue">You're a DRep</Badge>
+              <Badge colorScheme="cyan">You're a DRep</Badge>
             ) : null}
             {governanceState.source ? (
               <Tooltip
@@ -653,7 +654,7 @@ const Governance = () => {
         >
           <Flex direction={{ base: 'column', md: 'row' }} gap={4} justify="space-between">
             <Box maxW="650px">
-              <Badge colorScheme="blue" mb={2}>
+              <Badge colorScheme="cyan" mb={2}>
                 Voting Center
               </Badge>
               <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="black" lineHeight="1.05">
@@ -673,7 +674,15 @@ const Governance = () => {
               p={4}
             >
               <HStack spacing={3}>
-                <Flex rounded="2xl" bg="blue.400" color="gray.900" boxSize="12" align="center" justify="center">
+                <Flex
+                  rounded="2xl"
+                  bg="cyan.400"
+                  color="gray.900"
+                  boxSize="12"
+                  align="center"
+                  justify="center"
+                  boxShadow="0 0 18px rgba(0, 245, 255, 0.5)"
+                >
                   <Icon as={isBlockfrost ? MdOutlineVerified : MdHowToVote} boxSize={7} />
                 </Flex>
                 <Box>
@@ -696,7 +705,7 @@ const Governance = () => {
                 </Flex>
                 <Flex justify="space-between">
                   <Text color={mutedFg}>Your DRep</Text>
-                  <Text fontWeight="semibold" color={drepState.isRegistered ? accentLink : mutedFg}>
+                  <Text fontWeight="semibold" color={drepState.isRegistered ? cyanLink : mutedFg}>
                     {!drepState.checked
                       ? 'Checking…'
                       : drepState.isRegistered
@@ -773,11 +782,11 @@ const Governance = () => {
                 onChange={(event) => setDrepIdInput(event.target.value)}
                 bg={inputBg}
                 borderColor={inputBorder}
-                focusBorderColor="blue.400"
+                focusBorderColor="cyan.400"
                 _placeholder={{ color: placeholder }}
               />
               <Button
-                colorScheme="blue"
+                colorScheme="cyan"
                 px={8}
                 onClick={() => void handleCustomDrepDelegation()}
                 isDisabled={!drepIdInput.trim()}
@@ -806,7 +815,7 @@ const Governance = () => {
                     justify="space-between"
                     gap={3}
                     transition="all 0.18s ease"
-                    _hover={{ borderColor: 'blue.500', bg: cardHoverBg }}
+                    _hover={{ borderColor: 'cyan.400', bg: cardHoverBg }}
                   >
                     <Box minW={0}>
                       <Text fontWeight="semibold" isTruncated>
@@ -819,7 +828,7 @@ const Governance = () => {
                     </Box>
                     <Button
                       size="sm"
-                      colorScheme="blue"
+                      colorScheme="cyan"
                       variant="outline"
                       flexShrink={0}
                       onClick={() => {
@@ -849,7 +858,7 @@ const Governance = () => {
               Active Governance Proposals
             </Text>
             {drepState.isRegistered ? (
-              <Badge colorScheme="blue" variant="subtle">
+              <Badge colorScheme="cyan" variant="subtle">
                 Voting enabled — you are a DRep
               </Badge>
             ) : null}
@@ -863,7 +872,7 @@ const Governance = () => {
             inline.
           </Text>
           <Link
-            color={accentLink}
+            color={cyanLink}
             fontSize="xs"
             display="inline-flex"
             alignItems="center"
@@ -881,7 +890,7 @@ const Governance = () => {
 
           {governanceState.isLoading ? (
             <Flex justify="center" py={10}>
-              <Spinner color="blue.400" speed="0.65s" />
+              <Spinner color="cyan.400" speed="0.65s" />
             </Flex>
           ) : governanceState.error ? (
             <Alert status="error" rounded="2xl" bg="red.900" color="white">
@@ -911,7 +920,8 @@ const Governance = () => {
                     key={proposal.id}
                     rounded="2xl"
                     borderWidth="1px"
-                    borderColor={isOpen ? 'blue.400' : panelBorder}
+                    borderColor={isOpen ? 'cyan.400' : panelBorder}
+                    boxShadow={isOpen ? '0 0 16px rgba(0, 245, 255, 0.28)' : undefined}
                     bg={cardBg}
                     overflow="hidden"
                   >
@@ -1034,7 +1044,7 @@ const Governance = () => {
                           <Button
                             size="xs"
                             variant="link"
-                            colorScheme="blue"
+                            colorScheme="cyan"
                             onClick={() => toggleProposalSummary(proposal.id)}
                           >
                             {summaryExpanded ? 'Show less' : 'Read full proposal text'}
@@ -1077,7 +1087,7 @@ const Governance = () => {
                           {proposal.references.map((reference, referenceIndex) => (
                             <Link
                               key={`${proposal.id}-ref-${referenceIndex}`}
-                              color={accentLink}
+                              color={cyanLink}
                               fontSize="xs"
                               wordBreak="break-word"
                               onClick={() => {
@@ -1121,7 +1131,7 @@ const Governance = () => {
                         mt={2}
                         display="inline-flex"
                         alignItems="center"
-                        color={accentLink}
+                        color={cyanLink}
                         fontSize="xs"
                         onClick={() =>
                           window.open(proposal.url, '_blank', 'noopener,noreferrer')
@@ -1142,7 +1152,7 @@ const Governance = () => {
                         borderTopWidth="1px"
                         borderColor={panelBorder}
                       >
-                        <Text fontSize="xs" fontWeight="semibold" color={accentLink} mb={2}>
+                        <Text fontSize="xs" fontWeight="semibold" color={cyanLink} mb={2}>
                           Cast your DRep vote
                         </Text>
                         {votable ? (
@@ -1168,7 +1178,7 @@ const Governance = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              colorScheme="blue"
+                              colorScheme="cyan"
                               flex={1}
                               onClick={() => void prepareVote(proposal, 'abstain')}
                               isLoading={votingKey === `${proposal.id}:abstain`}
@@ -1208,7 +1218,7 @@ const Governance = () => {
           >
             <Flex align="center" justify="space-between" gap={3} mb={3} flexWrap="wrap">
               <HStack spacing={2}>
-                <Icon as={MdHistory} boxSize={5} color={accentLink} />
+                <Icon as={MdHistory} boxSize={5} color={cyanLink} />
                 <Text fontSize="xl" fontWeight="black">
                   Your Voting History
                 </Text>
@@ -1227,7 +1237,7 @@ const Governance = () => {
 
             {votesState.isLoading ? (
               <Flex justify="center" py={8}>
-                <Spinner color="blue.400" speed="0.65s" />
+                <Spinner color="cyan.400" speed="0.65s" />
               </Flex>
             ) : votesState.error ? (
               <Alert status="error" rounded="2xl" bg="red.900" color="white">

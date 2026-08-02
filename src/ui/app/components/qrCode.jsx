@@ -82,8 +82,24 @@ const QrCode = ({ value }) => {
 
   const qrCodeUrl = `${networkUrl}/address/${value}`; // Create the dynamic URL
 
+  // Extension popups do not reliably follow an <a target="_blank"> default
+  // navigation (especially with a <canvas> child), so open the explorer tab
+  // programmatically — the same pattern used elsewhere in the app.
+  const openExplorer = (e) => {
+    if (e) e.preventDefault();
+    if (!value) return;
+    window.open(qrCodeUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
-    <Link href={qrCodeUrl} isExternal target="_blank" rel="noopener noreferrer" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+    <Link
+      href={qrCodeUrl}
+      isExternal
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={openExplorer}
+      style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
+    >
       <Box
         background={theme.colors.cyan[600]}
         className='modal-glow-cyan'

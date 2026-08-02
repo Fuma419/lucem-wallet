@@ -240,11 +240,13 @@ app.add(METHOD.getUtxos, (request, sendResponse) => {
 });
 
 app.add(METHOD.getCollateral, (request, sendResponse) => {
-  getCollateral()
+  getCollateral(request.data)
     .then((utxos) => {
-      utxos = utxos.map((utxo) =>
-        Buffer.from(utxo.to_bytes()).toString('hex')
-      );
+      utxos = utxos
+        ? utxos.map((utxo) =>
+            Buffer.from(utxo.to_bytes()).toString('hex')
+          )
+        : null;
       sendResponse({
         id: request.id,
         data: utxos,

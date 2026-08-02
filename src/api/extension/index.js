@@ -48,6 +48,12 @@ import { KOIOS_REQUESTS, addressTxsIndicatesHistory } from '../koios-endpoints';
 import { bigIntLovelace, normalizeLovelaceScalar } from '../lovelace-scalar';
 import { buildVkeyWitnessSet } from '../tx/sign-witness-set';
 import {
+  MAX_COLLATERAL_AMOUNT,
+  isReservedCollateralPresent,
+  parseCollateralAmount,
+  selectCollateralCandidates,
+} from './collateral';
+import {
   emptyDelegation,
   normalizeDelegationRow,
   normalizeStakePool as normalizeStakePoolData,
@@ -733,7 +739,15 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
   return convertedUtxos;
 };
 
+/**
+ * Clear stale reserved collateral when the UTxO is no longer on-chain.
+ * Mutates `currentAccount[network.id].collateral` in place.
+ * @returns {boolean} true when collateral was cleared (caller should persist)
+ */
 const checkCollateral = async (currentAccount, network, checkTx) => {
+  const reserved = currentAccount[network.id].collateral;
+  if (!reserved) return false;
+
   if (checkTx) {
     const transactions = await getTransactions();
     if (
@@ -741,39 +755,49 @@ const checkCollateral = async (currentAccount, network, checkTx) => {
       currentAccount[network.id].history.confirmed.includes(
         transactions[0].txHash
       )
-    )
-      return;
+    ) {
+      return false;
+    }
   }
-  const address = await getAddress(); // Get the full address
-  
+
+  const address = await getAddress();
   const request = KOIOS_REQUESTS.getAddressInfo(address);
   const result = await koiosRequest(request.endpoint, {}, request.body);
-  
+
   if (result.error || !result[0]) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
-    else return [];
+    else return false;
   }
-  
-  let utxos = result[0].utxo_set || [];
 
-  // exclude collateral input from overall utxo set
-  if (currentAccount[network.id].collateral) {
-    const initialSize = utxos.length;
-    utxos = utxos.filter(
-      (utxo) =>
-        !(
-          utxo.tx_hash === currentAccount[network.id].collateral.txHash &&
-          utxo.output_index === currentAccount[network.id].collateral.txId
-        )
-    );
-    if (utxos.length === initialSize) {
-      delete currentAccount[network.id].collateral;
-    }
+  const utxos = result[0].utxo_set || [];
+  if (!isReservedCollateralPresent(utxos, reserved)) {
+    delete currentAccount[network.id].collateral;
+    return true;
+  }
+  return false;
+};
+
+const decodeCollateralCoinCbor = (hex) => {
+  const bytes = Buffer.from(hex, 'hex');
+  try {
+    return BigInt(Loader.Cardano.BigNum.from_bytes(bytes).to_str());
+  } catch (_) {
+    // fall through — some dApps send a CBOR Value instead of a bare Coin
+  }
+  try {
+    return BigInt(Loader.Cardano.Value.from_bytes(bytes).coin().to_str());
+  } catch (_) {
+    throw new Error('could not parse collateral amount');
   }
 };
 
-export const getCollateral = async () => {
+/**
+ * CIP-30 getCollateral (deprecated; prefer CIP-40 collateral return).
+ * @param {{ amount?: string|number }|string|number|undefined} params
+ * @returns {Promise<import('@emurgo/cardano-serialization-lib-browser').TransactionUnspentOutput[]|null>}
+ */
+export const getCollateral = async (params) => {
   await Loader.load();
   const currentIndex = await getCurrentAccountIndex();
   const accounts = await getStorage(STORAGE.accounts);
@@ -782,34 +806,72 @@ export const getCollateral = async () => {
   if (await checkCollateral(currentAccount, network, true)) {
     await setStorage({ [STORAGE.accounts]: accounts });
   }
+
+  const amountRaw =
+    params && typeof params === 'object' && !Array.isArray(params)
+      ? params.amount
+      : params;
+
+  let minLovelace;
+  try {
+    minLovelace = parseCollateralAmount(amountRaw, {
+      decodeCoin: decodeCollateralCoinCbor,
+    });
+  } catch (e) {
+    throw {
+      ...APIError.InvalidRequest,
+      info: e?.message || APIError.InvalidRequest.info,
+    };
+  }
+
   const collateral = currentAccount[network.id].collateral;
   if (collateral) {
-    const collateralUtxo = Loader.Cardano.TransactionUnspentOutput.new(
-      Loader.Cardano.TransactionInput.new(
-        Loader.Cardano.TransactionHash.from_bytes(
-          Buffer.from(collateral.txHash, 'hex')
+    const reservedCoin = BigInt(collateral.lovelace.toString());
+    if (reservedCoin >= minLovelace) {
+      return [
+        Loader.Cardano.TransactionUnspentOutput.new(
+          Loader.Cardano.TransactionInput.new(
+            Loader.Cardano.TransactionHash.from_bytes(
+              Buffer.from(collateral.txHash, 'hex')
+            ),
+            parseInt(collateral.txId, 10)
+          ),
+          Loader.Cardano.TransactionOutput.new(
+            Loader.Cardano.Address.from_bech32(
+              currentAccount[network.id].paymentAddr
+            ),
+            Loader.Cardano.Value.new(
+              Loader.Cardano.BigNum.from_str(collateral.lovelace.toString())
+            )
+          )
         ),
-        parseInt(collateral.txId, 10)
-      ),
-      Loader.Cardano.TransactionOutput.new(
-        Loader.Cardano.Address.from_bech32(
-          currentAccount[network.id].paymentAddr
-        ),
-        Loader.Cardano.Value.new(
-          Loader.Cardano.BigNum.from_str(collateral.lovelace.toString())
-        )
-      )
-    );
-    return [collateralUtxo];
+      ];
+    }
   }
+
   const utxos = await getUtxos();
-  return utxos.filter((utxo) => {
+  if (!utxos || utxos.length <= 0) return null;
+
+  const candidates = utxos.map((utxo) => {
     const amt = utxo.output().amount();
-    const coinOk =
-      BigInt(amt.coin().to_str()) <= BigInt('50000000');
     const ma = amt.multiasset();
-    return coinOk && (!ma || ma.len() === 0);
+    return {
+      coin: BigInt(amt.coin().to_str()),
+      multiassetLen: ma ? ma.len() : 0,
+      utxo,
+    };
   });
+
+  const selected = selectCollateralCandidates(candidates, minLovelace);
+  if (!selected) {
+    if (minLovelace === MAX_COLLATERAL_AMOUNT && amountRaw == null) {
+      // Back-compat: no amount requested and nothing suitable → empty list
+      // (legacy Nami behavior) rather than null.
+      return [];
+    }
+    return null;
+  }
+  return selected;
 };
 
 export const getAddress = async () => {

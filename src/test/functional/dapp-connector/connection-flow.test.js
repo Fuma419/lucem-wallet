@@ -152,7 +152,14 @@ describe('dApp connector — read methods (whitelisted session)', () => {
   });
 
   test('getCollateral returns hex-encoded collateral UTxOs', async () => {
-    await expect(dapp.getCollateral()).resolves.toEqual(['c0', 'c1']);
+    const params = { amount: '1a000f4240' };
+    await expect(dapp.getCollateral(params)).resolves.toEqual(['c0', 'c1']);
+    expect(extension.getCollateral).toHaveBeenCalledWith(params);
+  });
+
+  test('getCollateral returns null when the wallet has no suitable UTxOs', async () => {
+    extension.getCollateral.mockResolvedValue(null);
+    await expect(dapp.getCollateral({ amount: '1a004c4b40' })).resolves.toBeNull();
   });
 
   test('getRewardAddress is proxied from the wallet', async () => {

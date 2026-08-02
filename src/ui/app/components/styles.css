@@ -158,14 +158,14 @@ html[data-theme='light'] .lucem-inset-surface:hover {
 
 .lucem-inset-row.is-current {
   box-shadow:
-    0 0 0 1px rgba(196, 144, 0, 0.45),
-    0 0 24px rgba(196, 144, 0, 0.22);
+    0 0 0 2px rgba(255, 140, 0, 0.85),
+    0 0 28px rgba(255, 140, 0, 0.32);
 }
 
 html[data-theme='light'] .lucem-inset-row.is-current {
   box-shadow:
-    0 0 0 1px rgba(176, 129, 2, 0.4),
-    0 0 20px rgba(176, 129, 2, 0.16);
+    0 0 0 2px rgba(217, 119, 6, 0.7),
+    0 0 22px rgba(217, 119, 6, 0.22);
 }
 
 /* Tight “Create Account” card (create-wallet tab + similar). */

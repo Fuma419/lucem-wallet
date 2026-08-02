@@ -67,13 +67,13 @@ describe('keystone-cardano', () => {
 
   test('formatKeystoneCardanoAccountLabel', () => {
     expect(formatKeystoneCardanoAccountLabel(0, KEYSTONE_DERIVATION.standard)).toBe(
-      "Keystone · Account 0 · m/1852'/1815'/0' · Cardano standard"
+      'Keystone 0 · Cardano Native'
     );
     expect(formatKeystoneCardanoAccountLabel(23, KEYSTONE_DERIVATION.standard)).toBe(
-      "Keystone · Account 23 · m/1852'/1815'/23' · Cardano standard"
+      'Keystone 23 · Cardano Native'
     );
     expect(formatKeystoneCardanoAccountLabel(0, KEYSTONE_DERIVATION.ledger)).toBe(
-      "Keystone · Account 0 · m/1852'/1815'/0' · Ledger-compatible"
+      'Keystone 0 · Ledger'
     );
   });
 

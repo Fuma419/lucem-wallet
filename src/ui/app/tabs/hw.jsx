@@ -461,6 +461,32 @@ const ConnectHW = ({ onConfirm }) => {
           Scan the animated QR on your Keystone screen. Allow the camera when
           the browser asks.
         </Text>
+        <Box
+          mt={3}
+          w="full"
+          maxW="340px"
+          mx="auto"
+          rounded="md"
+          bg="rgba(206, 250, 0, 0.10)"
+          borderWidth="1px"
+          borderColor={HW_ACCENT.borderMuted}
+          px={3}
+          py={2}
+        >
+          <Text
+            fontSize="xs"
+            color="orange.200"
+            fontWeight="semibold"
+            textAlign="center"
+          >
+            Before you scan, set the account compatibility on Keystone to match
+            Lucem:{' '}
+            <b>
+              {keystoneDerivation === 'ledger' ? 'Ledger' : 'Cardano Native'}
+            </b>
+            . A mismatch imports a different address than the device shows.
+          </Text>
+        </Box>
         <Box h={4} />
         <Box
           w="full"

@@ -27,6 +27,7 @@ export default function useSurfaceColors() {
     placeholder: useColorModeValue('gray.500', 'whiteAlpha.500'),
     accentLink: useColorModeValue('blue.600', 'blue.200'),
     yellowLink: useColorModeValue('yellow.700', 'yellow.200'),
+    cyanLink: useColorModeValue('cyan.600', 'cyan.300'),
     poolIdleBg: useColorModeValue('rgba(15, 23, 42, 0.04)', 'rgba(255, 255, 255, 0.05)'),
     poolIdleFg: useColorModeValue('gray.900', 'white'),
     poolIdleHover: useColorModeValue('rgba(15, 23, 42, 0.08)', 'rgba(255, 255, 255, 0.1)'),

@@ -109,6 +109,8 @@ describe('staking and governance theme surfaces', () => {
     expect(hookSrc).toContain("useColorModeValue('#f4f6fb', '#080808')");
     expect(hookSrc).toContain('panelShadow');
     expect(hookSrc).toContain("useColorModeValue('transparent', 'transparent')");
+    expect(hookSrc).toContain('cyanLink');
+    expect(hookSrc).toContain("useColorModeValue('cyan.600', 'cyan.300')");
   });
 
   test('stake center page uses theme-aware page and panel backgrounds', () => {
@@ -122,6 +124,18 @@ describe('staking and governance theme surfaces', () => {
     expect(stakingSrc).toContain('bg={panelBg}');
     expect(stakingSrc).not.toMatch(/bg="black"/);
     expect(stakingSrc).not.toContain("useColorModeValue('gray.900', 'gray.900')");
+  });
+
+  test('voting center uses cyan accents matching the Vote FAB', () => {
+    const governanceSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/governance.jsx'),
+      'utf8'
+    );
+    expect(governanceSrc).toContain('cyanLink');
+    expect(governanceSrc).toContain('colorScheme="cyan"');
+    expect(governanceSrc).toContain('bg="cyan.400"');
+    expect(governanceSrc).toContain('rgba(0, 245, 255');
+    expect(governanceSrc).not.toContain('accentLink');
   });
 });
 

@@ -520,6 +520,7 @@ const Wallet = () => {
               <PopoverTrigger>
                 <Button
                   w="120px"
+                  h="2.6rem"
                   data-testid="wallet-receive"
                   className={receiveBtnClass}
                   color={actionBtnColor}
@@ -586,6 +587,7 @@ const Wallet = () => {
             >
               <Button
                 w="120px"
+                h="2.6rem"
                 data-testid="wallet-send"
                 onClick={() => {
                   navigate('/send');

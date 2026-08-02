@@ -16,7 +16,7 @@ describe('governance page and wallet network button wiring', () => {
       /\.button\.network-preprod\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(0,\s*122,\s*255/
     );
     expect(css).toMatch(
-      /\.button\.network-preview[\s\S]*radial-gradient\([\s\S]*rgba\(255,\s*140,\s*0/
+      /\.button\.network-preview[\s\S]*radial-gradient\([\s\S]*rgba\(0,\s*230,\s*118/
     );
     expect(css).toMatch(
       /\.button\.network-mainnet\[data-active\][\s\S]*opacity:\s*1\s*!important/
@@ -69,10 +69,10 @@ describe('governance page and wallet network button wiring', () => {
     // Rounded badge matching the Send/Receive button shape (not the old U-shape/rectangle)
     expect(css).toMatch(/\.network-banner[\s\S]*border-top:\s*thin\s+solid/);
     expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*0\.5rem/);
-    // Testnet indicators: blue (preprod) and orange (preview) — distinct from
-    // Send (purple) / Receive (cyan) and from mainnet lime yellow
+    // Testnet indicators: blue (preprod) and emerald (preview) — distinct from
+    // Send (purple) / Receive (cyan), mainnet lime, and Accounts orange
     expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*122,\s*255/);
-    expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(255,\s*140,\s*0/);
+    expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(0,\s*230,\s*118/);
   });
 
   test('governance page uses API-backed governance loading and confirm modal signing flow', () => {

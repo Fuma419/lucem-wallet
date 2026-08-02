@@ -41,7 +41,7 @@ jobs:
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          for stage in "Build" "Unit tests" "Integration tests" "Functional tests"; do
+          for stage in "Build" "Unit tests" "Integration tests" "Functional tests" "Mobile Android"; do
             gh api "repos/${REPO}/statuses/${SHA}" \
               --method POST \
               --field state=pending \

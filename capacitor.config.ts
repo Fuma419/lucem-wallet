@@ -7,6 +7,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
  * through the web platform adapter (`src/platform/web.js`, IndexedDB storage).
  *
  * `npm run mobile:sync` builds `build/` and copies it into the native projects.
+ * CI (`npm run mobile:android:ci` / Jenkins Mobile Android) syncs Android and
+ * runs `assembleDebug`. iOS is local-only for now (macOS + signing).
  */
 const config: CapacitorConfig = {
   appId: 'xyz.lucem.wallet',

@@ -441,12 +441,9 @@ const ConnectHW = ({ onConfirm }) => {
             fontWeight="semibold"
             textAlign="center"
           >
-            Before you scan, set the account compatibility on Keystone to match
-            Lucem:{' '}
-            <b>
-              {keystoneDerivation === 'ledger' ? 'Ledger' : 'Cardano Native'}
-            </b>
-            . A mismatch imports a different address than the device shows.
+            Before you scan, pick the account compatibility you want on
+            Keystone — <b>Cardano Native</b> or <b>Ledger</b>. Lucem imports
+            whichever the device exports, so choose it on the device first.
           </Text>
         </Box>
         <Box h={4} />

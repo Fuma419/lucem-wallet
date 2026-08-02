@@ -101,14 +101,14 @@ describe('governance page and wallet network button wiring', () => {
 });
 
 describe('staking and governance theme surfaces', () => {
-  test('shared surface hook elevates dark panels above page background', () => {
+  test('shared surface hook uses true light/dark page chrome (not mid-tone gray.100/900)', () => {
     const hookSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/hooks/useSurfaceColors.js'),
       'utf8'
     );
-    expect(hookSrc).toContain("useColorModeValue('gray.100', 'black')");
-    expect(hookSrc).toContain("useColorModeValue('white', 'gray.700')");
-    expect(hookSrc).toContain("useColorModeValue('gray.100', 'gray.600')");
+    expect(hookSrc).toContain("useColorModeValue('#f4f6fb', '#080808')");
+    expect(hookSrc).toContain('panelShadow');
+    expect(hookSrc).toContain("useColorModeValue('transparent', 'transparent')");
   });
 
   test('stake center page uses theme-aware page and panel backgrounds', () => {

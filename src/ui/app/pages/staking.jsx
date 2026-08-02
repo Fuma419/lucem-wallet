@@ -280,6 +280,7 @@ const Staking = () => {
     pageFg,
     panelBg,
     panelBorder,
+    panelShadow,
     cardBg,
     insetBg,
     mutedFg,
@@ -503,8 +504,7 @@ const Staking = () => {
           rounded="3xl"
           p={{ base: 5, md: 7 }}
           bg={panelBg}
-          borderWidth="1px"
-          borderColor={panelBorder}
+          boxShadow={panelShadow}
         >
           <Flex direction={{ base: 'column', md: 'row' }} gap={5} justify="space-between">
             <Box maxW="650px">
@@ -766,7 +766,7 @@ const Staking = () => {
               )}
             </Box>
 
-            <Box rounded="3xl" bg={panelBg} borderWidth="1px" borderColor={panelBorder} p={5}>
+            <Box rounded="3xl" bg={panelBg} boxShadow={panelShadow} p={5}>
               <HStack spacing={2} mb={4}>
                 <InfoOutlineIcon color="yellow.300" />
                 <Text fontSize="xl" fontWeight="black">

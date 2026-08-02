@@ -29,16 +29,18 @@ describe('governance page and wallet network button wiring', () => {
     );
   });
 
-  test('wallet network tray buttons use per-network class names with no shadow', () => {
+  test('wallet network tray buttons use circular labeled FABs with no shadow', () => {
     const traysSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/walletTrays.jsx'),
       'utf8'
     );
 
+    expect(traysSrc).toContain('TrayNetworkButton');
     expect(traysSrc).toContain('networkOptions.map((networkOption)');
     expect(traysSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
     expect(traysSrc).toContain('data-active=');
     expect(traysSrc).toMatch(/shadow="none"/);
+    expect(traysSrc).toContain('label={networkOption.label}');
     expect(traysSrc).toContain('wallet-tray-backdrop');
     expect(traysSrc).toContain('blackAlpha.700');
     expect(traysSrc).toMatch(/isNetworkTrayOpen \|\| isTrayOpen/);

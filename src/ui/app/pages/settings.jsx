@@ -25,6 +25,7 @@ import {
   useColorModeValue,
   Wrap,
   WrapItem,
+  Stack,
 } from '@chakra-ui/react';
 import { useAppearancePreference } from '../../appearanceContext';
 import { SmallCloseIcon, RepeatIcon } from '@chakra-ui/icons';
@@ -81,7 +82,6 @@ function useSettingsChrome() {
 
   const primaryButtonProps = {
     size: 'md',
-    w: 'full',
     h: '12',
     rounded: 'xl',
     bg: primaryBg,
@@ -349,7 +349,12 @@ const Settings = () => {
             />
           </Box>
 
-          <Flex direction="column" gap={3} mt={8} w="full">
+          <Stack
+            spacing={3}
+            mt={8}
+            className="lucem-equal-width-actions"
+            data-testid="settings-primary-actions"
+          >
             <Button
               {...settingsPrimaryButtonProps}
               isDisabled={refreshed}
@@ -365,24 +370,23 @@ const Settings = () => {
             >
               Change Password
             </Button>
-          </Flex>
-          <Button
-            mt={10}
-            {...settingsPrimaryButtonProps}
-            borderWidth="1px"
-            borderColor="red.400"
-            bg="rgba(120, 20, 20, 0.35)"
-            color="red.100"
-            _hover={{ bg: 'rgba(160, 30, 30, 0.45)', borderColor: 'red.300' }}
-            _active={{ bg: 'rgba(160, 30, 30, 0.55)' }}
-            onClick={() => {
-              setEraseAck(false);
-              setErasePhrase('');
-              setEraseModalOpen(true);
-            }}
-          >
-            Erase all data
-          </Button>
+            <Button
+              {...settingsPrimaryButtonProps}
+              borderWidth="1px"
+              borderColor="red.400"
+              bg="rgba(120, 20, 20, 0.35)"
+              color="red.100"
+              _hover={{ bg: 'rgba(160, 30, 30, 0.45)', borderColor: 'red.300' }}
+              _active={{ bg: 'rgba(160, 30, 30, 0.55)' }}
+              onClick={() => {
+                setEraseAck(false);
+                setErasePhrase('');
+                setEraseModalOpen(true);
+              }}
+            >
+              Erase all data
+            </Button>
+          </Stack>
           <Text mt={3} fontSize="xs" color={hintColor} textAlign="center" w="full">
             Removes every Lucem account, keys, and settings from this browser or
             extension. You will need your recovery phrase to use funds again.

@@ -91,11 +91,17 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(setupSrc).toContain('Import HW');
     expect(setupSrc).toContain('lucem-wallet-setup-actions');
     expect(css).toMatch(
+      /\.lucem-equal-width-actions[\s\S]*width:\s*max-content/
+    );
+    expect(css).toMatch(
       /\.lucem-wallet-setup-actions[\s\S]*width:\s*max-content/
     );
     expect(css).toMatch(
-      /\.lucem-wallet-setup-actions \.button[\s\S]*width:\s*100%/
+      /\.lucem-equal-width-actions \.button[\s\S]*width:\s*100%/
     );
+    expect(css).toMatch(/\.lucem-tray-equal-actions/);
+    expect(traysSrc).toContain('lucem-tray-equal-actions');
+    expect(traysSrc).toContain('lucem-tray-action-label');
   });
 
   test('accounts selected row is visually and accessibly marked', () => {
@@ -169,6 +175,8 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(settingsSrc).not.toContain('ChevronLeftIcon');
     expect(settingsSrc).toContain('data-testid="settings-app-version"');
     expect(settingsSrc).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
+    expect(settingsSrc).toContain('lucem-equal-width-actions');
+    expect(settingsSrc).toContain('data-testid="settings-primary-actions"');
     expect(governanceSrc).not.toContain('ArrowBackIcon');
     expect(stakingSrc).not.toContain('ArrowBackIcon');
   });

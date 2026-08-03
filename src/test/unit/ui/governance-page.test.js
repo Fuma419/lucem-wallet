@@ -102,6 +102,9 @@ describe('governance page and wallet network button wiring', () => {
     expect(governanceSrc).toContain('useSurfaceColors');
     expect(governanceSrc).toContain('bg={pageBg}');
     expect(governanceSrc).toContain('bg={panelBg}');
+    expect(governanceSrc).toContain('lucem-equal-width-actions');
+    expect(governanceSrc).toContain('data-testid="governance-delegate-actions"');
+    expect(governanceSrc).toContain('data-testid="governance-vote-actions"');
   });
 });
 

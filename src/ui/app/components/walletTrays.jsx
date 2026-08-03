@@ -56,8 +56,15 @@ const trayActionLabelProps = {
 
 /** Icon FAB with a visible text descriptor to its left (right tray). */
 const TrayActionButton = ({ label, children, ...buttonProps }) => (
-  <Flex alignItems="center" justifyContent="flex-end" gap={2} w="100%">
-    <Text {...trayActionLabelProps}>{label}</Text>
+  <Flex
+    className="lucem-tray-action-row"
+    alignItems="center"
+    justifyContent="flex-end"
+    gap={2}
+  >
+    <Text className="lucem-tray-action-label" {...trayActionLabelProps}>
+      {label}
+    </Text>
     <Button {...buttonProps}>{children}</Button>
   </Flex>
 );
@@ -301,13 +308,14 @@ const WalletTrays = ({
         data-testid="wallet-action-tray"
       >
         <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
-          <Stack spacing={2} mb={2} alignItems="stretch">
+          <Stack
+            spacing={2}
+            mb={2}
+            className="lucem-tray-equal-actions"
+            data-testid="wallet-action-tray-menu"
+          >
             {delegation && (
-              <Stack
-                data-testid="wallet-delegation"
-                spacing={2}
-                alignItems="stretch"
-              >
+              <Box data-testid="wallet-delegation" sx={{ display: 'contents' }}>
                 <TrayActionButton
                   label="Vote"
                   {...floatingVoteProps}
@@ -328,7 +336,7 @@ const WalletTrays = ({
                 >
                   <Icon as={MdOutlineHowToReg} boxSize={6} />
                 </TrayActionButton>
-              </Stack>
+              </Box>
             )}
 
             <TrayActionButton

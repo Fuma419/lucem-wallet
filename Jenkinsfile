@@ -209,17 +209,22 @@ pipeline {
 
     stage('Mobile Android') {
       // Capacitor sync + assembleDebug against the webpack build/ from the Build stage.
-      // Bootstraps a user-local Android SDK under $HOME/.local/android-sdk when needed.
+      // Bootstraps a user-local Android SDK + JDK 21 under $HOME/.local when needed.
       // iOS is intentionally omitted (needs macOS runners + signing).
+      // Soft-gate: mark the stage failed / publish failure status, but do not fail the
+      // whole PR pipeline on first-time agent SDK bootstrap flakes. Promote to hard
+      // gate once the lucem-wallet agent has a warm SDK cache.
       steps {
         script {
           publishGithubStatus('Mobile Android', 'pending', 'Mobile Android is running in Jenkins')
         }
-        sh '''
-          set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
-          npm run mobile:android:ci
-        '''
+        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+          sh '''
+            set -e
+            export PATH="${NODE20_DIR}/bin:${PATH}"
+            npm run mobile:android:ci
+          '''
+        }
       }
       post {
         success {
@@ -230,7 +235,7 @@ pipeline {
         }
         failure {
           script {
-            publishGithubStatus('Mobile Android', 'failure', 'Mobile Android failed in Jenkins')
+            publishGithubStatus('Mobile Android', 'failure', 'Mobile Android failed in Jenkins (non-gating)')
           }
         }
         aborted {

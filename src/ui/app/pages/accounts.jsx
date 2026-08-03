@@ -275,8 +275,7 @@ const Accounts = () => {
             p={{ base: 4, md: 5 }}
             data-testid="accounts-actions-panel"
           >
-            <Stack spacing={3}>
-              <WalletSetupButtons spacing={3} />
+            <WalletSetupButtons spacing={3}>
               {canDelete ? (
                 <Button
                   colorScheme="red"
@@ -303,15 +302,17 @@ const Accounts = () => {
               >
                 Collateral
               </Button>
-              <Button
-                rounded="xl"
-                h="12"
-                variant="ghost"
-                onClick={() => aboutRef.current.openModal()}
-              >
-                About
-              </Button>
-            </Stack>
+            </WalletSetupButtons>
+            <Button
+              mt={3}
+              w="full"
+              rounded="xl"
+              h="12"
+              variant="ghost"
+              onClick={() => aboutRef.current.openModal()}
+            >
+              About
+            </Button>
           </Box>
         </Stack>
       </Box>

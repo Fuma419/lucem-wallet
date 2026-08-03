@@ -284,6 +284,14 @@ html[data-theme='light'] .lucem-inset-row.is-current {
   white-space: nowrap;
 }
 
+/* Chakra outline/ghost CTAs nested in an equal-width group (accounts, etc.) */
+.lucem-equal-width-actions .chakra-button,
+.lucem-wallet-setup-actions .chakra-button {
+  width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
 /* Right-tray Vote / Delegate / Accounts / Settings: shared label column width */
 .lucem-tray-equal-actions {
   width: max-content;

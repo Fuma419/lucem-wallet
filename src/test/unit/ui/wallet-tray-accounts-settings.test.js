@@ -82,6 +82,9 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain('WalletSetupButtons');
     expect(accountsSrc).toContain('Collateral');
     expect(accountsSrc).toContain('Delete Account');
+    expect(accountsSrc).toMatch(
+      /WalletSetupButtons[\s\S]*Delete Account[\s\S]*Collateral[\s\S]*<\/WalletSetupButtons>/
+    );
     expect(accountsSrc).toContain('About');
     const setupSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
@@ -91,6 +94,7 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(setupSrc).toContain('Import Mnemonic');
     expect(setupSrc).toContain('Import HW');
     expect(setupSrc).toContain('lucem-wallet-setup-actions');
+    expect(setupSrc).toContain('{children}');
     expect(css).toMatch(
       /\.lucem-equal-width-actions[\s\S]*width:\s*max-content/
     );
@@ -99,6 +103,9 @@ describe('wallet tray accounts vs settings FABs', () => {
     );
     expect(css).toMatch(
       /\.lucem-equal-width-actions \.button[\s\S]*width:\s*100%/
+    );
+    expect(css).toMatch(
+      /\.lucem-wallet-setup-actions \.chakra-button[\s\S]*width:\s*100%/
     );
     expect(css).toMatch(/\.lucem-tray-equal-actions/);
     expect(traysSrc).toContain('lucem-tray-equal-actions');

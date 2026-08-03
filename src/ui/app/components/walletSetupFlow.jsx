@@ -29,6 +29,8 @@ export const WalletSetupButtons = ({
   spacing = 6,
   stackProps = {},
   buttonProps = {},
+  /** Extra equal-width actions rendered under the setup CTAs (e.g. accounts). */
+  children,
 }) => {
   const refWallet = React.useRef();
   const refImport = React.useRef();
@@ -63,6 +65,7 @@ export const WalletSetupButtons = ({
         >
           Import HW
         </Button>
+        {children}
       </Stack>
       <WalletModal ref={refWallet} />
       <ImportModal ref={refImport} />

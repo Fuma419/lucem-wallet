@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Spinner } from '@chakra-ui/react';
+import { Box } from '@chakra-ui/react';
 
 const THRESHOLD = 64; // px of pull required to trigger a refresh
 const MAX_PULL = 96; // clamp how far the content follows the finger
@@ -26,10 +26,10 @@ const findScrollParent = (node) => {
 };
 
 /**
- * Touch pull-to-refresh wrapper. Adds a native-feeling pull gesture (mobile /
- * WebView) that invokes `onRefresh` when released past the threshold, without
- * altering the child's own scrolling. On desktop it is inert (no touch events),
- * so pages should still expose an explicit refresh control there.
+ * Touch pull-to-refresh wrapper. Rubber-bands content and invokes `onRefresh`
+ * when released past the threshold. Does **not** render its own loading spinner
+ * — pages already expose a refresh control (e.g. balance-adjacent on wallet).
+ * On desktop it is inert (no touch events).
  */
 const PullToRefresh = ({ onRefresh, isRefreshing = false, children, ...boxProps }) => {
   const wrapRef = React.useRef(null);
@@ -83,9 +83,6 @@ const PullToRefresh = ({ onRefresh, isRefreshing = false, children, ...boxProps 
     }
   };
 
-  const showSpinner = busy || isRefreshing;
-  const indicatorHeight = Math.max(pull, showSpinner ? 32 : 0);
-
   return (
     <Box
       ref={wrapRef}
@@ -93,25 +90,11 @@ const PullToRefresh = ({ onRefresh, isRefreshing = false, children, ...boxProps 
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       position="relative"
+      data-testid="pull-to-refresh"
+      data-pulling={pull > 0 ? 'true' : undefined}
+      data-busy={busy || isRefreshing ? 'true' : undefined}
       {...boxProps}
     >
-      <Box
-        position="absolute"
-        top={0}
-        left={0}
-        right={0}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-        pointerEvents="none"
-        zIndex={10}
-        height={`${indicatorHeight}px`}
-        opacity={pull > 0 || showSpinner ? 1 : 0}
-        transition="opacity 0.15s ease"
-        data-testid="pull-to-refresh-indicator"
-      >
-        <Spinner size="sm" color="yellow.400" speed="0.65s" />
-      </Box>
       <Box
         transform={`translateY(${pull}px)`}
         transition={startYRef.current == null ? 'transform 0.2s ease' : 'none'}

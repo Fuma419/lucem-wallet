@@ -39,5 +39,12 @@ describe('wallet refresh state retention', () => {
     expect(walletSrc).toMatch(/isLoading=\{isFetching\}/);
     expect(walletSrc).not.toMatch(/isRefreshing=\{isFetching\}/);
     expect(walletSrc).not.toMatch(/<Skeleton[\s\S]{0,200}displayTotalAda/);
+    const ptrSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/pullToRefresh.jsx'),
+      'utf8'
+    );
+    // Pull-to-refresh must not add a second top-center yellow spinner.
+    expect(ptrSrc).not.toMatch(/Spinner/);
+    expect(ptrSrc).not.toContain('pull-to-refresh-indicator');
   });
 });

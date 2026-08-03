@@ -238,11 +238,14 @@ const options = {
           to: path.join(__dirname, 'build'),
           force: true,
           transform: function (content) {
+            // package.json is the single source of truth for version.
+            // Spread the source manifest first, then overwrite version so a
+            // stale/missing src/manifest.json version cannot win.
+            const manifest = JSON.parse(content.toString());
             return Buffer.from(
               JSON.stringify({
-                description: process.env.npm_package_description,
+                ...manifest,
                 version: process.env.npm_package_version,
-                ...JSON.parse(content.toString()),
               })
             );
           },

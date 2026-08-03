@@ -744,7 +744,11 @@ const Governance = () => {
             </Button>
           </Flex>
 
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+          <Stack
+            spacing={4}
+            className="lucem-equal-width-actions"
+            data-testid="governance-delegate-actions"
+          >
             <DelegateActionCard
               icon={MdOutlineGavel}
               title="Always Abstain"
@@ -762,7 +766,7 @@ const Governance = () => {
               onClick={() => void prepareVoteDelegation('always_no_confidence')}
               isLoading={isBuildingTx}
             />
-          </SimpleGrid>
+          </Stack>
 
           <Box
             mt={4}
@@ -1159,11 +1163,14 @@ const Governance = () => {
                           Cast your DRep vote
                         </Text>
                         {votable ? (
-                          <HStack spacing={2}>
+                          <Stack
+                            spacing={2}
+                            className="lucem-equal-width-actions"
+                            data-testid="governance-vote-actions"
+                          >
                             <Button
                               size="sm"
                               colorScheme="green"
-                              flex={1}
                               onClick={() => void prepareVote(proposal, 'yes')}
                               isLoading={votingKey === `${proposal.id}:yes`}
                             >
@@ -1172,7 +1179,6 @@ const Governance = () => {
                             <Button
                               size="sm"
                               colorScheme="red"
-                              flex={1}
                               onClick={() => void prepareVote(proposal, 'no')}
                               isLoading={votingKey === `${proposal.id}:no`}
                             >
@@ -1182,13 +1188,12 @@ const Governance = () => {
                               size="sm"
                               variant="outline"
                               colorScheme="cyan"
-                              flex={1}
                               onClick={() => void prepareVote(proposal, 'abstain')}
                               isLoading={votingKey === `${proposal.id}:abstain`}
                             >
                               Abstain
                             </Button>
-                          </HStack>
+                          </Stack>
                         ) : (
                           <Text fontSize="xs" color={placeholder}>
                             Voting needs a governance action id (tx hash + index), which the

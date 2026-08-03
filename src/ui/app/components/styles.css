@@ -258,7 +258,9 @@ html[data-theme='light'] .lucem-inset-row.is-current {
   will-change: transform, box-shadow;
 }
 
-/* Welcome / Accounts: Create / Import / HW share one width (widest label). */
+/* Equal-width action stacks: container grows to the widest child, then
+   every direct child stretches to that width (welcome setup, settings CTAs, …). */
+.lucem-equal-width-actions,
 .lucem-wallet-setup-actions {
   width: max-content;
   max-width: 100%;
@@ -266,12 +268,38 @@ html[data-theme='light'] .lucem-inset-row.is-current {
   align-items: stretch;
 }
 
+.lucem-equal-width-actions > *,
+.lucem-wallet-setup-actions > * {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lucem-equal-width-actions .button,
 .lucem-wallet-setup-actions .button {
   width: 100%;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  white-space: nowrap;
+}
+
+/* Right-tray Vote / Delegate / Accounts / Settings: shared label column width */
+.lucem-tray-equal-actions {
+  width: max-content;
+  max-width: 100%;
+  margin-left: auto;
+  align-items: stretch;
+}
+
+.lucem-tray-equal-actions .lucem-tray-action-row {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lucem-tray-equal-actions .lucem-tray-action-label {
+  flex: 1 1 auto;
+  text-align: right;
   white-space: nowrap;
 }
 

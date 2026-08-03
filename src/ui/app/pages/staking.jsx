@@ -579,7 +579,7 @@ const Staking = () => {
           </Alert>
         )}
 
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
           <Box
             borderWidth="1px"
             borderColor={panelBorder}
@@ -684,22 +684,28 @@ const Staking = () => {
             )}
           </Box>
 
-          <ActionCard
-            icon={MdOutlineSavings}
-            title="Withdraw Rewards"
-            text="Collect available staking rewards back into your wallet balance."
-            onClick={buildWithdrawalPreview}
-            isDisabled={rewards < MIN_REWARD_WITHDRAWAL}
-            isLoading={isBuilding && txMode === 'withdraw'}
-          />
-          <ActionCard
-            icon={MdUndo}
-            title="Unstake"
-            text="Deregister the stake key and reclaim the stake deposit after rewards are handled."
-            onClick={buildUnstakePreview}
-            isDisabled={!delegation?.active}
-            isLoading={isBuilding && txMode === 'unstake'}
-          />
+          <Stack
+            spacing={4}
+            className="lucem-equal-width-actions"
+            data-testid="stake-reward-actions"
+          >
+            <ActionCard
+              icon={MdOutlineSavings}
+              title="Withdraw Rewards"
+              text="Collect available staking rewards back into your wallet balance."
+              onClick={buildWithdrawalPreview}
+              isDisabled={rewards < MIN_REWARD_WITHDRAWAL}
+              isLoading={isBuilding && txMode === 'withdraw'}
+            />
+            <ActionCard
+              icon={MdUndo}
+              title="Unstake"
+              text="Deregister the stake key and reclaim the stake deposit after rewards are handled."
+              onClick={buildUnstakePreview}
+              isDisabled={!delegation?.active}
+              isLoading={isBuilding && txMode === 'unstake'}
+            />
+          </Stack>
         </SimpleGrid>
 
         <Stack spacing={5}>

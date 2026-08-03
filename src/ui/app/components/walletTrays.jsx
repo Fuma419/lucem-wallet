@@ -54,26 +54,31 @@ const trayActionLabelProps = {
   pointerEvents: 'none',
 };
 
-/** Icon FAB with a visible text descriptor to its left (right tray). */
-const TrayActionButton = ({ label, children, ...buttonProps }) => (
+/** Icon FAB with a text descriptor on either side (flips when trays swap). */
+const TrayLabeledButton = ({
+  label,
+  labelSide = 'left',
+  children,
+  ...buttonProps
+}) => (
   <Flex
     className="lucem-tray-action-row"
     alignItems="center"
-    justifyContent="flex-end"
+    justifyContent={labelSide === 'left' ? 'flex-end' : 'flex-start'}
     gap={2}
+    w={labelSide === 'right' ? '100%' : undefined}
   >
-    <Text className="lucem-tray-action-label" {...trayActionLabelProps}>
-      {label}
-    </Text>
+    {labelSide === 'left' ? (
+      <Text className="lucem-tray-action-label" {...trayActionLabelProps}>
+        {label}
+      </Text>
+    ) : null}
     <Button {...buttonProps}>{children}</Button>
-  </Flex>
-);
-
-/** Icon FAB with a visible text descriptor to its right (left / network tray). */
-const TrayNetworkButton = ({ label, children, ...buttonProps }) => (
-  <Flex alignItems="center" justifyContent="flex-start" gap={2} w="100%">
-    <Button {...buttonProps}>{children}</Button>
-    <Text {...trayActionLabelProps}>{label}</Text>
+    {labelSide === 'right' ? (
+      <Text className="lucem-tray-action-label" {...trayActionLabelProps}>
+        {label}
+      </Text>
+    ) : null}
   </Flex>
 );
 
@@ -84,21 +89,22 @@ const networkOptions = [
 ];
 
 /**
- * Fixed lower-left (network) and lower-right (actions) trays shared by wallet
- * shell screens. Navigation FABs switch between /accounts, /settings,
- * /staking, and /governance; Back/Wallet on those pages returns home.
+ * Fixed bottom trays shared by wallet shell screens. Default: network left,
+ * actions right. When `swapTrays` is true the sides are reversed.
  */
 const WalletTrays = ({
   networkId,
   onNetworkSelect,
   isNetworkLoading = false,
   delegation = null,
+  swapTrays = false,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { colorMode } = useColorMode();
   const [isTrayOpen, setIsTrayOpen] = React.useState(false);
   const [isNetworkTrayOpen, setIsNetworkTrayOpen] = React.useState(false);
+  const traysSwapped = Boolean(swapTrays);
 
   const fabVoteClass = colorMode === 'dark' ? 'button fab-vote' : undefined;
   const fabStakeClass = colorMode === 'dark' ? 'button fab-stake' : undefined;
@@ -215,6 +221,26 @@ const WalletTrays = ({
   const navPaths = ['/accounts', '/settings', '/staking', '/governance'];
   const isOnNavPage = navPaths.includes(path);
 
+  const sideInset = {
+    left: 'calc(env(safe-area-inset-left, 0px) + 1.5rem)',
+    right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
+  };
+  const networkSideProps = traysSwapped
+    ? { right: sideInset.right, alignItems: 'flex-end' }
+    : { left: sideInset.left, alignItems: 'flex-start' };
+  const actionSideProps = traysSwapped
+    ? { left: sideInset.left, alignItems: 'flex-start' }
+    : { right: sideInset.right, alignItems: 'flex-end' };
+  // Labels sit toward screen center (outside the icon relative to the edge).
+  const networkLabelSide = traysSwapped ? 'left' : 'right';
+  const actionLabelSide = traysSwapped ? 'right' : 'left';
+  const networkMenuClass = traysSwapped
+    ? 'lucem-tray-equal-actions'
+    : 'lucem-tray-equal-actions is-start';
+  const actionMenuClass = traysSwapped
+    ? 'lucem-tray-equal-actions is-start'
+    : 'lucem-tray-equal-actions';
+
   return (
     <>
       {isNetworkTrayOpen || isTrayOpen ? (
@@ -232,29 +258,29 @@ const WalletTrays = ({
         />
       ) : null}
 
-      {/* Lower left tray — network switcher with collapse toggle */}
       <Box
         zIndex={4}
         position="fixed"
         bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-        left="calc(env(safe-area-inset-left, 0px) + 1.5rem)"
         display="flex"
         flexDirection="column"
-        alignItems="flex-start"
         justifyContent="flex-end"
         gap={2}
         data-testid="wallet-network-tray"
+        data-tray-side={traysSwapped ? 'right' : 'left'}
+        {...networkSideProps}
       >
         <Collapse
           in={isNetworkTrayOpen}
           animateOpacity
           style={{ overflow: 'visible' }}
         >
-          <Stack spacing={2} mb={2} alignItems="stretch">
+          <Stack spacing={2} mb={2} alignItems="stretch" className={networkMenuClass}>
             {networkOptions.map((networkOption) => (
-              <TrayNetworkButton
+              <TrayLabeledButton
                 key={networkOption.id}
                 label={networkOption.label}
+                labelSide={networkLabelSide}
                 {...walletFabBase}
                 color="white"
                 data-active={
@@ -277,7 +303,7 @@ const WalletTrays = ({
                 }}
               >
                 <Icon as={networkOption.icon} boxSize={6} />
-              </TrayNetworkButton>
+              </TrayLabeledButton>
             ))}
           </Stack>
         </Collapse>
@@ -294,30 +320,30 @@ const WalletTrays = ({
         </Button>
       </Box>
 
-      {/* Lower right tray — respect safe area on notched devices */}
       <Box
         zIndex={4}
         position="fixed"
         bottom="calc(env(safe-area-inset-bottom, 0px) + 1.5rem)"
-        right="calc(env(safe-area-inset-right, 0px) + 1.5rem)"
         display="flex"
         flexDirection="column"
-        alignItems="flex-end"
         justifyContent="flex-end"
         gap={2}
         data-testid="wallet-action-tray"
+        data-tray-side={traysSwapped ? 'left' : 'right'}
+        {...actionSideProps}
       >
         <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
           <Stack
             spacing={2}
             mb={2}
-            className="lucem-tray-equal-actions"
+            className={actionMenuClass}
             data-testid="wallet-action-tray-menu"
           >
             {delegation && (
               <Box data-testid="wallet-delegation" sx={{ display: 'contents' }}>
-                <TrayActionButton
+                <TrayLabeledButton
                   label="Vote"
+                  labelSide={actionLabelSide}
                   {...floatingVoteProps}
                   className={fabVoteClass}
                   data-active={path === '/governance' ? 'true' : undefined}
@@ -325,9 +351,10 @@ const WalletTrays = ({
                   aria-label="Open voting"
                 >
                   <Icon as={MdHowToVote} boxSize={6} />
-                </TrayActionButton>
-                <TrayActionButton
+                </TrayLabeledButton>
+                <TrayLabeledButton
                   label={delegation.active ? 'Stake' : 'Delegate'}
+                  labelSide={actionLabelSide}
                   {...floatingStakeProps}
                   className={fabStakeClass}
                   data-active={path === '/staking' ? 'true' : undefined}
@@ -335,12 +362,13 @@ const WalletTrays = ({
                   aria-label="Open stake center"
                 >
                   <Icon as={MdOutlineHowToReg} boxSize={6} />
-                </TrayActionButton>
+                </TrayLabeledButton>
               </Box>
             )}
 
-            <TrayActionButton
+            <TrayLabeledButton
               label="Accounts"
+              labelSide={actionLabelSide}
               {...floatingAccountsProps}
               className={fabAccountsClass}
               data-active={path === '/accounts' ? 'true' : undefined}
@@ -348,10 +376,11 @@ const WalletTrays = ({
               aria-label="Open accounts"
             >
               <Icon as={MdAccountBalanceWallet} boxSize={6} />
-            </TrayActionButton>
+            </TrayLabeledButton>
 
-            <TrayActionButton
+            <TrayLabeledButton
               label="Settings"
+              labelSide={actionLabelSide}
               {...floatingSettingsProps}
               className={fabSettingsClass}
               data-active={path === '/settings' ? 'true' : undefined}
@@ -359,7 +388,7 @@ const WalletTrays = ({
               aria-label="Open settings"
             >
               <SettingsIcon boxSize={6} />
-            </TrayActionButton>
+            </TrayLabeledButton>
           </Stack>
         </Collapse>
         {isOnNavPage ? (

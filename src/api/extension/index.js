@@ -168,6 +168,14 @@ export const getCurrency = () => getStorage(STORAGE.currency);
 export const setCurrency = (currency) =>
   setStorage({ [STORAGE.currency]: currency });
 
+export const getSwapTrays = async () => {
+  const value = await getStorage(STORAGE.swapTrays);
+  return Boolean(value);
+};
+
+export const setSwapTrays = (swapTrays) =>
+  setStorage({ [STORAGE.swapTrays]: Boolean(swapTrays) });
+
 export const getDelegation = async ({ force = false } = {}) => {
   const network = await getNetwork();
   const stakeAddress = await getRewardAddress();

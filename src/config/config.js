@@ -59,6 +59,8 @@ export const STORAGE = {
   currentAccount: 'currentAccount',
   network: 'network',
   currency: 'currency',
+  /** When true, network tray is on the right and actions tray on the left. */
+  swapTrays: 'swapTrays',
   /** User preference for Chakra UI color mode (`light` | `dark`). */
   colorMode: 'colorMode',
   migration: 'migration',

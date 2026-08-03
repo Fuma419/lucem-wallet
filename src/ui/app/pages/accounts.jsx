@@ -10,6 +10,9 @@ import {
   Button,
   Flex,
   Icon,
+  Input,
+  InputGroup,
+  InputRightElement,
   Stack,
   Text,
   useColorModeValue,
@@ -17,6 +20,7 @@ import {
 } from '@chakra-ui/react';
 import { CheckIcon, DeleteIcon } from '@chakra-ui/icons';
 import { FaRegFileCode } from 'react-icons/fa';
+import { MdModeEdit } from 'react-icons/md';
 import { useStoreState } from 'easy-peasy';
 import {
   deleteAccount,
@@ -25,6 +29,7 @@ import {
   getNativeAccounts,
   isHW,
   onAccountChange,
+  setAccountName,
   switchAccount,
 } from '../../../api/extension';
 import { bigIntLovelace } from '../../../api/lovelace-scalar';
@@ -59,6 +64,7 @@ const Accounts = () => {
   const [accountsMeta, setAccountsMeta] = React.useState({});
   const [accountsLive, setAccountsLive] = React.useState(null);
   const [busyIndex, setBusyIndex] = React.useState(null);
+  const [nameDraft, setNameDraft] = React.useState('');
 
   const load = React.useCallback(async () => {
     const index = await getCurrentAccountIndex();
@@ -77,6 +83,23 @@ const Accounts = () => {
   const currentAccount = accountsLive && currentIndex != null
     ? accountsLive[currentIndex]
     : null;
+
+  const currentName = currentAccount?.name || '';
+
+  // Keep the rename field in sync with whichever account is selected.
+  React.useEffect(() => {
+    setNameDraft(currentName);
+  }, [currentName, currentIndex]);
+
+  const canApplyName =
+    nameDraft.trim().length > 0 && nameDraft.trim() !== currentName;
+
+  const applyName = React.useCallback(async () => {
+    const next = nameDraft.trim();
+    if (!next || next === currentName) return;
+    await setAccountName(next);
+    await load();
+  }, [nameDraft, currentName, load]);
 
   const canDelete =
     currentAccount &&
@@ -266,6 +289,48 @@ const Accounts = () => {
               })}
             </Stack>
           </Box>
+
+          {currentAccount ? (
+            <Box
+              className="lucem-inset-surface"
+              rounded="3xl"
+              p={{ base: 4, md: 5 }}
+              data-testid="accounts-rename-panel"
+            >
+              <Text fontSize="sm" color={mutedFg} mb={2}>
+                Rename selected account
+              </Text>
+              <InputGroup size="md" w="full">
+                <Input
+                  variant="outline"
+                  rounded="xl"
+                  placeholder="Account name"
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && canApplyName) applyName();
+                  }}
+                  pr="4.5rem"
+                  data-testid="accounts-rename-input"
+                />
+                <InputRightElement width="4.5rem" h="full">
+                  {canApplyName ? (
+                    <Button
+                      h="1.75rem"
+                      size="sm"
+                      rounded="md"
+                      onClick={applyName}
+                      data-testid="accounts-rename-apply"
+                    >
+                      Apply
+                    </Button>
+                  ) : (
+                    <Icon mr="-2" as={MdModeEdit} color={mutedFg} />
+                  )}
+                </InputRightElement>
+              </InputGroup>
+            </Box>
+          ) : null}
 
           <Box
             className="lucem-inset-surface"

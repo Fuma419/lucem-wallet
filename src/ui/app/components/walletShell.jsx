@@ -65,6 +65,7 @@ const WalletShell = () => {
         onNetworkSelect={onNetworkSelect}
         isNetworkLoading={isNetworkLoading}
         delegation={delegation}
+        swapTrays={Boolean(settings.swapTrays)}
       />
     </>
   );

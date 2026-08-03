@@ -2,9 +2,11 @@ import React from 'react';
 import {
   getCurrency,
   getNetwork,
+  getSwapTrays,
   requestAccountKey,
   setCurrency,
   setNetwork,
+  setSwapTrays,
 } from '../api/extension';
 import { NETWORK_ID, NODE } from '../config/config';
 import {
@@ -34,8 +36,12 @@ const settings = {
   setSettings: action((state, settings) => {
     setCurrency(settings.currency);
     setNetwork(settings.network);
+    if (Object.prototype.hasOwnProperty.call(settings, 'swapTrays')) {
+      setSwapTrays(settings.swapTrays);
+    }
     state.settings = {
       ...settings,
+      swapTrays: Boolean(settings.swapTrays),
       adaSymbol:
         settings.network.id === NETWORK_ID.mainnet
           ? '₳'
@@ -61,6 +67,7 @@ const globalModel = persist(
 
 const initSettings = async (setSettings) => {
   const currency = await getCurrency();
+  const swapTrays = await getSwapTrays();
   const storedNetwork = await getNetwork();
   const network =
     storedNetwork && NODE[storedNetwork.id]
@@ -71,6 +78,7 @@ const initSettings = async (setSettings) => {
   }
   setSettings({
     currency: currency || 'usd',
+    swapTrays: Boolean(swapTrays),
     network: network || { id: NETWORK_ID.mainnet, node: NODE.mainnet },
     adaSymbol: network
       ? network.id === NETWORK_ID.mainnet

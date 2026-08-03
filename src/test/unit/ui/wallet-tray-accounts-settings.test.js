@@ -40,16 +40,17 @@ describe('wallet tray accounts vs settings FABs', () => {
   });
 
   test('right tray action FABs show visible text descriptors', () => {
-    expect(traysSrc).toContain('TrayActionButton');
+    expect(traysSrc).toContain('TrayLabeledButton');
     expect(traysSrc).toContain('label="Vote"');
     expect(traysSrc).toContain('label="Accounts"');
     expect(traysSrc).toContain('label="Settings"');
     expect(traysSrc).toMatch(/label=\{delegation\.active \? 'Stake' : 'Delegate'\}/);
     expect(traysSrc).toContain('trayActionLabelProps');
+    expect(traysSrc).toContain('labelSide');
   });
 
   test('left network tray options match circular labeled FAB style', () => {
-    expect(traysSrc).toContain('TrayNetworkButton');
+    expect(traysSrc).toContain('TrayLabeledButton');
     expect(traysSrc).toContain('label={networkOption.label}');
     expect(traysSrc).toContain('MdPublic');
     expect(traysSrc).toContain('MdScience');
@@ -177,6 +178,11 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(settingsSrc).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
     expect(settingsSrc).toContain('lucem-equal-width-actions');
     expect(settingsSrc).toContain('data-testid="settings-primary-actions"');
+    expect(settingsSrc).toContain('data-testid="settings-swap-trays"');
+    expect(settingsSrc).toContain('swapTrays');
+    expect(traysSrc).toContain('swapTrays');
+    expect(traysSrc).toContain('data-tray-side');
+    expect(shellSrc).toContain('swapTrays={Boolean(settings.swapTrays)}');
     expect(governanceSrc).not.toContain('ArrowBackIcon');
     expect(stakingSrc).not.toContain('ArrowBackIcon');
   });

@@ -292,6 +292,11 @@ html[data-theme='light'] .lucem-inset-row.is-current {
   align-items: stretch;
 }
 
+.lucem-tray-equal-actions.is-start {
+  margin-left: 0;
+  margin-right: auto;
+}
+
 .lucem-tray-equal-actions .lucem-tray-action-row {
   width: 100%;
   box-sizing: border-box;
@@ -301,6 +306,10 @@ html[data-theme='light'] .lucem-inset-row.is-current {
   flex: 1 1 auto;
   text-align: right;
   white-space: nowrap;
+}
+
+.lucem-tray-equal-actions.is-start .lucem-tray-action-label {
+  text-align: left;
 }
 
 /* Specific button styles */

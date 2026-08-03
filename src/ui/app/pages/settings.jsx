@@ -339,6 +339,42 @@ const Settings = () => {
             </RadioGroup>
           </Flex>
 
+          <Flex
+            direction="column"
+            align="stretch"
+            gap={2}
+            mt={8}
+            w="full"
+            data-testid="settings-swap-trays"
+          >
+            <Text color={labelMuted} fontWeight="semibold" fontSize="sm">
+              Bottom trays
+            </Text>
+            <Flex align="center" justify="space-between" gap={3} w="full">
+              <Box flex="1" minW={0}>
+                <Text color={labelMuted} fontSize="sm">
+                  Swap tray positions
+                </Text>
+                <Text color={hintColor} fontSize="xs" mt={1}>
+                  {settings.swapTrays
+                    ? 'Actions on the left, network on the right.'
+                    : 'Network on the left, actions on the right.'}
+                </Text>
+              </Box>
+              <ButtonSwitch
+                isChecked={Boolean(settings.swapTrays)}
+                colorScheme="yellow"
+                onChange={(e) => {
+                  setSettings({
+                    ...settings,
+                    swapTrays: e.target.checked,
+                  });
+                }}
+                aria-label="Swap bottom tray positions"
+              />
+            </Flex>
+          </Flex>
+
           <Box mt={8} w="full">
             <SettingsSectionTitle>Advanced</SettingsSectionTitle>
             <MultiAddressSettings

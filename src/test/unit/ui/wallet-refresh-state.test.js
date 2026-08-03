@@ -35,5 +35,9 @@ describe('wallet refresh state retention', () => {
     expect(walletSrc).not.toMatch(
       /\{isFetching[\s\S]{0,200}quantity=\{[\s\S]{0,80}undefined/
     );
+    // Only the balance-adjacent refresh control should spin on refresh.
+    expect(walletSrc).toMatch(/isLoading=\{isFetching\}/);
+    expect(walletSrc).not.toMatch(/isRefreshing=\{isFetching\}/);
+    expect(walletSrc).not.toMatch(/<Skeleton[\s\S]{0,200}displayTotalAda/);
   });
 });

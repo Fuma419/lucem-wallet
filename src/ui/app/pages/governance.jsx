@@ -57,6 +57,15 @@ import {
 } from '../../../api/governance';
 import { ERROR, HW, TAB } from '../../../config/config';
 import useSurfaceColors from '../hooks/useSurfaceColors';
+import PullToRefresh from '../components/pullToRefresh';
+
+/**
+ * Last successful overview per network id, so re-opening the governance screen
+ * paints instantly and revalidates in the background instead of blanking to a
+ * spinner. Proposals/DReps are network-wide (not account-specific), so keying
+ * by network id is sufficient and safe.
+ */
+const governanceCache = {};
 
 const sourceBadgeColor = (source) =>
   source === 'blockfrost' ? 'green' : 'orange';
@@ -246,13 +255,18 @@ const Governance = () => {
   const [drepIdInput, setDrepIdInput] = React.useState('');
   const [isBuildingTx, setIsBuildingTx] = React.useState(false);
   const [votingKey, setVotingKey] = React.useState('');
-  const [governanceState, setGovernanceState] = React.useState({
-    source: '',
-    fallbackReason: '',
-    proposals: [],
-    dreps: [],
-    isLoading: true,
-    error: '',
+  const [governanceState, setGovernanceState] = React.useState(() => {
+    const cached = governanceCache[networkId];
+    return cached
+      ? { ...cached, isLoading: false, error: '' }
+      : {
+          source: '',
+          fallbackReason: '',
+          proposals: [],
+          dreps: [],
+          isLoading: true,
+          error: '',
+        };
   });
   const [drepState, setDrepState] = React.useState({
     checked: false,
@@ -309,9 +323,12 @@ const Governance = () => {
 
   const loadGovernance = React.useCallback(
     async (signal) => {
+      // Only blank to a spinner when we have nothing cached for this network;
+      // otherwise revalidate in the background while the last data stays visible.
+      const hasCached = Boolean(governanceCache[networkId]);
       setGovernanceState((previous) => ({
         ...previous,
-        isLoading: true,
+        isLoading: !hasCached,
         error: '',
       }));
 
@@ -325,26 +342,22 @@ const Governance = () => {
 
         setExpandedProposalIds({});
         setSelectedProposalId('');
-        setGovernanceState({
+        const next = {
           source: result.source,
           fallbackReason: result.fallbackReason || '',
           proposals: result.proposals,
           dreps: result.dreps,
-          isLoading: false,
-          error: '',
-        });
+        };
+        governanceCache[networkId] = next;
+        setGovernanceState({ ...next, isLoading: false, error: '' });
       } catch (error) {
         if (signal?.aborted) return;
-        setExpandedProposalIds({});
-        setSelectedProposalId('');
-        setGovernanceState({
-          source: '',
-          fallbackReason: '',
-          proposals: [],
-          dreps: [],
+        // Keep any previously shown data on a refresh failure.
+        setGovernanceState((previous) => ({
+          ...previous,
           isLoading: false,
           error: error.message || 'Unable to load governance data',
-        });
+        }));
       }
     },
     [networkId]
@@ -599,6 +612,7 @@ const Governance = () => {
   const isBlockfrost = governanceState.source === 'blockfrost';
 
   return (
+    <PullToRefresh onRefresh={() => loadGovernance()}>
     <Box
       data-testid="governance-page"
       minH="100vh"
@@ -1378,6 +1392,7 @@ const Governance = () => {
         }
       />
     </Box>
+    </PullToRefresh>
   );
 };
 

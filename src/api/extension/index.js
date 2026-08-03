@@ -58,6 +58,11 @@ import {
   normalizeDelegationRow,
   normalizeStakePool as normalizeStakePoolData,
 } from '../staking';
+import {
+  cacheKey,
+  invalidateAll as invalidateReadCache,
+  withCache,
+} from '../cache';
 
 export const normalizeStakePool = normalizeStakePoolData;
 
@@ -147,8 +152,17 @@ export const getCurrency = () => getStorage(STORAGE.currency);
 export const setCurrency = (currency) =>
   setStorage({ [STORAGE.currency]: currency });
 
-export const getDelegation = async () => {
+export const getDelegation = async ({ force = false } = {}) => {
+  const network = await getNetwork();
   const stakeAddress = await getRewardAddress();
+  return withCache(
+    cacheKey('delegation', network?.id, stakeAddress),
+    () => fetchDelegation(stakeAddress),
+    { force }
+  );
+};
+
+const fetchDelegation = async (stakeAddress) => {
   const request = KOIOS_REQUESTS.getAccountInfo(stakeAddress);
   const stake = await koiosRequest(request.endpoint, {}, request.body);
 
@@ -316,10 +330,17 @@ export const getBalance = async () => {
   return value;
 };
 
-export const getBalanceExtended = async () => {
-  const currentAccount = await getCurrentAccount();
+export const getBalanceExtended = async ({ force = false } = {}) => {
+  const network = await getNetwork();
   const address = await getAddress(); // Get the full address
-  
+  return withCache(
+    cacheKey('balance-extended', network?.id, address),
+    () => fetchBalanceExtended(address),
+    { force }
+  );
+};
+
+const fetchBalanceExtended = async (address) => {
   const request = KOIOS_REQUESTS.getAddressUtxos(address, true);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   
@@ -376,9 +397,19 @@ export const getFullBalance = async () => {
   ).toString();
 };
 
-export const getTransactions = async (paginate = 1, count = 10) => {
+export const getTransactions = async (paginate = 1, count = 10, { force = false } = {}) => {
+  const network = await getNetwork();
   const stakeAddress = await getRewardAddress();
+  // The bounded fetch returns the same leading 100 txs regardless of the UI's
+  // local paging cursor, so a single per-account/network cache entry is safe.
+  return withCache(
+    cacheKey('account-txs', network?.id, stakeAddress),
+    () => fetchTransactions(stakeAddress),
+    { force }
+  );
+};
 
+const fetchTransactions = async (stakeAddress) => {
   const request = KOIOS_REQUESTS.getAccountTxs(stakeAddress, 0);
   // Bound the Koios direct-path response (mainnet accounts can have thousands of
   // txs; an unbounded fetch is slow/huge and makes the history "load forever").
@@ -437,6 +468,18 @@ export const getTransactions = async (paginate = 1, count = 10) => {
   
   return processedTransactions;
 };
+
+/**
+ * Cached fiat price lookup. Previously each wallet mount refetched the rate
+ * (it lived only in a component ref), so returning to the wallet always
+ * re-hit the provider. Cached per-currency with the shared TTL.
+ */
+export const getFiatPrice = async (currency, { force = false } = {}) =>
+  withCache(
+    cacheKey('fiat-price', currency),
+    () => provider.api.price(currency),
+    { force }
+  );
 
 export const getTxInfo = async (txHash) => {
   const request = KOIOS_REQUESTS.getTxInfo(txHash);
@@ -1688,13 +1731,18 @@ export const submitTx = async (tx) => {
       body: Buffer.from(txHex, 'hex'),
     });
     if (result.ok) {
+      // Balance/UTxO/history caches are now stale — drop them so the next read
+      // reflects the just-submitted transaction.
+      invalidateReadCache();
       return await result.json();
     }
     throw APIError.InvalidRequest;
   }
   
   try {
-    return await koiosSubmitTransaction(txHex);
+    const result = await koiosSubmitTransaction(txHex);
+    invalidateReadCache();
+    return result;
   } catch (error) {
     console.error('Koios transaction submission error:', error);
     throw new Error(`Transaction submission failed: ${error.message}`);
@@ -1789,6 +1837,9 @@ export const requestAccountKey = async (password, accountIndex) => {
 
 /** Remove easy-peasy, asset cache, and session data so wiped state is consistent. */
 const clearBrowserWalletCaches = () => {
+  // Drop the in-memory read cache first so a fresh wallet can't observe the
+  // previous wallet's cached balances/history.
+  invalidateReadCache();
   if (typeof window === 'undefined') return;
   try {
     if (window.localStorage) {
@@ -2648,9 +2699,9 @@ export const getAsset = async (unit) => {
   }
 };
 
-export const updateBalance = async (currentAccount, network) => {
+export const updateBalance = async (currentAccount, network, { force = false } = {}) => {
   await Loader.load();
-  const assets = await getBalanceExtended();
+  const assets = await getBalanceExtended({ force });
   const amount = await assetsToValue(assets);
   await checkCollateral(currentAccount, network);
 
@@ -2725,8 +2776,8 @@ export const mergeConfirmedWithApi = (confirmed, apiHashes, opts = {}) => {
   return [...pending, ...apiHashes];
 };
 
-const updateTransactions = async (currentAccount, network, { replace = false } = {}) => {
-  const transactions = await getTransactions();
+const updateTransactions = async (currentAccount, network, { replace = false, force = false } = {}) => {
+  const transactions = await getTransactions(1, 10, { force });
   if (transactions.length <= 0) return false;
   const apiHashes = transactions.map((tx) => tx.txHash);
   const confirmed = currentAccount[network.id].history.confirmed;
@@ -2803,7 +2854,10 @@ export const updateAccount = async (forceUpdate = false) => {
   const currentAccount = accounts[currentIndex];
   const network = await getNetwork();
 
-  await updateTransactions(currentAccount, network, { replace: forceUpdate });
+  const txChanged = await updateTransactions(currentAccount, network, {
+    replace: forceUpdate,
+    force: forceUpdate,
+  });
 
   const isFirstLoad = currentAccount[network.id].lovelace == null;
   if (
@@ -2813,6 +2867,8 @@ export const updateAccount = async (forceUpdate = false) => {
     !isFirstLoad &&
     !currentAccount[network.id].forceUpdate
   ) {
+    // Nothing new on chain (latest tx hash unchanged) — skip the balance fetch
+    // and, since nothing was mutated, skip the storage write too.
     return;
   }
 
@@ -2820,10 +2876,19 @@ export const updateAccount = async (forceUpdate = false) => {
   if (currentAccount[network.id].forceUpdate)
     delete currentAccount[network.id].forceUpdate;
 
-  await updateBalance(currentAccount, network);
+  const balanceSignatureBefore = balanceSignature(currentAccount[network.id]);
+  await updateBalance(currentAccount, network, { force: forceUpdate });
+  const balanceChanged =
+    balanceSignature(currentAccount[network.id]) !== balanceSignatureBefore;
 
   currentAccount[network.id].lastUpdate =
     currentAccount[network.id].history.confirmed[0];
+
+  // Avoid rewriting the whole accounts blob when neither history nor balance
+  // actually changed (e.g. a forced refresh that returned identical data).
+  if (!txChanged && !balanceChanged && !isFirstLoad) {
+    return;
+  }
 
   return await setStorage({
     [STORAGE.accounts]: {
@@ -2831,6 +2896,15 @@ export const updateAccount = async (forceUpdate = false) => {
     },
   });
 };
+
+/** Compact fingerprint of the balance-relevant fields for change detection. */
+const balanceSignature = (networkSlice) =>
+  JSON.stringify({
+    lovelace: networkSlice?.lovelace ?? null,
+    minAda: networkSlice?.minAda ?? null,
+    assets: networkSlice?.assets ?? [],
+    collateral: networkSlice?.collateral ?? null,
+  });
 
 export const updateRecentSentToAddress = async (address) => {
   const currentIndex = await getCurrentAccountIndex();

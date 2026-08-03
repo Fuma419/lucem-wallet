@@ -2,20 +2,23 @@ const fs = require('fs');
 const path = require('path');
 
 describe('duplicate import UX', () => {
-  test('createWallet detects existing mnemonic before clearing storage', () => {
+  test('createWallet detects an existing mnemonic and never wipes the vault', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '../../../api/extension/index.js'),
       'utf8'
     );
     expect(src).toMatch(/findExistingAccountForMnemonic/);
     expect(src).toMatch(/walletAlreadyExists/);
-    // Duplicate check must run before the createWallet storage clear.
     const createWalletIdx = src.indexOf('export const createWallet');
-    const createWalletSrc = src.slice(createWalletIdx, createWalletIdx + 2500);
+    const createWalletSrc = src.slice(createWalletIdx, createWalletIdx + 6500);
+    // Importing/creating a mnemonic must NOT clear existing wallets anymore —
+    // additional seeds are added alongside the current ones.
+    expect(createWalletSrc).not.toMatch(/platform\.storage\.clear\(\)/);
+    // The duplicate-seed guard still runs before any key material is written.
     const checkIdx = createWalletSrc.indexOf('findExistingAccountForMnemonic');
-    const clearIdx = createWalletSrc.indexOf('platform.storage.clear()');
+    const writeIdx = createWalletSrc.indexOf('encryptedRootKey');
     expect(checkIdx).toBeGreaterThan(-1);
-    expect(clearIdx).toBeGreaterThan(checkIdx);
+    expect(writeIdx).toBeGreaterThan(checkIdx);
   });
 
   test('createHWAccounts always selects the first newly added account', () => {
@@ -35,7 +38,7 @@ describe('duplicate import UX', () => {
       'utf8'
     );
     const createWalletIdx = src.indexOf('export const createWallet');
-    const createWalletSrc = src.slice(createWalletIdx, createWalletIdx + 4500);
+    const createWalletSrc = src.slice(createWalletIdx, createWalletIdx + 6500);
     expect(createWalletSrc).toMatch(/await switchAccount\(index\)/);
   });
 });

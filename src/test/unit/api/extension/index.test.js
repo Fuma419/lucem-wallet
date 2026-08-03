@@ -14,6 +14,7 @@ import {
   initLocalWalletSecretIfAbsent,
 } from '../../../../api/extension';
 import Loader from '../../../../api/loader';
+import { generateMnemonic } from 'bip39';
 import { ERROR, NODE, STORAGE } from '../../../../config/config';
 
 beforeAll(async () => {
@@ -177,4 +178,48 @@ test('createAccount rejects a duplicate account index', async () => {
   await expect(createAccount('Dup', password, 0)).rejects.toThrow(
     /already/i
   );
+});
+
+test('importing a second seed keeps the first wallet and stores both', async () => {
+  await eraseLocalWalletData();
+  const seedA =
+    'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
+  const seedB = generateMnemonic(); // distinct, valid 12-word phrase
+  const password = 'password123';
+
+  const firstSlot = await createWallet('Wallet A', seedA, password, [0]);
+  const secondSlot = await createWallet('Wallet B', seedB, password, [0]);
+
+  const store = await getStorage();
+
+  // Both wallets survive — the second import no longer wipes the first.
+  const names = Object.values(store.accounts).map((a) => a.name);
+  expect(names).toContain('Wallet A');
+  expect(names).toContain('Wallet B');
+  expect(Object.keys(store.accounts).length).toBe(2);
+
+  // Distinct slots and a materialized multi-seed key map.
+  expect(String(firstSlot)).not.toBe(String(secondSlot));
+  expect(store.encryptedKeys).toBeDefined();
+  expect(store.encryptedKeys['0']).toBeDefined();
+  expect(store.encryptedKeys['1']).toBeDefined();
+
+  // Second wallet's account references its own seed via walletId.
+  const second = store.accounts[secondSlot];
+  expect(second.walletId).toBe('1');
+  expect(store.currentAccount).toEqual(secondSlot);
+});
+
+test('adding a wallet with the wrong vault password is rejected', async () => {
+  await eraseLocalWalletData();
+  const seedA =
+    'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
+  const seedB = generateMnemonic();
+  await createWallet('Wallet A', seedA, 'password123', [0]);
+  await expect(
+    createWallet('Wallet B', seedB, 'wrong-password', [0])
+  ).rejects.toThrow(/password/i);
+  // First wallet remains intact.
+  const store = await getStorage();
+  expect(Object.keys(store.accounts).length).toBe(1);
 });

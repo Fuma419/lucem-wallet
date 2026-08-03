@@ -51,6 +51,8 @@ import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
 import MultiAddressSettings from '../components/multiAddressSettings';
 
+const { version: appVersion } = require('../../../../package.json');
+
 /** Typed confirmation phrase (spacing / case normalized on compare). */
 const ERASE_WALLET_CONFIRM_PHRASE = 'Erase all data';
 
@@ -204,9 +206,24 @@ const Settings = () => {
       className="lucem-settings-shell lucem-wallet-main-column"
       data-testid="settings-page"
     >
-      <Flex align="center" px={{ base: 3, md: 4 }} pt={4} pb={2}>
-        <Text flex="1" textAlign="center" fontSize="xl" fontWeight="bold">
+      <Flex
+        direction="column"
+        align="center"
+        px={{ base: 3, md: 4 }}
+        pt={4}
+        pb={2}
+        gap={1}
+      >
+        <Text textAlign="center" fontSize="xl" fontWeight="bold">
           Settings
+        </Text>
+        <Text
+          fontSize="xs"
+          color={hintColor}
+          letterSpacing="0.04em"
+          data-testid="settings-app-version"
+        >
+          v{appVersion}
         </Text>
       </Flex>
 

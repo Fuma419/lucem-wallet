@@ -167,6 +167,8 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).not.toContain('ChevronLeftIcon');
     expect(settingsSrc).not.toContain('aria-label="Go back"');
     expect(settingsSrc).not.toContain('ChevronLeftIcon');
+    expect(settingsSrc).toContain('data-testid="settings-app-version"');
+    expect(settingsSrc).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
     expect(governanceSrc).not.toContain('ArrowBackIcon');
     expect(stakingSrc).not.toContain('ArrowBackIcon');
   });

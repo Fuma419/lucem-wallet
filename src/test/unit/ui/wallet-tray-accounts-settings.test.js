@@ -85,7 +85,8 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toMatch(
       /WalletSetupButtons[\s\S]*Delete Account[\s\S]*Collateral[\s\S]*<\/WalletSetupButtons>/
     );
-    expect(accountsSrc).toContain('About');
+    expect(accountsSrc).not.toContain('About');
+    expect(accountsSrc).not.toContain("import About from '../components/about'");
     const setupSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
       'utf8'
@@ -181,8 +182,7 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).not.toContain('ChevronLeftIcon');
     expect(settingsSrc).not.toContain('aria-label="Go back"');
     expect(settingsSrc).not.toContain('ChevronLeftIcon');
-    expect(settingsSrc).toContain('data-testid="settings-app-version"');
-    expect(settingsSrc).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
+    expect(settingsSrc).toContain('AboutContent');
     expect(settingsSrc).toContain('lucem-equal-width-actions');
     expect(settingsSrc).toContain('data-testid="settings-primary-actions"');
     expect(settingsSrc).toContain('data-testid="settings-swap-trays"');

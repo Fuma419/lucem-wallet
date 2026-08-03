@@ -51,8 +51,7 @@ import AvatarLoader from '../components/avatarLoader';
 import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
 import MultiAddressSettings from '../components/multiAddressSettings';
-
-const { version: appVersion } = require('../../../../package.json');
+import { AboutContent } from '../components/about';
 
 /** Typed confirmation phrase (spacing / case normalized on compare). */
 const ERASE_WALLET_CONFIRM_PHRASE = 'Erase all data';
@@ -211,20 +210,13 @@ const Settings = () => {
         align="center"
         px={{ base: 3, md: 4 }}
         pt={4}
-        pb={2}
-        gap={1}
+        pb={3}
+        gap={3}
       >
         <Text textAlign="center" fontSize="xl" fontWeight="bold">
           Settings
         </Text>
-        <Text
-          fontSize="xs"
-          color={hintColor}
-          letterSpacing="0.04em"
-          data-testid="settings-app-version"
-        >
-          v{appVersion}
-        </Text>
+        <AboutContent />
       </Flex>
 
       <Box

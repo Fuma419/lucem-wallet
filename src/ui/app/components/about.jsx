@@ -1,12 +1,5 @@
 import React from 'react';
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-  useDisclosure,
   useColorModeValue,
   Image,
   Text,
@@ -18,114 +11,98 @@ import LogoWhite from '../../../assets/img/logoWhite.png';
 import LogoBlack from '../../../assets/img/logo.svg';
 import IOHKWhite from '../../../assets/img/iohkWhite.svg';
 import IOHKBlack from '../../../assets/img/iohk.svg';
-import HodlerLogo from '../../../assets/img/Hodler_Green_Icon_round.png';
 import TermsOfUse from './termsOfUse';
 import PrivacyPolicy from './privacyPolicy';
 
 const { version } = require('../../../../package.json');
 
-const About = React.forwardRef((props, ref) => {
-
-  const { isOpen, onOpen, onClose } = useDisclosure();
+/** Inline About block (logo, version, credits, legal links). */
+export const AboutContent = () => {
   const Logo = useColorModeValue(LogoBlack, LogoWhite);
-  const IOHK = useColorModeValue(IOHKWhite, IOHKBlack);
-
+  const IOHK = useColorModeValue(IOHKBlack, IOHKWhite);
+  const muted = useColorModeValue('gray.600', 'whiteAlpha.600');
   const termsRef = React.useRef();
   const privacyPolRef = React.useRef();
 
-  React.useImperativeHandle(ref, () => ({
-    openModal() {
-      onOpen();
-    },
-    closeModal() {
-      onClose();
-    },
-  }));
   return (
     <>
-      <Modal
-        size="xs"
-        isOpen={isOpen}
-        onClose={onClose}
-        isCentered
-        blockScrollOnMount={false}
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        flexDirection="column"
+        data-testid="settings-about"
+        w="full"
       >
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader fontSize="md">About</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexDirection="column"
+        <Image
+          cursor="pointer"
+          onClick={() => window.open('https://www.hodlerstaking.com/')}
+          width="72px"
+          src={Logo}
+          alt="Lucem"
+        />
+        <Box height="3" />
+        <Text
+          fontSize="xs"
+          letterSpacing="0.04em"
+          color={muted}
+          data-testid="settings-app-version"
+        >
+          v{version}
+        </Text>
+        <Box height="4" />
+        <Text fontSize="xs" textAlign="center" color={muted}>
+          Created by{' '}
+          <Text
+            as="span"
+            onClick={() => window.open('https://www.hodlerstaking.com/')}
+            textDecoration="underline"
+            cursor="pointer"
           >
-            <Image
-              cursor="pointer"
-              onClick={() => window.open('https://www.hodlerstaking.com/')}
-              width="90px"
-              src={Logo}
-            />
-            <Box height="4" />
-            <Text fontSize="sm">{version}</Text>
-            <Box height="6" />
-            <Box
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              flexDirection="column"
-            >
-              <Text fontSize="xs">
-                Created by{' '}
-                <span
-                  onClick={() => window.open('https://www.hodlerstaking.com/')}
-                  style={{ textDecoration: 'underline', cursor: 'pointer' }}
-                >
-                  Hodler Staking
-                </span>
-                {' '}and{' '}
-                <span
-                  onClick={() => window.open('https://www.namiwallet.io/')}
-                  style={{ textDecoration: 'underline', cursor: 'pointer' }}
-                >
-                  IOG
-                </span>
-              </Text>
-              <Box height="4" />
-              <Image
-                cursor="pointer"
-                width="66px"
-                onClick={() => window.open('https://www.hodlerstaking.com/')}
-                src={IOHKWhite}
-              />
-            </Box>
-            <Box height="4" />
-            {/* Footer */}
-            <Box>
-              <Link
-                onClick={() => {
-                  termsRef.current.openModal();
-                }}
-                color="GrayText"
-              >
-                Terms of use
-              </Link>
-              <span> | </span>
-              <Link
-                onClick={() => privacyPolRef.current.openModal()}
-                color="GrayText"
-              >
-                Privacy Policy
-              </Link>
-            </Box>
-            <Box height="2" />
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+            Hodler Staking
+          </Text>
+          {' '}and{' '}
+          <Text
+            as="span"
+            onClick={() => window.open('https://www.namiwallet.io/')}
+            textDecoration="underline"
+            cursor="pointer"
+          >
+            IOG
+          </Text>
+        </Text>
+        <Box height="3" />
+        <Image
+          cursor="pointer"
+          width="56px"
+          onClick={() => window.open('https://www.hodlerstaking.com/')}
+          src={IOHK}
+          alt="IOHK"
+        />
+        <Box height="3" />
+        <Box fontSize="xs">
+          <Link
+            onClick={() => termsRef.current.openModal()}
+            color={muted}
+          >
+            Terms of use
+          </Link>
+          <Text as="span" color={muted}>
+            {' '}
+            |{' '}
+          </Text>
+          <Link
+            onClick={() => privacyPolRef.current.openModal()}
+            color={muted}
+          >
+            Privacy Policy
+          </Link>
+        </Box>
+      </Box>
       <TermsOfUse ref={termsRef} />
       <PrivacyPolicy ref={privacyPolRef} />
     </>
   );
-});
+};
 
-export default About;
+export default AboutContent;

@@ -30,7 +30,6 @@ import {
 import { bigIntLovelace } from '../../../api/lovelace-scalar';
 import AvatarLoader from '../components/avatarLoader';
 import UnitDisplay from '../components/unitDisplay';
-import About from '../components/about';
 import TransactionBuilder from '../components/transactionBuilder';
 import { WalletSetupButtons } from '../components/walletSetupFlow';
 import useSurfaceColors from '../hooks/useSurfaceColors';
@@ -42,7 +41,6 @@ const TRAY_CLEARANCE_PB =
 
 const Accounts = () => {
   const settings = useStoreState((state) => state.settings.settings);
-  const aboutRef = React.useRef();
   const deleteAccountRef = React.useRef();
   const builderRef = React.useRef();
 
@@ -303,16 +301,6 @@ const Accounts = () => {
                 Collateral
               </Button>
             </WalletSetupButtons>
-            <Button
-              mt={3}
-              w="full"
-              rounded="xl"
-              h="12"
-              variant="ghost"
-              onClick={() => aboutRef.current.openModal()}
-            >
-              About
-            </Button>
           </Box>
         </Stack>
       </Box>
@@ -323,7 +311,6 @@ const Accounts = () => {
         onDeleted={load}
       />
       <TransactionBuilder ref={builderRef} />
-      <About ref={aboutRef} />
     </Box>
   );
 };

@@ -52,8 +52,9 @@ describe('single version source of truth', () => {
       'utf8'
     );
     expect(about).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
-    expect(settings).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
-    expect(settings).toContain('data-testid="settings-app-version"');
+    expect(about).toContain('data-testid="settings-app-version"');
+    expect(settings).toContain('AboutContent');
+    expect(settings).toContain('data-testid="settings-about"');
     expect(migration).toMatch(/require\(['"]\.\.\/\.\.\/package\.json['"]\)/);
     expect(provider).toMatch(/from ['"]\.\.\/\.\.\/package\.json['"]/);
   });

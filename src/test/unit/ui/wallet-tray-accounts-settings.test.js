@@ -85,7 +85,8 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toMatch(
       /WalletSetupButtons[\s\S]*Delete Account[\s\S]*Collateral[\s\S]*<\/WalletSetupButtons>/
     );
-    expect(accountsSrc).toContain('About');
+    expect(accountsSrc).not.toContain('About');
+    expect(accountsSrc).not.toContain("import About from '../components/about'");
     const setupSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
       'utf8'

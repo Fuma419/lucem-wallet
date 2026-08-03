@@ -61,6 +61,11 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toContain('wallet-network-banner');
     expect(walletSrc).toMatch(/network-banner-\$\{testnetBanner\.id\}/);
     expect(css).toMatch(/\.network-banner[\s\S]*position:\s*absolute/);
+    // Align badge top with Lucem logo row (wallet.jsx pt base:3 / md:4)
+    expect(css).toMatch(/\.network-banner[\s\S]*top:\s*0\.75rem/);
+    expect(css).toMatch(
+      /@media\s*\(min-width:\s*48em\)\s*\{\s*\.network-banner\s*\{\s*top:\s*1rem/
+    );
     expect(css).toMatch(/\.network-banner[\s\S]*width:\s*auto/);
     // Label centered in the badge (flex + equal vertical pad; letter-spacing offset)
     expect(css).toMatch(/\.network-banner[\s\S]*display:\s*flex/);

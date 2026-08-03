@@ -70,6 +70,10 @@ describe('ERROR constants', () => {
     expect(ERROR.fullMempool).toBeDefined();
     expect(ERROR.submit).toBeDefined();
   });
+  test('duplicate import errors are defined', () => {
+    expect(ERROR.accountAlreadyExists).toMatch(/already imported/i);
+    expect(ERROR.walletAlreadyExists).toMatch(/already imported/i);
+  });
 });
 
 describe('TX constants', () => {

@@ -316,7 +316,7 @@ test.describe('capture static entry UIs', () => {
     test.setTimeout(90_000);
     await page.goto('/welcome', { waitUntil: 'domcontentloaded' });
     await page.getByText('Wallet Setup').waitFor({ state: 'visible', timeout: 60_000 });
-    await page.getByRole('button', { name: /hardware wallet/i }).click();
+    await page.getByRole('button', { name: /import hw/i }).click();
     await page.getByRole('dialog').getByText('Hardware wallet').waitFor({
       state: 'visible',
       timeout: 15_000,

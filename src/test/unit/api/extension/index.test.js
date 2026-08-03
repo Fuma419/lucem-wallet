@@ -142,10 +142,39 @@ test('createWallet with explicit accounts', async () => {
     'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
   const name = 'Wallet 1';
   const password = 'password123';
-  await createWallet(name, seed, password, [0, 2, 4]);
+  const selected = await createWallet(name, seed, password, [0, 2, 4]);
   const store = await getStorage();
   expect(Object.keys(store.accounts).length).toBe(3);
   expect(store.accounts[0].name).toBe('Wallet 1');
   expect(store.accounts[2].name).toBe('Account 2');
   expect(store.accounts[4].name).toBe('Account 4');
+  // Primary new account (first explicit index) must become the selection.
+  expect(selected).toBe(0);
+  expect(store.currentAccount).toBe(0);
+});
+
+test('createWallet rejects a seed that is already imported', async () => {
+  await eraseLocalWalletData();
+  const seed =
+    'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
+  const password = 'password123';
+  await createWallet('Wallet 1', seed, password, [0]);
+  await expect(
+    createWallet('Wallet 1 again', seed, password, [0])
+  ).rejects.toThrow(/already imported/i);
+  // Existing wallet must remain intact (no wipe on duplicate).
+  const store = await getStorage();
+  expect(store.accounts[0].name).toBe('Wallet 1');
+  expect(store.encryptedKey).toBeDefined();
+});
+
+test('createAccount rejects a duplicate account index', async () => {
+  await eraseLocalWalletData();
+  const seed =
+    'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
+  const password = 'password123';
+  await createWallet('Wallet 1', seed, password, [0]);
+  await expect(createAccount('Dup', password, 0)).rejects.toThrow(
+    /already/i
+  );
 });

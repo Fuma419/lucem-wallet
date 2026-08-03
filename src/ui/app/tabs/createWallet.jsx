@@ -780,6 +780,13 @@ const MakeAccount = ({ colorTheme }) => {
         setError(
           'This page cannot run wallet crypto (browser CSP). Create the wallet from the PWA at http://localhost…/mainPopup.html or your deployed site, not from a chrome-extension:// tab.'
         );
+      } else if (
+        msg.includes('already imported') ||
+        msg.includes('already in Lucem') ||
+        msg.includes('already in your wallet') ||
+        msg.includes('already in use')
+      ) {
+        setError(msg);
       } else {
         setError(msg || 'Failed to create wallet. Please try again.');
       }

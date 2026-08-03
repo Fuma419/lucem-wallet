@@ -63,6 +63,21 @@ import {
   invalidateAll as invalidateReadCache,
   withCache,
 } from '../cache';
+import {
+  getExternalIndices,
+  isMultiAddressEnabled,
+  listEnabledPaymentAddresses,
+  normalizeExternalIndices,
+  deriveExternalPaymentFromAccountPublicKey,
+  MAX_EXTERNAL_ADDRESS_INDEX,
+} from './multi-address';
+
+export {
+  getExternalIndices,
+  isMultiAddressEnabled,
+  normalizeExternalIndices,
+  MAX_EXTERNAL_ADDRESS_INDEX,
+};
 
 export const normalizeStakePool = normalizeStakePoolData;
 
@@ -282,11 +297,14 @@ export const getStakePools = async (limit = 25) => {
 
 export const getBalance = async () => {
   await Loader.load();
-  const currentAccount = await getCurrentAccount();
-  const address = await getAddress(); // Get the full address
-  
-  // Use address_utxos to get detailed UTXO information
-  const request = KOIOS_REQUESTS.getAddressUtxos(address, false);
+  const paymentAddresses = await getEnabledPaymentAddresses();
+  const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
+  if (addressList.length === 0) {
+    return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
+  }
+
+  // Use address_utxos to get detailed UTXO information across enabled addresses
+  const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   
   if (result.error) {
@@ -332,16 +350,24 @@ export const getBalance = async () => {
 
 export const getBalanceExtended = async ({ force = false } = {}) => {
   const network = await getNetwork();
-  const address = await getAddress(); // Get the full address
+  const addresses = await getEnabledPaymentAddresses();
+  const addressList = addresses.map((a) => a.paymentAddr).filter(Boolean);
+  if (addressList.length === 0) return [];
   return withCache(
-    cacheKey('balance-extended', network?.id, address),
-    () => fetchBalanceExtended(address),
+    cacheKey(
+      'balance-extended',
+      network?.id,
+      addressList.join(','),
+      addresses.map((a) => a.index).join('-')
+    ),
+    () => fetchBalanceExtended(addressList),
     { force }
   );
 };
 
-const fetchBalanceExtended = async (address) => {
-  const request = KOIOS_REQUESTS.getAddressUtxos(address, true);
+const fetchBalanceExtended = async (addresses) => {
+  const list = Array.isArray(addresses) ? addresses : [addresses];
+  const request = KOIOS_REQUESTS.getAddressesUtxos(list, true);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   
   if (result.error) {
@@ -718,9 +744,11 @@ export const getSpecificUtxo = async (txHash, txId) => {
  */
 export const getUtxos = async (amount = undefined, paginate = undefined) => {
   const currentAccount = await getCurrentAccount();
-  const address = await getAddress();
-  
-  const request = KOIOS_REQUESTS.getAddressUtxos(address, false);
+  const paymentAddresses = await getEnabledPaymentAddresses();
+  const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
+  if (addressList.length === 0) return [];
+
+  const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   
   if (result?.error) {
@@ -741,8 +769,18 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
     );
   }
 
+  // Map each UTxO back to its owning address (Koios includes address on rows when
+  // querying multiple; fall back to primary when absent).
+  const addrByHint = new Map(
+    paymentAddresses.map((a) => [a.paymentAddr, a.paymentAddr])
+  );
+
   let convertedUtxos = await Promise.all(
     utxos.map(async (utxo) => {
+      const owner =
+        (utxo.address && addrByHint.get(utxo.address)) ||
+        addressList.find((a) => a === utxo.address) ||
+        addressList[0];
       const formattedUtxo = {
         tx_hash: utxo.tx_hash,
         output_index: utxo.output_index ?? utxo.tx_index,
@@ -755,7 +793,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
         ]
       };
       
-      return await utxoFromJson(formattedUtxo, address);
+      return await utxoFromJson(formattedUtxo, owner);
     })
   );
   
@@ -920,8 +958,69 @@ export const getCollateral = async (params) => {
 export const getAddress = async () => {
   await Loader.load();
   const currentAccount = await getCurrentAccount();
-  // Return the full Bech32 address instead of converting to key hash
+  // Primary receive address remains external index 0 (CIP-30 / QR default).
   return currentAccount.paymentAddr;
+};
+
+/**
+ * Enabled CIP-1852 external payment addresses for the current account
+ * (index 0 plus any Advanced multi-address indices).
+ */
+export const getEnabledPaymentAddresses = async () => {
+  await Loader.load();
+  const currentAccount = await getCurrentAccount();
+  const network = await getNetwork();
+  const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
+  return listEnabledPaymentAddresses(
+    Loader.Cardano,
+    currentAccount,
+    networkId
+  );
+};
+
+/**
+ * Persist which external address indices are active for the current account.
+ * Index 0 is always kept. Triggers balance cache invalidation.
+ */
+export const setAccountExternalIndices = async (indices) => {
+  const currentIndex = await getCurrentAccountIndex();
+  const accounts = await getStorage(STORAGE.accounts);
+  if (!accounts?.[currentIndex]) {
+    throw new Error('No current account');
+  }
+  const next = normalizeExternalIndices(indices);
+  accounts[currentIndex].externalIndices = next;
+  await setStorage({ [STORAGE.accounts]: { ...accounts } });
+  invalidateReadCache();
+  return next;
+};
+
+/**
+ * Enable a single external index (0..MAX) on the current account.
+ */
+export const enableExternalAddressIndex = async (addressIndex) => {
+  const currentAccount = await getCurrentAccount();
+  const current = getExternalIndices(currentAccount);
+  const i = parseInt(addressIndex, 10);
+  if (!Number.isFinite(i) || i < 0 || i > MAX_EXTERNAL_ADDRESS_INDEX) {
+    throw new Error(
+      `Address index must be between 0 and ${MAX_EXTERNAL_ADDRESS_INDEX}`
+    );
+  }
+  return setAccountExternalIndices([...current, i]);
+};
+
+/**
+ * Disable an external index on the current account (index 0 cannot be disabled).
+ */
+export const disableExternalAddressIndex = async (addressIndex) => {
+  const i = parseInt(addressIndex, 10);
+  if (i === 0) {
+    throw new Error('The primary address (index 0) cannot be disabled');
+  }
+  const currentAccount = await getCurrentAccount();
+  const current = getExternalIndices(currentAccount).filter((n) => n !== i);
+  return setAccountExternalIndices(current);
 };
 
 export const getRewardAddress = async () => {
@@ -1565,6 +1664,18 @@ export const signTx = async (
     [drepKeyHash, drepKey],
   ]);
 
+  // Advanced multi-address: include payment keys for every enabled external index
+  // so inputs sitting on addr/.../0/n can be witnessed.
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts?.[accountIndex];
+  const extraIndices = getExternalIndices(account).filter((i) => i !== 0);
+  const extraPaymentKeys = [];
+  for (const addressIndex of extraIndices) {
+    const extraKey = accountKey.derive(0).derive(addressIndex).to_raw_key();
+    extraPaymentKeys.push(extraKey);
+    keyMap.set(extraKey.to_public().hash().to_hex(), extraKey);
+  }
+
   let txWitnessSet;
   try {
     txWitnessSet = buildVkeyWitnessSet(
@@ -1581,6 +1692,13 @@ export const signTx = async (
     drepKey.free();
     stakeKey.free();
     paymentKey.free();
+    extraPaymentKeys.forEach((k) => {
+      try {
+        k.free();
+      } catch (_) {
+        /* ignore */
+      }
+    });
   }
 
   return txWitnessSet;
@@ -1603,13 +1721,33 @@ export const signTxHW = async (
   };
   if (hw.device === HW.ledger) {
     const appAda = hw.appAda;
+    const networkId = network;
+    const paymentIndexByHash = {};
+    if (account?.publicKey) {
+      for (const row of listEnabledPaymentAddresses(
+        Loader.Cardano,
+        account,
+        networkId
+      )) {
+        paymentIndexByHash[row.paymentKeyHash] = row.index;
+      }
+    } else {
+      paymentIndexByHash[account.paymentKeyHash] = 0;
+    }
     keyHashes.forEach((keyHash) => {
-      if (keyHash === account.paymentKeyHash)
+      if (paymentIndexByHash[keyHash] != null) {
+        const addrIdx = paymentIndexByHash[keyHash];
         keys.payment = {
           hash: keyHash,
-          path: [HARDENED + 1852, HARDENED + 1815, HARDENED + hw.account, 0, 0],
+          path: [
+            HARDENED + 1852,
+            HARDENED + 1815,
+            HARDENED + hw.account,
+            0,
+            addrIdx,
+          ],
         };
-      else if (keyHash === account.stakeKeyHash)
+      } else if (keyHash === account.stakeKeyHash)
         keys.stake = {
           hash: keyHash,
           path: [HARDENED + 1852, HARDENED + 1815, HARDENED + hw.account, 2, 0],
@@ -1637,11 +1775,12 @@ export const signTxHW = async (
       if (
         witness.path[3] == 0 // payment key
       ) {
+        const addrIdx = witness.path[4] != null ? witness.path[4] : 0;
         const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
           account.publicKey
         )
           .derive(0)
-          .derive(0)
+          .derive(addrIdx)
           .to_raw_key();
         const signature = Loader.Cardano.Ed25519Signature.from_hex(
           witness.witnessSignatureHex
@@ -1669,13 +1808,26 @@ export const signTxHW = async (
     throw new Error('Keystone signing runs in the Keystone signing tab.');
   }
   if (hw.device === HW.trezor) {
+    const paymentIndexByHash = {};
+    if (account?.publicKey) {
+      for (const row of listEnabledPaymentAddresses(
+        Loader.Cardano,
+        account,
+        network
+      )) {
+        paymentIndexByHash[row.paymentKeyHash] = row.index;
+      }
+    } else {
+      paymentIndexByHash[account.paymentKeyHash] = 0;
+    }
     keyHashes.forEach((keyHash) => {
-      if (keyHash === account.paymentKeyHash)
+      if (paymentIndexByHash[keyHash] != null) {
+        const addrIdx = paymentIndexByHash[keyHash];
         keys.payment = {
           hash: keyHash,
-          path: `m/1852'/1815'/${hw.account}'/0/0`,
+          path: `m/1852'/1815'/${hw.account}'/0/${addrIdx}`,
         };
-      else if (keyHash === account.stakeKeyHash)
+      } else if (keyHash === account.stakeKeyHash)
         keys.stake = {
           hash: keyHash,
           path: `m/1852'/1815'/${hw.account}'/2/0`,
@@ -1945,16 +2097,96 @@ export const initLocalWalletSecretIfAbsent = async (password) => {
   return true;
 };
 
+/**
+ * Find a stored account that matches a BIP32 account public key (hex).
+ * Used to detect duplicate seed / HW imports before writing storage.
+ */
+export const findAccountByPublicKey = (accounts, publicKeyHex) => {
+  if (!accounts || typeof accounts !== 'object' || !publicKeyHex) return null;
+  const needle = String(publicKeyHex).toLowerCase();
+  for (const account of Object.values(accounts)) {
+    if (
+      account &&
+      typeof account.publicKey === 'string' &&
+      account.publicKey.toLowerCase() === needle
+    ) {
+      return account;
+    }
+  }
+  return null;
+};
+
+/**
+ * Derive the CIP-1852 account-level BIP32 public key hex for a mnemonic index
+ * without persisting anything. Caller must not log the mnemonic.
+ */
+export const deriveAccountPublicKeyFromMnemonic = async (
+  seedPhrase,
+  accountIndex = 0
+) => {
+  await Loader.load();
+  let entropy = mnemonicToEntropy(seedPhrase);
+  let rootKey = Loader.Cardano.Bip32PrivateKey.from_bip39_entropy(
+    Buffer.from(entropy, 'hex'),
+    Buffer.from('')
+  );
+  entropy = null;
+  let accountKey;
+  try {
+    accountKey = rootKey
+      .derive(harden(1852))
+      .derive(harden(1815))
+      .derive(harden(parseInt(accountIndex, 10)));
+    return accountKey.to_public().to_hex();
+  } finally {
+    if (accountKey) {
+      try {
+        accountKey.free();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    try {
+      rootKey.free();
+    } catch (_) {
+      /* ignore */
+    }
+    rootKey = null;
+  }
+};
+
+/**
+ * Returns the first existing account that matches any of the mnemonic's
+ * CIP-1852 account public keys in `accountIndices`.
+ */
+export const findExistingAccountForMnemonic = async (
+  seedPhrase,
+  accountIndices = [0]
+) => {
+  const accounts = await getStorage(STORAGE.accounts);
+  if (!accounts || typeof accounts !== 'object') return null;
+  for (const index of accountIndices) {
+    const publicKey = await deriveAccountPublicKeyFromMnemonic(
+      seedPhrase,
+      index
+    );
+    const match = findAccountByPublicKey(accounts, publicKey);
+    if (match) return match;
+  }
+  return null;
+};
+
 export const createAccount = async (name, password, accountIndex = null) => {
   await Loader.load();
 
   const existingAccounts = await getStorage(STORAGE.accounts);
 
-  const index = accountIndex
-    ? accountIndex
-    : existingAccounts
-      ? Object.keys(getNativeAccounts(existingAccounts)).length
-      : 0;
+  const index =
+    accountIndex !== null && accountIndex !== undefined && accountIndex !== ''
+      ? accountIndex
+      : existingAccounts
+        ? Object.keys(getNativeAccounts(existingAccounts)).length
+        : 0;
 
   let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
@@ -1971,6 +2203,21 @@ export const createAccount = async (name, password, accountIndex = null) => {
   accountKey = null;
   paymentKey = null;
   stakeKey = null;
+
+  // Same derivation path / public key already stored → tell the user instead of
+  // silently overwriting (which looks like "Import did nothing").
+  const duplicateByKey = findAccountByPublicKey(existingAccounts, publicKey);
+  if (duplicateByKey) {
+    const label = duplicateByKey.name ? `"${duplicateByKey.name}"` : 'this account';
+    throw new Error(
+      `${ERROR.accountAlreadyExists} ${label} is already in your wallet.`
+    );
+  }
+  if (existingAccounts && existingAccounts[index]) {
+    throw new Error(
+      `${ERROR.accountAlreadyExists} Account index ${index} is already in use.`
+    );
+  }
 
   const paymentKeyHash = Buffer.from(paymentKeyPub.hash().to_bytes()).toString(
     'hex'
@@ -2027,6 +2274,8 @@ export const createAccount = async (name, password, accountIndex = null) => {
       paymentKeyHashBech32,
       stakeKeyHash,
       name,
+      // CIP-1852 external indices included in balance/UTXO/signing (0 = primary).
+      externalIndices: [0],
       [NETWORK_ID.mainnet]: {
         ...networkDefault,
         paymentAddr: paymentAddrMainnet,
@@ -2063,10 +2312,26 @@ export const createHWAccounts = async (accounts) => {
   if (!existingAccounts || typeof existingAccounts !== 'object') {
     existingAccounts = {};
   }
-  accounts.forEach((account) => {
+
+  const added = [];
+  const skipped = [];
+
+  for (const account of accounts) {
     const publicKey = Loader.Cardano.Bip32PublicKey.from_hex(
       account.publicKey
     );
+    const publicKeyHex = publicKey.to_hex();
+    const index = account.accountIndex;
+    const name = account.name;
+
+    const duplicateByKey = findAccountByPublicKey(existingAccounts, publicKeyHex);
+    if (duplicateByKey || existingAccounts[index]) {
+      skipped.push({
+        index,
+        name: name || (duplicateByKey && duplicateByKey.name) || String(index),
+      });
+      continue;
+    }
 
     const paymentKeyHashRaw = publicKey.derive(0).derive(0).to_raw_key().hash();
     const stakeKeyHashRaw = publicKey.derive(2).derive(0).to_raw_key().hash();
@@ -2111,9 +2376,6 @@ export const createHWAccounts = async (accounts) => {
       .to_address()
       .to_bech32();
 
-    const index = account.accountIndex;
-    const name = account.name;
-
     const networkDefault = {
       lovelace: null,
       minAda: 0,
@@ -2123,11 +2385,12 @@ export const createHWAccounts = async (accounts) => {
 
     existingAccounts[index] = {
       index,
-      publicKey: publicKey.to_hex(),
+      publicKey: publicKeyHex,
       paymentKeyHash,
       paymentKeyHashBech32,
       stakeKeyHash,
       name,
+      externalIndices: [0],
       [NETWORK_ID.mainnet]: {
         ...networkDefault,
         paymentAddr: paymentAddrMainnet,
@@ -2150,20 +2413,31 @@ export const createHWAccounts = async (accounts) => {
       },
       avatar: Math.random().toString(),
     };
-  });
-  const setPayload = { [STORAGE.accounts]: existingAccounts };
-  if (accounts.length > 0) {
-    const firstNewIndex = accounts[0].accountIndex;
-    const currentIndex = await getStorage(STORAGE.currentAccount);
-    const needsCurrent =
-      currentIndex === undefined ||
-      currentIndex === null ||
-      existingAccounts[currentIndex] === undefined;
-    if (needsCurrent) {
-      setPayload[STORAGE.currentAccount] = firstNewIndex;
-    }
+    added.push({ index, name });
   }
-  await setStorage(setPayload);
+
+  if (added.length === 0) {
+    if (skipped.length > 0) {
+      const names = skipped
+        .map((s) => s.name)
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(', ');
+      throw new Error(
+        names
+          ? `${ERROR.accountAlreadyExists} Already in Lucem: ${names}.`
+          : ERROR.accountAlreadyExists
+      );
+    }
+    throw new Error('No accounts selected');
+  }
+
+  // Always select the first newly imported account (not the previously active
+  // one). switchAccount also emits accountChange for open shells.
+  const firstNewIndex = added[0].index;
+  await setStorage({ [STORAGE.accounts]: existingAccounts });
+  await switchAccount(firstNewIndex);
+  return { added, skipped };
 };
 
 export const deleteAccount = async () => {
@@ -2419,7 +2693,33 @@ export const getMilkomedaData = async (ethAddress) => {
 export const createWallet = async (name, seedPhrase, password, explicitAccounts = [0]) => {
   await Loader.load();
 
-  // Check and clear any leftover state from a previous failed attempt
+  const accountIndices =
+    Array.isArray(explicitAccounts) && explicitAccounts.length > 0
+      ? explicitAccounts
+      : [0];
+
+  // Detect re-import of an already-stored seed/account *before* wiping storage.
+  // Previously createWallet cleared and recreated, which looked like "Import did
+  // nothing" when the end state matched the existing wallet.
+  // Always include account 0 so the same seed is caught even if the user only
+  // selected higher indices in Advanced options.
+  const indicesToCheck = Array.from(
+    new Set([0, ...accountIndices.map((i) => parseInt(i, 10))])
+  ).filter((i) => Number.isFinite(i) && i >= 0);
+  const existingMatch = await findExistingAccountForMnemonic(
+    seedPhrase,
+    indicesToCheck
+  );
+  if (existingMatch) {
+    const label = existingMatch.name
+      ? `"${existingMatch.name}"`
+      : 'this wallet';
+    throw new Error(
+      `${ERROR.walletAlreadyExists} ${label} is already in Lucem.`
+    );
+  }
+
+  // Check and clear any leftover state from a previous failed attempt / replace
   const checkStore = await getStorage(STORAGE.encryptedKey);
   if (checkStore) {
     await platform.storage.clear();
@@ -2498,9 +2798,11 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
   }
 
   password = null;
+  // Always activate the primary new account (first explicit index), even when
+  // other accounts already existed on the device before this import/create.
   await switchAccount(index);
 
-  return true;
+  return index;
 };
 
 export const mnemonicToObject = (mnemonic) => {

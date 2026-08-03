@@ -49,6 +49,7 @@ import { MdModeEdit } from 'react-icons/md';
 import AvatarLoader from '../components/avatarLoader';
 import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
+import MultiAddressSettings from '../components/multiAddressSettings';
 
 /** Typed confirmation phrase (spacing / case normalized on compare). */
 const ERASE_WALLET_CONFIRM_PHRASE = 'Erase all data';
@@ -320,6 +321,16 @@ const Settings = () => {
               </Wrap>
             </RadioGroup>
           </Flex>
+
+          <Box mt={8} w="full">
+            <SettingsSectionTitle>Advanced</SettingsSectionTitle>
+            <MultiAddressSettings
+              account={account}
+              onIndicesChange={(externalIndices) => {
+                setAccount((prev) => ({ ...prev, externalIndices }));
+              }}
+            />
+          </Box>
 
           <Flex direction="column" gap={3} mt={8} w="full">
             <Button

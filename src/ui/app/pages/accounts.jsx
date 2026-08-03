@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
   AlertDialogBody,
@@ -16,7 +15,7 @@ import {
   useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react';
-import { AddIcon, CheckIcon, DeleteIcon } from '@chakra-ui/icons';
+import { CheckIcon, DeleteIcon } from '@chakra-ui/icons';
 import { FaRegFileCode } from 'react-icons/fa';
 import { useStoreState } from 'easy-peasy';
 import {
@@ -33,6 +32,7 @@ import AvatarLoader from '../components/avatarLoader';
 import UnitDisplay from '../components/unitDisplay';
 import About from '../components/about';
 import TransactionBuilder from '../components/transactionBuilder';
+import { WalletSetupButtons } from '../components/walletSetupFlow';
 import useSurfaceColors from '../hooks/useSurfaceColors';
 import { isSameAccountIndex } from '../utils/accountIndex';
 
@@ -41,7 +41,6 @@ const TRAY_CLEARANCE_PB =
   'calc(6.5rem + env(safe-area-inset-bottom, 0px))';
 
 const Accounts = () => {
-  const navigate = useNavigate();
   const settings = useStoreState((state) => state.settings.settings);
   const aboutRef = React.useRef();
   const deleteAccountRef = React.useRef();
@@ -132,8 +131,8 @@ const Accounts = () => {
             data-testid="accounts-list-panel"
           >
             <Text fontSize="sm" color={mutedFg} mb={3}>
-              Switch the active account. New Wallet adds another seed or
-              hardware device.
+              Switch the active account. Create, import, or connect hardware to
+              add another wallet.
             </Text>
 
             <Stack spacing={2}>
@@ -276,15 +275,8 @@ const Accounts = () => {
             p={{ base: 4, md: 5 }}
             data-testid="accounts-actions-panel"
           >
-            <Stack spacing={2}>
-              <Button
-                leftIcon={<AddIcon />}
-                rounded="xl"
-                h="12"
-                onClick={() => navigate('/welcome')}
-              >
-                New Wallet
-              </Button>
+            <Stack spacing={3}>
+              <WalletSetupButtons spacing={3} stackProps={{ align: 'stretch' }} />
               {canDelete ? (
                 <Button
                   colorScheme="red"

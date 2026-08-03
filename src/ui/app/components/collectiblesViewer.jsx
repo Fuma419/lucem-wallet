@@ -10,7 +10,6 @@ import {
   PopoverBody,
   PopoverContent,
   PopoverTrigger,
-  Spinner,
   Text,
   useDisclosure,
   Modal,
@@ -73,14 +72,9 @@ const CollectiblesViewer = ({ assets, onUpdateAvatar }) => {
     <>
       <Box position="relative" zIndex="0">
         {!(assets && assetsArray) ? (
-          <Box
-            mt="28"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Spinner color="#C5FF0A" speed="0.5s" />
-          </Box>
+          // No center spinner — wallet refresh already indicates loading next
+          // to the balance.
+          <Box mt="28" minH="4" aria-hidden="true" />
         ) : assetsArray.length <= 0 ? (
           <Box
             mt="16"

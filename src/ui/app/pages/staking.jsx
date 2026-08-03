@@ -33,6 +33,7 @@ import {
   MdUndo,
 } from 'react-icons/md';
 import { FaRegCopy } from 'react-icons/fa';
+import PullToRefresh from '../components/pullToRefresh';
 import { HW, TAB, ERROR } from '../../../config/config';
 import {
   createTab,
@@ -288,15 +289,23 @@ const Staking = () => {
     yellowLink,
   } = useSurfaceColors();
 
-  const loadStakeState = React.useCallback(async () => {
-    setIsLoading(true);
+  const didLoadRef = React.useRef(false);
+  const loadStakeState = React.useCallback(async ({ force = false } = {}) => {
+    // Only block the screen on the very first load; later refreshes (cache
+    // revalidation, pull-to-refresh) update in place without a spinner.
+    if (!didLoadRef.current) setIsLoading(true);
     setError('');
     try {
       const [nextAccount, nextDelegation, nextProtocolParameters] =
-        await Promise.all([getCurrentAccount(), getDelegation(), initTx()]);
+        await Promise.all([
+          getCurrentAccount(),
+          getDelegation({ force }),
+          initTx({ force }),
+        ]);
       setAccount(nextAccount);
       setDelegation(nextDelegation);
       setProtocolParameters(nextProtocolParameters);
+      didLoadRef.current = true;
     } catch (e) {
       console.error(e);
       setError(e?.message || 'Unable to load staking state.');
@@ -476,6 +485,7 @@ const Staking = () => {
     (activePool ? shortPoolId(activePool) : 'your pool');
 
   return (
+    <PullToRefresh onRefresh={() => loadStakeState({ force: true })}>
     <Box
       data-testid="stake-center-page"
       minH="100vh"
@@ -896,6 +906,7 @@ const Staking = () => {
         }}
       />
     </Box>
+    </PullToRefresh>
   );
 };
 

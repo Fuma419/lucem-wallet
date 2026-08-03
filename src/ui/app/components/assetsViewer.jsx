@@ -9,7 +9,6 @@ import {
   PopoverBody,
   PopoverContent,
   PopoverTrigger,
-  Spinner,
   Text,
 } from '@chakra-ui/react';
 import { SearchIcon, SmallCloseIcon } from '@chakra-ui/icons';
@@ -28,7 +27,8 @@ const AssetsViewer = ({ assets }) => {
       setSearch('');
       return;
     }
-    setAssetsArray(null);
+    // Keep current tiles while filtering — clearing to null flashes a center
+    // spinner on parent re-renders / refresh.
     await new Promise((res, rej) => setTimeout(() => res(), 10));
     const filter = (asset) => {
       const source = [asset.name, asset.policy, asset.fingerprint]
@@ -58,14 +58,9 @@ const AssetsViewer = ({ assets }) => {
     <>
       <Box position="relative" zIndex="0">
         {!(assets && assetsArray) ? (
-          <Box
-            mt="28"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Spinner color="yellow" speed="0.5s" />
-          </Box>
+          // No center spinner — wallet refresh already indicates loading next
+          // to the balance.
+          <Box mt="28" minH="4" aria-hidden="true" />
         ) : assetsArray.length <= 0 ? (
           <Box
             mt="16"

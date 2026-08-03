@@ -5,6 +5,7 @@ import {
   getAccounts,
   getCurrentAccountIndex,
   getDelegation,
+  getFiatPrice,
   getNetwork,
   updateAccount,
 } from '../../../api/extension';
@@ -32,15 +33,14 @@ import {
   TabPanel,
   Tooltip,
   IconButton,
-  Skeleton,
 } from '@chakra-ui/react';
 import {
   CopyIcon,
   InfoOutlineIcon,
 } from '@chakra-ui/icons';
 import QrCode from '../components/qrCode';
-import provider from '../../../config/provider';
 import UnitDisplay from '../components/unitDisplay';
+import PullToRefresh from '../components/pullToRefresh';
 import { onAccountChange } from '../../../api/extension';
 import HistoryViewer from '../components/historyViewer';
 import Copy from '../components/copy';
@@ -199,13 +199,12 @@ const Wallet = () => {
     });
     let price = fiatPrice.current;
     try {
-      if (!fiatPrice.current) {
-        price = await provider.api.price(settings.currency);
-        fiatPrice.current = price;
-      }
+      // Cached per-currency (90s TTL); `forceUpdate` bypasses on pull/refresh.
+      price = await getFiatPrice(settings.currency, { force: forceUpdate });
+      fiatPrice.current = price;
     } catch (e) {}
     const network = await getNetwork();
-    const delegation = await getDelegation();
+    const delegation = await getDelegation({ force: forceUpdate });
     if (!isMounted.current) return;
     setState((s) => ({
       ...s,
@@ -309,7 +308,7 @@ const Wallet = () => {
       : undefined;
 
   return (
-    <>
+    <PullToRefresh onRefresh={() => getData({ forceUpdate: true })}>
       <Box
         minH="100vh"
         sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
@@ -408,27 +407,22 @@ const Wallet = () => {
                     }}
                     px={1}
                   >
-                    <Skeleton
-                      isLoaded={accountAdaLovelace !== null}
-                      borderRadius="md"
-                      startColor="whiteAlpha.200"
-                      endColor="whiteAlpha.400"
+                    {/* Loading is only the refresh control beside the balance —
+                        keep the ADA figure visible (or blank) without a Skeleton. */}
+                    <UnitDisplay
+                      className="lineClamp"
+                      fontSize={{ base: 'xl', md: '2xl' }}
+                      fontWeight="bold"
+                      quantity={displayTotalAda}
+                      decimals={6}
+                      symbol={settings.adaSymbol}
                       minW={
                         accountAdaLovelace != null ? undefined : '7rem'
                       }
                       minH={
                         accountAdaLovelace != null ? undefined : '1.75rem'
                       }
-                    >
-                      <UnitDisplay
-                        className="lineClamp"
-                        fontSize={{ base: 'xl', md: '2xl' }}
-                        fontWeight="bold"
-                        quantity={displayTotalAda}
-                        decimals={6}
-                        symbol={settings.adaSymbol}
-                      />
-                    </Skeleton>
+                    />
                   </Box>
                 </PopoverTrigger>
                 <Portal>
@@ -717,7 +711,7 @@ const Wallet = () => {
         {/* Clearance for fixed lower trays from WalletShell */}
         <Box pb="calc(5.5rem + env(safe-area-inset-bottom, 0px))" flexShrink={0} />
       </Box>
-    </>
+    </PullToRefresh>
   );
 };
 

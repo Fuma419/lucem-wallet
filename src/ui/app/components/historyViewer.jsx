@@ -1,4 +1,4 @@
-import { Box, Text, Spinner, Accordion, Button } from '@chakra-ui/react';
+import { Box, Text, Accordion, Button } from '@chakra-ui/react';
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import React from 'react';
 import { File } from 'react-kawaii';
@@ -108,7 +108,9 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
   return (
     <Box position="relative">
       {!(history && historySlice) ? (
-        <HistorySpinner />
+        // No center spinner — wallet refresh already indicates loading next
+        // to the balance.
+        <Box mt="28" minH="4" aria-hidden="true" />
       ) : historySlice.length <= 0 ? (
         <Box
           mt="16"
@@ -183,11 +185,5 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
     </Box>
   );
 };
-
-const HistorySpinner = () => (
-  <Box mt="28" display="flex" alignItems="center" justifyContent="center">
-    <Spinner color="yellow" speed="0.5s" />
-  </Box>
-);
 
 export default HistoryViewer;

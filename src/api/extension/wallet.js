@@ -1,5 +1,6 @@
-import { getUtxos, signTx, signTxHW, submitTx } from '.';
+import { getNetwork, getUtxos, signTx, signTxHW, submitTx } from '.';
 import { ERROR, TX } from '../../config/config';
+import { cacheKey, withCache } from '../cache';
 import Loader from '../loader';
 import {
   buildProtocolParametersSnapshot,
@@ -73,7 +74,24 @@ export const assembleSignedTransaction = async (unsignedTx, witnessSet) => {
   return signed;
 };
 
-export const initTx = async () => {
+/**
+ * Protocol-parameter snapshot for fee estimation and display.
+ *
+ * Cached per network (shared TTL) so repeated screen visits (wallet balance,
+ * staking preview) don't refetch epoch params + tip each time. This is
+ * build-safe: `buildTx` re-fetches the tip slot at construction time, and the
+ * certificate txs bound their TTL at `slot + 6h`, so a slightly stale cached
+ * slot can never yield an already-expired invalidHereafter. Pass
+ * `{ force: true }` to bypass (pull-to-refresh).
+ */
+export const initTx = async ({ force = false } = {}) => {
+  const network = await getNetwork();
+  return withCache(cacheKey('protocol-params', network?.id), fetchProtocolParameters, {
+    force,
+  });
+};
+
+const fetchProtocolParameters = async () => {
   try {
     const tipSlot = await fetchKoiosTipSlot(koiosRequestEnhanced);
     const p = await koiosRequestEnhanced('/epoch_params/latest');

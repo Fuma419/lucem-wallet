@@ -39,6 +39,10 @@ describe('single version source of truth', () => {
       path.join(root, 'src/ui/app/components/about.jsx'),
       'utf8'
     );
+    const settings = fs.readFileSync(
+      path.join(root, 'src/ui/app/pages/settings.jsx'),
+      'utf8'
+    );
     const migration = fs.readFileSync(
       path.join(root, 'src/migrations/migration.js'),
       'utf8'
@@ -48,6 +52,8 @@ describe('single version source of truth', () => {
       'utf8'
     );
     expect(about).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
+    expect(settings).toMatch(/require\(['"]\.\.\/\.\.\/\.\.\/\.\.\/package\.json['"]\)/);
+    expect(settings).toContain('data-testid="settings-app-version"');
     expect(migration).toMatch(/require\(['"]\.\.\/\.\.\/package\.json['"]\)/);
     expect(provider).toMatch(/from ['"]\.\.\/\.\.\/package\.json['"]/);
   });

@@ -652,10 +652,11 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   color: white;
 }
 
-/* Overlay testnet rectangle badge — hugs the network name; no full-width bar / layout shift */
+/* Overlay testnet rectangle badge — hugs the network name; no full-width bar / layout shift.
+ * Top aligns with the Lucem logo row (wallet.jsx header Flex pt base:3 / md:4). */
 .network-banner {
   position: absolute;
-  top: 0;
+  top: 0.75rem; /* chakra space 3 — matches header logo row padding-top on base */
   left: 50%;
   transform: translateX(-50%);
   z-index: 5;
@@ -682,6 +683,12 @@ html[data-theme='light'] .button.network-testnet[data-active] {
   border-right: thin solid transparent;
   border-bottom: thin solid transparent;
   border-radius: 1rem;
+}
+
+@media (min-width: 48em) {
+  .network-banner {
+    top: 1rem; /* chakra space 4 — matches header logo row padding-top on md+ */
+  }
 }
 
 .network-banner-preprod {

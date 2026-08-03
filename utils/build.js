@@ -122,8 +122,10 @@ webpack(config, function (err, stats) {
       );
     }
 
-    // Clear console and show build completion message
-    console.clear();
+    // Clear console locally; avoid console.clear() in CI (scrambles Jenkins logs).
+    if (!process.env.CI) {
+      console.clear();
+    }
     console.log('\n');
     console.log('✅ Build completed successfully!');
     console.log(`📅 Time: ${buildInfo.formattedTime}`);

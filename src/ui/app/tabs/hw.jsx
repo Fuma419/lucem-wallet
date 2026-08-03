@@ -984,7 +984,11 @@ const SelectAccounts = ({ data, onConfirm }) => {
               : keystoneNewAccounts.length === 1
                 ? 'Confirm adding this account. The label shows CIP-1852 path and derivation type.'
                 : 'Confirm which accounts to add (at least one). Uncheck any you do not want in Lucem.'
-            : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device.'}
+            : Object.keys(existing).length > 0 &&
+                Object.keys(selected).filter((s) => selected[s] && !existing[s])
+                  .length === 0
+              ? 'The selected accounts are already imported in Lucem. Choose a different account index, or close this tab.'
+              : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device. Accounts already in Lucem are marked and cannot be selected again.'}
         </Text>
         <Box h={8} />
 
@@ -1017,14 +1021,27 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 display="flex"
                 alignItems="center"
               >
-                <Box ml={6} fontWeight="bold" fontSize="sm" maxW="85%" color="whiteAlpha.900">
-                  {isKeystone
-                    ? data.keystoneAccounts.find((x) => x.rowKey === rowKey)
-                        ?.name ||
-                      rowKey
-                    : `Account ${parseInt(rowKey, 10) + 1}${
-                        rowKey === '0' ? ' - Default' : ''
-                      }`}
+                <Box ml={6} maxW="85%" color="whiteAlpha.900">
+                  <Box fontWeight="bold" fontSize="sm">
+                    {isKeystone
+                      ? data.keystoneAccounts.find((x) => x.rowKey === rowKey)
+                          ?.name ||
+                        rowKey
+                      : `Account ${parseInt(rowKey, 10) + 1}${
+                          rowKey === '0' ? ' - Default' : ''
+                        }`}
+                  </Box>
+                  {existing[rowKey] ? (
+                    <Box
+                      mt={0.5}
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      color="yellow.300"
+                      letterSpacing="0.02em"
+                    >
+                      Already imported
+                    </Box>
+                  ) : null}
                 </Box>
                 <Checkbox
                   colorScheme="yellow"
@@ -1144,6 +1161,13 @@ const SelectAccounts = ({ data, onConfirm }) => {
             const accountIndexes = Object.keys(selected).filter(
               (s) => selected[s] && !existing[s]
             );
+            if (accountIndexes.length < 1) {
+              setError(
+                'Those accounts are already imported in Lucem. Select a different account.'
+              );
+              setIsLoading(false);
+              return;
+            }
             try {
               const { device, id, keystoneAccounts } = data;
               let accounts;

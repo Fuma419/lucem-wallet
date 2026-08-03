@@ -126,6 +126,10 @@ export const ERROR = {
   onlyOneAccount: 'Only one account exist in the wallet',
   fullMempool: 'fullMempool',
   submit: 'submit',
+  accountAlreadyExists:
+    'This account is already imported in Lucem.',
+  walletAlreadyExists:
+    'This wallet is already imported in Lucem.',
 };
 
 export const TX = {

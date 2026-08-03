@@ -78,10 +78,17 @@ describe('wallet tray accounts vs settings FABs', () => {
   test('accounts is a full-screen page with account actions', () => {
     expect(accountsSrc).toContain('data-testid="accounts-page"');
     expect(accountsSrc).toContain('switchAccount');
-    expect(accountsSrc).toContain('New Wallet');
+    expect(accountsSrc).toContain('WalletSetupButtons');
     expect(accountsSrc).toContain('Collateral');
     expect(accountsSrc).toContain('Delete Account');
     expect(accountsSrc).toContain('About');
+    const setupSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
+      'utf8'
+    );
+    expect(setupSrc).toContain('Create Mnemonic');
+    expect(setupSrc).toContain('Import Mnemonic');
+    expect(setupSrc).toContain('Import HW');
   });
 
   test('accounts selected row is visually and accessibly marked', () => {
@@ -92,7 +99,7 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain('currentRowBg');
     expect(accountsSrc).toContain('isSameAccountIndex');
     expect(accountsSrc).toContain(
-      'Switch the active account. New Wallet adds another seed or'
+      'Switch the active account. Create, import, or connect hardware to'
     );
     expect(css).toMatch(
       /\.lucem-inset-row\.is-current[\s\S]*0 0 0 2px rgba\(255,\s*140,\s*0/

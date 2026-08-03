@@ -20,7 +20,8 @@ import cryptoRandomString from 'crypto-random-string';
 import Loader from '../loader';
 import { createAvatar } from '@dicebear/avatars';
 import { shapes } from '@dicebear/collection';
-import { initTx } from './wallet';
+// Lazy-load `./wallet` at call sites — a static import cycles (wallet → index)
+// and breaks Jest `requireActual` mocks (e.g. MAX_EXTERNAL_ADDRESS_INDEX).
 import {
   koiosRequest,
   koiosRequestEnhanced,
@@ -3016,6 +3017,7 @@ export const updateBalance = async (currentAccount, network, { force = false } =
       (am) => am.unit !== 'lovelace'
     );
     if (currentAccount[network.id].assets.length > 0) {
+      const { initTx } = require('./wallet');
       const protocolParameters = await initTx();
       const checkOutput = Loader.Cardano.TransactionOutput.new(
         Loader.Cardano.Address.from_bech32(

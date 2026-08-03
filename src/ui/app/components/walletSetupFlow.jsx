@@ -36,7 +36,12 @@ export const WalletSetupButtons = ({
 
   return (
     <>
-      <Stack spacing={spacing} align="center" w="full" {...stackProps}>
+      <Stack
+        spacing={spacing}
+        align="stretch"
+        className="lucem-wallet-setup-actions"
+        {...stackProps}
+      >
         <Button
           className="button new-wallet"
           onClick={() => refWallet.current.openModal()}

@@ -258,6 +258,23 @@ html[data-theme='light'] .lucem-inset-row.is-current {
   will-change: transform, box-shadow;
 }
 
+/* Welcome / Accounts: Create / Import / HW share one width (widest label). */
+.lucem-wallet-setup-actions {
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  align-items: stretch;
+}
+
+.lucem-wallet-setup-actions .button {
+  width: 100%;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
 /* Specific button styles */
 .button.new-wallet {
   font-family: 'Barlow', sans-serif;

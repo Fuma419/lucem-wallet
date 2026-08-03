@@ -89,6 +89,13 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(setupSrc).toContain('Create Mnemonic');
     expect(setupSrc).toContain('Import Mnemonic');
     expect(setupSrc).toContain('Import HW');
+    expect(setupSrc).toContain('lucem-wallet-setup-actions');
+    expect(css).toMatch(
+      /\.lucem-wallet-setup-actions[\s\S]*width:\s*max-content/
+    );
+    expect(css).toMatch(
+      /\.lucem-wallet-setup-actions \.button[\s\S]*width:\s*100%/
+    );
   });
 
   test('accounts selected row is visually and accessibly marked', () => {

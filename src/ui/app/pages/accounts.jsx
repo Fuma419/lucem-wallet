@@ -276,7 +276,7 @@ const Accounts = () => {
             data-testid="accounts-actions-panel"
           >
             <Stack spacing={3}>
-              <WalletSetupButtons spacing={3} stackProps={{ align: 'stretch' }} />
+              <WalletSetupButtons spacing={3} />
               {canDelete ? (
                 <Button
                   colorScheme="red"

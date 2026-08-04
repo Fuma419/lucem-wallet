@@ -126,7 +126,12 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
     try {
       const next = await disableExternalAddressIndex(addressIndex);
       notify(next);
-      if (!isMultiAddressEnabled({ externalIndices: next })) {
+      if (
+        !isMultiAddressEnabled({
+          externalIndices: next,
+          internalIndices: account?.internalIndices,
+        })
+      ) {
         setAdvancedOn(false);
       }
       await refreshRows();

@@ -20,7 +20,7 @@ import {
   Stack,
 } from '@chakra-ui/react';
 import { useAppearancePreference } from '../../appearanceContext';
-import { SmallCloseIcon, RepeatIcon } from '@chakra-ui/icons';
+import { SmallCloseIcon, RepeatIcon, DownloadIcon, AttachmentIcon } from '@chakra-ui/icons';
 import React from 'react';
 import platform from '../../../platform';
 import {
@@ -33,6 +33,8 @@ import {
   eraseLocalWalletData,
   setAccountAvatar,
   setStorage,
+  exportAppData,
+  importAppData,
 } from '../../../api/extension';
 import { useNavigate } from 'react-router-dom';
 import { STORAGE } from '../../../config/config';
@@ -94,6 +96,8 @@ const Settings = () => {
   const [erasePhrase, setErasePhrase] = React.useState('');
   const [eraseBusy, setEraseBusy] = React.useState(false);
   const [whitelisted, setWhitelisted] = React.useState(null);
+  const [importing, setImporting] = React.useState(false);
+  const importFileRef = React.useRef();
   const rowBg = useColorModeValue('gray.100', 'whiteAlpha.50');
   const rowBorder = useColorModeValue('gray.200', 'whiteAlpha.100');
   const rowText = useColorModeValue('gray.900', 'white');
@@ -132,6 +136,67 @@ const Settings = () => {
     getWhitelisted().then((next) => {
       setWhitelisted(next);
     });
+
+  const exportHandler = React.useCallback(async () => {
+    try {
+      const backup = await exportAppData();
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().slice(0, 10);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lucem-backup-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({
+        title: 'Backup exported',
+        description: 'No private keys are included — seeds stay on this device.',
+        status: 'success',
+        duration: 5000,
+      });
+    } catch (e) {
+      toast({
+        title: 'Export failed',
+        description: e?.message || 'Could not export wallet data.',
+        status: 'error',
+        duration: 5000,
+      });
+    }
+  }, [toast]);
+
+  const onImportFile = React.useCallback(
+    async (event) => {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = '';
+      if (!file) return;
+      setImporting(true);
+      try {
+        const text = await file.text();
+        const backup = JSON.parse(text);
+        const { accounts } = await importAppData(backup);
+        toast({
+          title: 'Backup imported',
+          description: `${accounts} account(s) restored. Import each seed phrase to enable signing.`,
+          status: 'success',
+          duration: 6000,
+        });
+        window.location.reload();
+      } catch (e) {
+        setImporting(false);
+        toast({
+          title: 'Import failed',
+          description: e?.message || 'Could not read this backup file.',
+          status: 'error',
+          duration: 6000,
+        });
+      }
+    },
+    [toast]
+  );
 
   React.useEffect(() => {
     getCurrentAccount().then((nextAccount) => {
@@ -359,30 +424,67 @@ const Settings = () => {
 
             <Box borderTopWidth="1px" borderColor={rowDivider} mt={5} pt={5}>
               <Text fontSize="sm" fontWeight="bold" mb={1}>
-                Danger zone
+                Data
               </Text>
               <Text fontSize="xs" color={subtleFg} mb={3}>
-                Erase removes every Lucem account, keys, and settings from this
-                browser or extension. You will need your recovery phrase to use
-                funds again.
+                Back up accounts and settings, or wipe this device. Backups never
+                contain private keys or seed phrases.
               </Text>
-              <Button
-                {...settingsPrimaryButtonProps}
-                w="full"
-                borderWidth="1px"
-                borderColor={dangerBorder}
-                bg={dangerBg}
-                color={dangerFg}
-                _hover={{ bg: dangerHover, borderColor: dangerBorder }}
-                _active={{ bg: dangerHover }}
-                onClick={() => {
-                  setEraseAck(false);
-                  setErasePhrase('');
-                  setEraseModalOpen(true);
-                }}
+              <Stack
+                spacing={3}
+                className="lucem-equal-width-actions"
+                data-testid="settings-backup-actions"
               >
-                Erase all data
-              </Button>
+                <Button
+                  size="md"
+                  h="12"
+                  rounded="xl"
+                  fontWeight="semibold"
+                  leftIcon={<DownloadIcon />}
+                  variant="outline"
+                  onClick={exportHandler}
+                  data-testid="settings-export-button"
+                >
+                  Export Data
+                </Button>
+                <Button
+                  size="md"
+                  h="12"
+                  rounded="xl"
+                  fontWeight="semibold"
+                  leftIcon={<AttachmentIcon />}
+                  variant="outline"
+                  isLoading={importing}
+                  onClick={() => importFileRef.current?.click()}
+                  data-testid="settings-import-button"
+                >
+                  Import Data
+                </Button>
+                <Button
+                  {...settingsPrimaryButtonProps}
+                  borderWidth="1px"
+                  borderColor={dangerBorder}
+                  bg={dangerBg}
+                  color={dangerFg}
+                  _hover={{ bg: dangerHover, borderColor: dangerBorder }}
+                  _active={{ bg: dangerHover }}
+                  onClick={() => {
+                    setEraseAck(false);
+                    setErasePhrase('');
+                    setEraseModalOpen(true);
+                  }}
+                >
+                  Erase all data
+                </Button>
+              </Stack>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: 'none' }}
+                onChange={onImportFile}
+                data-testid="settings-import-file"
+              />
             </Box>
           </SettingsPanel>
 

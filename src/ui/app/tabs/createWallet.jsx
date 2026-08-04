@@ -65,6 +65,30 @@ function mnemonicFromObject(mnemonicMap) {
 const VALID_IMPORT_SEED_LENGTHS = [12, 15, 24];
 
 /**
+ * Leave the create/import tab without writing anything. Returns to Accounts when
+ * a vault already has accounts; otherwise Welcome (first-time setup).
+ * Uses platform storage only — does not load Cardano WASM.
+ */
+async function abandonWalletSetup() {
+  let hasAccounts = false;
+  try {
+    const accounts = await platform.storage.get('accounts');
+    hasAccounts =
+      accounts != null &&
+      typeof accounts === 'object' &&
+      Object.keys(accounts).length > 0;
+  } catch {
+    hasAccounts = false;
+  }
+  const dest = hasAccounts ? '/accounts' : '/welcome';
+  if (typeof platform.navigation.openMainRoute === 'function') {
+    await platform.navigation.openMainRoute(dest);
+  } else {
+    await platform.navigation.closeCurrentTab();
+  }
+}
+
+/**
  * Import flow opens as createWalletTab.html?type=import&length=… (see welcome.jsx).
  * History state can be missing on reload or briefly before bootstrap navigate runs; the query
  * string is the source of truth so we do not bounce users to "new seed" incorrectly.
@@ -684,7 +708,7 @@ const ImportSeed = ({ colorTheme }) => {
 
       <Spacer height="2" />
 
-      <Stack alignItems="center" direction="column">
+      <Stack alignItems="center" direction="column" spacing={3} w="100%">
         <Button
           type="button"
           isDisabled={!allValid}
@@ -702,6 +726,18 @@ const ImportSeed = ({ colorTheme }) => {
           }}
         >
           Next
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          color="whiteAlpha.800"
+          _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+          onClick={() => {
+            abandonWalletSetup();
+          }}
+          data-testid="import-abandon-button"
+        >
+          Cancel
         </Button>
       </Stack>
     </Box>
@@ -1059,6 +1095,21 @@ const MakeAccount = ({ colorTheme }) => {
           >
             Create
           </Button>
+          {flow === 'restore-wallet' ? (
+            <Button
+              type="button"
+              variant="ghost"
+              color="whiteAlpha.800"
+              _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+              isDisabled={loading}
+              onClick={() => {
+                abandonWalletSetup();
+              }}
+              data-testid="import-abandon-button"
+            >
+              Cancel
+            </Button>
+          ) : null}
         </Stack>
       </Box>
     </Box>

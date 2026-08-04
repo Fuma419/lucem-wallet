@@ -140,6 +140,26 @@ const webAdapter = {
       return Promise.resolve(true);
     },
 
+    /**
+     * Leave a full-page flow (create/import wallet, HW, …) and open a main-app
+     * route. Web uses path URLs that Vercel rewrites to mainPopup.html.
+     */
+    openMainRoute: (path = '/wallet') => {
+      const allowed = new Set([
+        '/wallet',
+        '/accounts',
+        '/welcome',
+        '/settings',
+        '/staking',
+        '/governance',
+      ]);
+      const safe = allowed.has(path) ? path : '/wallet';
+      if (typeof window !== 'undefined') {
+        window.location.assign(`${window.location.origin}${safe}`);
+      }
+      return Promise.resolve(true);
+    },
+
     /** After full data wipe: land on /welcome (rewrites to mainPopup.html) without stacked SPA paths */
     reloadToWalletBootstrap: () => {
       if (typeof window !== 'undefined') {

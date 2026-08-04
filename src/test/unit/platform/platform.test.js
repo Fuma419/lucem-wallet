@@ -90,4 +90,48 @@ describe('platform/web.js - navigation', () => {
     expect(result).toHaveProperty('url');
     expect(result).toHaveProperty('tabId');
   });
+
+  test('openMainRoute is available on the web adapter', () => {
+    expect(typeof webAdapter.navigation.openMainRoute).toBe('function');
+  });
+});
+
+describe('import abandon navigation', () => {
+  const fs = require('fs');
+  const path = require('path');
+
+  test('web and extension adapters expose openMainRoute with an allowlist', () => {
+    const webSrc = fs.readFileSync(
+      path.join(__dirname, '../../../platform/web.js'),
+      'utf8'
+    );
+    const extSrc = fs.readFileSync(
+      path.join(__dirname, '../../../platform/extension.js'),
+      'utf8'
+    );
+    expect(webSrc).toContain('openMainRoute:');
+    expect(extSrc).toContain('openMainRoute:');
+    expect(webSrc).toContain("'/accounts'");
+    expect(extSrc).toContain('?next=');
+  });
+
+  test('import and restore-account steps expose Cancel that routes accounts vs welcome', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),
+      'utf8'
+    );
+    expect(src).toContain('abandonWalletSetup');
+    expect(src).toContain('data-testid="import-abandon-button"');
+    expect(src).toContain("flow === 'restore-wallet'");
+    expect(src).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
+  });
+
+  test('main bootstrap honors ?next= deep links before defaulting to /wallet', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../ui/indexMain.jsx'),
+      'utf8'
+    );
+    expect(src).toContain(".get('next')");
+    expect(src).toContain("deepLink !== '/welcome'");
+  });
 });

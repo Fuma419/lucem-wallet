@@ -100,7 +100,37 @@ const App = () => {
   const [isLoading, setIsLoading] = React.useState(true);
   const init = async () => {
     const hasWallet = await hasStoredAccounts();
-    if (hasWallet) {
+    // Full-page flows (import/create) may return via `?next=/accounts` (extension)
+    // or a path deep-link like `/accounts` (web). Honor that before the default
+    // /wallet bootstrap so Cancel from import lands where the user expects.
+    const nextParam = new URLSearchParams(window.location.search).get('next');
+    const pathNow = location.pathname;
+    const allowedDeep = [
+      '/accounts',
+      '/welcome',
+      '/wallet',
+      '/settings',
+      '/staking',
+      '/governance',
+    ];
+    const deepLink = allowedDeep.includes(nextParam)
+      ? nextParam
+      : allowedDeep.includes(pathNow)
+        ? pathNow
+        : null;
+
+    if (!hasWallet) {
+      navigate('/welcome', { replace: true });
+      setRoute('/welcome');
+    } else if (deepLink && deepLink !== '/welcome') {
+      navigate(deepLink, { replace: true });
+      setRoute(deepLink);
+      if (nextParam && typeof window !== 'undefined' && window.history?.replaceState) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('next');
+        window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+      }
+    } else {
       navigate('/wallet', { replace: true });
       if (shouldReplayPersistedRoute(route)) {
         route
@@ -114,8 +144,6 @@ const App = () => {
       } else {
         setRoute('/wallet');
       }
-    } else {
-      navigate('/welcome', { replace: true });
     }
     setIsLoading(false);
   };

@@ -116,6 +116,31 @@ const extensionAdapter = {
       return Promise.resolve(true);
     },
 
+    /**
+     * Leave a full-page flow and open a main-app route. Extension pages load
+     * `mainPopup.html`; non-default routes are passed as `?next=` so bootstrap
+     * can land on /accounts (etc.) instead of always /wallet.
+     */
+    openMainRoute: (path = '/wallet') => {
+      const allowed = new Set([
+        '/wallet',
+        '/accounts',
+        '/welcome',
+        '/settings',
+        '/staking',
+        '/governance',
+      ]);
+      const safe = allowed.has(path) ? path : '/wallet';
+      if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
+        const base = chrome.runtime.getURL('mainPopup.html');
+        window.location.href =
+          safe === '/wallet'
+            ? base
+            : `${base}?next=${encodeURIComponent(safe)}`;
+      }
+      return Promise.resolve(true);
+    },
+
     /** After full data wipe: reload entry HTML so SPA path is not stuck on /settings/… */
     reloadToWalletBootstrap: () => {
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {

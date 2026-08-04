@@ -247,6 +247,8 @@ const Settings = () => {
                     : 'Network on the left, actions on the right.'
                 }
                 isChecked={Boolean(settings.swapTrays)}
+                offLabel="Default"
+                onLabel="Swapped"
                 onChange={(checked) => {
                   setSettings({
                     ...settings,

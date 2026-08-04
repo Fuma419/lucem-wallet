@@ -240,32 +240,29 @@ const WalletTrays = ({
             className={actionMenuClass}
             data-testid="wallet-action-tray-menu"
           >
-            {delegation && (
-              <Box data-testid="wallet-delegation" sx={{ display: 'contents' }}>
-                <TrayLabeledButton
-                  label="Vote"
-                  labelSide={actionLabelSide}
-                  {...walletFabBase}
-                  className="button fab-vote"
-                  data-active={path === '/governance' ? 'true' : undefined}
-                  onClick={() => go('/governance')}
-                  aria-label="Open voting"
-                >
-                  <Icon as={MdHowToVote} boxSize={6} color="white" />
-                </TrayLabeledButton>
-                <TrayLabeledButton
-                  label={delegation.active ? 'Stake' : 'Delegate'}
-                  labelSide={actionLabelSide}
-                  {...walletFabBase}
-                  className="button fab-stake"
-                  data-active={path === '/staking' ? 'true' : undefined}
-                  onClick={() => go('/staking')}
-                  aria-label="Open stake center"
-                >
-                  <Icon as={MdOutlineHowToReg} boxSize={6} color="white" />
-                </TrayLabeledButton>
-              </Box>
-            )}
+            <TrayLabeledButton
+              label="Vote"
+              labelSide={actionLabelSide}
+              {...walletFabBase}
+              className="button fab-vote"
+              data-testid="wallet-delegation"
+              data-active={path === '/governance' ? 'true' : undefined}
+              onClick={() => go('/governance')}
+              aria-label="Open voting"
+            >
+              <Icon as={MdHowToVote} boxSize={6} color="white" />
+            </TrayLabeledButton>
+            <TrayLabeledButton
+              label={delegation?.active ? 'Stake' : 'Delegate'}
+              labelSide={actionLabelSide}
+              {...walletFabBase}
+              className="button fab-stake"
+              data-active={path === '/staking' ? 'true' : undefined}
+              onClick={() => go('/staking')}
+              aria-label="Open stake center"
+            >
+              <Icon as={MdOutlineHowToReg} boxSize={6} color="white" />
+            </TrayLabeledButton>
 
             <TrayLabeledButton
               label="Accounts"

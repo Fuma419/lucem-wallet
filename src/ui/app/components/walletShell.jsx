@@ -22,10 +22,12 @@ const WalletShell = () => {
   const refreshDelegation = React.useCallback(async () => {
     try {
       const next = await getDelegation();
-      setDelegation(next);
+      if (next) setDelegation(next);
     } catch (e) {
+      // Keep the last known delegation so Vote/Stake tray actions do not
+      // flicker away on transient API failures (e.g. during theme toggles /
+      // remount-driven refreshes).
       console.warn('WalletShell: failed to load delegation', e);
-      setDelegation(null);
     }
   }, []);
 

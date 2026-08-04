@@ -32,6 +32,13 @@ describe('wallet refresh state retention', () => {
     expect(traysSrc).not.toMatch(
       /\{isFetching &&[\s\S]{0,200}data-testid="wallet-delegation"/
     );
+    // Vote / Delegate must not disappear when delegation is still loading or
+    // a refresh fails (previously gated on `delegation &&`).
+    expect(traysSrc).not.toMatch(
+      /\{delegation\s*&&[\s\S]{0,120}data-testid="wallet-delegation"/
+    );
+    expect(traysSrc).not.toMatch(/display:\s*'contents'/);
+    expect(traysSrc).toContain('delegation?.active');
     expect(walletSrc).not.toMatch(
       /\{isFetching[\s\S]{0,200}quantity=\{[\s\S]{0,80}undefined/
     );

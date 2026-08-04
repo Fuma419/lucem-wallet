@@ -44,7 +44,9 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).toContain('label="Vote"');
     expect(traysSrc).toContain('label="Accounts"');
     expect(traysSrc).toContain('label="Settings"');
-    expect(traysSrc).toMatch(/label=\{delegation\.active \? 'Stake' : 'Delegate'\}/);
+    expect(traysSrc).toMatch(
+      /label=\{delegation\?\.active \? 'Stake' : 'Delegate'\}/
+    );
     expect(traysSrc).toContain('trayActionLabelProps');
     expect(traysSrc).toContain('labelSide');
   });

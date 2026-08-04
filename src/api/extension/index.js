@@ -2256,6 +2256,232 @@ export const findExistingAccountForMnemonic = async (
   return null;
 };
 
+/* -------------------------------------------------------------------------- */
+/* Sterilized backup: export / import / seed validation                       */
+/* -------------------------------------------------------------------------- */
+
+export const BACKUP_FORMAT = 'lucem-wallet-backup';
+export const BACKUP_VERSION = 1;
+
+/**
+ * Storage keys included in a backup. Deliberately excludes every secret:
+ * `encryptedKey` / `encryptedKeys` (password-protected seeds) and transient
+ * signing state are never exported.
+ */
+const BACKUP_STORAGE_KEYS = [
+  STORAGE.accounts,
+  STORAGE.currentAccount,
+  STORAGE.network,
+  STORAGE.currency,
+  STORAGE.swapTrays,
+  STORAGE.colorMode,
+  STORAGE.migration,
+  STORAGE.whitelisted,
+  STORAGE.acceptedLegalDocsVersion,
+  STORAGE.userId,
+];
+
+/** Fields that must never appear on an exported account object. */
+const ACCOUNT_SECRET_FIELDS = [
+  'encryptedKey',
+  'encryptedKeys',
+  'privateKey',
+  'rootKey',
+  'mnemonic',
+  'seedPhrase',
+  'entropy',
+];
+
+const sanitizeAccountForExport = (account) => {
+  if (!account || typeof account !== 'object') return account;
+  const clone = { ...account };
+  for (const field of ACCOUNT_SECRET_FIELDS) delete clone[field];
+  return clone;
+};
+
+/**
+ * Build a completely sterilized backup of the wallet: all account metadata
+ * (names, avatars, BIP32 *public* keys, addresses, cached balances) and app
+ * settings, but **no key material**. Nothing in the result can sign a tx.
+ */
+export const exportAppData = async () => {
+  const store = (await getStorage()) || {};
+  const data = {};
+  for (const key of BACKUP_STORAGE_KEYS) {
+    if (store[key] !== undefined) data[key] = store[key];
+  }
+  if (data[STORAGE.accounts] && typeof data[STORAGE.accounts] === 'object') {
+    const sanitized = {};
+    for (const [slot, account] of Object.entries(data[STORAGE.accounts])) {
+      sanitized[slot] = sanitizeAccountForExport(account);
+    }
+    data[STORAGE.accounts] = sanitized;
+  }
+  return {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+};
+
+/**
+ * Restore a sterilized backup. Writes account metadata + settings but never any
+ * key material, so restored software accounts start unvalidated (cannot sign
+ * until the user re-imports their seed phrase). Existing keyed accounts are
+ * preserved on slot collisions.
+ */
+export const importAppData = async (backup) => {
+  if (!backup || typeof backup !== 'object' || backup.format !== BACKUP_FORMAT) {
+    throw new Error('This file is not a Lucem wallet backup.');
+  }
+  const data = backup.data;
+  if (!data || typeof data !== 'object') {
+    throw new Error('Backup file is empty or corrupted.');
+  }
+
+  const patch = {};
+  for (const key of BACKUP_STORAGE_KEYS) {
+    if (data[key] !== undefined) patch[key] = data[key];
+  }
+  // Belt-and-suspenders: never import key material even from a tampered file.
+  delete patch[STORAGE.encryptedKey];
+  delete patch[STORAGE.encryptedKeys];
+
+  // Strip any secret-shaped fields that a hand-edited file might carry.
+  if (patch[STORAGE.accounts] && typeof patch[STORAGE.accounts] === 'object') {
+    const sanitized = {};
+    for (const [slot, account] of Object.entries(patch[STORAGE.accounts])) {
+      sanitized[slot] = sanitizeAccountForExport(account);
+    }
+    patch[STORAGE.accounts] = sanitized;
+  }
+
+  // Merge with any accounts already present; keep existing (possibly keyed)
+  // entries when slots collide.
+  const existingAccounts = (await getStorage(STORAGE.accounts)) || {};
+  const importedAccounts = patch[STORAGE.accounts] || {};
+  const mergedAccounts = { ...importedAccounts, ...existingAccounts };
+  patch[STORAGE.accounts] = mergedAccounts;
+
+  const keys = Object.keys(mergedAccounts);
+  const currentValid =
+    patch[STORAGE.currentAccount] != null &&
+    mergedAccounts[patch[STORAGE.currentAccount]] != null;
+  if (!currentValid && keys.length > 0) {
+    const first = keys[0];
+    patch[STORAGE.currentAccount] =
+      isHW(first) || isNaN(first) ? first : parseInt(first, 10);
+  }
+
+  await setStorage(patch);
+  invalidateReadCache();
+  return { accounts: keys.length };
+};
+
+/** Wallet ids that currently have a stored (signable) seed. */
+export const getSignableWalletIds = async () => {
+  const legacy = await getStorage(STORAGE.encryptedKey);
+  const map = (await getStorage(STORAGE.encryptedKeys)) || {};
+  const ids = new Set(Object.keys(map));
+  if (legacy) ids.add('0');
+  return Array.from(ids);
+};
+
+/**
+ * True when `account` can sign: hardware accounts always can (device-side), and
+ * software accounts can once their seed's `walletId` has a stored key.
+ */
+export const isAccountSignable = (account, signableWalletIds) => {
+  if (!account) return false;
+  if (isHW(account.index)) return true;
+  const walletId = account.walletId != null ? String(account.walletId) : '0';
+  return (signableWalletIds || []).includes(walletId);
+};
+
+/**
+ * Attach a mnemonic to a restored (sterilized) account: verify the seed derives
+ * the account's stored public key, then store the encrypted root under the
+ * account's `walletId`. Validates every software account sharing that seed.
+ */
+export const validateAccountWithSeed = async (
+  accountKey,
+  seedPhrase,
+  password
+) => {
+  await Loader.load();
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts?.[accountKey];
+  if (!account) throw new Error('Account not found.');
+  if (isHW(account.index)) {
+    throw new Error('Hardware accounts sign on the device and need no seed.');
+  }
+  if (!password || String(password).length < 8) {
+    throw new Error('Password must be at least 8 characters long.');
+  }
+
+  const walletId = account.walletId != null ? String(account.walletId) : '0';
+  const derivationIndex =
+    account.derivationIndex != null
+      ? parseInt(account.derivationIndex, 10)
+      : parseInt(account.index, 10) || 0;
+
+  let derivedPublicKey;
+  try {
+    derivedPublicKey = await deriveAccountPublicKeyFromMnemonic(
+      seedPhrase,
+      derivationIndex
+    );
+  } catch (e) {
+    throw new Error('Invalid recovery phrase.');
+  }
+  if (account.publicKey && derivedPublicKey !== account.publicKey) {
+    throw new Error('This recovery phrase does not match the selected account.');
+  }
+
+  // If the vault is already unlocked with other seeds, the password must match.
+  const existingLegacy = await getStorage(STORAGE.encryptedKey);
+  const map = (await getStorage(STORAGE.encryptedKeys)) || {};
+  const mapKeys = Object.keys(map);
+  const probe = existingLegacy || (mapKeys.length ? map[mapKeys[0]] : null);
+  if (probe) {
+    try {
+      await decryptWithPassword(password, probe);
+    } catch (e) {
+      throw new Error(
+        `${ERROR.wrongPassword}: enter your existing Lucem password.`
+      );
+    }
+  }
+
+  let entropy = mnemonicToEntropy(seedPhrase);
+  let rootKey = Loader.Cardano.Bip32PrivateKey.from_bip39_entropy(
+    Buffer.from(entropy, 'hex'),
+    Buffer.from('')
+  );
+  entropy = null;
+  const encryptedRootKey = await encryptWithPassword(password, rootKey.as_bytes());
+  rootKey.free();
+  rootKey = null;
+
+  const nextMap = { ...map };
+  if (existingLegacy && !nextMap['0']) nextMap['0'] = existingLegacy;
+  nextMap[walletId] = encryptedRootKey;
+  await setStorage({ [STORAGE.encryptedKeys]: nextMap });
+  if (walletId === '0' && !existingLegacy) {
+    await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
+  }
+
+  const validated = Object.values(accounts).filter(
+    (a) =>
+      a &&
+      !isHW(a.index) &&
+      (a.walletId != null ? String(a.walletId) : '0') === walletId
+  ).length;
+
+  return { walletId, validated };
+};
+
 /** Total accounts (native + hardware) currently stored. */
 const totalAccountCount = (accounts) =>
   accounts && typeof accounts === 'object' ? Object.keys(accounts).length : 0;

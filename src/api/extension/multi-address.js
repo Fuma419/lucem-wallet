@@ -91,6 +91,67 @@ export const deriveExternalPaymentFromAccountPublicKey = (
 };
 
 /**
+ * Map on-chain payment addresses (from a stake key) to CIP-1852 external
+ * indices that this account can derive (0..maxIndex inclusive).
+ *
+ * @returns {number[]} sorted unique indices, always including 0
+ */
+export const matchExternalIndicesFromAddresses = (
+  Cardano,
+  accountPublicKeyHex,
+  networkIdNumber,
+  addresses,
+  maxIndex = MAX_EXTERNAL_ADDRESS_INDEX
+) => {
+  const wanted = new Set(
+    (Array.isArray(addresses) ? addresses : [])
+      .map((a) => (typeof a === 'string' ? a : a?.address))
+      .filter((a) => typeof a === 'string' && a.length > 0)
+  );
+  const found = new Set([0]);
+  if (!accountPublicKeyHex || wanted.size === 0) {
+    return Array.from(found).sort((a, b) => a - b);
+  }
+  for (let i = 0; i <= maxIndex; i++) {
+    const { paymentAddr } = deriveExternalPaymentFromAccountPublicKey(
+      Cardano,
+      accountPublicKeyHex,
+      networkIdNumber,
+      i
+    );
+    if (wanted.has(paymentAddr)) {
+      found.add(i);
+    }
+  }
+  return Array.from(found).sort((a, b) => a - b);
+};
+
+/**
+ * Flatten Koios `/account_addresses` payload into a list of payment addresses.
+ */
+export const flattenAccountAddressesPayload = (payload) => {
+  if (!Array.isArray(payload)) return [];
+  const out = [];
+  for (const row of payload) {
+    if (typeof row === 'string') {
+      out.push(row);
+      continue;
+    }
+    if (typeof row?.address === 'string') {
+      out.push(row.address);
+      continue;
+    }
+    if (Array.isArray(row?.addresses)) {
+      for (const a of row.addresses) {
+        if (typeof a === 'string') out.push(a);
+        else if (typeof a?.address === 'string') out.push(a.address);
+      }
+    }
+  }
+  return out;
+};
+
+/**
  * Build the list of enabled payment addresses for an account on a network.
  * Uses cached `paymentAddr` / `paymentKeyHash` for index 0 when present.
  */

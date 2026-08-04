@@ -19,6 +19,7 @@ describe('Koios Endpoints Library', () => {
       expect(KOIOS_ENDPOINTS).toHaveProperty('ADDRESS_TXS');
       expect(KOIOS_ENDPOINTS).toHaveProperty('ACCOUNT_INFO');
       expect(KOIOS_ENDPOINTS).toHaveProperty('ACCOUNT_UTXOS');
+      expect(KOIOS_ENDPOINTS).toHaveProperty('ACCOUNT_ADDRESSES');
       expect(KOIOS_ENDPOINTS).toHaveProperty('ACCOUNT_TXS');
       expect(KOIOS_ENDPOINTS).toHaveProperty('ACCOUNT_REWARDS');
       expect(KOIOS_ENDPOINTS).toHaveProperty('ASSETS');
@@ -430,6 +431,16 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/account_utxos');
     expect(request.body).toEqual({ _stake_addresses: ['test-stake-address'], _extended: false });
+  });
+
+  test('getAccountAddresses should build correct request', () => {
+    const request = KOIOS_REQUESTS.getAccountAddresses('test-stake-address', true);
+    expect(request.method).toBe('POST');
+    expect(request.endpoint).toBe('/account_addresses');
+    expect(request.body).toEqual({
+      _stake_addresses: ['test-stake-address'],
+      _empty: true,
+    });
   });
 
   test('getAccountsUtxos should build correct request for multiple stake addresses', () => {

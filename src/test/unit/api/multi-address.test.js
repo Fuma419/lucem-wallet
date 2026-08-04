@@ -1,8 +1,10 @@
 import {
   deriveExternalPaymentFromAccountPublicKey,
+  flattenAccountAddressesPayload,
   getExternalIndices,
   isMultiAddressEnabled,
   listEnabledPaymentAddresses,
+  matchExternalIndicesFromAddresses,
   MAX_EXTERNAL_ADDRESS_INDEX,
   normalizeExternalIndices,
 } from '../../../api/extension/multi-address';
@@ -150,5 +152,73 @@ describe('multi-address helpers', () => {
       paymentKeyHash: '11',
       paymentKeyHashBech32: 'addr_vkh_x',
     });
+  });
+
+  test('matchExternalIndicesFromAddresses maps on-chain addrs to indices', () => {
+    const addrs = {
+      0: 'addr_ext_0',
+      1: 'addr_ext_1',
+      3: 'addr_ext_3',
+    };
+    const paymentChain = {
+      derive: (idx) => ({
+        to_raw_key: () => ({
+          hash: () => ({
+            to_bytes: () => Buffer.from(String(idx), 'utf8'),
+            to_bech32: () => `vkh_${idx}`,
+          }),
+        }),
+      }),
+    };
+    const stakeChain = {
+      derive: () => ({
+        to_raw_key: () => ({
+          hash: () => ({
+            to_bytes: () => Buffer.from('stake', 'utf8'),
+          }),
+        }),
+      }),
+    };
+    const Cardano = {
+      Bip32PublicKey: {
+        from_hex: () => ({
+          derive: (role) => (role === 0 ? paymentChain : stakeChain),
+        }),
+      },
+      Credential: { from_keyhash: (h) => h },
+      BaseAddress: {
+        new: (_net, paymentCred) => ({
+          to_address: () => ({
+            to_bech32: () => {
+              const idx = Number(
+                Buffer.from(paymentCred.to_bytes()).toString('utf8')
+              );
+              return addrs[idx] || `addr_other_${idx}`;
+            },
+          }),
+        }),
+      },
+    };
+
+    expect(
+      matchExternalIndicesFromAddresses(Cardano, 'pub', 0, [
+        'addr_ext_1',
+        'addr_ext_3',
+        'addr_unrelated',
+      ])
+    ).toEqual([0, 1, 3]);
+  });
+
+  test('flattenAccountAddressesPayload accepts Koios and flat shapes', () => {
+    expect(
+      flattenAccountAddressesPayload([
+        { stake_address: 'stake1', addresses: ['a1', { address: 'a2' }] },
+      ])
+    ).toEqual(['a1', 'a2']);
+    expect(flattenAccountAddressesPayload([{ address: 'b1' }, 'b2'])).toEqual([
+      'b1',
+      'b2',
+    ]);
+    expect(flattenAccountAddressesPayload(null)).toEqual([]);
   });
 });

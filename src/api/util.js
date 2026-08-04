@@ -528,6 +528,46 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
       }));
   }
 
+  // --- /account_addresses: payment addresses linked to a stake key ---
+  if (endpoint === '/account_addresses' && body && Array.isArray(body._stake_addresses)) {
+    const rows = [];
+    for (const stakeAddress of body._stake_addresses) {
+      const addresses = [];
+      let page = 1;
+      // Blockfrost paginates; pull until a short page.
+      while (page <= 20) {
+        let batch;
+        try {
+          batch = await fetchBlockfrostJson(
+            networkKey,
+            `/accounts/${stakeAddress}/addresses?count=100&page=${page}`,
+            signal
+          );
+        } catch (error) {
+          if (String(error.message || '').includes('404')) {
+            batch = [];
+          } else {
+            throw error;
+          }
+        }
+        if (!Array.isArray(batch) || batch.length === 0) break;
+        for (const item of batch) {
+          const addr =
+            typeof item === 'string'
+              ? item
+              : typeof item?.address === 'string'
+                ? item.address
+                : null;
+          if (addr) addresses.push(addr);
+        }
+        if (batch.length < 100) break;
+        page += 1;
+      }
+      rows.push({ stake_address: stakeAddress, addresses });
+    }
+    return rows;
+  }
+
   // --- /asset_info: token/NFT metadata (name, image/logo, decimals) ---
   if (endpoint === '/asset_info' && body && Array.isArray(body._asset_list)) {
     const rows = [];

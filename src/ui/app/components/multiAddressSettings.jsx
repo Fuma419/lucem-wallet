@@ -3,7 +3,6 @@ import {
   Button,
   Collapse,
   Flex,
-  Switch,
   Text,
   useColorModeValue,
   useToast,
@@ -18,6 +17,7 @@ import {
   MAX_EXTERNAL_ADDRESS_INDEX,
   setAccountExternalIndices,
 } from '../../../api/extension';
+import { SettingsToggleRow } from './settingsChrome';
 
 const truncateAddr = (addr) => {
   if (!addr || addr.length < 20) return addr || '';
@@ -30,7 +30,6 @@ const truncateAddr = (addr) => {
  */
 const MultiAddressSettings = ({ account, onIndicesChange }) => {
   const toast = useToast();
-  const labelMuted = useColorModeValue('gray.700', 'white');
   const hintColor = useColorModeValue('gray.600', 'whiteAlpha.500');
   const rowBg = useColorModeValue('gray.100', 'whiteAlpha.50');
   const rowBorder = useColorModeValue('gray.200', 'whiteAlpha.100');
@@ -146,27 +145,17 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
 
   return (
     <Box w="full">
-      <Flex align="center" justify="space-between" gap={3} w="full">
-        <Box flex="1" minW={0}>
-          <Text color={labelMuted} fontWeight="semibold" fontSize="sm">
-            Multi-address
-          </Text>
-          <Text color={hintColor} fontSize="xs" mt={1}>
-            Include additional receive addresses from this account (CIP-1852
-            external chain). Primary address stays the default receive address.
-          </Text>
-        </Box>
-        <Switch
-          isChecked={advancedOn}
-          isDisabled={busy}
-          colorScheme="yellow"
-          onChange={(e) => onToggleAdvanced(e.target.checked)}
-          aria-label="Enable multi-address"
-        />
-      </Flex>
+      <SettingsToggleRow
+        label="Multi-address"
+        hint="Include additional receive addresses from this account (CIP-1852 external chain). Primary address stays the default receive address."
+        isChecked={advancedOn}
+        isDisabled={busy}
+        onChange={onToggleAdvanced}
+        aria-label="Enable multi-address"
+      />
 
       <Collapse in={advancedOn} animateOpacity>
-        <Flex direction="column" gap={2} mt={3} w="full">
+        <Flex direction="column" gap={2} mt={4} w="full">
           {rows.map((row) => (
             <Flex
               key={row.index}

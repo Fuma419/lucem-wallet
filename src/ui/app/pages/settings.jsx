@@ -3,7 +3,6 @@ import {
   Button,
   IconButton,
   Text,
-  Switch as ButtonSwitch,
   Image,
   SkeletonCircle,
   Spinner,
@@ -44,6 +43,14 @@ import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
 import MultiAddressSettings from '../components/multiAddressSettings';
 import { AboutContent } from '../components/about';
 import useSurfaceColors from '../hooks/useSurfaceColors';
+import {
+  SettingsPanel,
+  SettingsToggleRow,
+  SettingsChoiceField,
+  SettingsFieldStack,
+  SegmentedChoice,
+  useSettingsChrome,
+} from '../components/settingsChrome';
 
 /** Typed confirmation phrase (spacing / case normalized on compare). */
 const ERASE_WALLET_CONFIRM_PHRASE = 'Erase all data';
@@ -54,158 +61,9 @@ const normalizeErasePhraseInput = (s) =>
 const TRAY_CLEARANCE_PB =
   'calc(6.5rem + env(safe-area-inset-bottom, 0px))';
 
-/** Field + button tokens scoped to Settings (supports light mode). */
-function useSettingsChrome() {
-  const inputBg = useColorModeValue('white', 'black');
-  const border = useColorModeValue('gray.300', 'whiteAlpha.300');
-  const inputFg = useColorModeValue('gray.900', 'white');
-  const placeholder = useColorModeValue('blackAlpha.500', 'whiteAlpha.500');
-  const hoverBorder = useColorModeValue('gray.400', 'whiteAlpha.400');
-  const primaryBg = useColorModeValue('gray.200', 'gray.800');
-  const primaryFg = useColorModeValue('gray.900', 'white');
-  const primaryHover = useColorModeValue('gray.300', 'gray.700');
-  const primaryActive = primaryHover;
-  const segmentTrack = useColorModeValue(
-    'rgba(15, 23, 42, 0.06)',
-    'rgba(255, 255, 255, 0.06)'
-  );
-  const segmentActiveBg = useColorModeValue('white', 'whiteAlpha.200');
-  const segmentActiveFg = useColorModeValue('gray.900', 'white');
-  const segmentIdleFg = useColorModeValue('gray.600', 'whiteAlpha.700');
-  const segmentShadow = useColorModeValue(
-    '0 1px 3px rgba(15, 23, 42, 0.12)',
-    '0 1px 3px rgba(0, 0, 0, 0.35)'
-  );
-
-  const inputProps = {
-    bg: inputBg,
-    borderColor: border,
-    color: inputFg,
-    _placeholder: { color: placeholder },
-    _hover: { borderColor: hoverBorder },
-  };
-
-  const primaryButtonProps = {
-    size: 'md',
-    h: '12',
-    rounded: 'xl',
-    bg: primaryBg,
-    color: primaryFg,
-    fontWeight: 'semibold',
-    _hover: { bg: primaryHover },
-    _active: { bg: primaryActive },
-  };
-
-  return {
-    inputProps,
-    primaryButtonProps,
-    segmentTrack,
-    segmentActiveBg,
-    segmentActiveFg,
-    segmentIdleFg,
-    segmentShadow,
-  };
-}
-
-function SettingsPanel({ title, description, children, testId }) {
-  const { pageFg, mutedFg } = useSurfaceColors();
-  return (
-    <Box
-      className="lucem-inset-surface"
-      rounded="3xl"
-      p={{ base: 4, md: 5 }}
-      data-testid={testId}
-    >
-      {title ? (
-        <Text
-          fontSize="md"
-          fontWeight="bold"
-          color={pageFg}
-          letterSpacing="tight"
-          mb={description ? 1 : 4}
-        >
-          {title}
-        </Text>
-      ) : null}
-      {description ? (
-        <Text fontSize="sm" color={mutedFg} mb={4}>
-          {description}
-        </Text>
-      ) : null}
-      {children}
-    </Box>
-  );
-}
-
-function SettingsToggleRow({ label, hint, control }) {
-  const { softFg, subtleFg } = useSurfaceColors();
-  return (
-    <Flex align="center" justify="space-between" gap={4} w="full">
-      <Box flex="1" minW={0}>
-        <Text color={softFg} fontWeight="semibold" fontSize="sm">
-          {label}
-        </Text>
-        {hint ? (
-          <Text color={subtleFg} fontSize="xs" mt={1} lineHeight="short">
-            {hint}
-          </Text>
-        ) : null}
-      </Box>
-      <Box flexShrink={0}>{control}</Box>
-    </Flex>
-  );
-}
-
-function SegmentedChoice({ value, options, onChange, 'aria-label': ariaLabel }) {
-  const {
-    segmentTrack,
-    segmentActiveBg,
-    segmentActiveFg,
-    segmentIdleFg,
-    segmentShadow,
-  } = useSettingsChrome();
-
-  return (
-    <Flex
-      role="radiogroup"
-      aria-label={ariaLabel}
-      w="full"
-      p="1"
-      rounded="xl"
-      bg={segmentTrack}
-      gap={1}
-    >
-      {options.map((opt) => {
-        const selected = value === opt.value;
-        return (
-          <Button
-            key={opt.value}
-            flex={1}
-            size="sm"
-            h="9"
-            rounded="lg"
-            variant="unstyled"
-            fontWeight="semibold"
-            fontSize="sm"
-            bg={selected ? segmentActiveBg : 'transparent'}
-            color={selected ? segmentActiveFg : segmentIdleFg}
-            boxShadow={selected ? segmentShadow : 'none'}
-            onClick={() => onChange(opt.value)}
-            aria-checked={selected}
-            role="radio"
-          >
-            {opt.label}
-          </Button>
-        );
-      })}
-    </Flex>
-  );
-}
-
 const Settings = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const accountRef = React.useRef(null);
   const settings = useStoreState((state) => state.settings.settings);
   const setSettings = useStoreActions(
     (actions) => actions.settings.setSettings
@@ -215,6 +73,7 @@ const Settings = () => {
   const {
     inputProps: settingsInputProps,
     primaryButtonProps: settingsPrimaryButtonProps,
+    rowDivider,
   } = useSettingsChrome();
   const iconBorder = useColorModeValue('gray.300', 'whiteAlpha.300');
   const iconFg = useColorModeValue('gray.800', 'whiteAlpha.900');
@@ -249,7 +108,6 @@ const Settings = () => {
     account.avatar = avatar;
     await setAccountAvatar(account.avatar);
     setAccount({ ...account });
-    accountRef.current?.updateAccount?.();
   };
 
   const refreshHandler = async () => {
@@ -310,15 +168,11 @@ const Settings = () => {
         pb={TRAY_CLEARANCE_PB}
       >
         <Stack spacing={4} w="full" maxW="sm" mx="auto" pt={1}>
-          <SettingsPanel
-            title="Profile"
-            description="Avatar for the active account. Rename accounts from the Accounts page."
-            testId="settings-profile-panel"
-          >
-            <Flex align="center" justify="center" gap={5} w="full">
+          <SettingsPanel testId="settings-account-panel">
+            <Flex align="center" gap={4} w="full">
               <Box
-                w="72px"
-                h="72px"
+                w="56px"
+                h="56px"
                 flexShrink={0}
                 rounded="full"
                 overflow="hidden"
@@ -329,10 +183,18 @@ const Settings = () => {
                   width="full"
                 />
               </Box>
+              <Box flex="1" minW={0}>
+                <Text fontWeight="bold" fontSize="md" noOfLines={1}>
+                  {account.name || 'Account'}
+                </Text>
+                <Text fontSize="xs" color={subtleFg} mt={0.5}>
+                  Rename on the Accounts page
+                </Text>
+              </Box>
               <IconButton
                 onClick={avatarHandler}
                 rounded="lg"
-                size="md"
+                size="sm"
                 variant="outline"
                 borderColor={iconBorder}
                 color={iconFg}
@@ -345,15 +207,11 @@ const Settings = () => {
           </SettingsPanel>
 
           <SettingsPanel
-            title="Preferences"
-            description="Display and layout choices for this device."
+            title="Display"
             testId="settings-preferences-panel"
           >
-            <Stack spacing={5}>
-              <Box>
-                <Text color={mutedFg} fontWeight="semibold" fontSize="sm" mb={2}>
-                  Currency
-                </Text>
+            <SettingsFieldStack>
+              <SettingsChoiceField label="Currency">
                 <SegmentedChoice
                   aria-label="Fiat currency"
                   value={currency}
@@ -365,12 +223,9 @@ const Settings = () => {
                     { value: 'eur', label: 'EUR' },
                   ]}
                 />
-              </Box>
+              </SettingsChoiceField>
 
-              <Box>
-                <Text color={mutedFg} fontWeight="semibold" fontSize="sm" mb={2}>
-                  Appearance
-                </Text>
+              <SettingsChoiceField label="Appearance">
                 <SegmentedChoice
                   aria-label="Appearance"
                   value={appearance}
@@ -381,32 +236,38 @@ const Settings = () => {
                     { value: 'system', label: 'System' },
                   ]}
                 />
-              </Box>
+              </SettingsChoiceField>
 
-              <Box data-testid="settings-swap-trays">
-                <SettingsToggleRow
-                  label="Swap tray positions"
-                  hint={
-                    settings.swapTrays
-                      ? 'Actions on the left, network on the right.'
-                      : 'Network on the left, actions on the right.'
-                  }
-                  control={
-                    <ButtonSwitch
-                      isChecked={Boolean(settings.swapTrays)}
-                      colorScheme="yellow"
-                      onChange={(e) => {
-                        setSettings({
-                          ...settings,
-                          swapTrays: e.target.checked,
-                        });
-                      }}
-                      aria-label="Swap bottom tray positions"
-                    />
-                  }
-                />
-              </Box>
-            </Stack>
+              <SettingsToggleRow
+                data-testid="settings-swap-trays"
+                label="Swap tray positions"
+                hint={
+                  settings.swapTrays
+                    ? 'Actions on the left, network on the right.'
+                    : 'Network on the left, actions on the right.'
+                }
+                isChecked={Boolean(settings.swapTrays)}
+                onChange={(checked) => {
+                  setSettings({
+                    ...settings,
+                    swapTrays: checked,
+                  });
+                }}
+                aria-label="Swap bottom tray positions"
+              />
+            </SettingsFieldStack>
+          </SettingsPanel>
+
+          <SettingsPanel
+            title="Addresses"
+            testId="settings-advanced-panel"
+          >
+            <MultiAddressSettings
+              account={account}
+              onIndicesChange={(externalIndices) => {
+                setAccount((prev) => ({ ...prev, externalIndices }));
+              }}
+            />
           </SettingsPanel>
 
           <SettingsPanel
@@ -471,23 +332,7 @@ const Settings = () => {
             )}
           </SettingsPanel>
 
-          <SettingsPanel
-            title="Advanced"
-            description="Optional receive-address options for the active account."
-            testId="settings-advanced-panel"
-          >
-            <MultiAddressSettings
-              account={account}
-              onIndicesChange={(externalIndices) => {
-                setAccount((prev) => ({ ...prev, externalIndices }));
-              }}
-            />
-          </SettingsPanel>
-
-          <SettingsPanel
-            title="Security & data"
-            testId="settings-security-panel"
-          >
+          <SettingsPanel title="Wallet" testId="settings-security-panel">
             <Stack
               spacing={3}
               className="lucem-equal-width-actions"
@@ -508,8 +353,20 @@ const Settings = () => {
               >
                 Change Password
               </Button>
+            </Stack>
+
+            <Box borderTopWidth="1px" borderColor={rowDivider} mt={5} pt={5}>
+              <Text fontSize="sm" fontWeight="bold" mb={1}>
+                Danger zone
+              </Text>
+              <Text fontSize="xs" color={subtleFg} mb={3}>
+                Erase removes every Lucem account, keys, and settings from this
+                browser or extension. You will need your recovery phrase to use
+                funds again.
+              </Text>
               <Button
                 {...settingsPrimaryButtonProps}
+                w="full"
                 borderWidth="1px"
                 borderColor={dangerBorder}
                 bg={dangerBg}
@@ -524,17 +381,12 @@ const Settings = () => {
               >
                 Erase all data
               </Button>
-            </Stack>
-            <Text mt={3} fontSize="xs" color={subtleFg} textAlign="center">
-              Erase removes every Lucem account, keys, and settings from this
-              browser or extension. You will need your recovery phrase to use
-              funds again.
-            </Text>
+            </Box>
           </SettingsPanel>
 
           <SettingsPanel title="About" testId="settings-about-panel">
             <AboutContent showLegal={false} />
-            <Box mt={4}>
+            <Box mt={4} borderTopWidth="1px" borderColor={rowDivider} pt={4}>
               <Text color={mutedFg} fontWeight="semibold" fontSize="sm" mb={1}>
                 Legal
               </Text>

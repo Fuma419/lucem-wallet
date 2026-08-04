@@ -1,16 +1,27 @@
 /**
- * CIP-1852 external (receive) address helpers.
+ * CIP-1852 payment address helpers.
  *
  * Lucem historically tracked only role=0 / index=0 per account. Advanced
- * multi-address mode lets the user enable additional external indices so
- * balances, UTxOs, and signing include those addresses.
+ * multi-address mode enables additional external (role=0) indices. Import and
+ * balance refresh also discover internal/change (role=1) indices so ADA left
+ * on change addresses (common after spending from other wallets) is included
+ * in balance, UTxOs, and signing.
  *
- * Paths: m/1852'/1815'/account'/0/index  (external)
+ * Paths: m/1852'/1815'/account'/role/index
+ *   role 0 = external (receive)
+ *   role 1 = internal (change)
  * Stake remains role 2 / index 0 for base addresses.
  */
 
-/** Max external index users can enable (index 0 .. MAX inclusive). */
+/** Max external/internal index users can enable (index 0 .. MAX inclusive). */
 export const MAX_EXTERNAL_ADDRESS_INDEX = 20;
+export const MAX_INTERNAL_ADDRESS_INDEX = 20;
+
+/** CIP-1852 chain roles. */
+export const ADDRESS_ROLE = {
+  external: 0,
+  internal: 1,
+};
 
 /**
  * Enabled external indices for an account. Always includes 0. Missing/legacy
@@ -27,12 +38,28 @@ export const getExternalIndices = (account) => {
   return Array.from(set).sort((a, b) => a - b);
 };
 
+/**
+ * Enabled internal (change) indices. Default `[]` — none until discovered or set.
+ */
+export const getInternalIndices = (account) => {
+  const raw = account?.internalIndices;
+  if (!Array.isArray(raw)) return [];
+  const set = new Set();
+  for (const n of raw) {
+    const i = parseInt(n, 10);
+    if (Number.isFinite(i) && i >= 0 && i <= MAX_INTERNAL_ADDRESS_INDEX) {
+      set.add(i);
+    }
+  }
+  return Array.from(set).sort((a, b) => a - b);
+};
+
 /** True when more than the primary external address is enabled. */
 export const isMultiAddressEnabled = (account) =>
-  getExternalIndices(account).length > 1;
+  getExternalIndices(account).length > 1 || getInternalIndices(account).length > 0;
 
 /**
- * Normalize a proposed index list: unique, sorted, always includes 0, capped.
+ * Normalize a proposed external index list: unique, sorted, always includes 0, capped.
  */
 export const normalizeExternalIndices = (indices) => {
   const set = new Set([0]);
@@ -48,23 +75,41 @@ export const normalizeExternalIndices = (indices) => {
 };
 
 /**
- * Derive payment key hash + base address for external index `addressIndex`
- * from an account-level BIP32 public key.
+ * Normalize internal indices: unique, sorted, capped (0 not required).
+ */
+export const normalizeInternalIndices = (indices) => {
+  const set = new Set();
+  if (Array.isArray(indices)) {
+    for (const n of indices) {
+      const i = parseInt(n, 10);
+      if (Number.isFinite(i) && i >= 0 && i <= MAX_INTERNAL_ADDRESS_INDEX) {
+        set.add(i);
+      }
+    }
+  }
+  return Array.from(set).sort((a, b) => a - b);
+};
+
+/**
+ * Derive payment key hash + base address for CIP-1852 role/index from an
+ * account-level BIP32 public key.
  *
  * @param {object} Cardano - CSL module
  * @param {string} accountPublicKeyHex
  * @param {number} networkId - Shelley network id (1 mainnet, 0 testnet)
- * @param {number} addressIndex - CIP-1852 external chain index
+ * @param {number} role - 0 external, 1 internal
+ * @param {number} addressIndex
  */
-export const deriveExternalPaymentFromAccountPublicKey = (
+export const derivePaymentFromAccountPublicKey = (
   Cardano,
   accountPublicKeyHex,
   networkId,
+  role = ADDRESS_ROLE.external,
   addressIndex = 0
 ) => {
   const accountPub = Cardano.Bip32PublicKey.from_hex(accountPublicKeyHex);
   const paymentKeyHashRaw = accountPub
-    .derive(0)
+    .derive(role)
     .derive(addressIndex)
     .to_raw_key()
     .hash();
@@ -83,6 +128,7 @@ export const deriveExternalPaymentFromAccountPublicKey = (
     .to_bech32();
 
   return {
+    role,
     index: addressIndex,
     paymentAddr,
     paymentKeyHash,
@@ -91,32 +137,65 @@ export const deriveExternalPaymentFromAccountPublicKey = (
 };
 
 /**
- * Map on-chain payment addresses (from a stake key) to CIP-1852 external
- * indices that this account can derive (0..maxIndex inclusive).
- *
- * @returns {number[]} sorted unique indices, always including 0
+ * Derive payment key hash + base address for external index `addressIndex`.
+ * @deprecated Prefer derivePaymentFromAccountPublicKey with role 0.
  */
-export const matchExternalIndicesFromAddresses = (
+export const deriveExternalPaymentFromAccountPublicKey = (
+  Cardano,
+  accountPublicKeyHex,
+  networkId,
+  addressIndex = 0
+) => {
+  const row = derivePaymentFromAccountPublicKey(
+    Cardano,
+    accountPublicKeyHex,
+    networkId,
+    ADDRESS_ROLE.external,
+    addressIndex
+  );
+  // Preserve legacy shape (no role field required by older callers).
+  return {
+    index: row.index,
+    paymentAddr: row.paymentAddr,
+    paymentKeyHash: row.paymentKeyHash,
+    paymentKeyHashBech32: row.paymentKeyHashBech32,
+  };
+};
+
+/**
+ * Map on-chain payment addresses to CIP-1852 indices for a given role.
+ *
+ * @param {number} role - 0 external / 1 internal
+ * @param {{ alwaysIncludeZero?: boolean }} [opts]
+ * @returns {number[]} sorted unique indices
+ */
+export const matchRoleIndicesFromAddresses = (
   Cardano,
   accountPublicKeyHex,
   networkIdNumber,
   addresses,
-  maxIndex = MAX_EXTERNAL_ADDRESS_INDEX
+  role,
+  maxIndex = role === ADDRESS_ROLE.internal
+    ? MAX_INTERNAL_ADDRESS_INDEX
+    : MAX_EXTERNAL_ADDRESS_INDEX,
+  opts = {}
 ) => {
+  const alwaysIncludeZero = opts.alwaysIncludeZero ?? role === ADDRESS_ROLE.external;
   const wanted = new Set(
     (Array.isArray(addresses) ? addresses : [])
       .map((a) => (typeof a === 'string' ? a : a?.address))
       .filter((a) => typeof a === 'string' && a.length > 0)
   );
-  const found = new Set([0]);
+  const found = new Set(alwaysIncludeZero ? [0] : []);
   if (!accountPublicKeyHex || wanted.size === 0) {
     return Array.from(found).sort((a, b) => a - b);
   }
   for (let i = 0; i <= maxIndex; i++) {
-    const { paymentAddr } = deriveExternalPaymentFromAccountPublicKey(
+    const { paymentAddr } = derivePaymentFromAccountPublicKey(
       Cardano,
       accountPublicKeyHex,
       networkIdNumber,
+      role,
       i
     );
     if (wanted.has(paymentAddr)) {
@@ -125,6 +204,47 @@ export const matchExternalIndicesFromAddresses = (
   }
   return Array.from(found).sort((a, b) => a - b);
 };
+
+/**
+ * Map on-chain payment addresses to CIP-1852 external indices (0..max inclusive).
+ * Always includes 0.
+ */
+export const matchExternalIndicesFromAddresses = (
+  Cardano,
+  accountPublicKeyHex,
+  networkIdNumber,
+  addresses,
+  maxIndex = MAX_EXTERNAL_ADDRESS_INDEX
+) =>
+  matchRoleIndicesFromAddresses(
+    Cardano,
+    accountPublicKeyHex,
+    networkIdNumber,
+    addresses,
+    ADDRESS_ROLE.external,
+    maxIndex,
+    { alwaysIncludeZero: true }
+  );
+
+/**
+ * Map on-chain payment addresses to CIP-1852 internal (change) indices.
+ */
+export const matchInternalIndicesFromAddresses = (
+  Cardano,
+  accountPublicKeyHex,
+  networkIdNumber,
+  addresses,
+  maxIndex = MAX_INTERNAL_ADDRESS_INDEX
+) =>
+  matchRoleIndicesFromAddresses(
+    Cardano,
+    accountPublicKeyHex,
+    networkIdNumber,
+    addresses,
+    ADDRESS_ROLE.internal,
+    maxIndex,
+    { alwaysIncludeZero: false }
+  );
 
 /**
  * Flatten Koios `/account_addresses` payload into a list of payment addresses.
@@ -152,23 +272,25 @@ export const flattenAccountAddressesPayload = (payload) => {
 };
 
 /**
- * Build the list of enabled payment addresses for an account on a network.
- * Uses cached `paymentAddr` / `paymentKeyHash` for index 0 when present.
+ * Build the list of enabled payment addresses for an account on a network
+ * (external + discovered/enabled internal change addresses).
+ * Uses cached `paymentAddr` / `paymentKeyHash` for external index 0 when present.
  */
 export const listEnabledPaymentAddresses = (
   Cardano,
   account,
   networkIdNumber
 ) => {
-  const indices = getExternalIndices(account);
   const out = [];
-  for (const index of indices) {
+  const externalIndices = getExternalIndices(account);
+  for (const index of externalIndices) {
     if (
       index === 0 &&
       account?.paymentAddr &&
       account?.paymentKeyHash
     ) {
       out.push({
+        role: ADDRESS_ROLE.external,
         index: 0,
         paymentAddr: account.paymentAddr,
         paymentKeyHash: account.paymentKeyHash,
@@ -180,10 +302,27 @@ export const listEnabledPaymentAddresses = (
       continue;
     }
     out.push(
-      deriveExternalPaymentFromAccountPublicKey(
+      derivePaymentFromAccountPublicKey(
         Cardano,
         account.publicKey,
         networkIdNumber,
+        ADDRESS_ROLE.external,
+        index
+      )
+    );
+  }
+
+  if (!account?.publicKey) {
+    return out;
+  }
+
+  for (const index of getInternalIndices(account)) {
+    out.push(
+      derivePaymentFromAccountPublicKey(
+        Cardano,
+        account.publicKey,
+        networkIdNumber,
+        ADDRESS_ROLE.internal,
         index
       )
     );

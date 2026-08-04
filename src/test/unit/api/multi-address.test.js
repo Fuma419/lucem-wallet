@@ -1,12 +1,16 @@
 import {
+  ADDRESS_ROLE,
   deriveExternalPaymentFromAccountPublicKey,
   flattenAccountAddressesPayload,
   getExternalIndices,
+  getInternalIndices,
   isMultiAddressEnabled,
   listEnabledPaymentAddresses,
   matchExternalIndicesFromAddresses,
+  matchInternalIndicesFromAddresses,
   MAX_EXTERNAL_ADDRESS_INDEX,
   normalizeExternalIndices,
+  normalizeInternalIndices,
 } from '../../../api/extension/multi-address';
 
 describe('multi-address helpers', () => {
@@ -27,9 +31,12 @@ describe('multi-address helpers', () => {
     ).toEqual([0, 2]);
   });
 
-  test('isMultiAddressEnabled is true only when extras exist', () => {
+  test('isMultiAddressEnabled is true when extras or change addresses exist', () => {
     expect(isMultiAddressEnabled({ externalIndices: [0] })).toBe(false);
     expect(isMultiAddressEnabled({ externalIndices: [0, 1] })).toBe(true);
+    expect(
+      isMultiAddressEnabled({ externalIndices: [0], internalIndices: [0] })
+    ).toBe(true);
   });
 
   test('normalizeExternalIndices always keeps 0 and unique sorted', () => {
@@ -49,6 +56,7 @@ describe('multi-address helpers', () => {
     };
     expect(listEnabledPaymentAddresses(Cardano, account, 0)).toEqual([
       {
+        role: 0,
         index: 0,
         paymentAddr: 'addr_test1_primary',
         paymentKeyHash: 'pkh0',
@@ -112,6 +120,7 @@ describe('multi-address helpers', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].paymentAddr).toBe('addr_test1_primary');
     expect(rows[1]).toMatchObject({
+      role: 0,
       index: 1,
       paymentAddr: 'addr_test1_derived_1',
       paymentKeyHash: 'bb',
@@ -220,5 +229,123 @@ describe('multi-address helpers', () => {
       'b2',
     ]);
     expect(flattenAccountAddressesPayload(null)).toEqual([]);
+  });
+
+  test('getInternalIndices defaults empty and caps', () => {
+    expect(getInternalIndices(undefined)).toEqual([]);
+    expect(getInternalIndices({ internalIndices: [2, 0, 2] })).toEqual([0, 2]);
+    expect(normalizeInternalIndices([5, -1, 5])).toEqual([5]);
+  });
+
+  test('matchInternalIndicesFromAddresses finds change-chain hits', () => {
+    const addrs = { 0: 'addr_change_0', 2: 'addr_change_2' };
+    const paymentChain = {
+      derive: (idx) => ({
+        to_raw_key: () => ({
+          hash: () => ({
+            to_bytes: () => Buffer.from(String(idx), 'utf8'),
+            to_bech32: () => `vkh_i_${idx}`,
+          }),
+        }),
+      }),
+    };
+    const stakeChain = {
+      derive: () => ({
+        to_raw_key: () => ({
+          hash: () => ({ to_bytes: () => Buffer.from('stake', 'utf8') }),
+        }),
+      }),
+    };
+    const Cardano = {
+      Bip32PublicKey: {
+        from_hex: () => ({
+          derive: (role) => (role === 1 ? paymentChain : stakeChain),
+        }),
+      },
+      Credential: { from_keyhash: (h) => h },
+      BaseAddress: {
+        new: (_net, paymentCred) => ({
+          to_address: () => ({
+            to_bech32: () => {
+              const idx = Number(
+                Buffer.from(paymentCred.to_bytes()).toString('utf8')
+              );
+              return addrs[idx] || `addr_other_${idx}`;
+            },
+          }),
+        }),
+      },
+    };
+
+    expect(
+      matchInternalIndicesFromAddresses(Cardano, 'pub', 0, [
+        'addr_change_0',
+        'addr_change_2',
+        'addr_unrelated',
+      ])
+    ).toEqual([0, 2]);
+  });
+
+  test('listEnabledPaymentAddresses includes internal change addresses', () => {
+    const paymentChainFor = (role) => ({
+      derive: (idx) => ({
+        to_raw_key: () => ({
+          hash: () => ({
+            to_bytes: () => Buffer.from(`${role}-${idx}`, 'utf8'),
+            to_bech32: () => `vkh_${role}_${idx}`,
+          }),
+        }),
+      }),
+    });
+    const stakeChain = {
+      derive: () => ({
+        to_raw_key: () => ({
+          hash: () => ({ to_bytes: () => Buffer.from('stake', 'utf8') }),
+        }),
+      }),
+    };
+    const Cardano = {
+      Bip32PublicKey: {
+        from_hex: () => ({
+          derive: (role) =>
+            role === 2 ? stakeChain : paymentChainFor(role),
+        }),
+      },
+      Credential: { from_keyhash: (h) => h },
+      BaseAddress: {
+        new: (_net, paymentCred) => ({
+          to_address: () => ({
+            to_bech32: () =>
+              `addr_${Buffer.from(paymentCred.to_bytes()).toString('utf8')}`,
+          }),
+        }),
+      },
+    };
+
+    const rows = listEnabledPaymentAddresses(
+      Cardano,
+      {
+        paymentAddr: 'addr_primary',
+        paymentKeyHash: 'pkh0',
+        publicKey: 'pub',
+        externalIndices: [0],
+        internalIndices: [0, 1],
+      },
+      0
+    );
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({
+      role: ADDRESS_ROLE.external,
+      index: 0,
+      paymentAddr: 'addr_primary',
+    });
+    expect(rows[1]).toMatchObject({
+      role: ADDRESS_ROLE.internal,
+      index: 0,
+    });
+    expect(rows[2]).toMatchObject({
+      role: ADDRESS_ROLE.internal,
+      index: 1,
+    });
   });
 });

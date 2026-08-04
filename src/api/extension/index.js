@@ -67,20 +67,30 @@ import {
 } from '../cache';
 import {
   getExternalIndices,
+  getInternalIndices,
   isMultiAddressEnabled,
   listEnabledPaymentAddresses,
   normalizeExternalIndices,
+  normalizeInternalIndices,
   deriveExternalPaymentFromAccountPublicKey,
+  derivePaymentFromAccountPublicKey,
   matchExternalIndicesFromAddresses,
+  matchInternalIndicesFromAddresses,
   flattenAccountAddressesPayload,
   MAX_EXTERNAL_ADDRESS_INDEX,
+  MAX_INTERNAL_ADDRESS_INDEX,
+  ADDRESS_ROLE,
 } from './multi-address';
 
 export {
   getExternalIndices,
+  getInternalIndices,
   isMultiAddressEnabled,
   normalizeExternalIndices,
+  normalizeInternalIndices,
   MAX_EXTERNAL_ADDRESS_INDEX,
+  MAX_INTERNAL_ADDRESS_INDEX,
+  ADDRESS_ROLE,
 };
 
 export const normalizeStakePool = normalizeStakePoolData;
@@ -1033,6 +1043,21 @@ export const setAccountExternalIndicesAt = async (accountIndex, indices) => {
 };
 
 /**
+ * Persist internal (change) indices for a specific account storage slot.
+ */
+export const setAccountInternalIndicesAt = async (accountIndex, indices) => {
+  const accounts = await getStorage(STORAGE.accounts);
+  if (!accounts?.[accountIndex]) {
+    throw new Error('Account not found');
+  }
+  const next = normalizeInternalIndices(indices);
+  accounts[accountIndex].internalIndices = next;
+  await setStorage({ [STORAGE.accounts]: { ...accounts } });
+  invalidateReadCache();
+  return next;
+};
+
+/**
  * Networks to scan for used payment addresses under a stake key.
  * Preview/preprod share address bech32 format but are separate chains.
  */
@@ -1042,23 +1067,28 @@ const EXTERNAL_ADDRESS_SCAN_NETWORKS = [
   NETWORK_ID.preprod,
 ];
 
-/** Consecutive empty external indices before stopping address_txs fallback. */
+/** Consecutive empty payment indices before stopping address_txs fallback. */
 const EXTERNAL_ADDRESS_SCAN_GAP = 5;
 
 /**
  * Query Koios/Blockfrost for payment addresses on a stake key, then match
- * them to CIP-1852 external indices (0..MAX). Falls back to sequential
- * /address_txs probing when /account_addresses is unavailable.
+ * them to CIP-1852 external (role=0) and internal/change (role=1) indices.
  *
  * @param {object} account
- * @param {{ networkKeys?: string[] }} [options] - limit scan to these
- *   network ids (default: mainnet + preview + preprod)
- * @returns {number[]} sorted unique indices including 0
+ * @param {{ networkKeys?: string[] }} [options]
+ * @returns {{ externalIndices: number[], internalIndices: number[] }}
  */
-export const discoverUsedExternalIndices = async (account, options = {}) => {
+export const discoverUsedPaymentIndices = async (account, options = {}) => {
   await Loader.load();
+  const empty = {
+    externalIndices: getExternalIndices(account),
+    internalIndices: getInternalIndices(account),
+  };
   if (!account?.publicKey) {
-    return [0];
+    return {
+      externalIndices: [0],
+      internalIndices: [],
+    };
   }
 
   // Unit tests create wallets without a live chain; skip network discovery
@@ -1068,7 +1098,7 @@ export const discoverUsedExternalIndices = async (account, options = {}) => {
     process.env.JEST_WORKER_ID != null &&
     process.env.LUCEM_DISCOVER_ADDRESSES !== '1'
   ) {
-    return getExternalIndices(account);
+    return empty;
   }
 
   const networkKeys =
@@ -1076,14 +1106,14 @@ export const discoverUsedExternalIndices = async (account, options = {}) => {
       ? options.networkKeys
       : EXTERNAL_ADDRESS_SCAN_NETWORKS;
 
-  const found = new Set([0]);
+  const externalFound = new Set([0]);
+  const internalFound = new Set();
 
   for (const networkKey of networkKeys) {
     const rewardAddr = account[networkKey]?.rewardAddr;
     if (!rewardAddr) continue;
     const networkIdNumber = NETWORKD_ID_NUMBER[networkKey];
 
-    let matched = null;
     try {
       const req = KOIOS_REQUESTS.getAccountAddresses(rewardAddr, true);
       const payload = await koiosRequest(
@@ -1094,13 +1124,22 @@ export const discoverUsedExternalIndices = async (account, options = {}) => {
         networkKey
       );
       const addresses = flattenAccountAddressesPayload(payload);
-      matched = matchExternalIndicesFromAddresses(
+      for (const i of matchExternalIndicesFromAddresses(
         Loader.Cardano,
         account.publicKey,
         networkIdNumber,
         addresses
-      );
-      for (const i of matched) found.add(i);
+      )) {
+        externalFound.add(i);
+      }
+      for (const i of matchInternalIndicesFromAddresses(
+        Loader.Cardano,
+        account.publicKey,
+        networkIdNumber,
+        addresses
+      )) {
+        internalFound.add(i);
+      }
       continue;
     } catch (error) {
       console.warn(
@@ -1109,49 +1148,69 @@ export const discoverUsedExternalIndices = async (account, options = {}) => {
       );
     }
 
-    // Fallback when /account_addresses is unavailable: gap-limited /address_txs.
-    try {
-      let gap = 0;
-      for (let i = 1; i <= MAX_EXTERNAL_ADDRESS_INDEX; i++) {
-        const { paymentAddr } = deriveExternalPaymentFromAccountPublicKey(
-          Loader.Cardano,
-          account.publicKey,
-          networkIdNumber,
-          i
-        );
-        const req = KOIOS_REQUESTS.getAddressTxs(paymentAddr);
-        const txs = await koiosRequest(
-          req.endpoint,
-          undefined,
-          req.body,
-          undefined,
-          networkKey
-        );
-        if (addressTxsIndicatesHistory(txs)) {
-          found.add(i);
-          gap = 0;
-        } else {
-          gap += 1;
-          if (gap >= EXTERNAL_ADDRESS_SCAN_GAP) break;
+    // Fallback when /account_addresses is unavailable: gap-limited /address_txs
+    // on both external and internal chains.
+    for (const role of [ADDRESS_ROLE.external, ADDRESS_ROLE.internal]) {
+      try {
+        let gap = 0;
+        const start = role === ADDRESS_ROLE.external ? 1 : 0;
+        const max =
+          role === ADDRESS_ROLE.external
+            ? MAX_EXTERNAL_ADDRESS_INDEX
+            : MAX_INTERNAL_ADDRESS_INDEX;
+        for (let i = start; i <= max; i++) {
+          const { paymentAddr } = derivePaymentFromAccountPublicKey(
+            Loader.Cardano,
+            account.publicKey,
+            networkIdNumber,
+            role,
+            i
+          );
+          const req = KOIOS_REQUESTS.getAddressTxs(paymentAddr);
+          const txs = await koiosRequest(
+            req.endpoint,
+            undefined,
+            req.body,
+            undefined,
+            networkKey
+          );
+          if (addressTxsIndicatesHistory(txs)) {
+            if (role === ADDRESS_ROLE.external) externalFound.add(i);
+            else internalFound.add(i);
+            gap = 0;
+          } else {
+            gap += 1;
+            if (gap >= EXTERNAL_ADDRESS_SCAN_GAP) break;
+          }
         }
+      } catch (error) {
+        console.warn(
+          `address_txs role=${role} scan failed (${networkKey}):`,
+          error.message || error
+        );
       }
-    } catch (error) {
-      console.warn(
-        `address_txs external scan failed (${networkKey}):`,
-        error.message || error
-      );
     }
   }
 
-  return normalizeExternalIndices([...found]);
+  return {
+    externalIndices: normalizeExternalIndices([...externalFound]),
+    internalIndices: normalizeInternalIndices([...internalFound]),
+  };
+};
+
+/** @deprecated Prefer discoverUsedPaymentIndices (includes change addresses). */
+export const discoverUsedExternalIndices = async (account, options = {}) => {
+  const { externalIndices } = await discoverUsedPaymentIndices(account, options);
+  return externalIndices;
 };
 
 /**
- * After import/create: discover used external addresses for a stored account
+ * After import/create/refresh: discover used external + internal addresses
  * and activate them (merged with any already enabled indices).
  *
  * @param {string|number} accountIndex
  * @param {{ networkKeys?: string[] }} [options]
+ * @returns {{ externalIndices: number[], internalIndices: number[] }}
  */
 export const activateDiscoveredExternalAddresses = async (
   accountIndex,
@@ -1159,27 +1218,51 @@ export const activateDiscoveredExternalAddresses = async (
 ) => {
   const accounts = await getStorage(STORAGE.accounts);
   const account = accounts?.[accountIndex];
-  if (!account) return [0];
+  if (!account) {
+    return { externalIndices: [0], internalIndices: [] };
+  }
 
   try {
-    const discovered = await discoverUsedExternalIndices(account, options);
-    const merged = normalizeExternalIndices([
+    const discovered = await discoverUsedPaymentIndices(account, options);
+    const mergedExternal = normalizeExternalIndices([
       ...getExternalIndices(account),
-      ...discovered,
+      ...discovered.externalIndices,
     ]);
-    if (
-      merged.length === getExternalIndices(account).length &&
-      merged.every((n, i) => n === getExternalIndices(account)[i])
-    ) {
-      return merged;
+    const mergedInternal = normalizeInternalIndices([
+      ...getInternalIndices(account),
+      ...discovered.internalIndices,
+    ]);
+    const prevExternal = getExternalIndices(account);
+    const prevInternal = getInternalIndices(account);
+    const externalSame =
+      mergedExternal.length === prevExternal.length &&
+      mergedExternal.every((n, i) => n === prevExternal[i]);
+    const internalSame =
+      mergedInternal.length === prevInternal.length &&
+      mergedInternal.every((n, i) => n === prevInternal[i]);
+    if (externalSame && internalSame) {
+      return {
+        externalIndices: mergedExternal,
+        internalIndices: mergedInternal,
+      };
     }
-    return setAccountExternalIndicesAt(accountIndex, merged);
+    accounts[accountIndex].externalIndices = mergedExternal;
+    accounts[accountIndex].internalIndices = mergedInternal;
+    await setStorage({ [STORAGE.accounts]: { ...accounts } });
+    invalidateReadCache();
+    return {
+      externalIndices: mergedExternal,
+      internalIndices: mergedInternal,
+    };
   } catch (error) {
     console.warn(
       'External address activation failed:',
       error.message || error
     );
-    return getExternalIndices(account);
+    return {
+      externalIndices: getExternalIndices(account),
+      internalIndices: getInternalIndices(account),
+    };
   }
 };
 
@@ -1866,12 +1949,16 @@ export const signTx = async (
     [drepKeyHash, drepKey],
   ]);
 
-  // Advanced multi-address: include payment keys for every enabled external index
-  // so inputs sitting on addr/.../0/n can be witnessed.
-  const extraIndices = getExternalIndices(account).filter((i) => i !== 0);
+  // Advanced multi-address: include payment keys for every enabled external and
+  // internal (change) index so inputs on those addresses can be witnessed.
   const extraPaymentKeys = [];
-  for (const addressIndex of extraIndices) {
+  for (const addressIndex of getExternalIndices(account).filter((i) => i !== 0)) {
     const extraKey = accountKey.derive(0).derive(addressIndex).to_raw_key();
+    extraPaymentKeys.push(extraKey);
+    keyMap.set(extraKey.to_public().hash().to_hex(), extraKey);
+  }
+  for (const addressIndex of getInternalIndices(account)) {
+    const extraKey = accountKey.derive(1).derive(addressIndex).to_raw_key();
     extraPaymentKeys.push(extraKey);
     keyMap.set(extraKey.to_public().hash().to_hex(), extraKey);
   }
@@ -1929,21 +2016,27 @@ export const signTxHW = async (
         account,
         networkId
       )) {
-        paymentIndexByHash[row.paymentKeyHash] = row.index;
+        paymentIndexByHash[row.paymentKeyHash] = {
+          index: row.index,
+          role: row.role ?? ADDRESS_ROLE.external,
+        };
       }
     } else {
-      paymentIndexByHash[account.paymentKeyHash] = 0;
+      paymentIndexByHash[account.paymentKeyHash] = {
+        index: 0,
+        role: ADDRESS_ROLE.external,
+      };
     }
     keyHashes.forEach((keyHash) => {
       if (paymentIndexByHash[keyHash] != null) {
-        const addrIdx = paymentIndexByHash[keyHash];
+        const { index: addrIdx, role } = paymentIndexByHash[keyHash];
         keys.payment = {
           hash: keyHash,
           path: [
             HARDENED + 1852,
             HARDENED + 1815,
             HARDENED + hw.account,
-            0,
+            role,
             addrIdx,
           ],
         };
@@ -1972,14 +2065,13 @@ export const signTxHW = async (
     const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
     const vkeys = Loader.Cardano.Vkeywitnesses.new();
     result.witnesses.forEach((witness) => {
-      if (
-        witness.path[3] == 0 // payment key
-      ) {
+      const role = witness.path[3];
+      if (role === 0 || role === 1) {
         const addrIdx = witness.path[4] != null ? witness.path[4] : 0;
         const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
           account.publicKey
         )
-          .derive(0)
+          .derive(role)
           .derive(addrIdx)
           .to_raw_key();
         const signature = Loader.Cardano.Ed25519Signature.from_hex(
@@ -1987,7 +2079,7 @@ export const signTxHW = async (
         );
         vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
       } else if (
-        witness.path[3] == 2 // stake key
+        role == 2 // stake key
       ) {
         const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
           account.publicKey
@@ -2015,17 +2107,23 @@ export const signTxHW = async (
         account,
         network
       )) {
-        paymentIndexByHash[row.paymentKeyHash] = row.index;
+        paymentIndexByHash[row.paymentKeyHash] = {
+          index: row.index,
+          role: row.role ?? ADDRESS_ROLE.external,
+        };
       }
     } else {
-      paymentIndexByHash[account.paymentKeyHash] = 0;
+      paymentIndexByHash[account.paymentKeyHash] = {
+        index: 0,
+        role: ADDRESS_ROLE.external,
+      };
     }
     keyHashes.forEach((keyHash) => {
       if (paymentIndexByHash[keyHash] != null) {
-        const addrIdx = paymentIndexByHash[keyHash];
+        const { index: addrIdx, role } = paymentIndexByHash[keyHash];
         keys.payment = {
           hash: keyHash,
-          path: `m/1852'/1815'/${hw.account}'/0/${addrIdx}`,
+          path: `m/1852'/1815'/${hw.account}'/${role}/${addrIdx}`,
         };
       } else if (keyHash === account.stakeKeyHash)
         keys.stake = {
@@ -2830,6 +2928,8 @@ export const createAccount = async (
       name,
       // CIP-1852 external indices included in balance/UTXO/signing (0 = primary).
       externalIndices: [0],
+      // CIP-1852 internal/change indices (populated by stake-key discovery).
+      internalIndices: [],
       [NETWORK_ID.mainnet]: {
         ...networkDefault,
         paymentAddr: paymentAddrMainnet,
@@ -2960,6 +3060,7 @@ export const createHWAccounts = async (accounts) => {
       stakeKeyHash,
       name,
       externalIndices: [0],
+      internalIndices: [],
       [NETWORK_ID.mainnet]: {
         ...networkDefault,
         paymentAddr: paymentAddrMainnet,
@@ -3807,23 +3908,32 @@ export const updateAccount = async (forceUpdate = false) => {
   if (currentAccount[network.id].forceUpdate)
     delete currentAccount[network.id].forceUpdate;
 
-  // Discover newly used receive addresses on this network before balance so
-  // funds on unused external indices are included in the aggregate.
+  // Discover newly used receive + change addresses on this network before
+  // balance so funds on unused CIP-1852 indices are included in the aggregate.
   let addressesChanged = false;
   try {
-    const beforeIndices = getExternalIndices(currentAccount);
-    const discovered = await discoverUsedExternalIndices(currentAccount, {
+    const beforeExternal = getExternalIndices(currentAccount);
+    const beforeInternal = getInternalIndices(currentAccount);
+    const discovered = await discoverUsedPaymentIndices(currentAccount, {
       networkKeys: [network.id],
     });
-    const mergedIndices = normalizeExternalIndices([
-      ...beforeIndices,
-      ...discovered,
+    const mergedExternal = normalizeExternalIndices([
+      ...beforeExternal,
+      ...discovered.externalIndices,
     ]);
-    if (
-      mergedIndices.length !== beforeIndices.length ||
-      mergedIndices.some((n, i) => n !== beforeIndices[i])
-    ) {
-      currentAccount.externalIndices = mergedIndices;
+    const mergedInternal = normalizeInternalIndices([
+      ...beforeInternal,
+      ...discovered.internalIndices,
+    ]);
+    const externalChanged =
+      mergedExternal.length !== beforeExternal.length ||
+      mergedExternal.some((n, i) => n !== beforeExternal[i]);
+    const internalChanged =
+      mergedInternal.length !== beforeInternal.length ||
+      mergedInternal.some((n, i) => n !== beforeInternal[i]);
+    if (externalChanged || internalChanged) {
+      currentAccount.externalIndices = mergedExternal;
+      currentAccount.internalIndices = mergedInternal;
       addressesChanged = true;
       // Persist before balance fetch — getEnabledPaymentAddresses reads storage.
       await setStorage({

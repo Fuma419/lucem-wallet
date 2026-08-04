@@ -27,18 +27,16 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
-import { CheckIcon, DeleteIcon, DownloadIcon, AttachmentIcon } from '@chakra-ui/icons';
+import { CheckIcon, DeleteIcon } from '@chakra-ui/icons';
 import { FaRegFileCode } from 'react-icons/fa';
 import { MdModeEdit, MdVpnKey } from 'react-icons/md';
 import { useStoreState } from 'easy-peasy';
 import {
   deleteAccount,
-  exportAppData,
   getAccounts,
   getCurrentAccountIndex,
   getNativeAccounts,
   getSignableWalletIds,
-  importAppData,
   isAccountSignable,
   isHW,
   onAccountChange,
@@ -63,8 +61,6 @@ const Accounts = () => {
   const deleteAccountRef = React.useRef();
   const builderRef = React.useRef();
   const validateSeedRef = React.useRef();
-  const importFileRef = React.useRef();
-  const toast = useToast();
 
   const { pageBg, pageFg, cardBg, cardHoverBg, mutedFg } = useSurfaceColors();
   const currentAccent = useColorModeValue('orange.600', 'orange.300');
@@ -83,7 +79,6 @@ const Accounts = () => {
   const [busyIndex, setBusyIndex] = React.useState(null);
   const [nameDraft, setNameDraft] = React.useState('');
   const [signableIds, setSignableIds] = React.useState([]);
-  const [importing, setImporting] = React.useState(false);
 
   const load = React.useCallback(async () => {
     const index = await getCurrentAccountIndex();
@@ -123,68 +118,6 @@ const Accounts = () => {
   }, [nameDraft, currentName, load]);
 
   const currentSignable = isAccountSignable(currentAccount, signableIds);
-
-  const exportHandler = React.useCallback(async () => {
-    try {
-      const backup = await exportAppData();
-      const blob = new Blob([JSON.stringify(backup, null, 2)], {
-        type: 'application/json',
-      });
-      const url = URL.createObjectURL(blob);
-      const stamp = new Date().toISOString().slice(0, 10);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `lucem-backup-${stamp}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast({
-        title: 'Backup exported',
-        description: 'No private keys are included — seeds stay on this device.',
-        status: 'success',
-        duration: 5000,
-      });
-    } catch (e) {
-      toast({
-        title: 'Export failed',
-        description: e?.message || 'Could not export wallet data.',
-        status: 'error',
-        duration: 5000,
-      });
-    }
-  }, [toast]);
-
-  const onImportFile = React.useCallback(
-    async (event) => {
-      const file = event.target.files && event.target.files[0];
-      event.target.value = '';
-      if (!file) return;
-      setImporting(true);
-      try {
-        const text = await file.text();
-        const backup = JSON.parse(text);
-        const { accounts } = await importAppData(backup);
-        toast({
-          title: 'Backup imported',
-          description: `${accounts} account(s) restored. Import each seed phrase to enable signing.`,
-          status: 'success',
-          duration: 6000,
-        });
-        // Re-init the store/settings from freshly restored storage.
-        window.location.reload();
-      } catch (e) {
-        setImporting(false);
-        toast({
-          title: 'Import failed',
-          description: e?.message || 'Could not read this backup file.',
-          status: 'error',
-          duration: 6000,
-        });
-      }
-    },
-    [toast]
-  );
 
   const canDelete =
     currentAccount &&
@@ -485,49 +418,6 @@ const Accounts = () => {
                 Collateral
               </Button>
             </WalletSetupButtons>
-          </Box>
-
-          <Box
-            className="lucem-inset-surface"
-            rounded="3xl"
-            p={{ base: 4, md: 5 }}
-            data-testid="accounts-backup-panel"
-          >
-            <Text fontSize="sm" color={mutedFg} mb={3}>
-              Back up your accounts and settings. Backups never contain private
-              keys or seed phrases, so no transaction can be signed from them.
-            </Text>
-            <Stack spacing={3} className="lucem-equal-width-actions">
-              <Button
-                leftIcon={<DownloadIcon />}
-                rounded="xl"
-                h="12"
-                variant="outline"
-                onClick={exportHandler}
-                data-testid="accounts-export-button"
-              >
-                Export Data
-              </Button>
-              <Button
-                leftIcon={<AttachmentIcon />}
-                rounded="xl"
-                h="12"
-                variant="outline"
-                isLoading={importing}
-                onClick={() => importFileRef.current?.click()}
-                data-testid="accounts-import-button"
-              >
-                Import Data
-              </Button>
-            </Stack>
-            <input
-              ref={importFileRef}
-              type="file"
-              accept="application/json,.json"
-              style={{ display: 'none' }}
-              onChange={onImportFile}
-              data-testid="accounts-import-file"
-            />
           </Box>
         </Stack>
       </Box>

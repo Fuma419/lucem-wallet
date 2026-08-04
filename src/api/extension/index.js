@@ -1050,9 +1050,12 @@ const EXTERNAL_ADDRESS_SCAN_GAP = 5;
  * them to CIP-1852 external indices (0..MAX). Falls back to sequential
  * /address_txs probing when /account_addresses is unavailable.
  *
+ * @param {object} account
+ * @param {{ networkKeys?: string[] }} [options] - limit scan to these
+ *   network ids (default: mainnet + preview + preprod)
  * @returns {number[]} sorted unique indices including 0
  */
-export const discoverUsedExternalIndices = async (account) => {
+export const discoverUsedExternalIndices = async (account, options = {}) => {
   await Loader.load();
   if (!account?.publicKey) {
     return [0];
@@ -1068,9 +1071,14 @@ export const discoverUsedExternalIndices = async (account) => {
     return getExternalIndices(account);
   }
 
+  const networkKeys =
+    Array.isArray(options.networkKeys) && options.networkKeys.length > 0
+      ? options.networkKeys
+      : EXTERNAL_ADDRESS_SCAN_NETWORKS;
+
   const found = new Set([0]);
 
-  for (const networkKey of EXTERNAL_ADDRESS_SCAN_NETWORKS) {
+  for (const networkKey of networkKeys) {
     const rewardAddr = account[networkKey]?.rewardAddr;
     if (!rewardAddr) continue;
     const networkIdNumber = NETWORKD_ID_NUMBER[networkKey];
@@ -1141,14 +1149,20 @@ export const discoverUsedExternalIndices = async (account) => {
 /**
  * After import/create: discover used external addresses for a stored account
  * and activate them (merged with any already enabled indices).
+ *
+ * @param {string|number} accountIndex
+ * @param {{ networkKeys?: string[] }} [options]
  */
-export const activateDiscoveredExternalAddresses = async (accountIndex) => {
+export const activateDiscoveredExternalAddresses = async (
+  accountIndex,
+  options = {}
+) => {
   const accounts = await getStorage(STORAGE.accounts);
   const account = accounts?.[accountIndex];
   if (!account) return [0];
 
   try {
-    const discovered = await discoverUsedExternalIndices(account);
+    const discovered = await discoverUsedExternalIndices(account, options);
     const merged = normalizeExternalIndices([
       ...getExternalIndices(account),
       ...discovered,
@@ -3793,6 +3807,39 @@ export const updateAccount = async (forceUpdate = false) => {
   if (currentAccount[network.id].forceUpdate)
     delete currentAccount[network.id].forceUpdate;
 
+  // Discover newly used receive addresses on this network before balance so
+  // funds on unused external indices are included in the aggregate.
+  let addressesChanged = false;
+  try {
+    const beforeIndices = getExternalIndices(currentAccount);
+    const discovered = await discoverUsedExternalIndices(currentAccount, {
+      networkKeys: [network.id],
+    });
+    const mergedIndices = normalizeExternalIndices([
+      ...beforeIndices,
+      ...discovered,
+    ]);
+    if (
+      mergedIndices.length !== beforeIndices.length ||
+      mergedIndices.some((n, i) => n !== beforeIndices[i])
+    ) {
+      currentAccount.externalIndices = mergedIndices;
+      addressesChanged = true;
+      // Persist before balance fetch — getEnabledPaymentAddresses reads storage.
+      await setStorage({
+        [STORAGE.accounts]: {
+          ...accounts,
+        },
+      });
+      invalidateReadCache();
+    }
+  } catch (error) {
+    console.warn(
+      'Balance-refresh address discovery failed:',
+      error.message || error
+    );
+  }
+
   const balanceSignatureBefore = balanceSignature(currentAccount[network.id]);
   await updateBalance(currentAccount, network, { force: forceUpdate });
   const balanceChanged =
@@ -3803,7 +3850,7 @@ export const updateAccount = async (forceUpdate = false) => {
 
   // Avoid rewriting the whole accounts blob when neither history nor balance
   // actually changed (e.g. a forced refresh that returned identical data).
-  if (!txChanged && !balanceChanged && !isFirstLoad) {
+  if (!txChanged && !balanceChanged && !isFirstLoad && !addressesChanged) {
     return;
   }
 

@@ -16,25 +16,30 @@ import {
   Stack,
   Text,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react';
-import { ViewIcon, WarningTwoIcon } from '@chakra-ui/icons';
+import { ViewIcon, WarningTwoIcon, AttachmentIcon } from '@chakra-ui/icons';
 import TermsOfUse from './termsOfUse';
 import PrivacyPolicy from './privacyPolicy';
-import { createTab } from '../../../api/extension';
+import { createTab, importAppData } from '../../../api/extension';
 import { TAB } from '../../../config/config';
 import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
+import platform from '../../../platform';
 
 /** Create Mnemonic / Import Mnemonic / Import HW — start-screen wallet actions. */
 export const WalletSetupButtons = ({
   spacing = 6,
   stackProps = {},
   buttonProps = {},
+  /** First-run welcome: allow restoring a sterilized Lucem backup JSON. */
+  showBackupImport = false,
   /** Extra equal-width actions rendered under the setup CTAs (e.g. accounts). */
   children,
 }) => {
   const refWallet = React.useRef();
   const refImport = React.useRef();
   const refHw = React.useRef();
+  const refBackup = React.useRef();
 
   return (
     <>
@@ -65,11 +70,22 @@ export const WalletSetupButtons = ({
         >
           Import HW
         </Button>
+        {showBackupImport ? (
+          <Button
+            className="button import-backup"
+            onClick={() => refBackup.current.openModal()}
+            data-testid="welcome-import-backup"
+            {...buttonProps}
+          >
+            Import Backup
+          </Button>
+        ) : null}
         {children}
       </Stack>
       <WalletModal ref={refWallet} />
       <ImportModal ref={refImport} />
       <HardwareWalletModal ref={refHw} />
+      {showBackupImport ? <ImportBackupModal ref={refBackup} /> : null}
     </>
   );
 };
@@ -388,22 +404,156 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
             >
               Close
             </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <TermsOfUse ref={termsRef} />
+      <PrivacyPolicy ref={privacyPolicyRef} />
+    </>
+  );
+});
+
+/** Restore accounts/settings from a sterilized Lucem backup JSON (no keys). */
+export const ImportBackupModal = React.forwardRef((props, ref) => {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { accepted, setAccepted } = useAcceptDocs();
+  const toast = useToast();
+  const termsRef = React.useRef();
+  const privacyPolicyRef = React.useRef();
+  const fileRef = React.useRef();
+  const [importing, setImporting] = React.useState(false);
+
+  React.useImperativeHandle(ref, () => ({
+    openModal() {
+      onOpen();
+    },
+  }));
+
+  const onFile = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      const { accounts } = await importAppData(backup);
+      toast({
+        title: 'Backup imported',
+        description: `${accounts} account(s) restored. Import each seed phrase (or reconnect hardware) to enable signing.`,
+        status: 'success',
+        duration: 6000,
+      });
+      onClose();
+      window.setTimeout(() => {
+        platform.navigation.reloadToWalletBootstrap();
+      }, 250);
+    } catch (e) {
+      setImporting(false);
+      toast({
+        title: 'Import failed',
+        description: e?.message || 'Could not read this backup file.',
+        status: 'error',
+        duration: 6000,
+      });
+    }
+  };
+
+  return (
+    <>
+      <Modal
+        size="xs"
+        isOpen={isOpen}
+        onClose={() => {
+          if (!importing) onClose();
+        }}
+        isCentered
+        blockScrollOnMount={false}
+      >
+        <ModalOverlay
+          style={{
+            backgroundColor: 'rgba(183, 183, 183, 0.2)',
+            backdropFilter: 'blur(5px)',
+          }}
+        />
+        <ModalContent className="modal-glow-backup" backgroundColor="#1a1a1a">
+          <ModalHeader fontSize="md">Import backup</ModalHeader>
+          <ModalCloseButton isDisabled={importing} />
+          <ModalBody>
+            <Text fontSize="sm">
+              Restore accounts and settings from a Lucem backup file exported on
+              another device or browser.
+            </Text>
+            <Box h="3" />
+            <Text fontSize="sm" fontWeight="bold">
+              <WarningTwoIcon mr="1" />
+              Keys are not included
+            </Text>
+            <Box h="1" />
+            <Text fontSize="13px">
+              Backups never contain seed phrases or private keys. After import,
+              use Import Mnemonic (or reconnect hardware) for each account
+              before you can sign transactions.
+            </Text>
+            <Box h="5" />
+            <Box display="flex" alignItems="center" justifyContent="center">
+              <Checkbox
+                colorScheme="gray"
+                onChange={(e) => setAccepted(e.target.checked)}
+                isDisabled={importing}
+                _focus={false}
+              />
+              <Box w="2" />
+              <Text fontWeight={600} fontSize="sm">
+                I read and accepted the{' '}
+                <Link
+                  onClick={() => termsRef.current.openModal()}
+                  textDecoration="underline"
+                  color="whiteAlpha.800"
+                >
+                  Terms of use
+                </Link>
+                <span> and </span>
+                <Link
+                  onClick={() => privacyPolicyRef.current.openModal()}
+                  textDecoration="underline"
+                  color="whiteAlpha.800"
+                >
+                  Privacy Policy
+                </Link>
+              </Text>
+            </Box>
+          </ModalBody>
+          <ModalFooter>
             <Button
-              variant="unstyled"
-              className="button hw-wallet"
-              display="inline-flex"
-              alignItems="center"
-              justifyContent="center"
-              isDisabled={!accepted}
-              onClick={() => createTab(TAB.hw)}
-              minW="160px"
-              px={8}
+              mr={3}
+              variant="ghost"
+              isDisabled={importing}
+              onClick={onClose}
             >
-              Continue
+              Close
+            </Button>
+            <Button
+              className="button import-backup"
+              leftIcon={<AttachmentIcon />}
+              isDisabled={!accepted}
+              isLoading={importing}
+              onClick={() => fileRef.current?.click()}
+              data-testid="welcome-import-backup-choose"
+            >
+              Choose file
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        style={{ display: 'none' }}
+        onChange={onFile}
+        data-testid="welcome-import-backup-file"
+      />
       <TermsOfUse ref={termsRef} />
       <PrivacyPolicy ref={privacyPolicyRef} />
     </>

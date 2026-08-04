@@ -67,6 +67,11 @@ export const STORAGE = {
   currency: 'currency',
   /** When true, network tray is on the right and actions tray on the left. */
   swapTrays: 'swapTrays',
+  /**
+   * When true (default), neon button/modal glow styles are applied in light and
+   * dark mode. When false, glow box-shadows are suppressed globally.
+   */
+  glowEffects: 'glowEffects',
   /** User preference for Chakra UI color mode (`light` | `dark`). */
   colorMode: 'colorMode',
   migration: 'migration',

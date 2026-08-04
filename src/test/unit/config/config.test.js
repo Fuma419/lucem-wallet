@@ -23,6 +23,7 @@ describe('STORAGE keys', () => {
     expect(STORAGE.network).toBe('network');
     expect(STORAGE.currency).toBe('currency');
     expect(STORAGE.swapTrays).toBe('swapTrays');
+    expect(STORAGE.glowEffects).toBe('glowEffects');
     expect(STORAGE.whitelisted).toBe('whitelisted');
     expect(STORAGE.migration).toBe('migration');
   });

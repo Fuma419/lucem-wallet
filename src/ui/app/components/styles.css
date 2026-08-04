@@ -810,3 +810,20 @@ html[data-theme='light'] .network-banner-testnet {
   box-shadow: 0 4px 12px rgba(0, 230, 118, 0.28);
 }
 
+
+/* Global glow kill-switch (Settings → Button glow effects). */
+html[data-glow='off'] .button,
+html[data-glow='off'] .button:hover,
+html[data-glow='off'] .button:focus-visible,
+html[data-glow='off'] .button[data-active],
+html[data-glow='off'] .glow,
+html[data-glow='off'] .chakra-modal__content.modal-glow-purple,
+html[data-glow='off'] .modal-glow-purple,
+html[data-glow='off'] .chakra-modal__content.modal-glow-cyan,
+html[data-glow='off'] .modal-glow-cyan,
+html[data-glow='off'] .chakra-modal__content.modal-glow-yellow-green,
+html[data-glow='off'] .modal-glow-yellow-green,
+html[data-glow='off'] .chakra-modal__content.modal-glow-backup,
+html[data-glow='off'] .modal-glow-backup {
+  box-shadow: none !important;
+}

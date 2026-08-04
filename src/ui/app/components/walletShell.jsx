@@ -66,6 +66,7 @@ const WalletShell = () => {
         isNetworkLoading={isNetworkLoading}
         delegation={delegation}
         swapTrays={Boolean(settings.swapTrays)}
+        glowEffects={settings.glowEffects !== false}
       />
     </>
   );

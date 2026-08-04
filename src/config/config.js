@@ -55,6 +55,12 @@ localStorage = {
 export const STORAGE = {
   whitelisted: 'whitelisted',
   encryptedKey: 'encryptedKey',
+  /**
+   * Multi-seed vault: map of `walletId -> encrypted root key`. Legacy single-seed
+   * installs keep their root in `encryptedKey` (treated as walletId "0"); this map
+   * is written lazily the first time a second seed is added.
+   */
+  encryptedKeys: 'encryptedKeys',
   accounts: 'accounts',
   currentAccount: 'currentAccount',
   network: 'network',
@@ -132,7 +138,12 @@ export const ERROR = {
     'This account is already imported in Lucem.',
   walletAlreadyExists:
     'This wallet is already imported in Lucem.',
+  maxAccountsReached:
+    'Lucem can hold up to 30 accounts. Remove one before adding another.',
 };
+
+/** Maximum accounts (across every seed and hardware device) a single vault holds. */
+export const MAX_TOTAL_ACCOUNTS = 30;
 
 export const TX = {
   invalid_hereafter: 3600 * 6, //6h from current slot

@@ -724,6 +724,21 @@ const MakeAccount = ({ colorTheme }) => {
   const [isDone, setIsDone] = React.useState(false);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const [selectedAccounts, setSelectedAccounts] = React.useState([0]);
+  // When a vault already exists, this seed is added alongside it and must reuse
+  // the existing password (no new password is set).
+  const [vaultExists, setVaultExists] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    Promise.resolve(platform.storage.get('encryptedKey'))
+      .then((key) => {
+        if (!cancelled) setVaultExists(Boolean(key));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const readPasswords = React.useCallback(() => {
     const pw = passwordRef.current?.value ?? '';
@@ -751,15 +766,20 @@ const MakeAccount = ({ colorTheme }) => {
 
   const { pw, cf } = readPasswords();
   const canSubmit =
-    Boolean(state.name && pw.length >= 8 && pw === cf) && selectedAccounts.length >= 1;
+    Boolean(state.name && pw.length >= 8 && (vaultExists || pw === cf)) &&
+    selectedAccounts.length >= 1;
 
   const submitCreate = async () => {
     const { pw: p, cf: c } = readPasswords();
     setLoading(true);
     setError(null);
     try {
-      if (!state.name || p.length < 8 || p !== c) {
-        setError('Please enter a matching password (8+ characters).');
+      if (!state.name || p.length < 8 || (!vaultExists && p !== c)) {
+        setError(
+          vaultExists
+            ? 'Enter your existing Lucem password (8+ characters).'
+            : 'Please enter a matching password (8+ characters).'
+        );
         setLoading(false);
         return;
       }
@@ -803,8 +823,17 @@ const MakeAccount = ({ colorTheme }) => {
     <Box textAlign="center" display="flex" alignItems="center" justifyContent="center" width="100%">
       <Box className={`lucem-create-account-panel lucem-create-account-panel-${colorTheme}`}>
         <Text className="walletTitle" fontWeight="bold" fontSize="md" letterSpacing="wide">
-          Create Account
+          {vaultExists ? 'Add Wallet' : 'Create Account'}
         </Text>
+        {vaultExists && (
+          <>
+            <Spacer height="2" />
+            <Text fontSize="sm" color="whiteAlpha.700">
+              This wallet is added alongside your existing ones. Enter your
+              current Lucem password to unlock the vault.
+            </Text>
+          </>
+        )}
         <Spacer height="4" />
         <Stack
           as="form"
@@ -868,7 +897,11 @@ const MakeAccount = ({ colorTheme }) => {
                     }));
                   }
                 }}
-                placeholder="Enter password"
+                placeholder={
+                  vaultExists
+                    ? 'Enter your existing wallet password'
+                    : 'Enter password'
+                }
               />
               <InputRightElement width="4.5rem">
                 <Button
@@ -893,6 +926,7 @@ const MakeAccount = ({ colorTheme }) => {
             )}
           </Box>
 
+          {!vaultExists && (
           <Box>
             <InputGroup size="md" width="100%">
               <Input
@@ -949,6 +983,7 @@ const MakeAccount = ({ colorTheme }) => {
               </Text>
             )}
           </Box>
+          )}
 
           <Box>
             <Button

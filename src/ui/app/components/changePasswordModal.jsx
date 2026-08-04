@@ -15,13 +15,7 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import React from 'react';
-import { STORAGE } from '../../../config/config';
-import {
-  decryptWithPassword,
-  encryptWithPassword,
-  getStorage,
-  setStorage,
-} from '../../../api/extension';
+import { changeWalletPassword } from '../../../api/extension';
 import Loader from '../../../api/loader';
 
 export const ChangePasswordModal = React.forwardRef((props, ref) => {
@@ -70,23 +64,8 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
     try {
       await Loader.load();
 
-      const encryptedRootKey = await getStorage(STORAGE.encryptedKey);
-      const decryptedRootKey = await decryptWithPassword(
-        state.currentPassword,
-        encryptedRootKey
-      );
-
-      const rootKey = Loader.Cardano.Bip32PrivateKey.from_bytes(
-        Buffer.from(decryptedRootKey, 'hex')
-      );
-      const newlyEncryptedRootKey = await encryptWithPassword(
-        state.newPassword,
-        rootKey.as_bytes()
-      );
-
-      rootKey.free();
-
-      await setStorage({ [STORAGE.encryptedKey]: newlyEncryptedRootKey });
+      // Re-encrypts every seed in the vault, not just the primary one.
+      await changeWalletPassword(state.currentPassword, state.newPassword);
 
       toast({
         title: 'Password updated',
@@ -97,7 +76,12 @@ export const ChangePasswordModal = React.forwardRef((props, ref) => {
       onClose();
     } catch (e) {
       toast({
-        title: e && e.message ? e.message : 'Password update failed!',
+        title:
+          typeof e === 'string'
+            ? e
+            : e && e.message
+              ? e.message
+              : 'Password update failed!',
         status: 'error',
         duration: 5000,
       });

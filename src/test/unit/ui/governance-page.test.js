@@ -35,7 +35,7 @@ describe('governance page and wallet network button wiring', () => {
       'utf8'
     );
 
-    expect(traysSrc).toContain('TrayNetworkButton');
+    expect(traysSrc).toContain('TrayLabeledButton');
     expect(traysSrc).toContain('networkOptions.map((networkOption)');
     expect(traysSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
     expect(traysSrc).toContain('data-active=');

@@ -5,6 +5,7 @@ import {
   EVENT,
   HW,
   LOCAL_STORAGE,
+  MAX_TOTAL_ACCOUNTS,
   NETWORK_ID, NETWORKD_ID_NUMBER,
   NODE,
   SENDER,
@@ -1502,9 +1503,12 @@ export const signData = async (address, payload, password, accountIndex) => {
     : keyHash.startsWith('drep_vkh')
       ? 'drep_vkh'
       : 'stake_vkh';
+  const sdAccounts = await getStorage(STORAGE.accounts);
+  const sdAccount = sdAccounts?.[accountIndex];
   let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
-    accountIndex
+    sdAccount?.derivationIndex ?? accountIndex,
+    sdAccount?.walletId ?? null
   );
   let drepKey = deriveAccountDRepPrivateKey(accountKey);
   const signingKey =
@@ -1565,9 +1569,12 @@ export const signDataCIP30 = async (
     : keyHash.startsWith('drep_vkh')
       ? 'drep_vkh'
       : 'stake_vkh';
+  const cip30Accounts = await getStorage(STORAGE.accounts);
+  const cip30Account = cip30Accounts?.[accountIndex];
   let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
-    accountIndex
+    cip30Account?.derivationIndex ?? accountIndex,
+    cip30Account?.walletId ?? null
   );
   let drepKey = deriveAccountDRepPrivateKey(accountKey);
   const signingKey =
@@ -1658,9 +1665,17 @@ export const signTx = async (
   partialSign = false
 ) => {
   await Loader.load();
+  // `accountIndex` is the storage slot. Resolve the seed + CIP-1852 index it maps
+  // to so multi-seed accounts sign with the correct root key (legacy accounts
+  // fall back to slot == derivation index, walletId "0").
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts?.[accountIndex];
+  const derivationIndex = account?.derivationIndex ?? accountIndex;
+  const walletId = account?.walletId ?? null;
   let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
-    accountIndex
+    derivationIndex,
+    walletId
   );
   let drepKey = deriveAccountDRepPrivateKey(accountKey);
   const paymentKeyHash = paymentKey.to_public().hash().to_hex();
@@ -1675,8 +1690,6 @@ export const signTx = async (
 
   // Advanced multi-address: include payment keys for every enabled external index
   // so inputs sitting on addr/.../0/n can be witnessed.
-  const accounts = await getStorage(STORAGE.accounts);
-  const account = accounts?.[accountIndex];
   const extraIndices = getExternalIndices(account).filter((i) => i !== 0);
   const extraPaymentKeys = [];
   for (const addressIndex of extraIndices) {
@@ -1967,9 +1980,28 @@ export const switchAccount = async (accountIndex) => {
   return true;
 };
 
-export const requestAccountKey = async (password, accountIndex) => {
+/**
+ * Resolve the encrypted root key for a given seed.
+ *
+ * `walletId` is a stable per-seed id. Legacy single-seed installs (and the very
+ * first seed) live in `STORAGE.encryptedKey` and answer to walletId "0"; every
+ * other seed lives in the `STORAGE.encryptedKeys` map written when a second seed
+ * is added.
+ */
+const resolveEncryptedRootKey = async (walletId) => {
+  const id = walletId == null || walletId === '' ? '0' : String(walletId);
+  const map = await getStorage(STORAGE.encryptedKeys);
+  if (map && typeof map === 'object' && map[id]) return map[id];
+  if (id === '0') {
+    const legacy = await getStorage(STORAGE.encryptedKey);
+    if (legacy) return legacy;
+  }
+  throw new Error(`No stored key for wallet ${id}`);
+};
+
+export const requestAccountKey = async (password, accountIndex, walletId = null) => {
   await Loader.load();
-  const encryptedRootKey = await getStorage(STORAGE.encryptedKey);
+  const encryptedRootKey = await resolveEncryptedRootKey(walletId);
   let accountKey;
   let decryptedHex;
   try {
@@ -1994,6 +2026,45 @@ export const requestAccountKey = async (password, accountIndex) => {
     paymentKey: accountKey.derive(0).derive(0).to_raw_key(),
     stakeKey: accountKey.derive(2).derive(0).to_raw_key(),
   };
+};
+
+/**
+ * Re-encrypt every seed in the vault (legacy `encryptedKey` + all `encryptedKeys`)
+ * under a new password. Throws `ERROR.wrongPassword` if `currentPassword` is wrong.
+ */
+export const changeWalletPassword = async (currentPassword, newPassword) => {
+  await Loader.load();
+
+  const reencrypt = async (encryptedHex) => {
+    let decryptedHex;
+    try {
+      decryptedHex = await decryptWithPassword(currentPassword, encryptedHex);
+    } catch (e) {
+      throw ERROR.wrongPassword;
+    }
+    let rootKey = Loader.Cardano.Bip32PrivateKey.from_bytes(
+      Buffer.from(decryptedHex, 'hex')
+    );
+    const out = await encryptWithPassword(newPassword, rootKey.as_bytes());
+    rootKey.free();
+    rootKey = null;
+    return out;
+  };
+
+  const legacy = await getStorage(STORAGE.encryptedKey);
+  const map = await getStorage(STORAGE.encryptedKeys);
+
+  const patch = {};
+  if (legacy) patch[STORAGE.encryptedKey] = await reencrypt(legacy);
+  if (map && typeof map === 'object' && Object.keys(map).length > 0) {
+    const nextMap = {};
+    for (const id of Object.keys(map)) {
+      nextMap[id] = await reencrypt(map[id]);
+    }
+    patch[STORAGE.encryptedKeys] = nextMap;
+  }
+  await setStorage(patch);
+  return true;
 };
 
 /** Remove easy-peasy, asset cache, and session data so wiped state is consistent. */
@@ -2185,21 +2256,292 @@ export const findExistingAccountForMnemonic = async (
   return null;
 };
 
-export const createAccount = async (name, password, accountIndex = null) => {
+/* -------------------------------------------------------------------------- */
+/* Sterilized backup: export / import / seed validation                       */
+/* -------------------------------------------------------------------------- */
+
+export const BACKUP_FORMAT = 'lucem-wallet-backup';
+export const BACKUP_VERSION = 1;
+
+/**
+ * Storage keys included in a backup. Deliberately excludes every secret:
+ * `encryptedKey` / `encryptedKeys` (password-protected seeds) and transient
+ * signing state are never exported.
+ */
+const BACKUP_STORAGE_KEYS = [
+  STORAGE.accounts,
+  STORAGE.currentAccount,
+  STORAGE.network,
+  STORAGE.currency,
+  STORAGE.swapTrays,
+  STORAGE.colorMode,
+  STORAGE.migration,
+  STORAGE.whitelisted,
+  STORAGE.acceptedLegalDocsVersion,
+  STORAGE.userId,
+];
+
+/** Fields that must never appear on an exported account object. */
+const ACCOUNT_SECRET_FIELDS = [
+  'encryptedKey',
+  'encryptedKeys',
+  'privateKey',
+  'rootKey',
+  'mnemonic',
+  'seedPhrase',
+  'entropy',
+];
+
+const sanitizeAccountForExport = (account) => {
+  if (!account || typeof account !== 'object') return account;
+  const clone = { ...account };
+  for (const field of ACCOUNT_SECRET_FIELDS) delete clone[field];
+  return clone;
+};
+
+/**
+ * Build a completely sterilized backup of the wallet: all account metadata
+ * (names, avatars, BIP32 *public* keys, addresses, cached balances) and app
+ * settings, but **no key material**. Nothing in the result can sign a tx.
+ */
+export const exportAppData = async () => {
+  const store = (await getStorage()) || {};
+  const data = {};
+  for (const key of BACKUP_STORAGE_KEYS) {
+    if (store[key] !== undefined) data[key] = store[key];
+  }
+  if (data[STORAGE.accounts] && typeof data[STORAGE.accounts] === 'object') {
+    const sanitized = {};
+    for (const [slot, account] of Object.entries(data[STORAGE.accounts])) {
+      sanitized[slot] = sanitizeAccountForExport(account);
+    }
+    data[STORAGE.accounts] = sanitized;
+  }
+  return {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+};
+
+/**
+ * Restore a sterilized backup. Writes account metadata + settings but never any
+ * key material, so restored software accounts start unvalidated (cannot sign
+ * until the user re-imports their seed phrase). Existing keyed accounts are
+ * preserved on slot collisions.
+ */
+export const importAppData = async (backup) => {
+  if (!backup || typeof backup !== 'object' || backup.format !== BACKUP_FORMAT) {
+    throw new Error('This file is not a Lucem wallet backup.');
+  }
+  const data = backup.data;
+  if (!data || typeof data !== 'object') {
+    throw new Error('Backup file is empty or corrupted.');
+  }
+
+  const patch = {};
+  for (const key of BACKUP_STORAGE_KEYS) {
+    if (data[key] !== undefined) patch[key] = data[key];
+  }
+  // Belt-and-suspenders: never import key material even from a tampered file.
+  delete patch[STORAGE.encryptedKey];
+  delete patch[STORAGE.encryptedKeys];
+
+  // Strip any secret-shaped fields that a hand-edited file might carry.
+  if (patch[STORAGE.accounts] && typeof patch[STORAGE.accounts] === 'object') {
+    const sanitized = {};
+    for (const [slot, account] of Object.entries(patch[STORAGE.accounts])) {
+      sanitized[slot] = sanitizeAccountForExport(account);
+    }
+    patch[STORAGE.accounts] = sanitized;
+  }
+
+  // Merge with any accounts already present; keep existing (possibly keyed)
+  // entries when slots collide.
+  const existingAccounts = (await getStorage(STORAGE.accounts)) || {};
+  const importedAccounts = patch[STORAGE.accounts] || {};
+  const mergedAccounts = { ...importedAccounts, ...existingAccounts };
+  patch[STORAGE.accounts] = mergedAccounts;
+
+  const keys = Object.keys(mergedAccounts);
+  const currentValid =
+    patch[STORAGE.currentAccount] != null &&
+    mergedAccounts[patch[STORAGE.currentAccount]] != null;
+  if (!currentValid && keys.length > 0) {
+    const first = keys[0];
+    patch[STORAGE.currentAccount] =
+      isHW(first) || isNaN(first) ? first : parseInt(first, 10);
+  }
+
+  await setStorage(patch);
+  invalidateReadCache();
+  return { accounts: keys.length };
+};
+
+/** Wallet ids that currently have a stored (signable) seed. */
+export const getSignableWalletIds = async () => {
+  const legacy = await getStorage(STORAGE.encryptedKey);
+  const map = (await getStorage(STORAGE.encryptedKeys)) || {};
+  const ids = new Set(Object.keys(map));
+  if (legacy) ids.add('0');
+  return Array.from(ids);
+};
+
+/**
+ * True when `account` can sign: hardware accounts always can (device-side), and
+ * software accounts can once their seed's `walletId` has a stored key.
+ */
+export const isAccountSignable = (account, signableWalletIds) => {
+  if (!account) return false;
+  if (isHW(account.index)) return true;
+  const walletId = account.walletId != null ? String(account.walletId) : '0';
+  return (signableWalletIds || []).includes(walletId);
+};
+
+/**
+ * Attach a mnemonic to a restored (sterilized) account: verify the seed derives
+ * the account's stored public key, then store the encrypted root under the
+ * account's `walletId`. Validates every software account sharing that seed.
+ */
+export const validateAccountWithSeed = async (
+  accountKey,
+  seedPhrase,
+  password
+) => {
+  await Loader.load();
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts?.[accountKey];
+  if (!account) throw new Error('Account not found.');
+  if (isHW(account.index)) {
+    throw new Error('Hardware accounts sign on the device and need no seed.');
+  }
+  if (!password || String(password).length < 8) {
+    throw new Error('Password must be at least 8 characters long.');
+  }
+
+  const walletId = account.walletId != null ? String(account.walletId) : '0';
+  const derivationIndex =
+    account.derivationIndex != null
+      ? parseInt(account.derivationIndex, 10)
+      : parseInt(account.index, 10) || 0;
+
+  let derivedPublicKey;
+  try {
+    derivedPublicKey = await deriveAccountPublicKeyFromMnemonic(
+      seedPhrase,
+      derivationIndex
+    );
+  } catch (e) {
+    throw new Error('Invalid recovery phrase.');
+  }
+  if (account.publicKey && derivedPublicKey !== account.publicKey) {
+    throw new Error('This recovery phrase does not match the selected account.');
+  }
+
+  // If the vault is already unlocked with other seeds, the password must match.
+  const existingLegacy = await getStorage(STORAGE.encryptedKey);
+  const map = (await getStorage(STORAGE.encryptedKeys)) || {};
+  const mapKeys = Object.keys(map);
+  const probe = existingLegacy || (mapKeys.length ? map[mapKeys[0]] : null);
+  if (probe) {
+    try {
+      await decryptWithPassword(password, probe);
+    } catch (e) {
+      throw new Error(
+        `${ERROR.wrongPassword}: enter your existing Lucem password.`
+      );
+    }
+  }
+
+  let entropy = mnemonicToEntropy(seedPhrase);
+  let rootKey = Loader.Cardano.Bip32PrivateKey.from_bip39_entropy(
+    Buffer.from(entropy, 'hex'),
+    Buffer.from('')
+  );
+  entropy = null;
+  const encryptedRootKey = await encryptWithPassword(password, rootKey.as_bytes());
+  rootKey.free();
+  rootKey = null;
+
+  const nextMap = { ...map };
+  if (existingLegacy && !nextMap['0']) nextMap['0'] = existingLegacy;
+  nextMap[walletId] = encryptedRootKey;
+  await setStorage({ [STORAGE.encryptedKeys]: nextMap });
+  if (walletId === '0' && !existingLegacy) {
+    await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
+  }
+
+  const validated = Object.values(accounts).filter(
+    (a) =>
+      a &&
+      !isHW(a.index) &&
+      (a.walletId != null ? String(a.walletId) : '0') === walletId
+  ).length;
+
+  return { walletId, validated };
+};
+
+/** Total accounts (native + hardware) currently stored. */
+const totalAccountCount = (accounts) =>
+  accounts && typeof accounts === 'object' ? Object.keys(accounts).length : 0;
+
+/** Smallest unused non-negative integer native storage slot. */
+const nextNativeSlot = (accounts) => {
+  const used = new Set(
+    Object.keys(getNativeAccounts(accounts)).map((k) => parseInt(k, 10))
+  );
+  let slot = 0;
+  while (used.has(slot)) slot += 1;
+  return slot;
+};
+
+/** Next seed id for the `encryptedKeys` map (legacy seed is always "0"). */
+const nextWalletId = async () => {
+  const map = (await getStorage(STORAGE.encryptedKeys)) || {};
+  const ids = Object.keys(map)
+    .map((k) => parseInt(k, 10))
+    .filter((n) => Number.isFinite(n));
+  const max = ids.length ? Math.max(...ids) : 0;
+  return String(max + 1);
+};
+
+/**
+ * @param {string} name
+ * @param {string} password
+ * @param {number|null} accountIndex - legacy: CIP-1852 derivation index used as
+ *   the storage slot too. When `options.walletId` is set this is ignored in
+ *   favor of `options.derivationIndex`.
+ * @param {object} [options]
+ * @param {string} [options.walletId] - seed id (multi-seed). Defaults to "0".
+ * @param {number} [options.derivationIndex] - CIP-1852 account index in the seed.
+ */
+export const createAccount = async (
+  name,
+  password,
+  accountIndex = null,
+  options = {}
+) => {
   await Loader.load();
 
   const existingAccounts = await getStorage(STORAGE.accounts);
+  const walletId = options.walletId != null ? String(options.walletId) : '0';
+  const isLegacySeed = walletId === '0';
 
-  const index =
-    accountIndex !== null && accountIndex !== undefined && accountIndex !== ''
-      ? accountIndex
-      : existingAccounts
-        ? Object.keys(getNativeAccounts(existingAccounts)).length
-        : 0;
+  // CIP-1852 account index inside the seed.
+  const derivationIndex =
+    options.derivationIndex != null
+      ? parseInt(options.derivationIndex, 10)
+      : accountIndex !== null && accountIndex !== undefined && accountIndex !== ''
+        ? parseInt(accountIndex, 10)
+        : existingAccounts
+          ? Object.keys(getNativeAccounts(existingAccounts)).length
+          : 0;
 
   let { accountKey, paymentKey, stakeKey } = await requestAccountKey(
     password,
-    index
+    derivationIndex,
+    walletId
   );
 
   const publicKey = accountKey.to_public().to_hex(); // BIP32 Public key
@@ -2222,10 +2564,30 @@ export const createAccount = async (name, password, accountIndex = null) => {
       `${ERROR.accountAlreadyExists} ${label} is already in your wallet.`
     );
   }
-  if (existingAccounts && existingAccounts[index]) {
+  // Storage slot: decoupled from the CIP-1852 derivation index so multiple seeds
+  // (each starting at index 0) can coexist. Legacy single-seed accounts keep the
+  // derivation index as their slot for backwards compatibility.
+  let slot;
+  if (options.slot != null) {
+    slot = parseInt(options.slot, 10);
+  } else if (
+    isLegacySeed &&
+    (!existingAccounts || existingAccounts[derivationIndex] == null)
+  ) {
+    slot = derivationIndex;
+  } else {
+    slot = nextNativeSlot(existingAccounts);
+  }
+  const index = slot;
+
+  if (existingAccounts && existingAccounts[slot]) {
     throw new Error(
-      `${ERROR.accountAlreadyExists} Account index ${index} is already in use.`
+      `${ERROR.accountAlreadyExists} Account index ${slot} is already in use.`
     );
+  }
+
+  if (totalAccountCount(existingAccounts) >= MAX_TOTAL_ACCOUNTS) {
+    throw new Error(ERROR.maxAccountsReached);
   }
 
   const paymentKeyHash = Buffer.from(paymentKeyPub.hash().to_bytes()).toString(
@@ -2278,6 +2640,10 @@ export const createAccount = async (name, password, accountIndex = null) => {
   const newAccount = {
     [index]: {
       index,
+      // Seed this account is derived from + its CIP-1852 account index. `index`
+      // above is only the storage slot; signing uses these two fields.
+      walletId,
+      derivationIndex,
       publicKey,
       paymentKeyHash,
       paymentKeyHashBech32,
@@ -2340,6 +2706,10 @@ export const createHWAccounts = async (accounts) => {
         name: name || (duplicateByKey && duplicateByKey.name) || String(index),
       });
       continue;
+    }
+
+    if (totalAccountCount(existingAccounts) >= MAX_TOTAL_ACCOUNTS) {
+      throw new Error(ERROR.maxAccountsReached);
     }
 
     const paymentKeyHashRaw = publicKey.derive(0).derive(0).to_raw_key().hash();
@@ -2728,10 +3098,31 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
     );
   }
 
-  // Check and clear any leftover state from a previous failed attempt / replace
-  const checkStore = await getStorage(STORAGE.encryptedKey);
-  if (checkStore) {
-    await platform.storage.clear();
+  // A vault can already exist. Adding a mnemonic no longer wipes it — the new
+  // seed becomes an additional wallet (walletId) whose accounts live alongside
+  // the existing ones. Only the very first seed uses the legacy `encryptedKey`.
+  const existingEncryptedKey = await getStorage(STORAGE.encryptedKey);
+  const existingAccounts = await getStorage(STORAGE.accounts);
+  const vaultExists = Boolean(existingEncryptedKey);
+
+  let walletId = '0';
+  if (vaultExists) {
+    // Every seed in a vault is protected by the same password. Require the
+    // existing one instead of silently creating a second, unreachable password.
+    try {
+      await decryptWithPassword(password, existingEncryptedKey);
+    } catch (e) {
+      throw new Error(
+        `${ERROR.wrongPassword}: enter your existing Lucem password to add another wallet.`
+      );
+    }
+    if (
+      totalAccountCount(existingAccounts) + accountIndices.length >
+      MAX_TOTAL_ACCOUNTS
+    ) {
+      throw new Error(ERROR.maxAccountsReached);
+    }
+    walletId = await nextWalletId();
   }
 
   let entropy = mnemonicToEntropy(seedPhrase);
@@ -2749,27 +3140,50 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
   rootKey.free();
   rootKey = null;
 
-  await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
-  await setStorage({
-    [STORAGE.network]: { id: NETWORK_ID.mainnet, node: NODE.mainnet },
-  });
+  if (vaultExists) {
+    // Materialize the multi-seed map lazily, migrating the legacy seed to "0".
+    const map = (await getStorage(STORAGE.encryptedKeys)) || {};
+    if (!map['0'] && existingEncryptedKey) map['0'] = existingEncryptedKey;
+    map[walletId] = encryptedRootKey;
+    await setStorage({ [STORAGE.encryptedKeys]: map });
+  } else {
+    await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
+    await setStorage({
+      [STORAGE.network]: { id: NETWORK_ID.mainnet, node: NODE.mainnet },
+    });
+    await setStorage({
+      [STORAGE.currency]: 'usd',
+    });
+  }
 
-  await setStorage({
-    [STORAGE.currency]: 'usd',
+  const primaryIndex = parseInt(explicitAccounts[0], 10);
+  const index = await createAccount(name, password, primaryIndex, {
+    walletId,
+    derivationIndex: primaryIndex,
   });
-
-  const index = await createAccount(name, password, explicitAccounts[0]);
 
   // Create additional explicitly selected accounts
   for (let i = 1; i < explicitAccounts.length; i++) {
-    await createAccount(`Account ${explicitAccounts[i]}`, password, explicitAccounts[i]);
+    const derivationIndex = parseInt(explicitAccounts[i], 10);
+    await createAccount(`Account ${derivationIndex}`, password, derivationIndex, {
+      walletId,
+      derivationIndex,
+    });
   }
 
   // Discover additional used derivation indices via Koios POST /address_txs (legacy GET /addresses/.../txs was removed).
   const MAX_SUB_ACCOUNT_SCAN = 20;
-  let searchIndex = Math.max(...explicitAccounts) + 1;
+  let searchIndex = Math.max(...explicitAccounts.map((i) => parseInt(i, 10))) + 1;
   while (searchIndex <= MAX_SUB_ACCOUNT_SCAN) {
-    let { paymentKey, stakeKey } = await requestAccountKey(password, searchIndex);
+    // Respect the global cap; stop discovering rather than throwing mid-import.
+    if (totalAccountCount(await getStorage(STORAGE.accounts)) >= MAX_TOTAL_ACCOUNTS) {
+      break;
+    }
+    let { paymentKey, stakeKey } = await requestAccountKey(
+      password,
+      searchIndex,
+      walletId
+    );
 
     const network = await getNetwork();
     const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
@@ -2791,7 +3205,10 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
       const req = KOIOS_REQUESTS.getAddressTxs(fullAddress);
       const transactions = await koiosRequest(req.endpoint, undefined, req.body);
       if (addressTxsIndicatesHistory(transactions)) {
-        await createAccount(`Account ${searchIndex}`, password, searchIndex);
+        await createAccount(`Account ${searchIndex}`, password, searchIndex, {
+          walletId,
+          derivationIndex: searchIndex,
+        });
       } else {
         break;
       }

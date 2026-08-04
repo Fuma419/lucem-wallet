@@ -2,7 +2,6 @@ import {
   Box,
   Button,
   Flex,
-  Switch,
   Text,
   useColorModeValue,
 } from '@chakra-ui/react';
@@ -94,25 +93,7 @@ export function SettingsPanel({ title, description, children, testId }) {
   );
 }
 
-/** Single boolean control style for all Settings toggles. */
-export function SettingsSwitch({
-  isChecked,
-  onChange,
-  isDisabled,
-  'aria-label': ariaLabel,
-}) {
-  return (
-    <Switch
-      size="md"
-      colorScheme="yellow"
-      isChecked={Boolean(isChecked)}
-      isDisabled={isDisabled}
-      onChange={(e) => onChange?.(e.target.checked)}
-      aria-label={ariaLabel}
-    />
-  );
-}
-
+/** Boolean setting using the same segmented control as currency / appearance. */
 export function SettingsToggleRow({
   label,
   hint,
@@ -122,35 +103,30 @@ export function SettingsToggleRow({
   'aria-label': ariaLabel,
   'data-testid': dataTestId,
   testId,
+  onLabel = 'On',
+  offLabel = 'Off',
 }) {
-  const { softFg, subtleFg } = useSurfaceColors();
+  const { subtleFg } = useSurfaceColors();
   return (
-    <Flex
-      align="center"
-      justify="space-between"
-      gap={4}
-      w="full"
-      data-testid={dataTestId || testId}
-    >
-      <Box flex="1" minW={0}>
-        <Text color={softFg} fontWeight="semibold" fontSize="sm">
-          {label}
-        </Text>
-        {hint ? (
-          <Text color={subtleFg} fontSize="xs" mt={1} lineHeight="short">
-            {hint}
-          </Text>
-        ) : null}
-      </Box>
-      <Box flexShrink={0}>
-        <SettingsSwitch
-          isChecked={isChecked}
-          onChange={onChange}
-          isDisabled={isDisabled}
+    <Box w="full" data-testid={dataTestId || testId}>
+      <SettingsChoiceField label={label}>
+        <SegmentedChoice
           aria-label={ariaLabel || label}
+          value={isChecked ? 'on' : 'off'}
+          isDisabled={isDisabled}
+          onChange={(next) => onChange?.(next === 'on')}
+          options={[
+            { value: 'off', label: offLabel },
+            { value: 'on', label: onLabel },
+          ]}
         />
-      </Box>
-    </Flex>
+      </SettingsChoiceField>
+      {hint ? (
+        <Text color={subtleFg} fontSize="xs" mt={2} lineHeight="short">
+          {hint}
+        </Text>
+      ) : null}
+    </Box>
   );
 }
 
@@ -191,6 +167,7 @@ export function SegmentedChoice({
   value,
   options,
   onChange,
+  isDisabled,
   'aria-label': ariaLabel,
 }) {
   const {
@@ -210,6 +187,8 @@ export function SegmentedChoice({
       rounded="xl"
       bg={segmentTrack}
       gap={1}
+      opacity={isDisabled ? 0.55 : 1}
+      pointerEvents={isDisabled ? 'none' : 'auto'}
     >
       {options.map((opt) => {
         const selected = value === opt.value;
@@ -226,6 +205,7 @@ export function SegmentedChoice({
             bg={selected ? segmentActiveBg : 'transparent'}
             color={selected ? segmentActiveFg : segmentIdleFg}
             boxShadow={selected ? segmentShadow : 'none'}
+            isDisabled={isDisabled}
             onClick={() => onChange(opt.value)}
             aria-checked={selected}
             role="radio"

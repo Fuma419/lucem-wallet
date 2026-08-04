@@ -322,6 +322,26 @@ const Settings = () => {
                 }}
                 aria-label="Swap bottom tray positions"
               />
+
+              <SettingsToggleRow
+                data-testid="settings-glow-effects"
+                label="Button glow effects"
+                hint={
+                  settings.glowEffects !== false
+                    ? 'Neon glows on wallet and tray buttons in light and dark mode.'
+                    : 'Solid buttons without neon glow.'
+                }
+                isChecked={settings.glowEffects !== false}
+                offLabel="Off"
+                onLabel="On"
+                onChange={(checked) => {
+                  setSettings({
+                    ...settings,
+                    glowEffects: checked,
+                  });
+                }}
+                aria-label="Enable button glow effects"
+              />
             </SettingsFieldStack>
           </SettingsPanel>
 

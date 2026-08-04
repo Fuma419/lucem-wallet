@@ -177,6 +177,24 @@ export const getSwapTrays = async () => {
 export const setSwapTrays = (swapTrays) =>
   setStorage({ [STORAGE.swapTrays]: Boolean(swapTrays) });
 
+/** Neon glows default on; only an explicit `false` disables them. */
+export const getGlowEffects = async () => {
+  const value = await getStorage(STORAGE.glowEffects);
+  return value !== false;
+};
+
+export const setGlowEffects = (glowEffects) =>
+  setStorage({ [STORAGE.glowEffects]: Boolean(glowEffects) });
+
+/** Reflect glow preference on <html data-glow> for CSS. */
+export const syncGlowEffectsDom = (glowEffects) => {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute(
+    'data-glow',
+    glowEffects === false ? 'off' : 'on'
+  );
+};
+
 export const getDelegation = async ({ force = false } = {}) => {
   const network = await getNetwork();
   const stakeAddress = await getRewardAddress();
@@ -2274,6 +2292,7 @@ const BACKUP_STORAGE_KEYS = [
   STORAGE.network,
   STORAGE.currency,
   STORAGE.swapTrays,
+  STORAGE.glowEffects,
   STORAGE.colorMode,
   STORAGE.migration,
   STORAGE.whitelisted,

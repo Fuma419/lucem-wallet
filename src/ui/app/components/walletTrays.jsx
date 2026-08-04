@@ -98,6 +98,7 @@ const WalletTrays = ({
   isNetworkLoading = false,
   delegation = null,
   swapTrays = false,
+  glowEffects = true,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -105,14 +106,13 @@ const WalletTrays = ({
   const [isTrayOpen, setIsTrayOpen] = React.useState(false);
   const [isNetworkTrayOpen, setIsNetworkTrayOpen] = React.useState(false);
   const traysSwapped = Boolean(swapTrays);
+  const glowOn = glowEffects !== false;
 
-  const fabVoteClass = colorMode === 'dark' ? 'button fab-vote' : undefined;
-  const fabStakeClass = colorMode === 'dark' ? 'button fab-stake' : undefined;
-  const fabAccountsClass =
-    colorMode === 'dark' ? 'button fab-accounts' : undefined;
-  const fabSettingsClass =
-    colorMode === 'dark' ? 'button fab-settings' : undefined;
-  const fabToggleClass = colorMode === 'dark' ? 'button fab-toggle' : undefined;
+  const fabVoteClass = glowOn ? 'button fab-vote' : undefined;
+  const fabStakeClass = glowOn ? 'button fab-stake' : undefined;
+  const fabAccountsClass = glowOn ? 'button fab-accounts' : undefined;
+  const fabSettingsClass = glowOn ? 'button fab-settings' : undefined;
+  const fabToggleClass = glowOn ? 'button fab-toggle' : undefined;
 
   const fabVote = useColorModeValue(
     {
@@ -190,7 +190,7 @@ const WalletTrays = ({
     }
   );
 
-  const fabColor = colorMode === 'dark' ? 'white' : 'black';
+  const fabColor = glowOn || colorMode === 'dark' ? 'white' : 'black';
   const floatingVoteProps = { ...walletFabBase, color: fabColor, ...fabVote };
   const floatingStakeProps = { ...walletFabBase, color: fabColor, ...fabStake };
   const floatingAccountsProps = {

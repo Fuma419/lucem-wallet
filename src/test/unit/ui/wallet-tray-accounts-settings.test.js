@@ -195,9 +195,14 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(settingsSrc).toContain('data-testid="settings-primary-actions"');
     expect(settingsSrc).toContain('data-testid="settings-swap-trays"');
     expect(settingsSrc).toContain('swapTrays');
+    expect(settingsSrc).toContain('data-testid="settings-glow-effects"');
+    expect(settingsSrc).toContain('glowEffects');
     expect(traysSrc).toContain('swapTrays');
+    expect(traysSrc).toContain('glowEffects');
+    expect(traysSrc).toContain('glowOn');
     expect(traysSrc).toContain('data-tray-side');
     expect(shellSrc).toContain('swapTrays={Boolean(settings.swapTrays)}');
+    expect(shellSrc).toContain('glowEffects={settings.glowEffects !== false}');
     expect(governanceSrc).not.toContain('ArrowBackIcon');
     expect(stakingSrc).not.toContain('ArrowBackIcon');
   });

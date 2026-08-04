@@ -3,10 +3,13 @@ import {
   getCurrency,
   getNetwork,
   getSwapTrays,
+  getGlowEffects,
   requestAccountKey,
   setCurrency,
   setNetwork,
   setSwapTrays,
+  setGlowEffects,
+  syncGlowEffectsDom,
 } from '../api/extension';
 import { NETWORK_ID, NODE } from '../config/config';
 import {
@@ -39,9 +42,20 @@ const settings = {
     if (Object.prototype.hasOwnProperty.call(settings, 'swapTrays')) {
       setSwapTrays(settings.swapTrays);
     }
+    const glowEffects = Object.prototype.hasOwnProperty.call(
+      settings,
+      'glowEffects'
+    )
+      ? Boolean(settings.glowEffects)
+      : !(state.settings && state.settings.glowEffects === false);
+    if (Object.prototype.hasOwnProperty.call(settings, 'glowEffects')) {
+      setGlowEffects(glowEffects);
+    }
+    syncGlowEffectsDom(glowEffects);
     state.settings = {
       ...settings,
       swapTrays: Boolean(settings.swapTrays),
+      glowEffects,
       adaSymbol:
         settings.network.id === NETWORK_ID.mainnet
           ? '₳'
@@ -68,6 +82,7 @@ const globalModel = persist(
 const initSettings = async (setSettings) => {
   const currency = await getCurrency();
   const swapTrays = await getSwapTrays();
+  const glowEffects = await getGlowEffects();
   const storedNetwork = await getNetwork();
   const network =
     storedNetwork && NODE[storedNetwork.id]
@@ -76,9 +91,11 @@ const initSettings = async (setSettings) => {
   if (storedNetwork && !NODE[storedNetwork.id]) {
     await setNetwork(network);
   }
+  syncGlowEffectsDom(glowEffects);
   setSettings({
     currency: currency || 'usd',
     swapTrays: Boolean(swapTrays),
+    glowEffects,
     network: network || { id: NETWORK_ID.mainnet, node: NODE.mainnet },
     adaSymbol: network
       ? network.id === NETWORK_ID.mainnet

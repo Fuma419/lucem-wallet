@@ -97,10 +97,12 @@ const Wallet = () => {
   /** Light: solid brand tints; dark: filled cyan / gradient class handles Send. */
   const receiveButton = useColorModeValue('cyan.500', 'cyan.700');
   const sendButton = useColorModeValue('purple.500', 'yellow.600');
-  const receiveBtnClass =
-    colorMode === 'dark' ? 'button import-wallet' : undefined;
-  const sendBtnClass = colorMode === 'dark' ? 'button new-wallet' : undefined;
-  const actionBtnColor = colorMode === 'dark' ? 'white' : 'black';
+  const glowOn = settings?.glowEffects !== false;
+  // Neon glow classes in both themes when enabled (was dark-only before).
+  const receiveBtnClass = glowOn ? 'button import-wallet' : undefined;
+  const sendBtnClass = glowOn ? 'button new-wallet' : undefined;
+  const actionBtnColor =
+    glowOn || colorMode === 'dark' ? 'white' : 'black';
 
   const networkOptions = [
     { id: NETWORK_ID.mainnet, label: 'Mainnet' },
@@ -574,7 +576,11 @@ const Wallet = () => {
                   color={actionBtnColor}
                   background={receiveButton}
                   _hover={
-                    colorMode === 'light' ? { bg: 'cyan.600' } : undefined
+                    glowOn
+                      ? undefined
+                      : colorMode === 'light'
+                        ? { bg: 'cyan.600' }
+                        : undefined
                   }
                   rightIcon={<Icon as={BsArrowDownRight} />}
                   size="sm"
@@ -645,7 +651,11 @@ const Wallet = () => {
                 size="sm"
                 background={sendButton}
                 _hover={
-                  colorMode === 'light' ? { bg: 'purple.600' } : undefined
+                  glowOn
+                    ? undefined
+                    : colorMode === 'light'
+                      ? { bg: 'purple.600' }
+                      : undefined
                 }
                 rounded="2xl"
                 rightIcon={<Icon as={BsArrowUpRight} />}

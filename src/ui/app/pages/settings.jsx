@@ -9,9 +9,6 @@ import {
   Spinner,
   Checkbox,
   Input,
-  InputGroup,
-  InputRightElement,
-  Icon,
   useToast,
   Flex,
   Modal,
@@ -40,13 +37,11 @@ import {
   removeWhitelisted,
   eraseLocalWalletData,
   setAccountAvatar,
-  setAccountName,
   setStorage,
 } from '../../../api/extension';
 import { useNavigate } from 'react-router-dom';
 import { STORAGE } from '../../../config/config';
 import { useStoreState, useStoreActions } from 'easy-peasy';
-import { MdModeEdit } from 'react-icons/md';
 import AvatarLoader from '../components/avatarLoader';
 import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
@@ -125,7 +120,6 @@ const Settings = () => {
   const iconFg = useColorModeValue('gray.800', 'whiteAlpha.900');
   const iconBtnBg = useColorModeValue('gray.100', 'black');
   const iconBtnHover = useColorModeValue('gray.200', 'whiteAlpha.50');
-  const editIcon = useColorModeValue('gray.500', 'whiteAlpha.700');
   const hintColor = useColorModeValue('gray.600', 'whiteAlpha.500');
   const eraseModalBg = useColorModeValue('white', 'gray.900');
   const eraseModalFg = useColorModeValue('gray.900', 'white');
@@ -133,7 +127,6 @@ const Settings = () => {
   const sectionDivider = useColorModeValue('gray.300', 'whiteAlpha.200');
   const [refreshed, setRefreshed] = React.useState(false);
   const [account, setAccount] = React.useState({ name: '', avatar: '' });
-  const [originalName, setOriginalName] = React.useState('');
   const changePasswordRef = React.useRef();
   const [eraseModalOpen, setEraseModalOpen] = React.useState(false);
   const [eraseAck, setEraseAck] = React.useState(false);
@@ -146,12 +139,6 @@ const Settings = () => {
   const closeIcon = useColorModeValue('gray.600', 'whiteAlpha.700');
   const closeHover = useColorModeValue('gray.800', 'white');
   const emptyHint = useColorModeValue('gray.600', 'whiteAlpha.500');
-
-  const nameHandler = async () => {
-    await setAccountName(account.name);
-    setOriginalName(account.name);
-    accountRef.current?.updateAccount?.();
-  };
 
   const avatarHandler = async () => {
     const avatar = Math.random().toString();
@@ -186,7 +173,6 @@ const Settings = () => {
 
   React.useEffect(() => {
     getCurrentAccount().then((nextAccount) => {
-      setOriginalName(nextAccount.name);
       setAccount(nextAccount);
     });
     loadWhitelist();
@@ -229,45 +215,7 @@ const Settings = () => {
       >
         <Box w="full" maxW="sm" mx="auto" pt={1}>
           <SettingsSectionTitle>Account</SettingsSectionTitle>
-          <InputGroup size="md" w="full">
-            <Input
-              variant="outline"
-              rounded="xl"
-              {...settingsInputProps}
-              onKeyDown={(e) => {
-                if (
-                  e.key === 'Enter' &&
-                  account.name.length > 0 &&
-                  account.name !== originalName
-                )
-                  nameHandler();
-              }}
-              placeholder="Account name"
-              value={account.name}
-              onChange={(e) => {
-                account.name = e.target.value;
-                setAccount({ ...account });
-              }}
-              pr="4.5rem"
-            />
-            <InputRightElement width="4.5rem" h="full">
-              {account.name === originalName ? (
-                <Icon mr="-2" as={MdModeEdit} color={editIcon} />
-              ) : (
-                <Button
-                  isDisabled={account.name.length <= 0}
-                  h="1.75rem"
-                  size="sm"
-                  rounded="md"
-                  onClick={nameHandler}
-                >
-                  Apply
-                </Button>
-              )}
-            </InputRightElement>
-          </InputGroup>
-
-          <Flex align="center" justify="center" gap={5} mt={8} w="full">
+          <Flex align="center" justify="center" gap={5} w="full">
             <Box w="72px" h="72px" flexShrink={0} rounded="full" overflow="hidden">
               <AvatarLoader forceUpdate avatar={account.avatar} width="full" />
             </Box>

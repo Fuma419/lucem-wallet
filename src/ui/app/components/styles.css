@@ -397,6 +397,7 @@ html[data-theme='light'] .lucem-inset-row.is-current {
 
 .button.fab-vote {
   opacity: .85;
+  color: #ffffff;
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 245, 255, .5), rgba(0, 0, 0, .5));
   border: thin solid rgba(0, 245, 255, 1);
   box-shadow: 0px 0px 15px rgba(0, 245, 255, 0.75);
@@ -405,6 +406,7 @@ html[data-theme='light'] .lucem-inset-row.is-current {
 
 .button.fab-stake {
   opacity: .85;
+  color: #ffffff;
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, .5), rgba(0, 0, 0, .5));
   border: thin solid rgba(206, 250, 0, 1);
   box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75);
@@ -413,6 +415,7 @@ html[data-theme='light'] .lucem-inset-row.is-current {
 
 .button.fab-accounts {
   opacity: .85;
+  color: #ffffff;
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 140, 0, .5), rgba(0, 0, 0, .5));
   border: thin solid rgba(255, 140, 0, 1);
   box-shadow: 0px 0px 15px rgba(255, 140, 0, 0.75);
@@ -425,6 +428,7 @@ html[data-theme='light'] .lucem-inset-row.is-current {
 
 .button.fab-settings {
   opacity: .85;
+  color: #ffffff;
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(220, 27, 250, .5), rgba(0, 0, 0, .5));
   border: thin solid rgba(220, 27, 250, 1);
   box-shadow: 0px 0px 15px rgba(220, 27, 250, 0.75);
@@ -488,6 +492,7 @@ html[data-theme='light'] .lucem-inset-row.is-current {
 
 .button.fab-toggle {
   opacity: .85;
+  color: #ffffff;
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, .5), rgba(0, 0, 0, .5));
   border: thin solid rgba(0, 122, 255, 1);
   box-shadow: 0px 0px 15px rgba(0, 122, 255, 0.75);
@@ -497,6 +502,36 @@ html[data-theme='light'] .lucem-inset-row.is-current {
 .button.fab-toggle:hover {
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 1), rgba(0, 0, 0, .5));
   box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9);
+}
+
+/* Tray FAB icons stay white in every theme / glow mode (Chakra Icon inherits). */
+.button.fab-vote,
+.button.fab-stake,
+.button.fab-accounts,
+.button.fab-settings,
+.button.fab-toggle,
+.button.network-mainnet,
+.button.network-preprod,
+.button.network-preview,
+.button.network-testnet {
+  color: #ffffff !important;
+}
+
+.button.fab-vote svg,
+.button.fab-stake svg,
+.button.fab-accounts svg,
+.button.fab-settings svg,
+.button.fab-toggle svg,
+.button.network-mainnet svg,
+.button.network-preprod svg,
+.button.network-preview svg,
+.button.network-testnet svg {
+  color: #ffffff !important;
+  fill: currentColor;
+}
+
+.lucem-tray-action-label {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
 /* Hardware wallet tab: wider CTAs so uppercase labels fit (e.g. Continue, long Keystone strings). */

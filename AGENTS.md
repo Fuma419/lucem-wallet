@@ -149,12 +149,27 @@ Confirm which git branch Vercel Production is tied to in project settings (`rele
 ### Vercel deployment
 
 The project deploys to Vercel via `vercel.json`:
-- **Build command:** `npm run build`
+- **Install command:** `npm ci` (deterministic; must stay in sync with `package-lock.json`)
+- **Build command:** `npm run build:webpack` (webpack only — the deploy build does **not** run Jest; tests are gated by Jenkins/GitHub Actions)
 - **Output directory:** `build/`
 - **Rewrites:** `/` → `mainPopup.html`, SPA routes → appropriate HTML entry points
-- **Node version:** 20.x (configured in Vercel project settings)
+- **Node version:** 20.x — pinned by `.nvmrc` / `.node-version` (`20.19.0`) and `engines` (`engine-strict=true`). Vercel project settings must also select 20.x.
 - Secrets auto-generated in `utils/build.js` — no manual setup required.
 - **Vercel CLI auth:** requires `VERCEL_TOKEN` secret. Scope: `my-team-5c660a1c`. Project: `lucem-wallet`.
+
+**Reproduce the Vercel build locally** (aligned environment — do this instead of `npm run build` when chasing a Vercel-only failure):
+
+```bash
+nvm use            # picks up .nvmrc → Node 20.19.0
+npm ci             # exact locked deps (not `npm install`)
+npm run build:webpack
+```
+
+Divergences that make a build pass locally but fail on Vercel — and the guards now in place:
+- **Node drift:** `.nvmrc`/`.node-version` + `engine-strict=true` fail fast on the wrong major.
+- **Dependency drift:** `npm ci` installs the exact locked tree instead of re-resolving semver.
+- **Case-sensitive imports:** `case-sensitive-paths-webpack-plugin` fails locally on casing that only Linux would reject.
+- **Flaky tests in the deploy path:** Jest no longer runs inside the Vercel build.
 
 ### Jest / ESLint baselines
 

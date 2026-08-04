@@ -133,7 +133,13 @@ webpack(config, function (err, stats) {
     console.log('✨ Build information saved to build/build-info.json');
     console.log('\n');
 
-    if (!process.env.CI && process.env.LUCEM_SKIP_SERVE !== '1') {
+    // Never spawn the long-lived preview server in a deploy/CI context. Vercel
+    // sets VERCEL=1 (CI may be unset), so guard on both to avoid hanging builds.
+    if (
+      !process.env.CI &&
+      !process.env.VERCEL &&
+      process.env.LUCEM_SKIP_SERVE !== '1'
+    ) {
       startLocalPwaPreview();
     }
   }

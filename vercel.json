@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:webpack",
   "outputDirectory": "build",
-  "installCommand": "npm install",
+  "installCommand": "npm ci",
   "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; else echo \"Skipping Vercel preview deployment; Jenkins gates and protected branch merge control releases.\"; exit 0; fi",
   "framework": null,
   "rewrites": [

@@ -7,6 +7,7 @@ var webpack = require('webpack'),
   CopyWebpackPlugin = require('copy-webpack-plugin'),
   HtmlWebpackPlugin = require('html-webpack-plugin'),
   TerserPlugin = require('terser-webpack-plugin'),
+  CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin'),
   NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 // Use only this import for EsbuildPlugin.
@@ -210,6 +211,9 @@ const options = {
       raw: true,
     }),
     new NodePolyfillPlugin(),
+    // Fail locally (case-insensitive macOS/Windows) on any import whose casing
+    // does not match the file on disk, matching Vercel's case-sensitive Linux FS.
+    new CaseSensitivePathsPlugin(),
     new webpack.ProgressPlugin(),
     new CleanWebpackPlugin({
       verbose: true,

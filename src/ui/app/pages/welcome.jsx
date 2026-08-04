@@ -99,7 +99,7 @@ const Welcome = () => {
       >
         <Text className="message">Wallet Setup</Text>
         <Box height="6" />
-        <WalletSetupButtons />
+        <WalletSetupButtons showBackupImport />
       </Flex>
       <Box
         flexShrink={0}

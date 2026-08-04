@@ -71,6 +71,8 @@ import {
   listEnabledPaymentAddresses,
   normalizeExternalIndices,
   deriveExternalPaymentFromAccountPublicKey,
+  matchExternalIndicesFromAddresses,
+  flattenAccountAddressesPayload,
   MAX_EXTERNAL_ADDRESS_INDEX,
 } from './multi-address';
 
@@ -1012,15 +1014,159 @@ export const getEnabledPaymentAddresses = async () => {
  */
 export const setAccountExternalIndices = async (indices) => {
   const currentIndex = await getCurrentAccountIndex();
+  return setAccountExternalIndicesAt(currentIndex, indices);
+};
+
+/**
+ * Persist external indices for a specific account storage slot.
+ */
+export const setAccountExternalIndicesAt = async (accountIndex, indices) => {
   const accounts = await getStorage(STORAGE.accounts);
-  if (!accounts?.[currentIndex]) {
-    throw new Error('No current account');
+  if (!accounts?.[accountIndex]) {
+    throw new Error('Account not found');
   }
   const next = normalizeExternalIndices(indices);
-  accounts[currentIndex].externalIndices = next;
+  accounts[accountIndex].externalIndices = next;
   await setStorage({ [STORAGE.accounts]: { ...accounts } });
   invalidateReadCache();
   return next;
+};
+
+/**
+ * Networks to scan for used payment addresses under a stake key.
+ * Preview/preprod share address bech32 format but are separate chains.
+ */
+const EXTERNAL_ADDRESS_SCAN_NETWORKS = [
+  NETWORK_ID.mainnet,
+  NETWORK_ID.preview,
+  NETWORK_ID.preprod,
+];
+
+/** Consecutive empty external indices before stopping address_txs fallback. */
+const EXTERNAL_ADDRESS_SCAN_GAP = 5;
+
+/**
+ * Query Koios/Blockfrost for payment addresses on a stake key, then match
+ * them to CIP-1852 external indices (0..MAX). Falls back to sequential
+ * /address_txs probing when /account_addresses is unavailable.
+ *
+ * @returns {number[]} sorted unique indices including 0
+ */
+export const discoverUsedExternalIndices = async (account) => {
+  await Loader.load();
+  if (!account?.publicKey) {
+    return [0];
+  }
+
+  // Unit tests create wallets without a live chain; skip network discovery
+  // unless explicitly opted in (avoids slow/flaky CI).
+  if (
+    typeof process !== 'undefined' &&
+    process.env.JEST_WORKER_ID != null &&
+    process.env.LUCEM_DISCOVER_ADDRESSES !== '1'
+  ) {
+    return getExternalIndices(account);
+  }
+
+  const found = new Set([0]);
+
+  for (const networkKey of EXTERNAL_ADDRESS_SCAN_NETWORKS) {
+    const rewardAddr = account[networkKey]?.rewardAddr;
+    if (!rewardAddr) continue;
+    const networkIdNumber = NETWORKD_ID_NUMBER[networkKey];
+
+    let matched = null;
+    try {
+      const req = KOIOS_REQUESTS.getAccountAddresses(rewardAddr, true);
+      const payload = await koiosRequest(
+        req.endpoint,
+        undefined,
+        req.body,
+        undefined,
+        networkKey
+      );
+      const addresses = flattenAccountAddressesPayload(payload);
+      matched = matchExternalIndicesFromAddresses(
+        Loader.Cardano,
+        account.publicKey,
+        networkIdNumber,
+        addresses
+      );
+      for (const i of matched) found.add(i);
+      continue;
+    } catch (error) {
+      console.warn(
+        `account_addresses scan failed (${networkKey}):`,
+        error.message || error
+      );
+    }
+
+    // Fallback when /account_addresses is unavailable: gap-limited /address_txs.
+    try {
+      let gap = 0;
+      for (let i = 1; i <= MAX_EXTERNAL_ADDRESS_INDEX; i++) {
+        const { paymentAddr } = deriveExternalPaymentFromAccountPublicKey(
+          Loader.Cardano,
+          account.publicKey,
+          networkIdNumber,
+          i
+        );
+        const req = KOIOS_REQUESTS.getAddressTxs(paymentAddr);
+        const txs = await koiosRequest(
+          req.endpoint,
+          undefined,
+          req.body,
+          undefined,
+          networkKey
+        );
+        if (addressTxsIndicatesHistory(txs)) {
+          found.add(i);
+          gap = 0;
+        } else {
+          gap += 1;
+          if (gap >= EXTERNAL_ADDRESS_SCAN_GAP) break;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        `address_txs external scan failed (${networkKey}):`,
+        error.message || error
+      );
+    }
+  }
+
+  return normalizeExternalIndices([...found]);
+};
+
+/**
+ * After import/create: discover used external addresses for a stored account
+ * and activate them (merged with any already enabled indices).
+ */
+export const activateDiscoveredExternalAddresses = async (accountIndex) => {
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts?.[accountIndex];
+  if (!account) return [0];
+
+  try {
+    const discovered = await discoverUsedExternalIndices(account);
+    const merged = normalizeExternalIndices([
+      ...getExternalIndices(account),
+      ...discovered,
+    ]);
+    if (
+      merged.length === getExternalIndices(account).length &&
+      merged.every((n, i) => n === getExternalIndices(account)[i])
+    ) {
+      return merged;
+    }
+    return setAccountExternalIndicesAt(accountIndex, merged);
+  } catch (error) {
+    console.warn(
+      'External address activation failed:',
+      error.message || error
+    );
+    return getExternalIndices(account);
+  }
 };
 
 /**
@@ -2697,6 +2843,17 @@ export const createAccount = async (
   await setStorage({
     [STORAGE.accounts]: { ...existingAccounts, ...newAccount },
   });
+
+  // Import/create: activate every used external address under this stake key.
+  try {
+    await activateDiscoveredExternalAddresses(index);
+  } catch (error) {
+    console.warn(
+      'Post-create address discovery skipped:',
+      error.message || error
+    );
+  }
+
   return index;
 };
 
@@ -2834,6 +2991,18 @@ export const createHWAccounts = async (accounts) => {
   // one). switchAccount also emits accountChange for open shells.
   const firstNewIndex = added[0].index;
   await setStorage({ [STORAGE.accounts]: existingAccounts });
+
+  for (const { index: hwIndex } of added) {
+    try {
+      await activateDiscoveredExternalAddresses(hwIndex);
+    } catch (error) {
+      console.warn(
+        `HW address discovery skipped (${hwIndex}):`,
+        error.message || error
+      );
+    }
+  }
+
   await switchAccount(firstNewIndex);
   return { added, skipped };
 };

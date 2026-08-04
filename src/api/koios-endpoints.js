@@ -143,6 +143,24 @@ export const KOIOS_ENDPOINTS = {
     }
   },
 
+  ACCOUNT_ADDRESSES: {
+    // POST /account_addresses - Payment addresses linked to stake keys
+    DETAILS: {
+      method: 'POST',
+      endpoint: '/account_addresses',
+      body: {
+        _stake_addresses: ['stake1...', 'stake2...'],
+        _empty: true, // include zero-balance addresses that still have history
+      },
+      example: {
+        _stake_addresses: [
+          'stake1u8fvlns8kzw5rl08uns7g35atul8k43unpcyd8we8juwuhcc27rzl',
+        ],
+        _empty: true,
+      },
+    },
+  },
+
   ACCOUNT_TXS: {
     // GET /account_txs - Get transaction history for given stake addresses
     DETAILS: {
@@ -405,6 +423,23 @@ export const KOIOS_REQUESTS = {
   getAccountsUtxos: (stakeAddresses, extended = false) => buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_UTXOS.DETAILS, {
     body: { _stake_addresses: [...stakeAddresses], _extended: extended }
   }),
+
+  // Payment addresses associated with stake account(s)
+  getAccountAddresses: (stakeAddress, empty = true) =>
+    buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_ADDRESSES.DETAILS, {
+      body: {
+        _stake_addresses: [stakeAddress],
+        _empty: Boolean(empty),
+      },
+    }),
+
+  getAccountsAddresses: (stakeAddresses, empty = true) =>
+    buildKoiosRequest(KOIOS_ENDPOINTS.ACCOUNT_ADDRESSES.DETAILS, {
+      body: {
+        _stake_addresses: [...stakeAddresses],
+        _empty: Boolean(empty),
+      },
+    }),
   
   // Get pool list
   getPoolList: () => buildKoiosRequest(KOIOS_ENDPOINTS.POOLS.LIST, {

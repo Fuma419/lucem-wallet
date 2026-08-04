@@ -52,13 +52,13 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
 
   React.useEffect(() => {
     setAdvancedOn(isMultiAddressEnabled(account));
-  }, [account?.index, account?.externalIndices]);
+  }, [account?.index, account?.externalIndices, account?.internalIndices]);
 
   React.useEffect(() => {
     if (advancedOn) {
       refreshRows();
     }
-  }, [advancedOn, account?.externalIndices, refreshRows]);
+  }, [advancedOn, account?.externalIndices, account?.internalIndices, refreshRows]);
 
   const notify = (indicesNext) => {
     onIndicesChange?.(indicesNext);
@@ -126,7 +126,12 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
     try {
       const next = await disableExternalAddressIndex(addressIndex);
       notify(next);
-      if (!isMultiAddressEnabled({ externalIndices: next })) {
+      if (
+        !isMultiAddressEnabled({
+          externalIndices: next,
+          internalIndices: account?.internalIndices,
+        })
+      ) {
         setAdvancedOn(false);
       }
       await refreshRows();
@@ -147,7 +152,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
     <Box w="full">
       <SettingsToggleRow
         label="Multi-address"
-        hint="Include additional receive addresses from this account (CIP-1852 external chain). Primary address stays the default receive address."
+        hint="Include additional receive addresses and any change addresses found on this stake key. Primary address stays the default receive address."
         isChecked={advancedOn}
         isDisabled={busy}
         onChange={onToggleAdvanced}
@@ -158,7 +163,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
         <Flex direction="column" gap={2} mt={4} w="full">
           {rows.map((row) => (
             <Flex
-              key={row.index}
+              key={`${row.role ?? 0}-${row.index}`}
               align="center"
               justify="space-between"
               gap={2}
@@ -172,7 +177,11 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
               <Box minW={0}>
                 <Text fontSize="xs" fontWeight="bold" color={rowText}>
                   #{row.index}
-                  {row.index === 0 ? ' · primary' : ''}
+                  {row.role === 1
+                    ? ' · change'
+                    : row.index === 0
+                      ? ' · primary'
+                      : ''}
                 </Text>
                 <Text
                   fontSize="xs"
@@ -184,9 +193,9 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
                   {truncateAddr(row.paymentAddr)}
                 </Text>
               </Box>
-              {row.index === 0 ? (
+              {row.role === 1 || row.index === 0 ? (
                 <Text fontSize="xs" color={hintColor}>
-                  Always on
+                  {row.role === 1 ? 'Auto' : 'Always on'}
                 </Text>
               ) : (
                 <Button

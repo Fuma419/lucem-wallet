@@ -22,8 +22,9 @@ function SettingsListNavItem({
       display="flex"
       alignItems="center"
       justifyContent="space-between"
-      py={4}
-      px={4}
+      py={3}
+      px={2}
+      mx={-2}
       rounded="xl"
       bg="transparent"
       borderWidth={0}
@@ -32,7 +33,7 @@ function SettingsListNavItem({
       _hover={{ bg: rowHover }}
       onClick={onClick}
     >
-      <Text fontWeight="semibold" color={labelColor} fontSize="md" textAlign="left">
+      <Text fontWeight="semibold" color={labelColor} fontSize="sm" textAlign="left">
         {label}
       </Text>
       <ChevronRightIcon color={chevron} boxSize={5} />

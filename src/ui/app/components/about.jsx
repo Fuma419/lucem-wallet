@@ -16,8 +16,8 @@ import PrivacyPolicy from './privacyPolicy';
 
 const { version } = require('../../../../package.json');
 
-/** Inline About block (logo, version, credits, legal links). */
-export const AboutContent = () => {
+/** Inline About block (logo, version, credits, optional legal links). */
+export const AboutContent = ({ showLegal = true }) => {
   const Logo = useColorModeValue(LogoBlack, LogoWhite);
   const IOHK = useColorModeValue(IOHKBlack, IOHKWhite);
   const muted = useColorModeValue('gray.600', 'whiteAlpha.600');
@@ -79,28 +79,36 @@ export const AboutContent = () => {
           src={IOHK}
           alt="IOHK"
         />
-        <Box height="3" />
-        <Box fontSize="xs">
-          <Link
-            onClick={() => termsRef.current.openModal()}
-            color={muted}
-          >
-            Terms of use
-          </Link>
-          <Text as="span" color={muted}>
-            {' '}
-            |{' '}
-          </Text>
-          <Link
-            onClick={() => privacyPolRef.current.openModal()}
-            color={muted}
-          >
-            Privacy Policy
-          </Link>
-        </Box>
+        {showLegal ? (
+          <>
+            <Box height="3" />
+            <Box fontSize="xs">
+              <Link
+                onClick={() => termsRef.current.openModal()}
+                color={muted}
+              >
+                Terms of use
+              </Link>
+              <Text as="span" color={muted}>
+                {' '}
+                |{' '}
+              </Text>
+              <Link
+                onClick={() => privacyPolRef.current.openModal()}
+                color={muted}
+              >
+                Privacy Policy
+              </Link>
+            </Box>
+          </>
+        ) : null}
       </Box>
-      <TermsOfUse ref={termsRef} />
-      <PrivacyPolicy ref={privacyPolRef} />
+      {showLegal ? (
+        <>
+          <TermsOfUse ref={termsRef} />
+          <PrivacyPolicy ref={privacyPolRef} />
+        </>
+      ) : null}
     </>
   );
 };

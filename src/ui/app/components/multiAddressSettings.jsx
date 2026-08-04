@@ -1,9 +1,9 @@
 import {
   Box,
   Button,
-  Checkbox,
   Collapse,
   Flex,
+  Switch,
   Text,
   useColorModeValue,
   useToast,
@@ -145,7 +145,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
   };
 
   return (
-    <Box w="full" mt={2}>
+    <Box w="full">
       <Flex align="center" justify="space-between" gap={3} w="full">
         <Box flex="1" minW={0}>
           <Text color={labelMuted} fontWeight="semibold" fontSize="sm">
@@ -156,7 +156,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
             external chain). Primary address stays the default receive address.
           </Text>
         </Box>
-        <Checkbox
+        <Switch
           isChecked={advancedOn}
           isDisabled={busy}
           colorScheme="yellow"

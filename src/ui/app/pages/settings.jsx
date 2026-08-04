@@ -17,11 +17,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  RadioGroup,
-  Radio,
   useColorModeValue,
-  Wrap,
-  WrapItem,
   Stack,
 } from '@chakra-ui/react';
 import { useAppearancePreference } from '../../appearanceContext';
@@ -47,12 +43,16 @@ import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
 import MultiAddressSettings from '../components/multiAddressSettings';
 import { AboutContent } from '../components/about';
+import useSurfaceColors from '../hooks/useSurfaceColors';
 
 /** Typed confirmation phrase (spacing / case normalized on compare). */
 const ERASE_WALLET_CONFIRM_PHRASE = 'Erase all data';
 
 const normalizeErasePhraseInput = (s) =>
   s.trim().replace(/\s+/g, ' ').toLowerCase();
+
+const TRAY_CLEARANCE_PB =
+  'calc(6.5rem + env(safe-area-inset-bottom, 0px))';
 
 /** Field + button tokens scoped to Settings (supports light mode). */
 function useSettingsChrome() {
@@ -65,6 +65,17 @@ function useSettingsChrome() {
   const primaryFg = useColorModeValue('gray.900', 'white');
   const primaryHover = useColorModeValue('gray.300', 'gray.700');
   const primaryActive = primaryHover;
+  const segmentTrack = useColorModeValue(
+    'rgba(15, 23, 42, 0.06)',
+    'rgba(255, 255, 255, 0.06)'
+  );
+  const segmentActiveBg = useColorModeValue('white', 'whiteAlpha.200');
+  const segmentActiveFg = useColorModeValue('gray.900', 'white');
+  const segmentIdleFg = useColorModeValue('gray.600', 'whiteAlpha.700');
+  const segmentShadow = useColorModeValue(
+    '0 1px 3px rgba(15, 23, 42, 0.12)',
+    '0 1px 3px rgba(0, 0, 0, 0.35)'
+  );
 
   const inputProps = {
     bg: inputBg,
@@ -85,22 +96,109 @@ function useSettingsChrome() {
     _active: { bg: primaryActive },
   };
 
-  return { inputProps, primaryButtonProps };
+  return {
+    inputProps,
+    primaryButtonProps,
+    segmentTrack,
+    segmentActiveBg,
+    segmentActiveFg,
+    segmentIdleFg,
+    segmentShadow,
+  };
 }
 
-function SettingsSectionTitle({ children }) {
-  const titleColor = useColorModeValue('gray.900', 'white');
+function SettingsPanel({ title, description, children, testId }) {
+  const { pageFg, mutedFg } = useSurfaceColors();
   return (
-    <Text
-      fontSize="md"
-      fontWeight="bold"
-      color={titleColor}
-      letterSpacing="tight"
-      mb={3}
-      mt={1}
+    <Box
+      className="lucem-inset-surface"
+      rounded="3xl"
+      p={{ base: 4, md: 5 }}
+      data-testid={testId}
     >
+      {title ? (
+        <Text
+          fontSize="md"
+          fontWeight="bold"
+          color={pageFg}
+          letterSpacing="tight"
+          mb={description ? 1 : 4}
+        >
+          {title}
+        </Text>
+      ) : null}
+      {description ? (
+        <Text fontSize="sm" color={mutedFg} mb={4}>
+          {description}
+        </Text>
+      ) : null}
       {children}
-    </Text>
+    </Box>
+  );
+}
+
+function SettingsToggleRow({ label, hint, control }) {
+  const { softFg, subtleFg } = useSurfaceColors();
+  return (
+    <Flex align="center" justify="space-between" gap={4} w="full">
+      <Box flex="1" minW={0}>
+        <Text color={softFg} fontWeight="semibold" fontSize="sm">
+          {label}
+        </Text>
+        {hint ? (
+          <Text color={subtleFg} fontSize="xs" mt={1} lineHeight="short">
+            {hint}
+          </Text>
+        ) : null}
+      </Box>
+      <Box flexShrink={0}>{control}</Box>
+    </Flex>
+  );
+}
+
+function SegmentedChoice({ value, options, onChange, 'aria-label': ariaLabel }) {
+  const {
+    segmentTrack,
+    segmentActiveBg,
+    segmentActiveFg,
+    segmentIdleFg,
+    segmentShadow,
+  } = useSettingsChrome();
+
+  return (
+    <Flex
+      role="radiogroup"
+      aria-label={ariaLabel}
+      w="full"
+      p="1"
+      rounded="xl"
+      bg={segmentTrack}
+      gap={1}
+    >
+      {options.map((opt) => {
+        const selected = value === opt.value;
+        return (
+          <Button
+            key={opt.value}
+            flex={1}
+            size="sm"
+            h="9"
+            rounded="lg"
+            variant="unstyled"
+            fontWeight="semibold"
+            fontSize="sm"
+            bg={selected ? segmentActiveBg : 'transparent'}
+            color={selected ? segmentActiveFg : segmentIdleFg}
+            boxShadow={selected ? segmentShadow : 'none'}
+            onClick={() => onChange(opt.value)}
+            aria-checked={selected}
+            role="radio"
+          >
+            {opt.label}
+          </Button>
+        );
+      })}
+    </Flex>
   );
 }
 
@@ -113,18 +211,22 @@ const Settings = () => {
     (actions) => actions.settings.setSettings
   );
   const { appearance, setAppearance } = useAppearancePreference();
-  const { inputProps: settingsInputProps, primaryButtonProps: settingsPrimaryButtonProps } =
-    useSettingsChrome();
-  const labelMuted = useColorModeValue('gray.700', 'white');
+  const { mutedFg, subtleFg } = useSurfaceColors();
+  const {
+    inputProps: settingsInputProps,
+    primaryButtonProps: settingsPrimaryButtonProps,
+  } = useSettingsChrome();
   const iconBorder = useColorModeValue('gray.300', 'whiteAlpha.300');
   const iconFg = useColorModeValue('gray.800', 'whiteAlpha.900');
   const iconBtnBg = useColorModeValue('gray.100', 'black');
   const iconBtnHover = useColorModeValue('gray.200', 'whiteAlpha.50');
-  const hintColor = useColorModeValue('gray.600', 'whiteAlpha.500');
   const eraseModalBg = useColorModeValue('white', 'gray.900');
   const eraseModalFg = useColorModeValue('gray.900', 'white');
   const phraseHint = useColorModeValue('gray.600', 'whiteAlpha.600');
-  const sectionDivider = useColorModeValue('gray.300', 'whiteAlpha.200');
+  const dangerBg = useColorModeValue('red.50', 'rgba(120, 20, 20, 0.35)');
+  const dangerFg = useColorModeValue('red.700', 'red.100');
+  const dangerBorder = useColorModeValue('red.300', 'red.400');
+  const dangerHover = useColorModeValue('red.100', 'rgba(160, 30, 30, 0.45)');
   const [refreshed, setRefreshed] = React.useState(false);
   const [account, setAccount] = React.useState({ name: '', avatar: '' });
   const changePasswordRef = React.useRef();
@@ -139,6 +241,8 @@ const Settings = () => {
   const closeIcon = useColorModeValue('gray.600', 'whiteAlpha.700');
   const closeHover = useColorModeValue('gray.800', 'white');
   const emptyHint = useColorModeValue('gray.600', 'whiteAlpha.500');
+
+  const currency = settings.currency === 'eur' ? 'eur' : 'usd';
 
   const avatarHandler = async () => {
     const avatar = Math.random().toString();
@@ -191,18 +295,10 @@ const Settings = () => {
       className="lucem-settings-shell lucem-wallet-main-column"
       data-testid="settings-page"
     >
-      <Flex
-        direction="column"
-        align="center"
-        px={{ base: 3, md: 4 }}
-        pt={4}
-        pb={3}
-        gap={3}
-      >
-        <Text textAlign="center" fontSize="xl" fontWeight="bold">
+      <Flex align="center" px={{ base: 3, md: 4 }} pt={4} pb={2}>
+        <Text flex="1" textAlign="center" fontSize="xl" fontWeight="bold">
           Settings
         </Text>
-        <AboutContent />
       </Flex>
 
       <Box
@@ -210,326 +306,344 @@ const Settings = () => {
         minH={0}
         overflowY="auto"
         w="full"
-        px={{ base: 4, md: 5 }}
-        pb="calc(6.5rem + env(safe-area-inset-bottom, 0px))"
+        px={{ base: 4, md: 6 }}
+        pb={TRAY_CLEARANCE_PB}
       >
-        <Box w="full" maxW="sm" mx="auto" pt={1}>
-          <SettingsSectionTitle>Account</SettingsSectionTitle>
-          <Flex align="center" justify="center" gap={5} w="full">
-            <Box w="72px" h="72px" flexShrink={0} rounded="full" overflow="hidden">
-              <AvatarLoader forceUpdate avatar={account.avatar} width="full" />
-            </Box>
-            <IconButton
-              onClick={() => {
-                avatarHandler();
-              }}
-              rounded="lg"
-              size="md"
-              variant="outline"
-              borderColor={iconBorder}
-              color={iconFg}
-              bg={iconBtnBg}
-              _hover={{ bg: iconBtnHover }}
-              aria-label="New avatar"
-              icon={<RepeatIcon />}
-            />
-          </Flex>
-
-          <Flex align="center" justify="center" gap={3} mt={8} w="full">
-            <Text color={labelMuted} fontWeight="medium">
-              USD
-            </Text>
-            <ButtonSwitch
-              defaultChecked={settings.currency !== 'usd'}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSettings({ ...settings, currency: 'eur' });
-                } else {
-                  setSettings({ ...settings, currency: 'usd' });
-                }
-              }}
-            />
-            <Text color={labelMuted} fontWeight="medium">
-              EUR
-            </Text>
-          </Flex>
-
-          <Flex direction="column" align="stretch" gap={2} mt={8} w="full">
-            <Text color={labelMuted} fontWeight="semibold" fontSize="sm">
-              Appearance
-            </Text>
-            <RadioGroup onChange={setAppearance} value={appearance}>
-              <Wrap spacing={4} rowGap={3}>
-                <WrapItem>
-                  <Radio value="dark" colorScheme="yellow">
-                    Dark
-                  </Radio>
-                </WrapItem>
-                <WrapItem>
-                  <Radio value="light" colorScheme="yellow">
-                    Light
-                  </Radio>
-                </WrapItem>
-                <WrapItem>
-                  <Radio value="system" colorScheme="yellow">
-                    System
-                  </Radio>
-                </WrapItem>
-              </Wrap>
-            </RadioGroup>
-          </Flex>
-
-          <Flex
-            direction="column"
-            align="stretch"
-            gap={2}
-            mt={8}
-            w="full"
-            data-testid="settings-swap-trays"
+        <Stack spacing={4} w="full" maxW="sm" mx="auto" pt={1}>
+          <SettingsPanel
+            title="Profile"
+            description="Avatar for the active account. Rename accounts from the Accounts page."
+            testId="settings-profile-panel"
           >
-            <Text color={labelMuted} fontWeight="semibold" fontSize="sm">
-              Bottom trays
-            </Text>
-            <Flex align="center" justify="space-between" gap={3} w="full">
-              <Box flex="1" minW={0}>
-                <Text color={labelMuted} fontSize="sm">
-                  Swap tray positions
-                </Text>
-                <Text color={hintColor} fontSize="xs" mt={1}>
-                  {settings.swapTrays
-                    ? 'Actions on the left, network on the right.'
-                    : 'Network on the left, actions on the right.'}
-                </Text>
+            <Flex align="center" justify="center" gap={5} w="full">
+              <Box
+                w="72px"
+                h="72px"
+                flexShrink={0}
+                rounded="full"
+                overflow="hidden"
+              >
+                <AvatarLoader
+                  forceUpdate
+                  avatar={account.avatar}
+                  width="full"
+                />
               </Box>
-              <ButtonSwitch
-                isChecked={Boolean(settings.swapTrays)}
-                colorScheme="yellow"
-                onChange={(e) => {
-                  setSettings({
-                    ...settings,
-                    swapTrays: e.target.checked,
-                  });
-                }}
-                aria-label="Swap bottom tray positions"
+              <IconButton
+                onClick={avatarHandler}
+                rounded="lg"
+                size="md"
+                variant="outline"
+                borderColor={iconBorder}
+                color={iconFg}
+                bg={iconBtnBg}
+                _hover={{ bg: iconBtnHover }}
+                aria-label="New avatar"
+                icon={<RepeatIcon />}
               />
             </Flex>
-          </Flex>
+          </SettingsPanel>
 
-          <Box mt={8} w="full">
-            <SettingsSectionTitle>Advanced</SettingsSectionTitle>
+          <SettingsPanel
+            title="Preferences"
+            description="Display and layout choices for this device."
+            testId="settings-preferences-panel"
+          >
+            <Stack spacing={5}>
+              <Box>
+                <Text color={mutedFg} fontWeight="semibold" fontSize="sm" mb={2}>
+                  Currency
+                </Text>
+                <SegmentedChoice
+                  aria-label="Fiat currency"
+                  value={currency}
+                  onChange={(next) => {
+                    setSettings({ ...settings, currency: next });
+                  }}
+                  options={[
+                    { value: 'usd', label: 'USD' },
+                    { value: 'eur', label: 'EUR' },
+                  ]}
+                />
+              </Box>
+
+              <Box>
+                <Text color={mutedFg} fontWeight="semibold" fontSize="sm" mb={2}>
+                  Appearance
+                </Text>
+                <SegmentedChoice
+                  aria-label="Appearance"
+                  value={appearance}
+                  onChange={setAppearance}
+                  options={[
+                    { value: 'light', label: 'Light' },
+                    { value: 'dark', label: 'Dark' },
+                    { value: 'system', label: 'System' },
+                  ]}
+                />
+              </Box>
+
+              <Box data-testid="settings-swap-trays">
+                <SettingsToggleRow
+                  label="Swap tray positions"
+                  hint={
+                    settings.swapTrays
+                      ? 'Actions on the left, network on the right.'
+                      : 'Network on the left, actions on the right.'
+                  }
+                  control={
+                    <ButtonSwitch
+                      isChecked={Boolean(settings.swapTrays)}
+                      colorScheme="yellow"
+                      onChange={(e) => {
+                        setSettings({
+                          ...settings,
+                          swapTrays: e.target.checked,
+                        });
+                      }}
+                      aria-label="Swap bottom tray positions"
+                    />
+                  }
+                />
+              </Box>
+            </Stack>
+          </SettingsPanel>
+
+          <SettingsPanel
+            title="Whitelisted sites"
+            description="dApps allowed to connect to Lucem."
+            testId="settings-whitelist-panel"
+          >
+            {whitelisted ? (
+              whitelisted.length > 0 ? (
+                <Flex direction="column" gap={2} w="full">
+                  {whitelisted.map((origin, index) => (
+                    <Flex
+                      key={index}
+                      align="center"
+                      justify="space-between"
+                      gap={3}
+                      py={3}
+                      px={3}
+                      rounded="2xl"
+                      bg={rowBg}
+                      borderWidth="1px"
+                      borderColor={rowBorder}
+                    >
+                      <Image
+                        width="24px"
+                        src={platform.icons.getFaviconUrl(origin)}
+                        fallback={
+                          <SkeletonCircle width="24px" height="24px" />
+                        }
+                      />
+                      <Text
+                        flex="1"
+                        color={rowText}
+                        fontSize="sm"
+                        fontWeight="medium"
+                        isTruncated
+                      >
+                        {origin.split('//')[1]}
+                      </Text>
+                      <SmallCloseIcon
+                        cursor="pointer"
+                        color={closeIcon}
+                        _hover={{ color: closeHover }}
+                        aria-label={`Remove ${origin}`}
+                        onClick={async () => {
+                          await removeWhitelisted(origin);
+                          loadWhitelist();
+                        }}
+                      />
+                    </Flex>
+                  ))}
+                </Flex>
+              ) : (
+                <Text textAlign="center" color={emptyHint} py={4} fontSize="sm">
+                  No whitelisted sites
+                </Text>
+              )
+            ) : (
+              <Flex w="full" py={6} align="center" justify="center">
+                <Spinner color="yellow" speed="0.5s" />
+              </Flex>
+            )}
+          </SettingsPanel>
+
+          <SettingsPanel
+            title="Advanced"
+            description="Optional receive-address options for the active account."
+            testId="settings-advanced-panel"
+          >
             <MultiAddressSettings
               account={account}
               onIndicesChange={(externalIndices) => {
                 setAccount((prev) => ({ ...prev, externalIndices }));
               }}
             />
-          </Box>
+          </SettingsPanel>
 
-          <Stack
-            spacing={3}
-            mt={8}
-            className="lucem-equal-width-actions"
-            data-testid="settings-primary-actions"
+          <SettingsPanel
+            title="Security & data"
+            testId="settings-security-panel"
           >
-            <Button
-              {...settingsPrimaryButtonProps}
-              isDisabled={refreshed}
-              onClick={refreshHandler}
+            <Stack
+              spacing={3}
+              className="lucem-equal-width-actions"
+              data-testid="settings-primary-actions"
             >
-              Refresh Balance
-            </Button>
-            <Button
-              {...settingsPrimaryButtonProps}
-              onClick={() => {
-                changePasswordRef.current.openModal();
-              }}
+              <Button
+                {...settingsPrimaryButtonProps}
+                isDisabled={refreshed}
+                onClick={refreshHandler}
+              >
+                Refresh Balance
+              </Button>
+              <Button
+                {...settingsPrimaryButtonProps}
+                onClick={() => {
+                  changePasswordRef.current.openModal();
+                }}
+              >
+                Change Password
+              </Button>
+              <Button
+                {...settingsPrimaryButtonProps}
+                borderWidth="1px"
+                borderColor={dangerBorder}
+                bg={dangerBg}
+                color={dangerFg}
+                _hover={{ bg: dangerHover, borderColor: dangerBorder }}
+                _active={{ bg: dangerHover }}
+                onClick={() => {
+                  setEraseAck(false);
+                  setErasePhrase('');
+                  setEraseModalOpen(true);
+                }}
+              >
+                Erase all data
+              </Button>
+            </Stack>
+            <Text mt={3} fontSize="xs" color={subtleFg} textAlign="center">
+              Erase removes every Lucem account, keys, and settings from this
+              browser or extension. You will need your recovery phrase to use
+              funds again.
+            </Text>
+          </SettingsPanel>
+
+          <SettingsPanel title="About" testId="settings-about-panel">
+            <AboutContent showLegal={false} />
+            <Box mt={4}>
+              <Text color={mutedFg} fontWeight="semibold" fontSize="sm" mb={1}>
+                Legal
+              </Text>
+              <LegalSettings />
+            </Box>
+          </SettingsPanel>
+        </Stack>
+      </Box>
+
+      <Modal
+        isOpen={eraseModalOpen}
+        onClose={() => {
+          if (!eraseBusy) setEraseModalOpen(false);
+        }}
+        isCentered
+        size="sm"
+      >
+        <ModalOverlay />
+        <ModalContent bg={eraseModalBg} color={eraseModalFg} mx={3}>
+          <ModalHeader fontSize="md">Erase all data on this device?</ModalHeader>
+          <ModalBody>
+            <Text fontSize="sm" mb={3}>
+              This permanently removes all Lucem data from this browser or
+              extension: encrypted keys, accounts, network choice, whitelisted
+              sites, and local UI state. It cannot be undone. Your recovery
+              phrase (or hardware wallet backup) is the only way to access funds
+              again.
+            </Text>
+            <Checkbox
+              isChecked={eraseAck}
+              onChange={(e) => setEraseAck(e.target.checked)}
+              colorScheme="yellow"
+              mb={3}
             >
-              Change Password
-            </Button>
+              I have saved my recovery phrase or I accept losing access to these
+              funds.
+            </Checkbox>
+            <Text fontSize="xs" color={phraseHint} mb={1}>
+              Type the phrase below (spacing and capitalization are flexible):
+            </Text>
+            <Text
+              fontSize="sm"
+              fontFamily="mono"
+              color="yellow.200"
+              mb={2}
+              userSelect="all"
+            >
+              {ERASE_WALLET_CONFIRM_PHRASE}
+            </Text>
+            <Input
+              {...settingsInputProps}
+              rounded="md"
+              value={erasePhrase}
+              onChange={(e) => setErasePhrase(e.target.value)}
+              placeholder={ERASE_WALLET_CONFIRM_PHRASE}
+              autoComplete="off"
+            />
+          </ModalBody>
+          <ModalFooter flexDirection="column" gap={2}>
             <Button
-              {...settingsPrimaryButtonProps}
-              borderWidth="1px"
-              borderColor="red.400"
-              bg="rgba(120, 20, 20, 0.35)"
-              color="red.100"
-              _hover={{ bg: 'rgba(160, 30, 30, 0.45)', borderColor: 'red.300' }}
-              _active={{ bg: 'rgba(160, 30, 30, 0.55)' }}
-              onClick={() => {
-                setEraseAck(false);
-                setErasePhrase('');
-                setEraseModalOpen(true);
+              w="full"
+              colorScheme="red"
+              isDisabled={
+                !eraseAck ||
+                normalizeErasePhraseInput(erasePhrase) !==
+                  normalizeErasePhraseInput(ERASE_WALLET_CONFIRM_PHRASE) ||
+                eraseBusy
+              }
+              isLoading={eraseBusy}
+              onClick={async () => {
+                setEraseBusy(true);
+                try {
+                  await eraseLocalWalletData();
+                  setEraseModalOpen(false);
+                  toast({
+                    title: 'All local data erased',
+                    description: 'Reloading…',
+                    status: 'success',
+                    duration: 2000,
+                  });
+                  window.setTimeout(() => {
+                    platform.navigation.reloadToWalletBootstrap();
+                  }, 250);
+                } catch (e) {
+                  toast({
+                    title: 'Could not erase data',
+                    description:
+                      e && e.message ? String(e.message) : 'Please try again.',
+                    status: 'error',
+                    duration: 5000,
+                  });
+                  setEraseBusy(false);
+                }
               }}
             >
               Erase all data
             </Button>
-          </Stack>
-          <Text mt={3} fontSize="xs" color={hintColor} textAlign="center" w="full">
-            Removes every Lucem account, keys, and settings from this browser or
-            extension. You will need your recovery phrase to use funds again.
-          </Text>
-
-          <Box borderTopWidth="1px" borderColor={sectionDivider} my={8} />
-
-          <SettingsSectionTitle>Whitelisted sites</SettingsSectionTitle>
-          {whitelisted ? (
-            whitelisted.length > 0 ? (
-              <Flex direction="column" gap={3} w="full">
-                {whitelisted.map((origin, index) => (
-                  <Flex
-                    key={index}
-                    align="center"
-                    justify="space-between"
-                    gap={3}
-                    py={3}
-                    px={4}
-                    rounded="xl"
-                    bg={rowBg}
-                    borderWidth="1px"
-                    borderColor={rowBorder}
-                  >
-                    <Image
-                      width="24px"
-                      src={platform.icons.getFaviconUrl(origin)}
-                      fallback={<SkeletonCircle width="24px" height="24px" />}
-                    />
-                    <Text
-                      flex="1"
-                      color={rowText}
-                      fontSize="sm"
-                      fontWeight="medium"
-                      isTruncated
-                    >
-                      {origin.split('//')[1]}
-                    </Text>
-                    <SmallCloseIcon
-                      cursor="pointer"
-                      color={closeIcon}
-                      _hover={{ color: closeHover }}
-                      onClick={async () => {
-                        await removeWhitelisted(origin);
-                        loadWhitelist();
-                      }}
-                    />
-                  </Flex>
-                ))}
-              </Flex>
-            ) : (
-              <Text textAlign="center" color={emptyHint} py={6} fontSize="sm">
-                No whitelisted sites
-              </Text>
-            )
-          ) : (
-            <Flex w="full" py={8} align="center" justify="center">
-              <Spinner color="yellow" speed="0.5s" />
-            </Flex>
-          )}
-
-          <Box borderTopWidth="1px" borderColor={sectionDivider} my={8} />
-
-          <SettingsSectionTitle>Legal</SettingsSectionTitle>
-          <LegalSettings />
-
-          <Modal
-            isOpen={eraseModalOpen}
-            onClose={() => {
-              if (!eraseBusy) setEraseModalOpen(false);
-            }}
-            isCentered
-            size="sm"
-          >
-            <ModalOverlay />
-            <ModalContent bg={eraseModalBg} color={eraseModalFg} mx={3}>
-              <ModalHeader fontSize="md">Erase all data on this device?</ModalHeader>
-              <ModalBody>
-                <Text fontSize="sm" mb={3}>
-                  This permanently removes all Lucem data from this browser or
-                  extension: encrypted keys, accounts, network choice, whitelisted
-                  sites, and local UI state. It cannot be undone. Your recovery phrase
-                  (or hardware wallet backup) is the only way to access funds again.
-                </Text>
-                <Checkbox
-                  isChecked={eraseAck}
-                  onChange={(e) => setEraseAck(e.target.checked)}
-                  colorScheme="yellow"
-                  mb={3}
-                >
-                  I have saved my recovery phrase or I accept losing access to these
-                  funds.
-                </Checkbox>
-                <Text fontSize="xs" color={phraseHint} mb={1}>
-                  Type the phrase below (spacing and capitalization are flexible):
-                </Text>
-                <Text
-                  fontSize="sm"
-                  fontFamily="mono"
-                  color="yellow.200"
-                  mb={2}
-                  userSelect="all"
-                >
-                  {ERASE_WALLET_CONFIRM_PHRASE}
-                </Text>
-                <Input
-                  {...settingsInputProps}
-                  rounded="md"
-                  value={erasePhrase}
-                  onChange={(e) => setErasePhrase(e.target.value)}
-                  placeholder={ERASE_WALLET_CONFIRM_PHRASE}
-                  autoComplete="off"
-                />
-              </ModalBody>
-              <ModalFooter flexDirection="column" gap={2}>
-                <Button
-                  w="full"
-                  colorScheme="red"
-                  isDisabled={
-                    !eraseAck ||
-                    normalizeErasePhraseInput(erasePhrase) !==
-                      normalizeErasePhraseInput(ERASE_WALLET_CONFIRM_PHRASE) ||
-                    eraseBusy
-                  }
-                  isLoading={eraseBusy}
-                  onClick={async () => {
-                    setEraseBusy(true);
-                    try {
-                      await eraseLocalWalletData();
-                      setEraseModalOpen(false);
-                      toast({
-                        title: 'All local data erased',
-                        description: 'Reloading…',
-                        status: 'success',
-                        duration: 2000,
-                      });
-                      window.setTimeout(() => {
-                        platform.navigation.reloadToWalletBootstrap();
-                      }, 250);
-                    } catch (e) {
-                      toast({
-                        title: 'Could not erase data',
-                        description:
-                          e && e.message ? String(e.message) : 'Please try again.',
-                        status: 'error',
-                        duration: 5000,
-                      });
-                      setEraseBusy(false);
-                    }
-                  }}
-                >
-                  Erase all data
-                </Button>
-                <Button
-                  variant="ghost"
-                  w="full"
-                  isDisabled={eraseBusy}
-                  onClick={() => setEraseModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-              </ModalFooter>
-            </ModalContent>
-          </Modal>
-          <ChangePasswordModal ref={changePasswordRef} />
-        </Box>
-      </Box>
+            <Button
+              variant="ghost"
+              w="full"
+              isDisabled={eraseBusy}
+              onClick={() => setEraseModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      <ChangePasswordModal ref={changePasswordRef} />
     </Box>
   );
 };

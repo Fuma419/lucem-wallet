@@ -199,7 +199,11 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(settingsSrc).toContain('glowEffects');
     expect(traysSrc).toContain('swapTrays');
     expect(traysSrc).toContain('glowEffects');
-    expect(traysSrc).toContain('glowOn');
+    expect(traysSrc).toContain('className="button fab-vote"');
+    expect(traysSrc).toContain('className="button fab-toggle"');
+    expect(traysSrc).toContain('color="white"');
+    expect(traysSrc).not.toContain('useColorModeValue');
+    expect(traysSrc).not.toContain('fabColor');
     expect(traysSrc).toContain('data-tray-side');
     expect(shellSrc).toContain('swapTrays={Boolean(settings.swapTrays)}');
     expect(shellSrc).toContain('glowEffects={settings.glowEffects !== false}');

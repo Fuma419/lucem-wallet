@@ -39,7 +39,7 @@ describe('governance page and wallet network button wiring', () => {
     expect(traysSrc).toContain('networkOptions.map((networkOption)');
     expect(traysSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
     expect(traysSrc).toContain('data-active=');
-    expect(traysSrc).toMatch(/shadow="none"/);
+    expect(traysSrc).toMatch(/shadow:\s*'none'/);
     expect(traysSrc).toContain('label={networkOption.label}');
     expect(traysSrc).toContain('wallet-tray-backdrop');
     expect(traysSrc).toContain('blackAlpha.700');

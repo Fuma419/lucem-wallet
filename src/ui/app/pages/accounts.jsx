@@ -49,6 +49,7 @@ import AvatarLoader from '../components/avatarLoader';
 import UnitDisplay from '../components/unitDisplay';
 import TransactionBuilder from '../components/transactionBuilder';
 import { WalletSetupButtons } from '../components/walletSetupFlow';
+import MultiAddressSettings from '../components/multiAddressSettings';
 import useSurfaceColors from '../hooks/useSurfaceColors';
 import { isSameAccountIndex } from '../utils/accountIndex';
 
@@ -381,6 +382,28 @@ const Accounts = () => {
                   Import seed to enable signing
                 </Button>
               ) : null}
+            </Box>
+          ) : null}
+
+          {currentAccount ? (
+            <Box
+              className="lucem-inset-surface"
+              rounded="3xl"
+              p={{ base: 4, md: 5 }}
+              data-testid="accounts-multi-address-panel"
+            >
+              <Text fontSize="sm" fontWeight="bold" color={pageFg} mb={1}>
+                Addresses
+              </Text>
+              <Text fontSize="sm" color={mutedFg} mb={3}>
+                Receive and change addresses for the selected account.
+              </Text>
+              <MultiAddressSettings
+                account={currentAccount}
+                onIndicesChange={async () => {
+                  await load();
+                }}
+              />
             </Box>
           ) : null}
 

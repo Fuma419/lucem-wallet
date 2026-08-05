@@ -48,6 +48,19 @@ describe('stake-unified wallet source guards', () => {
     expect(src).not.toMatch(/setAccountExternalIndices\(\s*\[0\]\s*\)/);
   });
 
+  test('multi-address panel lives on Accounts not Settings', () => {
+    expect(read('ui/app/pages/accounts.jsx')).toMatch(/MultiAddressSettings/);
+    expect(read('ui/app/pages/accounts.jsx')).toMatch(
+      /accounts-multi-address-panel/
+    );
+    expect(read('ui/app/pages/settings.jsx')).not.toMatch(
+      /MultiAddressSettings/
+    );
+    expect(read('ui/app/pages/settings.jsx')).not.toMatch(
+      /settings-advanced-panel/
+    );
+  });
+
   test('Keystone signing uses enabled payment/change paths not primary-only', () => {
     const src = read('api/keystone-cardano.js');
     expect(src).toMatch(/findEnabledPaymentByAddress/);

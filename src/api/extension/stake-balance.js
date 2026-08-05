@@ -4,8 +4,28 @@
  * Payment addresses under one reward/stake key share controlled funds. Lucem
  * aggregates UTxOs via `/account_utxos` so the wallet total matches chain
  * stake-controlled ADA and native assets — not just the primary address.
+ *
+ * The stake account for a payment address is discovered via `/address_info`
+ * (`stake_address`), not hard-coded.
  */
 import { bigIntLovelace } from '../lovelace-scalar';
+
+/**
+ * Extract the stake/reward address from a Koios or Blockfrost-shaped
+ * `/address_info` payload (array or single row).
+ *
+ * @param {unknown} payload
+ * @returns {string|null}
+ */
+export const stakeAddressFromAddressInfo = (payload) => {
+  const row = Array.isArray(payload) ? payload[0] : payload;
+  if (!row || typeof row !== 'object') return null;
+  const stake =
+    row.stake_address ||
+    row.stake_addr ||
+    (typeof row.stake_addr === 'object' ? row.stake_addr?.bech32 : null);
+  return typeof stake === 'string' && stake.length > 0 ? stake : null;
+};
 
 /**
  * Sum Koios-shaped UTxO rows into a flat asset list (lovelace + native units).

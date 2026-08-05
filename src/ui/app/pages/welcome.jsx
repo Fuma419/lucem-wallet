@@ -10,7 +10,7 @@ import {
   useColorMode,
   useColorModeValue,
 } from '@chakra-ui/react';
-import BannerDark from '../../../assets/img/bannerBlack.png'; // Directly using the dark banner
+import Logo from '../../../assets/img/logo.png';
 import { hasStoredAccounts } from '../../../api/extension';
 import { useNavigate } from 'react-router-dom';
 import { WalletSetupButtons } from '../components/walletSetupFlow';
@@ -57,15 +57,25 @@ const Welcome = () => {
         flexShrink={0}
         pt="max(1rem, env(safe-area-inset-top, 0px))"
         px={4}
+        pb={1}
+        overflow="visible"
         textAlign="center"
       >
+        {/*
+          Use logo.png (padded mark) with object-fit contain so the full Lucem
+          orb + glow stays visible. bannerBlack.png runs glow to the file edges
+          and looked cropped on this screen.
+        */}
         <Image
           draggable={false}
-          width="150px"
-          maxW="min(150px, 72vw)"
-          src={BannerDark}
+          src={Logo}
+          alt="Lucem"
           mx="auto"
-          alt=""
+          width={{ base: '160px', sm: '180px' }}
+          maxW="min(180px, 70vw)"
+          height="auto"
+          objectFit="contain"
+          objectPosition="center"
         />
       </Box>
       {hasWallet && (

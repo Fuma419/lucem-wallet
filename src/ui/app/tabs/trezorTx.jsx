@@ -13,6 +13,7 @@ import {
   FlowExitButton,
   FlowShellHeader,
   leaveSignTabFlow,
+  readFlowReturnPath,
 } from '../components/flowExit';
 import {
   closeCurrentTab,
@@ -38,13 +39,14 @@ const App = () => {
 
   const abandon = React.useCallback(async () => {
     abandonedRef.current = true;
+    const dest = readFlowReturnPath() || '/wallet';
     try {
       resetSend();
-      setRoute('/wallet');
+      setRoute(dest);
     } catch {
       /* still leave */
     }
-    await leaveSignTabFlow();
+    await leaveSignTabFlow(dest);
   }, [resetSend, setRoute]);
 
   const init = async () => {
@@ -83,7 +85,7 @@ const App = () => {
     }
     if (abandonedRef.current) return;
     resetSend();
-    setRoute('/wallet');
+    setRoute(readFlowReturnPath() || '/wallet');
     setTimeout(() => closeCurrentTab(), 3000);
   };
 

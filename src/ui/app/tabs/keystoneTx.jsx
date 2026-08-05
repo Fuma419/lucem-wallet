@@ -142,7 +142,7 @@ const App = () => {
       throw e;
     } finally {
       resetSend();
-      setRoute('/wallet');
+      setRoute(readFlowReturnPath() || '/wallet');
       setTimeout(() => closeCurrentTab(), 2500);
     }
   };
@@ -161,13 +161,14 @@ const App = () => {
   };
 
   const abandon = React.useCallback(async () => {
+    const dest = readFlowReturnPath() || '/wallet';
     try {
       resetSend();
-      setRoute('/wallet');
+      setRoute(dest);
     } catch {
       /* still leave */
     }
-    await leaveSignTabFlow();
+    await leaveSignTabFlow(dest);
   }, [resetSend, setRoute]);
 
   return (

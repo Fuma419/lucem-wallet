@@ -12,6 +12,36 @@ describe('wallet refresh state retention', () => {
     );
   });
 
+  test('pull-to-refresh always clears isFetching (try/finally)', () => {
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),
+      'utf8'
+    );
+    // Regression: getData used to setIsFetching(true) then return/throw without
+    // clearing it, so pull-to-refresh spun forever after updateAccount errors.
+    expect(walletSrc).toMatch(/setIsFetching\(true\)/);
+    expect(walletSrc).toMatch(
+      /finally\s*\{[\s\S]{0,200}setIsFetching\(false\)/
+    );
+    // Early unmount returns must not skip the finally block.
+    expect(walletSrc).toMatch(
+      /const getData = async[\s\S]{0,400}try\s*\{/
+    );
+    expect(walletSrc).toMatch(/withTimeout\([\s\S]{0,80}updateAccount/);
+    expect(walletSrc).toMatch(/assets \?\? \[\]/);
+  });
+
+  test('updateBalance must not fail the refresh when minAda probe throws', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../api/extension/index.js'),
+      'utf8'
+    );
+    expect(src).toMatch(/minAda probe failed/);
+    expect(src).toMatch(
+      /assets\.length > 0\)\s*\{[\s\S]{0,120}try\s*\{[\s\S]{0,200}initTx/
+    );
+  });
+
   test('functional: delegation actions and balance rendering are not gated by isFetching', () => {
     const walletSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/pages/wallet.jsx'),

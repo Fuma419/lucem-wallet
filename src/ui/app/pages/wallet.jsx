@@ -82,6 +82,20 @@ const useIsMounted = () => {
   return isMounted;
 };
 
+/** Soft ceiling so a hung Koios/Blockfrost call cannot leave the refresh spinner on forever. */
+const REFRESH_TIMEOUT_MS = 45_000;
+
+const withTimeout = (promise, ms, label) => {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+};
+
 const Wallet = () => {
   const isMounted = useIsMounted();
   const navigate = useNavigate();
@@ -147,73 +161,103 @@ const Wallet = () => {
 
   const getData = async ({ forceUpdate = false, skipUpdate = false } = {}) => {
     setIsFetching(true);
-    const currentIndex = await getCurrentAccountIndex();
-    const accounts = await getAccounts();
-    const { avatar, name, index, paymentAddr } = accounts[currentIndex];
-    if (!isMounted.current) return;
-    setInfo({ avatar, name, currentIndex: index, paymentAddr, accounts });
-    if (!skipUpdate) {
-      await updateAccount(forceUpdate);
-    }
-    const allAccounts = await getAccounts();
-    const currentAccount = allAccounts[currentIndex];
-    const totalAda = bigIntLovelace(currentAccount.lovelace);
-    currentAccount.ft =
-      totalAda > 0n
-        ? [
-            {
-              unit: 'lovelace',
-              quantity: (
-                totalAda -
-                bigIntLovelace(currentAccount.minAda) -
-                bigIntLovelace(currentAccount.collateral?.lovelace)
-              ).toString(),
-            },
-          ]
-        : [];
-    currentAccount.nft = [];
-    currentAccount.assets.forEach((asset) => {
-      try {
-        if (!asset || typeof asset.unit !== 'string' || asset.unit.length < 56) {
-          return;
-        }
-        asset.policy = asset.unit.slice(0, 56);
-        asset.name = Buffer.from(asset.unit.slice(56), 'hex');
-        asset.fingerprint = AssetFingerprint.fromParts(
-          Buffer.from(asset.policy, 'hex'),
-          asset.name
-        ).fingerprint();
-        asset.name = asset.name.toString();
-        if (
-          (asset.has_nft_onchain_metadata === true &&
-            !fromAssetUnit(asset.unit).label) ||
-          fromAssetUnit(asset.unit).label === 222
-        )
-          currentAccount.nft.push(asset);
-        else currentAccount.ft.push(asset);
-      } catch (err) {
-        console.warn('Skipping malformed asset row', asset?.unit, err);
-      }
-    });
-    let price = fiatPrice.current;
     try {
-      // Cached per-currency (90s TTL); `forceUpdate` bypasses on pull/refresh.
-      price = await getFiatPrice(settings.currency, { force: forceUpdate });
-      fiatPrice.current = price;
-    } catch (e) {}
-    const network = await getNetwork();
-    const delegation = await getDelegation({ force: forceUpdate });
-    if (!isMounted.current) return;
-    setState((s) => ({
-      ...s,
-      account: currentAccount,
-      accounts: allAccounts,
-      fiatPrice: price,
-      network,
-      delegation,
-    }));
-    setIsFetching(false);
-    lastRefreshRef.current = Date.now();
+      const currentIndex = await getCurrentAccountIndex();
+      const accounts = await getAccounts();
+      const { avatar, name, index, paymentAddr } = accounts[currentIndex];
+      if (!isMounted.current) return;
+      setInfo({ avatar, name, currentIndex: index, paymentAddr, accounts });
+      if (!skipUpdate) {
+        await withTimeout(
+          updateAccount(forceUpdate),
+          REFRESH_TIMEOUT_MS,
+          'updateAccount'
+        );
+      }
+      const allAccounts = await getAccounts();
+      const currentAccount = allAccounts[currentIndex];
+      const totalAda = bigIntLovelace(currentAccount.lovelace);
+      currentAccount.ft =
+        totalAda > 0n
+          ? [
+              {
+                unit: 'lovelace',
+                quantity: (
+                  totalAda -
+                  bigIntLovelace(currentAccount.minAda) -
+                  bigIntLovelace(currentAccount.collateral?.lovelace)
+                ).toString(),
+              },
+            ]
+          : [];
+      currentAccount.nft = [];
+      (currentAccount.assets ?? []).forEach((asset) => {
+        try {
+          if (!asset || typeof asset.unit !== 'string' || asset.unit.length < 56) {
+            return;
+          }
+          asset.policy = asset.unit.slice(0, 56);
+          asset.name = Buffer.from(asset.unit.slice(56), 'hex');
+          asset.fingerprint = AssetFingerprint.fromParts(
+            Buffer.from(asset.policy, 'hex'),
+            asset.name
+          ).fingerprint();
+          asset.name = asset.name.toString();
+          if (
+            (asset.has_nft_onchain_metadata === true &&
+              !fromAssetUnit(asset.unit).label) ||
+            fromAssetUnit(asset.unit).label === 222
+          )
+            currentAccount.nft.push(asset);
+          else currentAccount.ft.push(asset);
+        } catch (err) {
+          console.warn('Skipping malformed asset row', asset?.unit, err);
+        }
+      });
+      let price = fiatPrice.current;
+      try {
+        // Cached per-currency (90s TTL); `forceUpdate` bypasses on pull/refresh.
+        price = await getFiatPrice(settings.currency, { force: forceUpdate });
+        fiatPrice.current = price;
+      } catch (e) {}
+      const network = await getNetwork();
+      try {
+        const delegation = await withTimeout(
+          getDelegation({ force: forceUpdate }),
+          REFRESH_TIMEOUT_MS,
+          'getDelegation'
+        );
+        if (!isMounted.current) return;
+        setState((s) => ({
+          ...s,
+          account: currentAccount,
+          accounts: allAccounts,
+          fiatPrice: price,
+          network,
+          delegation,
+        }));
+      } catch (delegationError) {
+        console.warn(
+          'Delegation refresh failed:',
+          delegationError.message || delegationError
+        );
+        if (!isMounted.current) return;
+        setState((s) => ({
+          ...s,
+          account: currentAccount,
+          accounts: allAccounts,
+          fiatPrice: price,
+          network,
+        }));
+      }
+      lastRefreshRef.current = Date.now();
+    } catch (e) {
+      console.error('Failed to load account data:', e);
+    } finally {
+      // Pull-to-refresh awaits getData; if we leave isFetching true the
+      // balance spinner never stops (even when PullToRefresh clears its own busy).
+      setIsFetching(false);
+    }
   };
 
   const schedulePostTxRefresh = (delayMs = 30000) => {

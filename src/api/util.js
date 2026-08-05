@@ -32,7 +32,10 @@ const PLACEHOLDER_KEYS = new Set([
   'dummy',
   'your-koios-api-key-here',
   'your-blockfrost-project-id',
+  'DUMMY_MAINNET',
+  'DUMMY_TESTNET',
   'DUMMY_PREVIEW',
+  'DUMMY_PREPROD',
 ]);
 
 function isExtensionRuntime() {
@@ -341,13 +344,19 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
           `/accounts/${stakeAddress}`,
           signal
         );
+        const controlled = account.controlled_amount || '0';
+        const withdrawable = account.withdrawable_amount || '0';
         rows.push({
           stake_address: stakeAddress,
           registered: true,
           active: account.active,
           pool_id: account.pool_id || null,
-          withdrawable_amount: account.withdrawable_amount || '0',
-          controlled_amount: account.controlled_amount || '0',
+          withdrawable_amount: withdrawable,
+          rewards_available: withdrawable,
+          controlled_amount: controlled,
+          // Koios-shaped aliases so consumers can read either schema.
+          utxo: controlled,
+          total_balance: controlled,
           status: 'registered',
         });
       } catch (error) {
@@ -358,7 +367,10 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
             active: false,
             pool_id: null,
             withdrawable_amount: '0',
+            rewards_available: '0',
             controlled_amount: '0',
+            utxo: '0',
+            total_balance: '0',
             status: 'unregistered',
           });
           continue;

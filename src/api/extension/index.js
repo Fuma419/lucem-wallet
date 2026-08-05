@@ -3986,26 +3986,28 @@ export const updateAccount = async (forceUpdate = false) => {
   }
 
   const isFirstLoad = currentAccount[network.id].lovelace == null;
+  // Account-level forceUpdate (migrations) must both bypass the tip short-circuit
+  // and force a fresh balance fetch. Using only the function parameter meant
+  // soft opens after 4.0.3 could clear the flag and still skip/cache-serve the
+  // old primary-address total when tip was unchanged.
+  const accountForceUpdate = Boolean(currentAccount[network.id].forceUpdate);
   if (
     currentAccount[network.id].history.confirmed[0] ==
       currentAccount[network.id].lastUpdate &&
     !forceUpdate &&
     !isFirstLoad &&
-    !currentAccount[network.id].forceUpdate &&
+    !accountForceUpdate &&
     !addressesChanged
   ) {
-    // Nothing new on chain (latest tx hash unchanged) — skip the balance fetch
-    // and, since nothing was mutated, skip the storage write too.
+    // Tip unchanged and no forced balance refresh — skip the balance fetch.
     return;
   }
 
-  // forcing acccount update for in case of breaking changes in an Nami update
-  if (currentAccount[network.id].forceUpdate)
-    delete currentAccount[network.id].forceUpdate;
+  if (accountForceUpdate) delete currentAccount[network.id].forceUpdate;
 
   const balanceSignatureBefore = balanceSignature(currentAccount[network.id]);
   await updateBalance(currentAccount, network, {
-    force: forceUpdate || addressesChanged,
+    force: forceUpdate || addressesChanged || accountForceUpdate,
   });
   const balanceChanged =
     balanceSignature(currentAccount[network.id]) !== balanceSignatureBefore;

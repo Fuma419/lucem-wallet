@@ -12,6 +12,7 @@ import v3_0_0 from './versions/3.0.0';
 import v3_0_2 from './versions/3.0.2';
 import v3_3_0 from './versions/3.3.0';
 import v4_0_3 from './versions/4.0.3';
+import v4_0_4 from './versions/4.0.4';
 const MIG_SCRIPTS = [
   v1_1_5,
   v1_1_7,
@@ -24,6 +25,7 @@ const MIG_SCRIPTS = [
   v3_0_2,
   v3_3_0,
   v4_0_3,
+  v4_0_4,
 ];
 const { version } = require('../../package.json');
 let pwd = null;

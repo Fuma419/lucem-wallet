@@ -6,6 +6,7 @@ import { APIError } from '../../../config/config';
 import platform from '../../../platform';
 
 import Account from '../components/account';
+import { leaveDappApprovalFlow } from '../components/flowExit';
 
 const Enable = ({ request, controller }) => {
   const background = useColorModeValue('blue.100', 'gray.900');
@@ -97,8 +98,9 @@ const Enable = ({ request, controller }) => {
           width={{ base: '42%', sm: '180px' }}
           minW="140px"
           onClick={async () => {
-            await controller.returnData({ error: APIError.Refused });
-            window.close();
+            await leaveDappApprovalFlow(async () => {
+              await controller.returnData({ error: APIError.Refused });
+            });
           }}
         >
           Cancel
@@ -111,7 +113,7 @@ const Enable = ({ request, controller }) => {
           onClick={async () => {
             await setWhitelisted(request.origin);
             await controller.returnData({ data: true });
-            window.close();
+            await leaveDappApprovalFlow();
           }}
         >
           Access

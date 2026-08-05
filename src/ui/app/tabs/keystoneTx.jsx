@@ -9,11 +9,16 @@ import Main from '../../index';
 import PreventHistoryBack from '../components/PreventHistoryBack';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
-import { Box, Button, Image, Text, useToast } from '@chakra-ui/react';
+import { Box, Button, Text, useToast } from '@chakra-ui/react';
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import backgroundGreenWebp from '../../../assets/img/background-green.webp';
+import {
+  FlowExitButton,
+  FlowShellHeader,
+  leaveSignTabFlow,
+} from '../components/flowExit';
 import {
   closeCurrentTab,
   getCurrentAccount,
@@ -155,6 +160,16 @@ const App = () => {
     }
   };
 
+  const abandon = React.useCallback(async () => {
+    try {
+      resetSend();
+      setRoute('/wallet');
+    } catch {
+      /* still leave */
+    }
+    await leaveSignTabFlow();
+  }, [resetSend, setRoute]);
+
   return (
     <Box
       display="flex"
@@ -174,28 +189,7 @@ const App = () => {
       boxSizing="border-box"
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <Box
-        as="header"
-        width="100%"
-        flexShrink={0}
-        display="flex"
-        justifyContent="flex-start"
-        pt={{
-          base: 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 8,
-        }}
-        pb={{ base: 2, md: 2 }}
-        px={{ base: 4, md: 8 }}
-      >
-        <Image
-          draggable={false}
-          src={LogoWhite}
-          width={{ base: '72px', sm: '88px', md: '100px' }}
-          maxW="min(100px, 36vw)"
-          objectFit="contain"
-          alt=""
-        />
-      </Box>
+      <FlowShellHeader logoSrc={LogoWhite} onExit={abandon} />
       <Box
         flex="1 1 auto"
         minH={0}
@@ -290,6 +284,7 @@ const App = () => {
                 >
                   Scan signature from Keystone
                 </Button>
+                <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
               </>
             )}
             {phase === Phase.scan && (
@@ -330,17 +325,21 @@ const App = () => {
                 >
                   Back to transaction QR
                 </Button>
+                <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
               </>
             )}
             {(phase === Phase.done || error) && (
-              <Text
-                fontSize="sm"
-                color={error ? 'red.200' : 'whiteAlpha.800'}
-                textAlign="center"
-                mt={4}
-              >
-                {error || 'Done. You can close this tab.'}
-              </Text>
+              <>
+                <Text
+                  fontSize="sm"
+                  color={error ? 'red.200' : 'whiteAlpha.800'}
+                  textAlign="center"
+                  mt={4}
+                >
+                  {error || 'Done. You can close this tab.'}
+                </Text>
+                <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
+              </>
             )}
           </Box>
         </Box>

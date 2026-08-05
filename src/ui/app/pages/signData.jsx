@@ -20,6 +20,7 @@ import {
 import ConfirmModal from '../components/confirmModal';
 import Loader from '../../../api/loader';
 import { DataSignError } from '../../../config/config';
+import { leaveDappApprovalFlow, FlowExitButton } from '../components/flowExit';
 
 const SignData = ({ request, controller }) => {
   const ref = React.useRef();
@@ -95,10 +96,25 @@ const SignData = ({ request, controller }) => {
           sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
           width="full"
           display="flex"
+          flexDirection="column"
           alignItems="center"
           justifyContent="center"
+          gap={4}
         >
           <Spinner color="yellow" speed="0.5s" />
+          <FlowExitButton
+            color="gray.500"
+            _hover={{ bg: 'blackAlpha.100', color: 'gray.700' }}
+            onClick={async () => {
+              await leaveDappApprovalFlow(async () => {
+                await controller.returnData({
+                  error: DataSignError.UserDeclined,
+                });
+              });
+            }}
+          >
+            Exit
+          </FlowExitButton>
         </Box>
       ) : (
         <Box
@@ -204,10 +220,11 @@ const SignData = ({ request, controller }) => {
                 width={{ base: '42%', sm: '180px' }}
                 minW="140px"
                 onClick={async () => {
-                  await controller.returnData({
-                    error: DataSignError.UserDeclined,
+                  await leaveDappApprovalFlow(async () => {
+                    await controller.returnData({
+                      error: DataSignError.UserDeclined,
+                    });
                   });
-                  window.close();
                 }}
               >
                 Cancel
@@ -255,7 +272,7 @@ const SignData = ({ request, controller }) => {
           } else {
             await controller.returnData({ error: signedMessage });
           }
-          window.close();
+          await leaveDappApprovalFlow();
         }}
       />
     </>

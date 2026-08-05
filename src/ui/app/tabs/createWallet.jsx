@@ -10,7 +10,6 @@ import {
   Input,
   InputGroup,
   InputRightElement,
-  Image,
   Textarea,
   Collapse,
 } from '@chakra-ui/react';
@@ -27,6 +26,11 @@ import Theme from '../../theme';
 import { TAB } from '../../../config/config';
 import platform from '../../../platform';
 import PreventHistoryBack from '../components/PreventHistoryBack';
+import {
+  FlowExitButton,
+  FlowShellHeader,
+  leaveSetupFlow,
+} from '../components/flowExit';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
 
 /** Two-column seed UI: tighter on phones, standard on tablet/desktop. */
@@ -63,30 +67,6 @@ function mnemonicFromObject(mnemonicMap) {
 }
 
 const VALID_IMPORT_SEED_LENGTHS = [12, 15, 24];
-
-/**
- * Leave the create/import tab without writing anything. Returns to Accounts when
- * a vault already has accounts; otherwise Welcome (first-time setup).
- * Uses platform storage only — does not load Cardano WASM.
- */
-async function abandonWalletSetup() {
-  let hasAccounts = false;
-  try {
-    const accounts = await platform.storage.get('accounts');
-    hasAccounts =
-      accounts != null &&
-      typeof accounts === 'object' &&
-      Object.keys(accounts).length > 0;
-  } catch {
-    hasAccounts = false;
-  }
-  const dest = hasAccounts ? '/accounts' : '/welcome';
-  if (typeof platform.navigation.openMainRoute === 'function') {
-    await platform.navigation.openMainRoute(dest);
-  } else {
-    await platform.navigation.closeCurrentTab();
-  }
-}
 
 /**
  * Import flow opens as createWalletTab.html?type=import&length=… (see welcome.jsx).
@@ -201,34 +181,13 @@ const App = () => {
       backgroundRepeat="no-repeat"
       boxSizing="border-box"
     >
-      <Box
-        as="header"
-        width="100%"
-        flexShrink={0}
-        display="flex"
-        justifyContent="flex-start"
-        pt={{
-          base: hideHeaderLogoOnMobile
-            ? 'max(0.35rem, env(safe-area-inset-top, 0px))'
-            : 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 8,
+      <FlowShellHeader
+        logoSrc={LogoWhite}
+        hideLogoOnMobile={hideHeaderLogoOnMobile}
+        onExit={() => {
+          leaveSetupFlow();
         }}
-        pb={{ base: hideHeaderLogoOnMobile ? 0 : 2, md: 2 }}
-        px={{ base: 4, md: 8 }}
-      >
-        <Image
-          draggable={false}
-          src={LogoWhite}
-          width={{ base: '72px', sm: '88px', md: '100px' }}
-          maxW="min(100px, 36vw)"
-          objectFit="contain"
-          alt=""
-          display={{
-            base: hideHeaderLogoOnMobile ? 'none' : 'block',
-            md: 'block',
-          }}
-        />
-      </Box>
+      />
       <Box
         flex="1 1 auto"
         minH={0}
@@ -392,6 +351,7 @@ const GenerateSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
+        <FlowExitButton onClick={() => leaveSetupFlow()}>Exit</FlowExitButton>
       </Stack>
     </Box>
   );
@@ -515,34 +475,42 @@ const VerifySeed = ({ colorTheme }) => {
         ))}
       </Stack>
       <Spacer height="6" />
-      <Stack alignItems="center" justifyContent="center" direction="row">
-        <Button
-          type="button"
-          fontWeight="medium"
-          className="button"
-          onClick={() => {
-            // Pass the original mnemonic string for account creation
-            navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet', colorTheme },
-            });
-          }}
-        >
-          Skip
-        </Button>
-        <Button
-          type="button"
-          ml="3"
-          className="button new-wallet"
-          isDisabled={!allValid}
-          rightIcon={<ChevronRightIcon />}
-          onClick={() => {
-            navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet', colorTheme },
-            });
-          }}
-        >
-          Next
-        </Button>
+      <Stack
+        alignItems="center"
+        justifyContent="center"
+        direction="column"
+        spacing={3}
+      >
+        <Stack alignItems="center" justifyContent="center" direction="row">
+          <Button
+            type="button"
+            fontWeight="medium"
+            className="button"
+            onClick={() => {
+              // Pass the original mnemonic string for account creation
+              navigate('/account', {
+                state: { mnemonic, flow: 'create-wallet', colorTheme },
+              });
+            }}
+          >
+            Skip
+          </Button>
+          <Button
+            type="button"
+            ml="3"
+            className="button new-wallet"
+            isDisabled={!allValid}
+            rightIcon={<ChevronRightIcon />}
+            onClick={() => {
+              navigate('/account', {
+                state: { mnemonic, flow: 'create-wallet', colorTheme },
+              });
+            }}
+          >
+            Next
+          </Button>
+        </Stack>
+        <FlowExitButton onClick={() => leaveSetupFlow()}>Exit</FlowExitButton>
       </Stack>
     </Box>
   );
@@ -727,18 +695,12 @@ const ImportSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          color="whiteAlpha.800"
-          _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
-          onClick={() => {
-            abandonWalletSetup();
-          }}
+        <FlowExitButton
+          onClick={() => leaveSetupFlow()}
           data-testid="import-abandon-button"
         >
-          Cancel
-        </Button>
+          Exit
+        </FlowExitButton>
       </Stack>
     </Box>
   );
@@ -1095,21 +1057,15 @@ const MakeAccount = ({ colorTheme }) => {
           >
             Create
           </Button>
-          {flow === 'restore-wallet' ? (
-            <Button
-              type="button"
-              variant="ghost"
-              color="whiteAlpha.800"
-              _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
-              isDisabled={loading}
-              onClick={() => {
-                abandonWalletSetup();
-              }}
-              data-testid="import-abandon-button"
-            >
-              Cancel
-            </Button>
-          ) : null}
+          <FlowExitButton
+            isDisabled={loading}
+            onClick={() => leaveSetupFlow()}
+            data-testid={
+              flow === 'restore-wallet' ? 'import-abandon-button' : 'flow-exit-button'
+            }
+          >
+            Exit
+          </FlowExitButton>
         </Stack>
       </Box>
     </Box>

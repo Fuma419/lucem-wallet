@@ -49,6 +49,7 @@ import {
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
+import { leaveDappApprovalFlow, FlowExitButton } from '../components/flowExit';
 
 const KPhase = { load: 'load', show: 'show', scan: 'scan' };
 
@@ -704,10 +705,25 @@ const SignTx = ({ request, controller }) => {
           sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
           width="full"
           display="flex"
+          flexDirection="column"
           alignItems="center"
           justifyContent="center"
+          gap={4}
         >
           <Spinner color="yellow" speed="0.5s" />
+          <FlowExitButton
+            color="gray.500"
+            _hover={{ bg: 'blackAlpha.100', color: 'gray.700' }}
+            onClick={async () => {
+              await leaveDappApprovalFlow(async () => {
+                await controller.returnData({
+                  error: TxSignError.UserDeclined,
+                });
+              });
+            }}
+          >
+            Exit
+          </FlowExitButton>
         </Box>
       ) : (
         <Box
@@ -951,10 +967,11 @@ const SignTx = ({ request, controller }) => {
                 width={{ base: '42%', sm: '180px' }}
                 minW="140px"
                 onClick={async () => {
-                  await controller.returnData({
-                    error: TxSignError.UserDeclined,
+                  await leaveDappApprovalFlow(async () => {
+                    await controller.returnData({
+                      error: TxSignError.UserDeclined,
+                    });
                   });
-                  window.close();
                 }}
               >
                 Cancel
@@ -1016,7 +1033,7 @@ const SignTx = ({ request, controller }) => {
           } else {
             await controller.returnData({ error: signedTx });
           }
-          window.close();
+          await leaveDappApprovalFlow();
         }}
       />
       <Modal
@@ -1035,11 +1052,11 @@ const SignTx = ({ request, controller }) => {
                 txHex={request.data.tx}
                 keyHashes={keyHashes.key}
                 account={account}
-                onSuccess={(merged) => {
-                  controller.returnData({
+                onSuccess={async (merged) => {
+                  await controller.returnData({
                     data: Buffer.from(merged.to_bytes()).toString('hex'),
                   });
-                  window.close();
+                  await leaveDappApprovalFlow();
                 }}
                 onCancel={() => setKeystoneHw(null)}
               />

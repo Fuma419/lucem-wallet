@@ -34,6 +34,10 @@ import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import TrezorWidget from '../components/trezorWidget';
 import {
+  FlowShellHeader,
+  leaveSetupFlow,
+} from '../components/flowExit';
+import {
   closeCurrentTab,
   createHWAccounts,
   getHwAccounts,
@@ -173,28 +177,12 @@ const App = () => {
       boxSizing="border-box"
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <Box
-        as="header"
-        width="100%"
-        flexShrink={0}
-        display="flex"
-        justifyContent="flex-start"
-        pt={{
-          base: 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 8,
+      <FlowShellHeader
+        logoSrc={LogoWhite}
+        onExit={() => {
+          leaveSetupFlow();
         }}
-        pb={{ base: 2, md: 2 }}
-        px={{ base: 4, md: 8 }}
-      >
-        <Image
-          draggable={false}
-          src={LogoWhite}
-          width={{ base: '72px', sm: '88px', md: '100px' }}
-          maxW="min(100px, 36vw)"
-          objectFit="contain"
-          alt=""
-        />
-      </Box>
+      />
 
       <Box
         flex="1 1 auto"

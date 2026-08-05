@@ -5,10 +5,15 @@ import Main from '../../index';
 import PreventHistoryBack from '../components/PreventHistoryBack';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
-import { Box, Flex, Image, Text, useToast } from '@chakra-ui/react';
+import { Box, Flex, Text, useToast } from '@chakra-ui/react';
 
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import backgroundGreenWebp from '../../../assets/img/background-green.webp';
+import {
+  FlowExitButton,
+  FlowShellHeader,
+  leaveSignTabFlow,
+} from '../components/flowExit';
 import {
   closeCurrentTab,
   getCurrentAccount,
@@ -22,6 +27,7 @@ import { useStoreActions } from 'easy-peasy';
 
 const App = () => {
   const toast = useToast();
+  const abandonedRef = React.useRef(false);
 
   const setRoute = useStoreActions(
     (actions) => actions.globalModel.routeStore.setRoute
@@ -29,6 +35,17 @@ const App = () => {
   const resetSend = useStoreActions(
     (actions) => actions.globalModel.sendStore.reset
   );
+
+  const abandon = React.useCallback(async () => {
+    abandonedRef.current = true;
+    try {
+      resetSend();
+      setRoute('/wallet');
+    } catch {
+      /* still leave */
+    }
+    await leaveSignTabFlow();
+  }, [resetSend, setRoute]);
 
   const init = async () => {
     await Loader.load();
@@ -41,6 +58,7 @@ const App = () => {
     const txDes = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
     await initHW({ device: hw.device, id: hw.id });
     try {
+      if (abandonedRef.current) return;
       const paymentHashes = await paymentKeyHashesForSigning(account);
       await signAndSubmitHW(txDes, {
         keyHashes: paymentHashes.length
@@ -49,24 +67,29 @@ const App = () => {
         account,
         hw,
       });
+      if (abandonedRef.current) return;
       toast({
         title: 'Transaction submitted',
         status: 'success',
         duration: 3000,
       });
     } catch (_e) {
+      if (abandonedRef.current) return;
       toast({
         title: 'Transaction failed',
         status: 'error',
         duration: 3000,
       });
     }
+    if (abandonedRef.current) return;
     resetSend();
     setRoute('/wallet');
     setTimeout(() => closeCurrentTab(), 3000);
   };
 
-  React.useEffect(() => init(), []);
+  React.useEffect(() => {
+    init();
+  }, []);
 
   return (
     <Box
@@ -82,24 +105,7 @@ const App = () => {
       backgroundPosition="center, center"
       backgroundRepeat="no-repeat, no-repeat"
     >
-      <Box
-        flexShrink={0}
-        px={{ base: 4, md: 8 }}
-        pt={{
-          base: 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 8,
-        }}
-        pb={2}
-      >
-        <Image
-          draggable={false}
-          src={LogoWhite}
-          width={{ base: '72px', sm: '88px', md: '100px' }}
-          maxW="min(100px, 36vw)"
-          objectFit="contain"
-          alt=""
-        />
-      </Box>
+      <FlowShellHeader logoSrc={LogoWhite} onExit={abandon} />
       <Flex
         flex="1"
         align="center"
@@ -116,14 +122,19 @@ const App = () => {
           color="whiteAlpha.900"
           maxW="420px"
           mx="auto"
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          gap={4}
         >
           <Text className="walletTitle" fontSize="lg" fontWeight="bold" textAlign="center">
             Waiting for Trezor…
           </Text>
-          <Text fontSize="sm" color="whiteAlpha.700" textAlign="center" mt={3}>
+          <Text fontSize="sm" color="whiteAlpha.700" textAlign="center" mt={1}>
             Complete signing on your device. This tab will close when the transaction is
             submitted.
           </Text>
+          <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
         </Box>
       </Flex>
     </Box>

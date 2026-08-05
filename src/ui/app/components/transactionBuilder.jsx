@@ -33,6 +33,7 @@ import Loader from '../../../api/loader';
 import {
   createTab,
   openKeystoneSignTxTab,
+  paymentKeyHashesForSigning,
   getUtxos,
   removeCollateral,
   setCollateral,
@@ -41,6 +42,13 @@ import {
 import { FaRegFileCode } from 'react-icons/fa';
 
 const poolDefaultValue = {};
+
+/** Payment (+ optional stake) key hashes covering all enabled addresses. */
+async function signingKeyHashesForAccount(account, { includeStake = true } = {}) {
+  const paymentHashes = await paymentKeyHashesForSigning(account);
+  if (!includeStake) return paymentHashes;
+  return [...paymentHashes, account?.stakeKeyHash].filter(Boolean);
+}
 
 const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
   const settings = useStoreState((state) => state.settings.settings);
@@ -173,6 +181,9 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     <>
       <ConfirmModal
         sign={async (password, hw) => {
+          const keyHashes = await signingKeyHashesForAccount(data.account, {
+            includeStake: true,
+          });
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(
@@ -183,18 +194,12 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
                 txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
-                keyHashes: [
-                  data.account.paymentKeyHash,
-                  data.account.stakeKeyHash,
-                ],
+                keyHashes,
                 partialSign: false,
               });
             }
             return await signAndSubmitHW(data.tx, {
-              keyHashes: [
-                data.account.paymentKeyHash,
-                data.account.stakeKeyHash,
-              ],
+              keyHashes,
               account: data.account,
               hw,
             });
@@ -202,10 +207,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           return await signAndSubmit(
             data.tx,
             {
-              keyHashes: [
-                data.account.paymentKeyHash,
-                data.account.stakeKeyHash,
-              ],
+              keyHashes,
               accountIndex: data.account.index,
             },
             password
@@ -286,6 +288,9 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
         ready={data.ready}
         title="Stake deregistration"
         sign={async (password, hw) => {
+          const keyHashes = await signingKeyHashesForAccount(data.account, {
+            includeStake: true,
+          });
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(
@@ -296,18 +301,12 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
                 txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
-                keyHashes: [
-                  data.account.paymentKeyHash,
-                  data.account.stakeKeyHash,
-                ],
+                keyHashes,
                 partialSign: false,
               });
             }
             return await signAndSubmitHW(data.tx, {
-              keyHashes: [
-                data.account.paymentKeyHash,
-                data.account.stakeKeyHash,
-              ],
+              keyHashes,
               account: data.account,
               hw,
             });
@@ -315,10 +314,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           return await signAndSubmit(
             data.tx,
             {
-              keyHashes: [
-                data.account.paymentKeyHash,
-                data.account.stakeKeyHash,
-              ],
+              keyHashes,
               accountIndex: data.account.index,
             },
             password
@@ -410,6 +406,9 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           </Box>
         }
         sign={async (password, hw) => {
+          const keyHashes = await signingKeyHashesForAccount(data.account, {
+            includeStake: false,
+          });
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(
@@ -420,12 +419,12 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
                 txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
-                keyHashes: [data.account.paymentKeyHash],
+                keyHashes,
                 partialSign: false,
               });
             }
             return await signAndSubmitHW(data.tx, {
-              keyHashes: [data.account.paymentKeyHash],
+              keyHashes,
               account: data.account,
               hw,
             });
@@ -433,7 +432,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           return await signAndSubmit(
             data.tx,
             {
-              keyHashes: [data.account.paymentKeyHash],
+              keyHashes,
               accountIndex: data.account.index,
             },
             password

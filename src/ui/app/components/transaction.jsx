@@ -608,25 +608,32 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
 };
 
 const getTxType = (currentAddr, addresses, uTxOList) => {
+  const [, ownStakeCred] = getAddressCredentials(currentAddr);
+  // Own = current payment addr or any address under the same stake key
+  // (change / other CIP-1852 indices). Other Lucem accounts stay "internal".
+  const isOwn = (addr) => {
+    if (!addr) return false;
+    if (addr === currentAddr) return true;
+    const [, stakeCred] = getAddressCredentials(addr);
+    return Boolean(ownStakeCred && stakeCred && stakeCred === ownStakeCred);
+  };
+  const isInternalPeer = (addr) =>
+    Boolean(addr && Array.isArray(addresses) && addresses.includes(addr) && !isOwn(addr));
+
   let inputsAddr = uTxOList.inputs.map((utxo) => utxo.address);
   let outputsAddr = uTxOList.outputs.map((utxo) => utxo.address);
 
-  if (inputsAddr.every((addr) => addr === currentAddr)) {
-    // sender
-    return outputsAddr.every((addr) => addr === currentAddr)
+  if (inputsAddr.every((addr) => isOwn(addr))) {
+    return outputsAddr.every((addr) => isOwn(addr))
       ? 'self'
-      : outputsAddr.some(
-            (addr) => addresses.includes(addr) && addr !== currentAddr
-          )
+      : outputsAddr.some((addr) => isInternalPeer(addr))
         ? 'internalOut'
         : 'externalOut';
-  } else if (inputsAddr.every((addr) => addr !== currentAddr)) {
-    // receiver
-    return inputsAddr.some((addr) => addresses.includes(addr))
+  } else if (inputsAddr.every((addr) => !isOwn(addr))) {
+    return inputsAddr.some((addr) => isInternalPeer(addr))
       ? 'internalIn'
       : 'externalIn';
   }
-  // multisig
   return 'multisig';
 };
 
@@ -683,11 +690,19 @@ const getAddressCredentials = (address) => {
 
 const matchesAnyCredential = (address, [ownPaymentCred, ownStakingCred]) => {
   const [otherPaymentCred, otherStakingCred] = getAddressCredentials(address);
+  // Same stake key ⇒ own wallet (other payment/change index under this account).
+  if (
+    otherStakingCred &&
+    ownStakingCred &&
+    otherStakingCred === ownStakingCred
+  ) {
+    return true;
+  }
   if (otherPaymentCred && ownPaymentCred) {
     return otherPaymentCred === ownPaymentCred;
   }
-  return otherStakingCred != null && otherStakingCred === ownStakingCred;
-}
+  return false;
+};
 
 const calculateAmount = (currentAddr, uTxOList, validContract = true) => {
   

@@ -43,6 +43,7 @@ import {
   getStakePools,
   getUtxos,
   openKeystoneSignTxTab,
+  paymentKeyHashesForSigning,
   searchPools,
 } from '../../../api/extension';
 import {
@@ -824,6 +825,11 @@ const Staking = () => {
         ready={Boolean(txPreview?.tx)}
         title={actionCopy[txMode].title}
         sign={async (password, hw) => {
+          const paymentHashes = await paymentKeyHashesForSigning(account);
+          const keyHashes = [
+            ...paymentHashes,
+            account.stakeKeyHash,
+          ].filter(Boolean);
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(
@@ -834,12 +840,12 @@ const Staking = () => {
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
                 txHex: Buffer.from(txPreview.tx.to_bytes()).toString('hex'),
-                keyHashes: [account.paymentKeyHash, account.stakeKeyHash],
+                keyHashes,
                 partialSign: false,
               });
             }
             return signAndSubmitHW(txPreview.tx, {
-              keyHashes: [account.paymentKeyHash, account.stakeKeyHash],
+              keyHashes,
               account,
               hw,
             });
@@ -847,19 +853,22 @@ const Staking = () => {
           return signAndSubmit(
             txPreview.tx,
             {
-              keyHashes: [account.paymentKeyHash, account.stakeKeyHash],
+              keyHashes,
               accountIndex: account.index,
             },
             password
           );
         }}
-        onHwKeystone={() =>
-          openKeystoneSignTxTab({
+        onHwKeystone={async () => {
+          const paymentHashes = await paymentKeyHashesForSigning(account);
+          return openKeystoneSignTxTab({
             txHex: Buffer.from(txPreview.tx.to_bytes()).toString('hex'),
-            keyHashes: [account.paymentKeyHash, account.stakeKeyHash],
+            keyHashes: [...paymentHashes, account.stakeKeyHash].filter(
+              Boolean
+            ),
             partialSign: false,
-          })
-        }
+          });
+        }}
         onConfirm={async (status, signedTx) => {
           if (status === true) {
             const txHash = typeof signedTx === 'string' ? signedTx : '';

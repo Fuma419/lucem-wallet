@@ -41,6 +41,7 @@ import {
   getDelegation,
   isHW,
   openKeystoneSignTxTab,
+  paymentKeyHashesForSigning,
 } from '../../../api/extension';
 import {
   initTx,
@@ -495,13 +496,16 @@ const Governance = () => {
         keyHashHex
       );
 
+      const paymentHashes = await paymentKeyHashesForSigning(currentAccount);
       setVoteTxState({
         tx,
         fee: tx.body().fee().toString(),
         account: currentAccount,
         ready: true,
         kind: 'delegation',
-        keyHashes: [currentAccount.paymentKeyHash, currentAccount.stakeKeyHash],
+        keyHashes: [...paymentHashes, currentAccount.stakeKeyHash].filter(
+          Boolean
+        ),
         title: 'Confirm Vote Delegation',
         detailLabel: 'Delegation target',
         detailValue: voteLabel(voteType),
@@ -540,13 +544,16 @@ const Governance = () => {
         voteKind,
       });
 
+      const paymentHashes = await paymentKeyHashesForSigning(currentAccount);
       setVoteTxState({
         tx,
         fee: tx.body().fee().toString(),
         account: currentAccount,
         ready: true,
         kind: 'vote',
-        keyHashes: [currentAccount.paymentKeyHash, drepState.drepKeyHashHex],
+        keyHashes: [...paymentHashes, drepState.drepKeyHashHex].filter(
+          Boolean
+        ),
         title: 'Confirm DRep Vote',
         detailLabel: 'Vote',
         detailValue: `${voteKindLabel(voteKind)} — ${

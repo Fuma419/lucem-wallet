@@ -24,8 +24,8 @@ const truncateAddr = (addr) => {
 };
 
 /**
- * Settings panel: enable extra CIP-1852 external receive addresses on the
- * current account (balances / UTxOs / signing aggregate across them).
+ * Account panel: review CIP-1852 receive / change addresses for the selected
+ * account (balances / UTxOs / signing aggregate across them).
  */
 const MultiAddressSettings = ({ account, onIndicesChange }) => {
   const toast = useToast();

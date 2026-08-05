@@ -42,7 +42,6 @@ import { useStoreState, useStoreActions } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
 import { ChangePasswordModal } from '../components/changePasswordModal';
 import { LegalSettings } from '../../../features/settings/legal/LegalSettings';
-import MultiAddressSettings from '../components/multiAddressSettings';
 import { AboutContent } from '../components/about';
 import useSurfaceColors from '../hooks/useSurfaceColors';
 import {
@@ -343,18 +342,6 @@ const Settings = () => {
                 aria-label="Enable button glow effects"
               />
             </SettingsFieldStack>
-          </SettingsPanel>
-
-          <SettingsPanel
-            title="Addresses"
-            testId="settings-advanced-panel"
-          >
-            <MultiAddressSettings
-              account={account}
-              onIndicesChange={(externalIndices) => {
-                setAccount((prev) => ({ ...prev, externalIndices }));
-              }}
-            />
           </SettingsPanel>
 
           <SettingsPanel

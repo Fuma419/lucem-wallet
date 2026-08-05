@@ -14,6 +14,7 @@ import {
   getCurrentAccount,
   indexToHw,
   initHW,
+  paymentKeyHashesForSigning,
 } from '../../../api/extension';
 import { signAndSubmitHW } from '../../../api/extension/wallet';
 import Loader from '../../../api/loader';
@@ -40,8 +41,11 @@ const App = () => {
     const txDes = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
     await initHW({ device: hw.device, id: hw.id });
     try {
+      const paymentHashes = await paymentKeyHashesForSigning(account);
       await signAndSubmitHW(txDes, {
-        keyHashes: [account.paymentKeyHash],
+        keyHashes: paymentHashes.length
+          ? paymentHashes
+          : [account.paymentKeyHash].filter(Boolean),
         account,
         hw,
       });

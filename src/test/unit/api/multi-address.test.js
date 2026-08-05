@@ -31,6 +31,10 @@ describe('multi-address helpers', () => {
     ).toEqual([0, 2]);
   });
 
+  test('discovery index caps allow deeper change/receive gaps', () => {
+    expect(MAX_EXTERNAL_ADDRESS_INDEX).toBe(50);
+  });
+
   test('isMultiAddressEnabled is true when extras or change addresses exist', () => {
     expect(isMultiAddressEnabled({ externalIndices: [0] })).toBe(false);
     expect(isMultiAddressEnabled({ externalIndices: [0, 1] })).toBe(true);

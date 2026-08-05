@@ -13,6 +13,7 @@ import {
   indexToHw,
   isHW,
   isValidAddress,
+  paymentKeyHashesForSigning,
   prependTxHash,
   toUnit,
   updateRecentSentToAddress,
@@ -203,9 +204,10 @@ const Send = () => {
     const acc = account.current;
     if (!acc?.paymentKeyHash) return;
     try {
+      const paymentHashes = await paymentKeyHashesForSigning(acc);
       await openKeystoneSignTxTab({
         txHex: tx,
-        keyHashes: [acc.paymentKeyHash, acc.stakeKeyHash],
+        keyHashes: [...paymentHashes, acc.stakeKeyHash],
         partialSign: false,
       });
       toast({
@@ -1114,6 +1116,9 @@ const Send = () => {
           const txDes = Loader.Cardano.Transaction.from_bytes(
             Buffer.from(tx, 'hex')
           );
+          const paymentHashes = await paymentKeyHashesForSigning(
+            account.current
+          );
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(TAB.trezorTx, `?tx=${tx}`);
@@ -1122,14 +1127,14 @@ const Send = () => {
               return openKeystoneSignTxTab({
                 txHex: tx,
                 keyHashes: [
-                  account.current.paymentKeyHash,
+                  ...paymentHashes,
                   account.current.stakeKeyHash,
                 ],
                 partialSign: false,
               });
             }
             return await signAndSubmitHW(txDes, {
-              keyHashes: [account.current.paymentKeyHash],
+              keyHashes: paymentHashes,
               account: account.current,
               hw,
             });
@@ -1138,7 +1143,7 @@ const Send = () => {
               txDes,
               {
                 accountIndex: account.current.index,
-                keyHashes: [account.current.paymentKeyHash],
+                keyHashes: paymentHashes,
               },
               password
             );

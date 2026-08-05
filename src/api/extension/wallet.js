@@ -1,4 +1,4 @@
-import { getNetwork, getUtxos, signTx, signTxHW, submitTx } from '.';
+import { getNetwork, getUtxos, paymentKeyHashesForSigning, signTx, signTxHW, submitTx } from '.';
 import { ERROR, TX } from '../../config/config';
 import { cacheKey, withCache } from '../cache';
 import Loader from '../loader';
@@ -133,7 +133,11 @@ export const buildTx = async (
       slot: await fetchKoiosTipSlot(koiosRequestEnhanced),
     };
 
-    const requiredVkeyHashesHex = [account.paymentKeyHash].filter(Boolean);
+    const paymentHashes = await paymentKeyHashesForSigning(account);
+    const requiredVkeyHashesHex =
+      paymentHashes.length > 0
+        ? paymentHashes
+        : [account.paymentKeyHash].filter(Boolean);
     if (requiredVkeyHashesHex.length === 0) {
       throw new Error(
         'Account missing payment key hash for fee estimation'

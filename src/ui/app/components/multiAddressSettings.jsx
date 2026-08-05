@@ -15,7 +15,6 @@ import {
   getExternalIndices,
   isMultiAddressEnabled,
   MAX_EXTERNAL_ADDRESS_INDEX,
-  setAccountExternalIndices,
 } from '../../../api/extension';
 import { SettingsToggleRow } from './settingsChrome';
 
@@ -68,12 +67,13 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
     setBusy(true);
     try {
       if (!checked) {
-        const next = await setAccountExternalIndices([0]);
+        // Collapse the panel only — keep discovered external/internal indices
+        // so change-address funds remain spendable after Soft refresh.
         setAdvancedOn(false);
-        notify(next);
         toast({
-          title: 'Multi-address off',
-          description: 'Only the primary address is active.',
+          title: 'Address list hidden',
+          description:
+            'Discovered receive and change addresses stay active for balance and sends.',
           status: 'info',
           duration: 2500,
           isClosable: true,
@@ -152,7 +152,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
     <Box w="full">
       <SettingsToggleRow
         label="Multi-address"
-        hint="Include additional receive addresses and any change addresses found on this stake key. Primary address stays the default receive address."
+        hint="Lucem automatically includes receive and change addresses with on-chain history. Expand to review them."
         isChecked={advancedOn}
         isDisabled={busy}
         onChange={onToggleAdvanced}

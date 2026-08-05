@@ -76,6 +76,12 @@ describe('matchesAnyCredential', () => {
     expect(matchesAnyCredential(externalAddr, [pay, stake])).toBe(false);
   });
 
+  test('matches same stake key with different payment index (change addr)', () => {
+    const changeAddr = makeBaseAddress(PAYMENT_KEY_1, STAKE_KEY_0);
+    const [pay, stake] = getAddressCredentials(addr0);
+    expect(matchesAnyCredential(changeAddr, [pay, stake])).toBe(true);
+  });
+
   test('matches same payment cred even with different stake cred', () => {
     const samePayDiffStake = makeBaseAddress(PAYMENT_KEY_0, STAKE_KEY_1);
     const [pay, stake] = getAddressCredentials(addr0);
@@ -215,6 +221,24 @@ describe('getTxType', () => {
   test('external out', () => {
     const uTxOList = {
       inputs: [{ address: addr0 }],
+      outputs: [{ address: externalAddr }, { address: addr0 }],
+    };
+    expect(getTxType(addr0, [addr0, addr1], uTxOList)).toBe('externalOut');
+  });
+
+  test('self when spending change under same stake', () => {
+    const changeAddr = makeBaseAddress(PAYMENT_KEY_1, STAKE_KEY_0);
+    const uTxOList = {
+      inputs: [{ address: changeAddr }],
+      outputs: [{ address: addr0 }],
+    };
+    expect(getTxType(addr0, [addr0, addr1], uTxOList)).toBe('self');
+  });
+
+  test('external out from change address under same stake', () => {
+    const changeAddr = makeBaseAddress(PAYMENT_KEY_1, STAKE_KEY_0);
+    const uTxOList = {
+      inputs: [{ address: changeAddr }],
       outputs: [{ address: externalAddr }, { address: addr0 }],
     };
     expect(getTxType(addr0, [addr0, addr1], uTxOList)).toBe('externalOut');

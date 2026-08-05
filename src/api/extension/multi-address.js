@@ -14,8 +14,8 @@
  */
 
 /** Max external/internal index users can enable (index 0 .. MAX inclusive). */
-export const MAX_EXTERNAL_ADDRESS_INDEX = 20;
-export const MAX_INTERNAL_ADDRESS_INDEX = 20;
+export const MAX_EXTERNAL_ADDRESS_INDEX = 50;
+export const MAX_INTERNAL_ADDRESS_INDEX = 50;
 
 /** CIP-1852 chain roles. */
 export const ADDRESS_ROLE = {

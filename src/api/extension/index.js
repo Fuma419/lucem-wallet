@@ -1032,6 +1032,35 @@ export const getEnabledPaymentAddresses = async () => {
 };
 
 /**
+ * Payment key hashes for every enabled external + internal address on an
+ * account. Used so fee sizing and witnesses cover change/multi-address UTxOs.
+ *
+ * @param {object} [accountOverride] - network-specific or storage account
+ * @returns {Promise<string[]>}
+ */
+export const paymentKeyHashesForSigning = async (accountOverride) => {
+  await Loader.load();
+  const account = accountOverride || (await getCurrentAccount());
+  const network = await getNetwork();
+  const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
+  const rows = listEnabledPaymentAddresses(
+    Loader.Cardano,
+    account,
+    networkId
+  );
+  const hashes = [];
+  const seen = new Set();
+  const push = (h) => {
+    if (!h || seen.has(h)) return;
+    seen.add(h);
+    hashes.push(h);
+  };
+  push(account.paymentKeyHash);
+  for (const row of rows) push(row.paymentKeyHash);
+  return hashes;
+};
+
+/**
  * Persist which external address indices are active for the current account.
  * Index 0 is always kept. Triggers balance cache invalidation.
  */

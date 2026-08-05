@@ -125,9 +125,23 @@ describe('import abandon navigation', () => {
       'utf8'
     );
     expect(flowExit).toContain('leaveSetupFlow');
+    expect(flowExit).toContain('readFlowReturnPath');
     expect(flowExit).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
     expect(createWallet).toContain('leaveSetupFlow');
     expect(createWallet).toContain('data-testid="import-abandon-button"');
+  });
+
+  test('openMainRoute allowlist includes /send for Exit from send', () => {
+    const webSrc = fs.readFileSync(
+      path.join(__dirname, '../../../platform/web.js'),
+      'utf8'
+    );
+    const extSrc = fs.readFileSync(
+      path.join(__dirname, '../../../platform/extension.js'),
+      'utf8'
+    );
+    expect(webSrc).toContain("'/send'");
+    expect(extSrc).toContain("'/send'");
   });
 
   test('main bootstrap honors ?next= deep links before defaulting to /wallet', () => {

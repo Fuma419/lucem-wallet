@@ -34,6 +34,7 @@ import { useStoreState } from 'easy-peasy';
 
 import ConfirmModal from '../components/confirmModal';
 import UnitDisplay from '../components/unitDisplay';
+import { appendFlowReturnQuery } from '../components/flowExit';
 import {
   createTab,
   getAccountDRepId,
@@ -1321,13 +1322,17 @@ const Governance = () => {
               );
             }
             if (hw.device === HW.trezor) {
-              return createTab(TAB.trezorTx, `?tx=${txHex}`);
+              return createTab(
+                TAB.trezorTx,
+                appendFlowReturnQuery(`?tx=${txHex}`, '/governance')
+              );
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
                 txHex,
                 keyHashes,
                 partialSign: false,
+                from: '/governance',
               });
             }
             return signAndSubmitHW(voteTxState.tx, {

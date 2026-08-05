@@ -25,6 +25,22 @@ import { createTab, importAppData } from '../../../api/extension';
 import { TAB } from '../../../config/config';
 import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
 import platform from '../../../platform';
+import { useLocation } from 'react-router-dom';
+import {
+  appendFlowReturnQuery,
+  sanitizeFlowReturnPath,
+} from './flowExit';
+
+const useFlowReturnPath = () => {
+  const location = useLocation();
+  return (
+    sanitizeFlowReturnPath(location?.pathname) ||
+    sanitizeFlowReturnPath(
+      typeof window !== 'undefined' ? window.location.pathname : ''
+    ) ||
+    '/wallet'
+  );
+};
 
 /** Create Mnemonic / Import Mnemonic / Import HW — start-screen wallet actions. */
 export const WalletSetupButtons = ({
@@ -93,6 +109,7 @@ export const WalletSetupButtons = ({
 export const WalletModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { accepted, setAccepted } = useAcceptDocs();
+  const returnTo = useFlowReturnPath();
 
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
@@ -163,7 +180,12 @@ export const WalletModal = React.forwardRef((props, ref) => {
             <Button
               className="button new-wallet"
               isDisabled={!accepted}
-              onClick={() => createTab(TAB.createWallet, `?type=generate`)}
+              onClick={() =>
+                createTab(
+                  TAB.createWallet,
+                  appendFlowReturnQuery('?type=generate', returnTo)
+                )
+              }
             >
               Continue
             </Button>
@@ -181,6 +203,7 @@ export const ImportModal = React.forwardRef((props, ref) => {
   const { accepted, setAccepted } = useAcceptDocs();
   const [selected, setSelected] = React.useState(null);
   const [hasProceeded, setHasProceeded] = React.useState(false);
+  const returnTo = useFlowReturnPath();
 
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
@@ -200,7 +223,10 @@ export const ImportModal = React.forwardRef((props, ref) => {
     }
 
     setHasProceeded(true);
-    createTab(TAB.createWallet, `?type=import&length=${seedLength}`);
+    createTab(
+      TAB.createWallet,
+      appendFlowReturnQuery(`?type=import&length=${seedLength}`, returnTo)
+    );
   };
 
   return (
@@ -323,6 +349,7 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
   const { accepted, setAccepted } = useAcceptDocs();
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
+  const returnTo = useFlowReturnPath();
 
   React.useImperativeHandle(ref, () => ({
     openModal() {
@@ -403,6 +430,16 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
               minW="120px"
             >
               Close
+            </Button>
+            <Button
+              className="button hw-wallet"
+              isDisabled={!accepted}
+              minW="120px"
+              onClick={() =>
+                createTab(TAB.hw, appendFlowReturnQuery('', returnTo))
+              }
+            >
+              Continue
             </Button>
           </ModalFooter>
         </ModalContent>

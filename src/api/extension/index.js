@@ -1574,16 +1574,24 @@ export const takeKeystoneSignPayload = async (signId) => {
 };
 
 /** Air-gapped Keystone: opens full tab with QR flow; payload is removed when consumed. */
-export const openKeystoneSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
+export const openKeystoneSignTxTab = async ({
+  txHex,
+  keyHashes,
+  partialSign,
+  from,
+}) => {
   const signId = await pushKeystoneSignPayload({
     txHex,
     keyHashes,
     partialSign: !!partialSign,
   });
-  await createTab(
-    TAB.keystoneTx,
-    `?signId=${encodeURIComponent(signId)}`
-  );
+  const params = new URLSearchParams();
+  params.set('signId', signId);
+  if (from && typeof from === 'string') {
+    const safeFrom = from.startsWith('/') ? from.split('?')[0] : `/${from}`;
+    params.set('from', safeFrom);
+  }
+  await createTab(TAB.keystoneTx, `?${params.toString()}`);
 };
 
 export const getCurrentWebpage = () =>

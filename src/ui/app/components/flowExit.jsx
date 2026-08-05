@@ -1,16 +1,79 @@
 /**
  * Shared exit/abort controls for full-page setup and signing flows.
  * Always-visible header Exit avoids trapping users mid-wizard.
+ * Exit returns to the page that opened the flow (`from` query), when present.
  */
 import React from 'react';
 import { Box, Button, Image } from '@chakra-ui/react';
 import platform from '../../../platform';
 
+/** Main-app routes allowed as Exit destinations / `?from=` values. */
+export const FLOW_RETURN_ROUTES = [
+  '/wallet',
+  '/accounts',
+  '/welcome',
+  '/settings',
+  '/staking',
+  '/governance',
+  '/send',
+];
+
+export function sanitizeFlowReturnPath(path) {
+  if (!path || typeof path !== 'string') return null;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  const bare = normalized.split('?')[0].split('#')[0];
+  return FLOW_RETURN_ROUTES.includes(bare) ? bare : null;
+}
+
+/**
+ * Append `from=<route>` so Exit can return to the initiating page.
+ * @param {string} query - existing query (`?type=generate` or `type=generate`)
+ * @param {string} fromPath - current SPA route (e.g. `/accounts`)
+ */
+export function appendFlowReturnQuery(query = '', fromPath) {
+  const safe = sanitizeFlowReturnPath(fromPath);
+  if (!safe) {
+    if (!query) return '';
+    return query.startsWith('?') ? query : `?${query}`;
+  }
+  const raw = query.startsWith('?') ? query.slice(1) : query;
+  const params = new URLSearchParams(raw);
+  params.set('from', safe);
+  return `?${params.toString()}`;
+}
+
+/** @deprecated Prefer appendFlowReturnQuery */
+export const withFlowReturnQuery = appendFlowReturnQuery;
+
+export function readFlowReturnPath(
+  search = typeof window !== 'undefined' ? window.location.search : ''
+) {
+  try {
+    return sanitizeFlowReturnPath(new URLSearchParams(search).get('from'));
+  } catch {
+    return null;
+  }
+}
+
+async function openReturnRoute(path) {
+  const safe = sanitizeFlowReturnPath(path) || '/wallet';
+  if (typeof platform.navigation.openMainRoute === 'function') {
+    await platform.navigation.openMainRoute(safe);
+  } else {
+    await platform.navigation.closeCurrentTab();
+  }
+}
+
 /**
  * Leave create/import/HW account setup without writing anything.
- * Returns to Accounts when a vault already has accounts; otherwise Welcome.
+ * Prefers `?from=` (initiator). Falls back to accounts vs welcome.
  */
 export async function leaveSetupFlow() {
+  const from = readFlowReturnPath();
+  if (from) {
+    await openReturnRoute(from);
+    return;
+  }
   let hasAccounts = false;
   try {
     const accounts = await platform.storage.get('accounts');
@@ -21,21 +84,15 @@ export async function leaveSetupFlow() {
   } catch {
     hasAccounts = false;
   }
-  const dest = hasAccounts ? '/accounts' : '/welcome';
-  if (typeof platform.navigation.openMainRoute === 'function') {
-    await platform.navigation.openMainRoute(dest);
-  } else {
-    await platform.navigation.closeCurrentTab();
-  }
+  await openReturnRoute(hasAccounts ? '/accounts' : '/welcome');
 }
 
-/** Leave a HW signing tab (Keystone / Trezor) and return to the main app. */
-export async function leaveSignTabFlow() {
-  if (typeof platform.navigation.openMainRoute === 'function') {
-    await platform.navigation.openMainRoute('/wallet');
-  } else {
-    await platform.navigation.closeCurrentTab();
-  }
+/**
+ * Leave a HW signing tab (Keystone / Trezor). Prefers `?from=` (e.g. /send).
+ */
+export async function leaveSignTabFlow(fallback = '/wallet') {
+  const from = readFlowReturnPath() || sanitizeFlowReturnPath(fallback) || '/wallet';
+  await openReturnRoute(from);
 }
 
 /**

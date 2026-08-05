@@ -40,6 +40,8 @@ import {
   toUnit,
 } from '../../../api/extension';
 import { FaRegFileCode } from 'react-icons/fa';
+import { useLocation } from 'react-router-dom';
+import { appendFlowReturnQuery, sanitizeFlowReturnPath } from './flowExit';
 
 const poolDefaultValue = {};
 
@@ -51,6 +53,9 @@ async function signingKeyHashesForAccount(account, { includeStake = true } = {})
 }
 
 const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
+  const location = useLocation();
+  const returnTo =
+    sanitizeFlowReturnPath(location?.pathname) || '/accounts';
   const settings = useStoreState((state) => state.settings.settings);
   const toast = useToast();
   const {
@@ -188,7 +193,10 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
+                appendFlowReturnQuery(
+                  `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`,
+                  returnTo
+                )
               );
             }
             if (hw.device === HW.keystone) {
@@ -196,6 +204,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                 txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
                 keyHashes,
                 partialSign: false,
+                from: returnTo,
               });
             }
             return await signAndSubmitHW(data.tx, {
@@ -295,7 +304,10 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
+                appendFlowReturnQuery(
+                  `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`,
+                  returnTo
+                )
               );
             }
             if (hw.device === HW.keystone) {
@@ -303,6 +315,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                 txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
                 keyHashes,
                 partialSign: false,
+                from: returnTo,
               });
             }
             return await signAndSubmitHW(data.tx, {
@@ -413,7 +426,10 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
+                appendFlowReturnQuery(
+                  `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`,
+                  returnTo
+                )
               );
             }
             if (hw.device === HW.keystone) {
@@ -421,6 +437,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
                 txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
                 keyHashes,
                 partialSign: false,
+                from: returnTo,
               });
             }
             return await signAndSubmitHW(data.tx, {

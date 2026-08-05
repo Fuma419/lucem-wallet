@@ -112,6 +112,7 @@ const App = () => {
       '/settings',
       '/staking',
       '/governance',
+      '/send',
     ];
     const deepLink = allowedDeep.includes(nextParam)
       ? nextParam

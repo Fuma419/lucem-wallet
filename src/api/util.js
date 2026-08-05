@@ -568,6 +568,41 @@ async function blockfrostKoiosCompatibleRequest(networkKey, endpoint, body, sign
     return rows;
   }
 
+  // --- /account_utxos: all UTxOs under stake key(s) ---
+  if (endpoint === '/account_utxos' && body && Array.isArray(body._stake_addresses)) {
+    const rows = [];
+    for (const stakeAddress of body._stake_addresses) {
+      let page = 1;
+      while (page <= 50) {
+        let batch;
+        try {
+          batch = await fetchBlockfrostJson(
+            networkKey,
+            `/accounts/${stakeAddress}/utxos?count=100&page=${page}`,
+            signal
+          );
+        } catch (error) {
+          if (String(error.message || '').includes('404')) {
+            batch = [];
+          } else {
+            throw error;
+          }
+        }
+        if (!Array.isArray(batch) || batch.length === 0) break;
+        for (const utxo of batch) {
+          rows.push({
+            ...blockfrostUtxoToKoios(utxo),
+            address: utxo.address || null,
+            stake_addr: stakeAddress,
+          });
+        }
+        if (batch.length < 100) break;
+        page += 1;
+      }
+    }
+    return rows;
+  }
+
   // --- /asset_info: token/NFT metadata (name, image/logo, decimals) ---
   if (endpoint === '/asset_info' && body && Array.isArray(body._asset_list)) {
     const rows = [];

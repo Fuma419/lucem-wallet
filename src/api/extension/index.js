@@ -337,32 +337,75 @@ export const getStakePools = async (limit = 25) => {
 
 export const getBalance = async () => {
   await Loader.load();
-  const paymentAddresses = await getEnabledPaymentAddresses();
-  const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
-  if (addressList.length === 0) {
+  const stakeAddress = await getRewardAddress();
+  let utxos = [];
+  if (stakeAddress) {
+    const request = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, false);
+    const result = await koiosRequest(request.endpoint, {}, request.body);
+    if (result?.error) {
+      if (result.status_code === 400) throw APIError.InvalidRequest;
+      else if (result.status_code === 500) throw APIError.InternalError;
+    } else if (Array.isArray(result)) {
+      utxos = result;
+    }
+  }
+  // Fallback: enabled payment addresses only (legacy / no stake addr).
+  if (utxos.length === 0 && !stakeAddress) {
+    const paymentAddresses = await getEnabledPaymentAddresses();
+    const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
+    if (addressList.length === 0) {
+      return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
+    }
+    const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
+    const result = await koiosRequest(request.endpoint, {}, request.body);
+    if (result?.error) {
+      if (result.status_code === 400) throw APIError.InvalidRequest;
+      else if (result.status_code === 500) throw APIError.InternalError;
+      else return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
+    }
+    utxos = Array.isArray(result) ? result : [];
+  }
+
+  if (utxos.length === 0) {
     return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
   }
 
-  // Use address_utxos to get detailed UTXO information across enabled addresses
-  const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
-  if (result.error) {
-    if (result.status_code === 400) throw APIError.InvalidRequest;
-    else if (result.status_code === 500) throw APIError.InternalError;
-    else return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
+  const assets = aggregateKoiosUtxosToAssets(utxos);
+  return await assetsToValue(assets);
+};
+
+export const getBalanceExtended = async ({ force = false } = {}) => {
+  const network = await getNetwork();
+  const stakeAddress = await getRewardAddress();
+  if (!stakeAddress) {
+    const addresses = await getEnabledPaymentAddresses();
+    const addressList = addresses.map((a) => a.paymentAddr).filter(Boolean);
+    if (addressList.length === 0) return [];
+    return withCache(
+      cacheKey(
+        'balance-extended',
+        network?.id,
+        addressList.join(','),
+        addresses.map((a) => `${a.role ?? 0}:${a.index}`).join('-')
+      ),
+      () => fetchBalanceExtended(addressList),
+      { force }
+    );
   }
-  
-  // If no UTXOs, return zero balance
-  if (!result || result.length === 0) {
-    return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
-  }
-  
-  // Aggregate all UTXOs to get total balance
+  // Stake-controlled UTxOs include every payment address under the account
+  // (external + change), so the wallet total matches chain controlled_amount.
+  return withCache(
+    cacheKey('balance-extended-stake', network?.id, stakeAddress),
+    () => fetchBalanceFromStake(stakeAddress),
+    { force }
+  );
+};
+
+const aggregateKoiosUtxosToAssets = (utxos) => {
   const aggregatedAssets = {};
   let totalLovelace = BigInt(0);
 
-  for (const utxo of result) {
+  for (const utxo of utxos) {
     totalLovelace += bigIntLovelace(utxo.value);
 
     if (utxo.asset_list && Array.isArray(utxo.asset_list)) {
@@ -376,78 +419,48 @@ export const getBalance = async () => {
     }
   }
 
-  const assets = [
+  return [
     { unit: 'lovelace', quantity: totalLovelace.toString() },
     ...Object.entries(aggregatedAssets).map(([unit, quantity]) => ({
       unit,
-      quantity: quantity.toString()
-    }))
+      quantity: quantity.toString(),
+    })),
   ];
-
-  const value = await assetsToValue(assets);
-  return value;
-};
-
-export const getBalanceExtended = async ({ force = false } = {}) => {
-  const network = await getNetwork();
-  const addresses = await getEnabledPaymentAddresses();
-  const addressList = addresses.map((a) => a.paymentAddr).filter(Boolean);
-  if (addressList.length === 0) return [];
-  return withCache(
-    cacheKey(
-      'balance-extended',
-      network?.id,
-      addressList.join(','),
-      addresses.map((a) => a.index).join('-')
-    ),
-    () => fetchBalanceExtended(addressList),
-    { force }
-  );
 };
 
 const fetchBalanceExtended = async (addresses) => {
   const list = Array.isArray(addresses) ? addresses : [addresses];
   const request = KOIOS_REQUESTS.getAddressesUtxos(list, true);
   const result = await koiosRequest(request.endpoint, {}, request.body);
-  
+
   if (result.error) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
     else return [];
   }
-  
-  // If no UTXOs, return empty array
+
   if (!result || result.length === 0) {
     return [];
   }
-  
-  // Aggregate all UTXOs to get total balance
-  const aggregatedAssets = {};
-  let totalLovelace = BigInt(0);
-  
-  for (const utxo of result) {
-    totalLovelace += bigIntLovelace(utxo.value);
 
-    if (utxo.asset_list && Array.isArray(utxo.asset_list)) {
-      for (const asset of utxo.asset_list) {
-        const unit = asset.policy_id + asset.asset_name;
-        if (!aggregatedAssets[unit]) {
-          aggregatedAssets[unit] = BigInt(0);
-        }
-        aggregatedAssets[unit] += bigIntLovelace(asset.quantity);
-      }
-    }
+  return aggregateKoiosUtxosToAssets(result);
+};
+
+const fetchBalanceFromStake = async (stakeAddress) => {
+  const request = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, true);
+  const result = await koiosRequest(request.endpoint, {}, request.body);
+
+  if (result?.error) {
+    if (result.status_code === 400) throw APIError.InvalidRequest;
+    else if (result.status_code === 500) throw APIError.InternalError;
+    else return [];
   }
 
-  const assets = [
-    { unit: 'lovelace', quantity: totalLovelace.toString() },
-    ...Object.entries(aggregatedAssets).map(([unit, quantity]) => ({
-      unit,
-      quantity: quantity.toString()
-    }))
-  ];
+  if (!result || result.length === 0) {
+    return [];
+  }
 
-  return assets;
+  return aggregateKoiosUtxosToAssets(result);
 };
 
 export const getFullBalance = async () => {
@@ -786,17 +799,24 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
   const currentAccount = await getCurrentAccount();
   const paymentAddresses = await getEnabledPaymentAddresses();
   const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
-  if (addressList.length === 0) return [];
+  const stakeAddress = await getRewardAddress();
 
-  const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  
+  let result;
+  if (stakeAddress) {
+    const request = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, false);
+    result = await koiosRequest(request.endpoint, {}, request.body);
+  } else {
+    if (addressList.length === 0) return [];
+    const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
+    result = await koiosRequest(request.endpoint, {}, request.body);
+  }
+
   if (result?.error) {
     if (result.status_code === 400) throw APIError.InvalidRequest;
     else if (result.status_code === 500) throw APIError.InternalError;
     else return [];
   }
-  
+
   let utxos = Array.isArray(result) ? result : [];
 
   if (currentAccount.collateral) {
@@ -809,34 +829,27 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
     );
   }
 
-  // Map each UTxO back to its owning address (Koios includes address on rows when
-  // querying multiple; fall back to primary when absent).
-  const addrByHint = new Map(
-    paymentAddresses.map((a) => [a.paymentAddr, a.paymentAddr])
-  );
+  const fallbackOwner = addressList[0] || currentAccount.paymentAddr;
 
   let convertedUtxos = await Promise.all(
     utxos.map(async (utxo) => {
-      const owner =
-        (utxo.address && addrByHint.get(utxo.address)) ||
-        addressList.find((a) => a === utxo.address) ||
-        addressList[0];
+      const owner = utxo.address || fallbackOwner;
       const formattedUtxo = {
         tx_hash: utxo.tx_hash,
         output_index: utxo.output_index ?? utxo.tx_index,
         amount: [
           { unit: 'lovelace', quantity: utxo.value || '0' },
-          ...(utxo.asset_list || []).map(asset => ({
+          ...(utxo.asset_list || []).map((asset) => ({
             unit: asset.policy_id + asset.asset_name,
-            quantity: asset.quantity || '0'
-          }))
-        ]
+            quantity: asset.quantity || '0',
+          })),
+        ],
       };
-      
+
       return await utxoFromJson(formattedUtxo, owner);
     })
   );
-  
+
   // filter utxos
   if (amount) {
     await Loader.load();
@@ -853,7 +866,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
         compareValues(unspent.output().amount(), filterValue) !== -1
     );
   }
-  
+
   if ((amount || paginate) && convertedUtxos.length <= 0) {
     return null;
   }
@@ -3891,25 +3904,9 @@ export const updateAccount = async (forceUpdate = false) => {
     force: forceUpdate,
   });
 
-  const isFirstLoad = currentAccount[network.id].lovelace == null;
-  if (
-    currentAccount[network.id].history.confirmed[0] ==
-      currentAccount[network.id].lastUpdate &&
-    !forceUpdate &&
-    !isFirstLoad &&
-    !currentAccount[network.id].forceUpdate
-  ) {
-    // Nothing new on chain (latest tx hash unchanged) — skip the balance fetch
-    // and, since nothing was mutated, skip the storage write too.
-    return;
-  }
-
-  // forcing acccount update for in case of breaking changes in an Nami update
-  if (currentAccount[network.id].forceUpdate)
-    delete currentAccount[network.id].forceUpdate;
-
-  // Discover newly used receive + change addresses on this network before
-  // balance so funds on unused CIP-1852 indices are included in the aggregate.
+  // Discover used external + change addresses even when the balance refresh is
+  // skipped (unchanged tip). Otherwise soft refreshes never activate change
+  // addresses that already hold funds under this stake key.
   let addressesChanged = false;
   try {
     const beforeExternal = getExternalIndices(currentAccount);
@@ -3935,7 +3932,6 @@ export const updateAccount = async (forceUpdate = false) => {
       currentAccount.externalIndices = mergedExternal;
       currentAccount.internalIndices = mergedInternal;
       addressesChanged = true;
-      // Persist before balance fetch — getEnabledPaymentAddresses reads storage.
       await setStorage({
         [STORAGE.accounts]: {
           ...accounts,
@@ -3945,13 +3941,33 @@ export const updateAccount = async (forceUpdate = false) => {
     }
   } catch (error) {
     console.warn(
-      'Balance-refresh address discovery failed:',
+      'Address discovery failed:',
       error.message || error
     );
   }
 
+  const isFirstLoad = currentAccount[network.id].lovelace == null;
+  if (
+    currentAccount[network.id].history.confirmed[0] ==
+      currentAccount[network.id].lastUpdate &&
+    !forceUpdate &&
+    !isFirstLoad &&
+    !currentAccount[network.id].forceUpdate &&
+    !addressesChanged
+  ) {
+    // Nothing new on chain (latest tx hash unchanged) — skip the balance fetch
+    // and, since nothing was mutated, skip the storage write too.
+    return;
+  }
+
+  // forcing acccount update for in case of breaking changes in an Nami update
+  if (currentAccount[network.id].forceUpdate)
+    delete currentAccount[network.id].forceUpdate;
+
   const balanceSignatureBefore = balanceSignature(currentAccount[network.id]);
-  await updateBalance(currentAccount, network, { force: forceUpdate });
+  await updateBalance(currentAccount, network, {
+    force: forceUpdate || addressesChanged,
+  });
   const balanceChanged =
     balanceSignature(currentAccount[network.id]) !== balanceSignatureBefore;
 

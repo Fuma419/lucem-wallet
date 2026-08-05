@@ -72,13 +72,14 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(walletSrc).toMatch(/lucem-wallet-main-column/);
   });
 
-  test('wallet.jsx header orbs share shell props and logo uses background overscan (not raw Image cover)', () => {
+  test('wallet.jsx header orbs share shell props and logo uses background contain (full mark)', () => {
     const walletSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
       'utf8'
     );
     expect(walletSrc).toContain('walletHeaderOrbShellProps');
     expect(walletSrc).toContain('WALLET_HEADER_LOGO_BG_SIZE');
+    expect(walletSrc).toMatch(/WALLET_HEADER_LOGO_BG_SIZE\s*=\s*'100%'/);
     expect(walletSrc).toContain('backgroundImage={`url(${Logo})`}');
   });
 
@@ -237,13 +238,24 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).toMatch(/height:\s*['"]100%['"]/);
   });
 
-  test('store.jsx loading shell should use dvh-aware minHeight', () => {
+  test('store.jsx loading shell shows full logo (contain) with dvh-aware minHeight', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '../../ui/store.jsx'),
       'utf8'
     );
     expect(src).toMatch(/minH="100vh"/);
     expect(src).toMatch(/100dvh/);
+    expect(src).toMatch(/objectFit="contain"/);
+    expect(src).toMatch(/assets\/img\/logo\.png/);
+  });
+
+  test('Capacitor splash fits full logo (CENTER_INSIDE, not CENTER_CROP)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../capacitor.config.ts'),
+      'utf8'
+    );
+    expect(src).toMatch(/androidScaleType:\s*'CENTER_INSIDE'/);
+    expect(src).not.toMatch(/CENTER_CROP/);
   });
 
   test('termsOfUse.jsx legal scroll region should cap height with viewport (not fixed 400px only)', () => {

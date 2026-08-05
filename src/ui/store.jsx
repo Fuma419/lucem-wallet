@@ -21,8 +21,9 @@ import {
   useStoreState,
   persist,
 } from 'easy-peasy';
-import { Box, Text, Spinner } from '@chakra-ui/react';
+import { Box, Text, Image, Spinner } from '@chakra-ui/react';
 import { InfoOutlineIcon } from '@chakra-ui/icons';
+import Logo from '../assets/img/logo.png';
 import {
   needUpgrade,
   needPWD,
@@ -184,9 +185,21 @@ const StoreInit = ({ children }) => {
             sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
             width="full"
             display="flex"
+            flexDirection="column"
             alignItems="center"
             justifyContent="center"
+            gap={6}
+            bg="#000000"
           >
+            <Image
+              src={Logo}
+              alt="Lucem"
+              draggable={false}
+              boxSize={{ base: '96px', md: '112px' }}
+              maxW="70vw"
+              objectFit="contain"
+              objectPosition="center"
+            />
             <Spinner color="yellow" speed="0.5s" />
           </Box>
 

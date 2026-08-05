@@ -1,6 +1,12 @@
 const runIntegration = process.env.LUCEM_RUN_INTEGRATION === '1';
+// Parallel Jest workers + CSL/Keystone native modules occasionally SIGSEGV on
+// the Jenkins agent (flake across unrelated suites). Serialize there only.
+const isCi = Boolean(
+  process.env.CI || process.env.JENKINS_URL || process.env.GITHUB_ACTIONS
+);
 
 module.exports = {
+  ...(isCi ? { maxWorkers: 1 } : {}),
   testPathIgnorePatterns: [
     '/node_modules/',
     '/yoroi-frontend/',

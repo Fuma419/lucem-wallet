@@ -181,6 +181,9 @@ pipeline {
         sh '''
           set -e
           export PATH="${NODE20_DIR}/bin:${PATH}"
+          # Serialize Jest: parallel workers + CSL/Keystone natives can SIGSEGV
+          # on this agent and mark Unit tests failed (flake, not product bugs).
+          export CI=1
           npm test
         '''
       }

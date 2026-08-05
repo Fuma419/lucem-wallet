@@ -1,24 +1,31 @@
 /**
- * Regression: consolidated stake balance + assets for a real mainnet account
- * where the primary payment address holds only ~2.5k ADA and native assets
- * live on a change address under the same stake key.
+ * Regression: consolidated stake balance + assets.
  *
- * Fixture addresses (mainnet):
+ * Input is only the payment address. The stake account is identified via
+ * `/address_info` (API), then `/account_utxos` aggregates ADA + assets under
+ * that stake key — not the payment address alone.
+ *
+ * Fixture (mainnet):
  *   payment: addr1q9n6mxkrrey8ys6vst9rr9vpt85t92xrpxe9du4al7d33cah4f889p4yrfzz6u84knuqf8vf4vkhph3u5dqnzrgxzngqnjg232
- *   stake:   stake1uxm65nnjs6jp53pdwr6mf7qynky6kttsmc72xsf3p5rpf5qvlszan
+ *   stake key hash: b7aa4e7286a41a442d70f5b4f8049d89ab2d70de3ca341310d0614d0
  */
 const fs = require('fs');
 const path = require('path');
+const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
 
 const {
   aggregateKoiosUtxosToAssets,
+  stakeAddressFromAddressInfo,
   stakeControlledLovelaceFromAccountInfo,
 } = require('../../../api/extension/stake-balance');
+const { KOIOS_REQUESTS } = require('../../../api/koios-endpoints');
 
 const PRIMARY_PAYMENT =
   'addr1q9n6mxkrrey8ys6vst9rr9vpt85t92xrpxe9du4al7d33cah4f889p4yrfzz6u84knuqf8vf4vkhph3u5dqnzrgxzngqnjg232';
-const STAKE =
-  'stake1uxm65nnjs6jp53pdwr6mf7qynky6kttsmc72xsf3p5rpf5qvlszan';
+/** Stake credential key hash for PRIMARY_PAYMENT (not hard-coded bech32). */
+const EXPECTED_STAKE_KEY_HASH =
+  'b7aa4e7286a41a442d70f5b4f8049d89ab2d70de3ca341310d0614d0';
+
 const CHANGE_WITH_ASSETS =
   'addr1qyemvyyvcqw99k4kl70esv8rcaz23ysxcj5xl04jc97srdah4f889p4yrfzz6u84knuqf8vf4vkhph3u5dqnzrgxzngq6qk6gj';
 
@@ -26,6 +33,21 @@ const ASSET_XSPO =
   '2654f990d88fa7ca4268ebcd745188cec37202aa74d0dc10c7f81a147873706f3431';
 const ASSET_T_MINSWAP =
   '6ac5787a00e1fa8c92436ca641add73365f5a9b3802b595faf0cb871542d4d494e53574150';
+
+const stakeKeyHashFromBech32 = (stakeBech32) => {
+  const reward = CSL.RewardAddress.from_address(
+    CSL.Address.from_bech32(stakeBech32)
+  );
+  const cred = reward.payment_cred();
+  return Buffer.from(cred.to_keyhash().to_bytes()).toString('hex');
+};
+
+const stakeKeyHashFromBaseAddress = (paymentBech32) => {
+  const base = CSL.BaseAddress.from_address(
+    CSL.Address.from_bech32(paymentBech32)
+  );
+  return Buffer.from(base.stake_cred().to_keyhash().to_bytes()).toString('hex');
+};
 
 /** Snapshot shaped like Koios `/account_utxos` with `_extended: true`. */
 const STAKE_UTXOS_EXTENDED = [
@@ -63,7 +85,6 @@ const STAKE_UTXOS_EXTENDED = [
   },
 ];
 
-/** Same rows as Koios returns when `_extended` is omitted/false (`asset_list: null`). */
 const STAKE_UTXOS_NOT_EXTENDED = STAKE_UTXOS_EXTENDED.map((u) => ({
   ...u,
   asset_list: null,
@@ -82,11 +103,49 @@ const PRIMARY_ONLY_UTXOS = [
 const root = path.join(__dirname, '../../..');
 const readSrc = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
-describe('stake-consolidated balance (addr1q9n6… / stake1uxm65…)', () => {
+const koiosPost = async (endpoint, body) => {
+  const response = await fetch(`https://api.koios.rest/api/v1${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Koios ${response.status}: ${text.slice(0, 200)}`);
+  }
+  return text ? JSON.parse(text) : null;
+};
+
+describe('stake-consolidated balance (resolve stake from payment address)', () => {
+  test('payment address stake credential matches the expected key hash', () => {
+    expect(stakeKeyHashFromBaseAddress(PRIMARY_PAYMENT)).toBe(
+      EXPECTED_STAKE_KEY_HASH
+    );
+  });
+
+  test('stakeAddressFromAddressInfo reads stake_address from API rows', () => {
+    expect(
+      stakeAddressFromAddressInfo([
+        {
+          address: PRIMARY_PAYMENT,
+          stake_address: 'stake1uxm65nnjs6jp53pdwr6mf7qynky6kttsmc72xsf3p5rpf5qvlszan',
+        },
+      ])
+    ).toBe('stake1uxm65nnjs6jp53pdwr6mf7qynky6kttsmc72xsf3p5rpf5qvlszan');
+
+    expect(stakeAddressFromAddressInfo({ stake_addr: 'stake1abc' })).toBe(
+      'stake1abc'
+    );
+    expect(stakeAddressFromAddressInfo([])).toBeNull();
+    expect(stakeAddressFromAddressInfo(null)).toBeNull();
+  });
+
   test('primary-address-only total is far below stake-controlled ADA', () => {
     const primary = aggregateKoiosUtxosToAssets(PRIMARY_ONLY_UTXOS);
     const stake = aggregateKoiosUtxosToAssets(STAKE_UTXOS_EXTENDED);
-    const primaryAda = BigInt(primary.find((a) => a.unit === 'lovelace').quantity);
+    const primaryAda = BigInt(
+      primary.find((a) => a.unit === 'lovelace').quantity
+    );
     const stakeAda = BigInt(stake.find((a) => a.unit === 'lovelace').quantity);
 
     expect(primaryAda).toBe(2517884644n);
@@ -116,7 +175,6 @@ describe('stake-consolidated balance (addr1q9n6… / stake1uxm65…)', () => {
   test('account_info helpers accept Koios total_balance/utxo and Blockfrost controlled_amount', () => {
     expect(
       stakeControlledLovelaceFromAccountInfo({
-        stake_address: STAKE,
         utxo: '20069694472',
         total_balance: '20069694472',
         rewards_available: '0',
@@ -125,36 +183,64 @@ describe('stake-consolidated balance (addr1q9n6… / stake1uxm65…)', () => {
 
     expect(
       stakeControlledLovelaceFromAccountInfo({
-        stake_address: STAKE,
         controlled_amount: '20069694472',
         withdrawable_amount: '0',
       })
     ).toBe('20069694472');
   });
 
-  test('balance and UTxO fetchers request extended account_utxos', () => {
+  test('wallet resolves stake via address_info and uses extended account_utxos', () => {
     const src = readSrc('api/extension/index.js');
-    // Wallet total (assets + ADA)
-    expect(src).toMatch(
-      /getAccountUtxos\(\s*stakeAddress\s*,\s*true\s*\)/
-    );
-    // CIP-30 getBalance and spendable getUtxos must not omit asset_list
-    expect(src).toMatch(
-      /getAccountUtxos\(\s*stakeAddress\s*,\s*true\s*\)/g
-    );
+    expect(src).toMatch(/resolveStakeAddressFromPaymentAddress/);
+    expect(src).toMatch(/getAccountStakeAddress/);
+    expect(src).toMatch(/stakeAddressFromAddressInfo/);
+    expect(src).toMatch(/getAddressInfo\(paymentAddr\)/);
+
     const accountUtxoCalls = [
       ...src.matchAll(/getAccountUtxos\(\s*([^)]*)\s*\)/g),
     ].map((m) => m[1].replace(/\s+/g, ' '));
-    // Every stake UTxO fetch in index.js should pass true (extended)
+    expect(accountUtxoCalls.length).toBeGreaterThan(0);
     for (const args of accountUtxoCalls) {
       expect(args).toMatch(/true/);
     }
   });
 
-  test('getBalanceExtended prefers stake path over payment addresses', () => {
-    const src = readSrc('api/extension/index.js');
-    expect(src).toMatch(/balance-extended-stake/);
-    expect(src).toMatch(/fetchBalanceFromStake/);
-    expect(src).toMatch(/aggregateKoiosUtxosToAssets/);
-  });
+  test(
+    'live: address_info → stake key → consolidated ADA/assets exceed primary',
+    async () => {
+      const infoReq = KOIOS_REQUESTS.getAddressInfo(PRIMARY_PAYMENT);
+      expect(infoReq.endpoint).toBe('/address_info');
+      expect(infoReq.body).toEqual({ _addresses: [PRIMARY_PAYMENT] });
+
+      const info = await koiosPost(infoReq.endpoint, infoReq.body);
+      const stakeAddress = stakeAddressFromAddressInfo(info);
+      expect(stakeAddress).toMatch(/^stake1/);
+      expect(stakeKeyHashFromBech32(stakeAddress)).toBe(EXPECTED_STAKE_KEY_HASH);
+
+      const stakeReq = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, true);
+      expect(stakeReq.body._extended).toBe(true);
+      const stakeUtxos = await koiosPost(stakeReq.endpoint, stakeReq.body);
+      const stakeAssets = aggregateKoiosUtxosToAssets(stakeUtxos);
+
+      const primaryReq = KOIOS_REQUESTS.getAddressesUtxos(
+        [PRIMARY_PAYMENT],
+        true
+      );
+      const primaryUtxos = await koiosPost(primaryReq.endpoint, primaryReq.body);
+      const primaryAssets = aggregateKoiosUtxosToAssets(primaryUtxos);
+
+      const stakeAda = BigInt(
+        stakeAssets.find((a) => a.unit === 'lovelace').quantity
+      );
+      const primaryAda = BigInt(
+        primaryAssets.find((a) => a.unit === 'lovelace').quantity
+      );
+
+      expect(stakeAda).toBeGreaterThan(primaryAda * 7n);
+      expect(stakeAssets.length).toBeGreaterThan(primaryAssets.length);
+      expect(stakeAssets.some((a) => a.unit === ASSET_XSPO)).toBe(true);
+      expect(stakeAssets.some((a) => a.unit === ASSET_T_MINSWAP)).toBe(true);
+    },
+    60000
+  );
 });

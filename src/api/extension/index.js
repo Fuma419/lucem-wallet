@@ -57,6 +57,7 @@ import {
 } from './collateral';
 import {
   aggregateKoiosUtxosToAssets,
+  stakeAddressFromAddressInfo,
   stakeControlledLovelaceFromAccountInfo,
 } from './stake-balance';
 import {
@@ -339,9 +340,40 @@ export const getStakePools = async (limit = 25) => {
   return detailedPools.map((pool) => normalizeStakePool(pool));
 };
 
+/**
+ * Look up the stake/reward address for a payment address via `/address_info`.
+ * Used when the wallet has a payment address but no stored rewardAddr yet.
+ */
+export const resolveStakeAddressFromPaymentAddress = async (paymentAddr) => {
+  if (!paymentAddr) return null;
+  try {
+    const request = KOIOS_REQUESTS.getAddressInfo(paymentAddr);
+    const result = await koiosRequest(request.endpoint, {}, request.body);
+    if (result?.error) return null;
+    return stakeAddressFromAddressInfo(result);
+  } catch (error) {
+    console.warn(
+      'resolveStakeAddressFromPaymentAddress failed:',
+      error.message || error
+    );
+    return null;
+  }
+};
+
+/**
+ * Stake account for the current wallet: prefer stored rewardAddr, otherwise
+ * resolve it from the primary payment address through the chain API.
+ */
+export const getAccountStakeAddress = async () => {
+  const stored = await getRewardAddress();
+  if (stored) return stored;
+  const paymentAddr = await getAddress();
+  return resolveStakeAddressFromPaymentAddress(paymentAddr);
+};
+
 export const getBalance = async () => {
   await Loader.load();
-  const stakeAddress = await getRewardAddress();
+  const stakeAddress = await getAccountStakeAddress();
   let utxos = [];
   if (stakeAddress) {
     // `_extended: true` is required on Koios — otherwise asset_list is null and
@@ -382,7 +414,7 @@ export const getBalance = async () => {
 
 export const getBalanceExtended = async ({ force = false } = {}) => {
   const network = await getNetwork();
-  const stakeAddress = await getRewardAddress();
+  const stakeAddress = await getAccountStakeAddress();
   if (!stakeAddress) {
     const addresses = await getEnabledPaymentAddresses();
     const addressList = addresses.map((a) => a.paymentAddr).filter(Boolean);
@@ -443,7 +475,7 @@ const fetchBalanceFromStake = async (stakeAddress) => {
 };
 
 export const getFullBalance = async () => {
-  const stakeAddress = await getRewardAddress();
+  const stakeAddress = await getAccountStakeAddress();
   if (!stakeAddress) return '0';
 
   const request = KOIOS_REQUESTS.getAccountInfo(stakeAddress);
@@ -776,7 +808,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
   const currentAccount = await getCurrentAccount();
   const paymentAddresses = await getEnabledPaymentAddresses();
   const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
-  const stakeAddress = await getRewardAddress();
+  const stakeAddress = await getAccountStakeAddress();
 
   let result;
   if (stakeAddress) {

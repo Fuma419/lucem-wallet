@@ -200,6 +200,16 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).not.toMatch(/position=["']absolute["'][\s\S]{0,30}top=["']9["']/);
   });
 
+  test('welcome.jsx logo uses padded asset with object-fit contain (full mark)', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/welcome.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/assets\/img\/logo\.png/);
+    expect(src).toMatch(/objectFit="contain"/);
+    expect(src).toMatch(/height="auto"/);
+  });
+
   test('hw.jsx hardware tab uses minHeight 100dvh shell (no fixed 100vh center only)', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '../../ui/app/tabs/hw.jsx'),

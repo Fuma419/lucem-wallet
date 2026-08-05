@@ -56,6 +56,10 @@ import {
   selectCollateralCandidates,
 } from './collateral';
 import {
+  aggregateKoiosUtxosToAssets,
+  stakeControlledLovelaceFromAccountInfo,
+} from './stake-balance';
+import {
   emptyDelegation,
   normalizeDelegationRow,
   normalizeStakePool as normalizeStakePoolData,
@@ -340,7 +344,9 @@ export const getBalance = async () => {
   const stakeAddress = await getRewardAddress();
   let utxos = [];
   if (stakeAddress) {
-    const request = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, false);
+    // `_extended: true` is required on Koios — otherwise asset_list is null and
+    // native tokens under the stake key are omitted from the CIP-30 Value.
+    const request = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, true);
     const result = await koiosRequest(request.endpoint, {}, request.body);
     if (result?.error) {
       if (result.status_code === 400) throw APIError.InvalidRequest;
@@ -356,7 +362,7 @@ export const getBalance = async () => {
     if (addressList.length === 0) {
       return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
     }
-    const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
+    const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, true);
     const result = await koiosRequest(request.endpoint, {}, request.body);
     if (result?.error) {
       if (result.status_code === 400) throw APIError.InvalidRequest;
@@ -401,33 +407,6 @@ export const getBalanceExtended = async ({ force = false } = {}) => {
   );
 };
 
-const aggregateKoiosUtxosToAssets = (utxos) => {
-  const aggregatedAssets = {};
-  let totalLovelace = BigInt(0);
-
-  for (const utxo of utxos) {
-    totalLovelace += bigIntLovelace(utxo.value);
-
-    if (utxo.asset_list && Array.isArray(utxo.asset_list)) {
-      for (const asset of utxo.asset_list) {
-        const unit = asset.policy_id + asset.asset_name;
-        if (!aggregatedAssets[unit]) {
-          aggregatedAssets[unit] = BigInt(0);
-        }
-        aggregatedAssets[unit] += bigIntLovelace(asset.quantity);
-      }
-    }
-  }
-
-  return [
-    { unit: 'lovelace', quantity: totalLovelace.toString() },
-    ...Object.entries(aggregatedAssets).map(([unit, quantity]) => ({
-      unit,
-      quantity: quantity.toString(),
-    })),
-  ];
-};
-
 const fetchBalanceExtended = async (addresses) => {
   const list = Array.isArray(addresses) ? addresses : [addresses];
   const request = KOIOS_REQUESTS.getAddressesUtxos(list, true);
@@ -464,16 +443,14 @@ const fetchBalanceFromStake = async (stakeAddress) => {
 };
 
 export const getFullBalance = async () => {
-  const currentAccount = await getCurrentAccount();
-  const stakeAddress = await getRewardAddress(); // Get the stake address
-  
+  const stakeAddress = await getRewardAddress();
+  if (!stakeAddress) return '0';
+
   const request = KOIOS_REQUESTS.getAccountInfo(stakeAddress);
   const result = await koiosRequest(request.endpoint, {}, request.body);
-  
-  if (result.error || !result[0]) return '0';
-  return (
-    BigInt(result[0].controlled_amount || 0) - BigInt(result[0].withdrawable_amount || 0)
-  ).toString();
+
+  if (result?.error || !result?.[0]) return '0';
+  return stakeControlledLovelaceFromAccountInfo(result[0]);
 };
 
 export const getTransactions = async (paginate = 1, count = 10, { force = false } = {}) => {
@@ -803,11 +780,12 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
 
   let result;
   if (stakeAddress) {
-    const request = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, false);
+    // Extended UTxOs include asset_list (Koios drops tokens when false).
+    const request = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, true);
     result = await koiosRequest(request.endpoint, {}, request.body);
   } else {
     if (addressList.length === 0) return [];
-    const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, false);
+    const request = KOIOS_REQUESTS.getAddressesUtxos(addressList, true);
     result = await koiosRequest(request.endpoint, {}, request.body);
   }
 

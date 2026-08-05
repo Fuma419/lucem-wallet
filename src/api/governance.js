@@ -12,6 +12,10 @@ const BLOCKFROST_PLACEHOLDER_KEYS = new Set([
   'dummy',
   'your-koios-api-key-here',
   'your-blockfrost-project-id',
+  'dummy_mainnet',
+  'dummy_testnet',
+  'dummy_preview',
+  'dummy_preprod',
 ]);
 
 const asArray = (value) => (Array.isArray(value) ? value : []);

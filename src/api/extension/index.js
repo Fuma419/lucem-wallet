@@ -3797,22 +3797,31 @@ export const updateBalance = async (currentAccount, network, { force = false } =
       (am) => am.unit !== 'lovelace'
     );
     if (currentAccount[network.id].assets.length > 0) {
-      const { initTx } = require('./wallet');
-      const protocolParameters = await initTx();
-      const checkOutput = Loader.Cardano.TransactionOutput.new(
-        Loader.Cardano.Address.from_bech32(
-          currentAccount[network.id].paymentAddr
-        ),
-        amount
-      );
-      const dataCost = Loader.Cardano.DataCost.new_coins_per_byte(
-        Loader.Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord.toString())
-      );
-      const minAda = Loader.Cardano.min_ada_for_output(
-        checkOutput,
-        dataCost
-      ).toString();
-      currentAccount[network.id].minAda = normalizeLovelaceScalar(minAda);
+      try {
+        const { initTx } = require('./wallet');
+        const protocolParameters = await initTx();
+        const checkOutput = Loader.Cardano.TransactionOutput.new(
+          Loader.Cardano.Address.from_bech32(
+            currentAccount[network.id].paymentAddr
+          ),
+          amount
+        );
+        const dataCost = Loader.Cardano.DataCost.new_coins_per_byte(
+          Loader.Cardano.BigNum.from_str(
+            protocolParameters.coinsPerUtxoWord.toString()
+          )
+        );
+        const minAda = Loader.Cardano.min_ada_for_output(
+          checkOutput,
+          dataCost
+        ).toString();
+        currentAccount[network.id].minAda = normalizeLovelaceScalar(minAda);
+      } catch (error) {
+        // Stake-wide multiasset values can fail the single-output min-ada probe
+        // (or protocol-params fetch). Do not fail the whole balance refresh.
+        console.warn('minAda probe failed:', error.message || error);
+        currentAccount[network.id].minAda = 0;
+      }
     } else {
       currentAccount[network.id].minAda = 0;
     }

@@ -27,7 +27,7 @@ import { TAB } from '../../../config/config';
 import platform from '../../../platform';
 import PreventHistoryBack from '../components/PreventHistoryBack';
 import {
-  FlowExitButton,
+  FlowCardCloseButton,
   FlowShellHeader,
   leaveSetupFlow,
 } from '../components/flowExit';
@@ -184,9 +184,6 @@ const App = () => {
       <FlowShellHeader
         logoSrc={LogoWhite}
         hideLogoOnMobile={hideHeaderLogoOnMobile}
-        onExit={() => {
-          leaveSetupFlow();
-        }}
       />
       <Box
         flex="1 1 auto"
@@ -207,6 +204,7 @@ const App = () => {
           className={`modal-glow-${colorTheme} create-wallet-modal lucem-modal-card`}
           rounded="2xl"
           shadow="md"
+          position="relative"
           display="flex"
           flexDirection="column"
           alignItems="stretch"
@@ -221,9 +219,14 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
+          <FlowCardCloseButton
+            onClick={() => leaveSetupFlow()}
+            data-testid="import-abandon-button"
+          />
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
+            pt={{ base: 12, sm: 10, md: 10 }}
             flex="1 1 auto"
             minH={0}
           >
@@ -351,7 +354,6 @@ const GenerateSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
-        <FlowExitButton onClick={() => leaveSetupFlow()}>Exit</FlowExitButton>
       </Stack>
     </Box>
   );
@@ -510,7 +512,6 @@ const VerifySeed = ({ colorTheme }) => {
             Next
           </Button>
         </Stack>
-        <FlowExitButton onClick={() => leaveSetupFlow()}>Exit</FlowExitButton>
       </Stack>
     </Box>
   );
@@ -695,12 +696,6 @@ const ImportSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
-        <FlowExitButton
-          onClick={() => leaveSetupFlow()}
-          data-testid="import-abandon-button"
-        >
-          Exit
-        </FlowExitButton>
       </Stack>
     </Box>
   );
@@ -1057,15 +1052,6 @@ const MakeAccount = ({ colorTheme }) => {
           >
             Create
           </Button>
-          <FlowExitButton
-            isDisabled={loading}
-            onClick={() => leaveSetupFlow()}
-            data-testid={
-              flow === 'restore-wallet' ? 'import-abandon-button' : 'flow-exit-button'
-            }
-          >
-            Exit
-          </FlowExitButton>
         </Stack>
       </Box>
     </Box>

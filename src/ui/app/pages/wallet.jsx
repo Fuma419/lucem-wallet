@@ -59,14 +59,10 @@ import { useColorMode, useColorModeValue } from '@chakra-ui/react';
 import Logo from '../../../assets/img/logo.png';
 
 /**
- * Root cause of “smaller Lucem orb”: `logo.png` packs most of its bounding box in soft glow +
- * transparency; the salient black disc is much smaller than the file edges. Wallet avatars are
- * DiceBear (or uploads) drawn under `background-size: cover`, so they read to the circular clip.
- * Matching only outer `boxSize` never equalizes perceived size. Fix: render the logo with the
- * same CSS pipeline as avatars (`background-*`) and overscan with a larger `background-size` so
- * the luminous ring + disc fill the clip like avatar art. Tune if the asset changes.
+ * Lucem `logo.png` includes soft glow around the disc. Draw at 100% / contain so
+ * the full mark stays inside the circular clip (overscan previously cropped it).
  */
-const WALLET_HEADER_LOGO_BG_SIZE = '138%';
+const WALLET_HEADER_LOGO_BG_SIZE = '100%';
 
 const walletHeaderOrbShellProps = {
   boxSize: { base: '12', sm: '13', md: '14' },

@@ -23,7 +23,8 @@ const config: CapacitorConfig = {
       launchShowDuration: 600,
       backgroundColor: '#000000',
       showSpinner: false,
-      androidScaleType: 'CENTER_CROP',
+      // Fit the full logo inside the screen (avoid crop scale types).
+      androidScaleType: 'CENTER_INSIDE',
     },
   },
 };

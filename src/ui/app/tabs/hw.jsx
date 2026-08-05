@@ -34,6 +34,7 @@ import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import TrezorWidget from '../components/trezorWidget';
 import {
+  FlowCardCloseButton,
   FlowShellHeader,
   leaveSetupFlow,
 } from '../components/flowExit';
@@ -177,12 +178,7 @@ const App = () => {
       boxSizing="border-box"
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <FlowShellHeader
-        logoSrc={LogoWhite}
-        onExit={() => {
-          leaveSetupFlow();
-        }}
-      />
+      <FlowShellHeader logoSrc={LogoWhite} />
 
       <Box
         flex="1 1 auto"
@@ -203,6 +199,7 @@ const App = () => {
           className="modal-glow-yellow-green create-wallet-modal lucem-modal-card"
           rounded="2xl"
           shadow="md"
+          position="relative"
           display="flex"
           flexDirection="column"
           alignItems="stretch"
@@ -217,9 +214,13 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
+          {tab !== 2 ? (
+            <FlowCardCloseButton onClick={() => leaveSetupFlow()} />
+          ) : null}
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
+            pt={{ base: tab !== 2 ? 12 : 4, sm: 6, md: 10 }}
             flex="1 1 auto"
             minH={0}
           >

@@ -15,9 +15,10 @@ import { URType } from '@keystonehq/keystone-sdk';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import backgroundGreenWebp from '../../../assets/img/background-green.webp';
 import {
-  FlowExitButton,
+  FlowCardCloseButton,
   FlowShellHeader,
   leaveSignTabFlow,
+  readFlowReturnPath,
 } from '../components/flowExit';
 import {
   closeCurrentTab,
@@ -190,7 +191,7 @@ const App = () => {
       boxSizing="border-box"
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <FlowShellHeader logoSrc={LogoWhite} onExit={abandon} />
+      <FlowShellHeader logoSrc={LogoWhite} />
       <Box
         flex="1 1 auto"
         minH={0}
@@ -210,6 +211,7 @@ const App = () => {
           className="modal-glow-yellow-green create-wallet-modal lucem-modal-card"
           rounded="2xl"
           shadow="md"
+          position="relative"
           display="flex"
           flexDirection="column"
           alignItems="stretch"
@@ -223,9 +225,11 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
+          <FlowCardCloseButton onClick={abandon} />
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
+            pt={{ base: 12, sm: 10, md: 10 }}
             flex="1 1 auto"
             minH={0}
             display="flex"
@@ -285,7 +289,6 @@ const App = () => {
                 >
                   Scan signature from Keystone
                 </Button>
-                <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
               </>
             )}
             {phase === Phase.scan && (
@@ -326,21 +329,17 @@ const App = () => {
                 >
                   Back to transaction QR
                 </Button>
-                <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
               </>
             )}
             {(phase === Phase.done || error) && (
-              <>
-                <Text
-                  fontSize="sm"
-                  color={error ? 'red.200' : 'whiteAlpha.800'}
-                  textAlign="center"
-                  mt={4}
-                >
-                  {error || 'Done. You can close this tab.'}
-                </Text>
-                <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
-              </>
+              <Text
+                fontSize="sm"
+                color={error ? 'red.200' : 'whiteAlpha.800'}
+                textAlign="center"
+                mt={4}
+              >
+                {error || 'Done. You can close this tab.'}
+              </Text>
             )}
           </Box>
         </Box>

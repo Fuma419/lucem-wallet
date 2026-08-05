@@ -1,10 +1,11 @@
 /**
  * Shared exit/abort controls for full-page setup and signing flows.
- * Always-visible header Exit avoids trapping users mid-wizard.
+ * Close control matches Chakra modal chrome (icon X on the card).
  * Exit returns to the page that opened the flow (`from` query), when present.
  */
 import React from 'react';
-import { Box, Button, Image } from '@chakra-ui/react';
+import { Box, IconButton, Image } from '@chakra-ui/react';
+import { CloseIcon } from '@chakra-ui/icons';
 import platform from '../../../platform';
 
 /** Main-app routes allowed as Exit destinations / `?from=` values. */
@@ -114,33 +115,65 @@ export async function leaveDappApprovalFlow(decline) {
   }
 }
 
-const EXIT_BUTTON_PROPS = {
-  type: 'button',
-  variant: 'ghost',
-  size: 'sm',
-  color: 'whiteAlpha.800',
-  fontWeight: 'medium',
-  letterSpacing: '0.02em',
-  _hover: { bg: 'whiteAlpha.100', color: 'white' },
-  _active: { bg: 'whiteAlpha.200' },
-  'data-testid': 'flow-exit-button',
-};
+function handleExitClick(onClick) {
+  return (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (typeof onClick === 'function') onClick(e);
+  };
+}
 
-/** Subtle ghost Exit — use under primary CTAs or in headers. */
+/**
+ * Modal-style close (X) for full-page flow cards. Never submits enclosing forms.
+ */
+export const FlowCardCloseButton = ({ onClick, ...rest }) => (
+  <IconButton
+    type="button"
+    aria-label="Exit"
+    icon={<CloseIcon boxSize="2.5" />}
+    size="sm"
+    variant="ghost"
+    color="whiteAlpha.700"
+    position="absolute"
+    top={{ base: 3, md: 4 }}
+    right={{ base: 3, md: 4 }}
+    zIndex={2}
+    minW="36px"
+    h="36px"
+    rounded="full"
+    _hover={{ bg: 'whiteAlpha.200', color: 'white' }}
+    _active={{ bg: 'whiteAlpha.300' }}
+    onClick={handleExitClick(onClick)}
+    data-testid="flow-exit-button"
+    {...rest}
+  />
+);
+
+/** @deprecated Use FlowCardCloseButton on the modal card instead. */
 export const FlowExitButton = ({ onClick, children = 'Exit', ...rest }) => (
-  <Button {...EXIT_BUTTON_PROPS} onClick={onClick} {...rest}>
-    {children}
-  </Button>
+  <IconButton
+    type="button"
+    aria-label={typeof children === 'string' ? children : 'Exit'}
+    icon={<CloseIcon boxSize="2.5" />}
+    size="sm"
+    variant="ghost"
+    color="whiteAlpha.700"
+    rounded="full"
+    _hover={{ bg: 'whiteAlpha.200', color: 'white' }}
+    onClick={handleExitClick(onClick)}
+    data-testid="flow-exit-button"
+    {...rest}
+  />
 );
 
 /**
- * Full-page tab header: logo left, Exit right (always available).
+ * Full-page tab header: logo only (close control lives on the modal card).
  */
 export const FlowShellHeader = ({
   logoSrc,
-  onExit,
   hideLogoOnMobile = false,
-  exitLabel = 'Exit',
 }) => (
   <Box
     as="header"
@@ -148,8 +181,7 @@ export const FlowShellHeader = ({
     flexShrink={0}
     display="flex"
     alignItems="center"
-    justifyContent="space-between"
-    gap={3}
+    justifyContent="flex-start"
     pt={{
       base: hideLogoOnMobile
         ? 'max(0.35rem, env(safe-area-inset-top, 0px))'
@@ -159,24 +191,19 @@ export const FlowShellHeader = ({
     pb={{ base: hideLogoOnMobile ? 0 : 2, md: 2 }}
     px={{ base: 4, md: 8 }}
   >
-    <Box minW={0} flex="1">
-      {logoSrc ? (
-        <Image
-          draggable={false}
-          src={logoSrc}
-          width={{ base: '72px', sm: '88px', md: '100px' }}
-          maxW="min(100px, 36vw)"
-          objectFit="contain"
-          alt=""
-          display={{
-            base: hideLogoOnMobile ? 'none' : 'block',
-            md: 'block',
-          }}
-        />
-      ) : null}
-    </Box>
-    <FlowExitButton onClick={onExit} flexShrink={0}>
-      {exitLabel}
-    </FlowExitButton>
+    {logoSrc ? (
+      <Image
+        draggable={false}
+        src={logoSrc}
+        width={{ base: '72px', sm: '88px', md: '100px' }}
+        maxW="min(100px, 36vw)"
+        objectFit="contain"
+        alt=""
+        display={{
+          base: hideLogoOnMobile ? 'none' : 'block',
+          md: 'block',
+        }}
+      />
+    ) : null}
   </Box>
 );

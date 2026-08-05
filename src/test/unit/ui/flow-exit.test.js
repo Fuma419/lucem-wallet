@@ -14,15 +14,16 @@ describe('flow exit / abort', () => {
     expect(src).toMatch(/export async function leaveSignTabFlow/);
     expect(src).toMatch(/export async function leaveDappApprovalFlow/);
     expect(src).toMatch(/export const FlowShellHeader/);
+    expect(src).toMatch(/export const FlowCardCloseButton/);
     expect(src).toMatch(/export function appendFlowReturnQuery/);
     expect(src).toMatch(/export function readFlowReturnPath/);
     expect(src).toMatch(/FLOW_RETURN_ROUTES/);
     expect(src).toMatch(/'\/send'/);
-    expect(src).toMatch(/data-testid': 'flow-exit-button'/);
+    expect(src).toMatch(/CloseIcon/);
+    expect(src).toMatch(/data-testid=["']flow-exit-button["']/);
   });
 
   test('appendFlowReturnQuery encodes from path', () => {
-    // Pure logic mirrored from flowExit (avoid importing JSX module in node).
     const allowed = new Set([
       '/wallet',
       '/accounts',
@@ -32,11 +33,9 @@ describe('flow exit / abort', () => {
       '/governance',
       '/send',
     ]);
-    const sanitize = (path) => {
-      if (!path || typeof path !== 'string') return null;
-      const bare = (path.startsWith('/') ? path : `/${path}`)
-        .split('?')[0]
-        .split('#')[0];
+    const sanitize = (p) => {
+      if (!p || typeof p !== 'string') return null;
+      const bare = (p.startsWith('/') ? p : `/${p}`).split('?')[0].split('#')[0];
       return allowed.has(bare) ? bare : null;
     };
     const append = (query = '', fromPath) => {
@@ -61,12 +60,15 @@ describe('flow exit / abort', () => {
     ).toBe('/send');
   });
 
-  test('create wallet shell exposes Exit on every step', () => {
+  test('create wallet uses card close outside the password form', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
-    expect(src).toMatch(/FlowShellHeader/);
+    expect(src).toMatch(/FlowCardCloseButton/);
     expect(src).toMatch(/leaveSetupFlow/);
     expect(src).toMatch(/data-testid="import-abandon-button"/);
-    expect(src).not.toMatch(/abandonWalletSetup/);
+    const formIdx = src.indexOf('as="form"');
+    expect(formIdx).toBeGreaterThan(-1);
+    const formExit = src.slice(formIdx, formIdx + 2500);
+    expect(formExit).not.toMatch(/FlowExitButton|FlowCardCloseButton|leaveSetupFlow/);
   });
 
   test('wallet setup openers pass from= initiator route', () => {
@@ -78,15 +80,21 @@ describe('flow exit / abort', () => {
 
   test('hardware wallet setup shell exposes Exit', () => {
     const src = read('ui/app/tabs/hw.jsx');
-    expect(src).toMatch(/FlowShellHeader/);
+    expect(src).toMatch(/FlowCardCloseButton/);
     expect(src).toMatch(/leaveSetupFlow/);
   });
 
-  test('Keystone and Trezor sign tabs expose Exit', () => {
+  test('Keystone and Trezor sign tabs expose card close', () => {
     expect(read('ui/app/tabs/keystoneTx.jsx')).toMatch(/leaveSignTabFlow/);
-    expect(read('ui/app/tabs/keystoneTx.jsx')).toMatch(/FlowShellHeader/);
+    expect(read('ui/app/tabs/keystoneTx.jsx')).toMatch(/FlowCardCloseButton/);
     expect(read('ui/app/tabs/trezorTx.jsx')).toMatch(/leaveSignTabFlow/);
-    expect(read('ui/app/tabs/trezorTx.jsx')).toMatch(/FlowShellHeader/);
+    expect(read('ui/app/tabs/trezorTx.jsx')).toMatch(/FlowCardCloseButton/);
+  });
+
+  test('HW confirm closes before opening Keystone/Trezor tabs', () => {
+    const src = read('ui/app/components/confirmModal.jsx');
+    expect(src).toMatch(/Close before opening Keystone\/Trezor/);
+    expect(src).toMatch(/onClose\(\);\s*\n\s*await props\.sign\(null, hw\)/);
   });
 
   test('dApp sign/enable decline via leaveDappApprovalFlow', () => {

@@ -47,4 +47,21 @@ describe('stake-unified wallet source guards', () => {
     expect(src).toMatch(/Collapse the panel only/);
     expect(src).not.toMatch(/setAccountExternalIndices\(\s*\[0\]\s*\)/);
   });
+
+  test('Keystone signing uses enabled payment/change paths not primary-only', () => {
+    const src = read('api/keystone-cardano.js');
+    expect(src).toMatch(/findEnabledPaymentByAddress/);
+    expect(src).toMatch(/cip1852PaymentPath/);
+    expect(src).not.toMatch(
+      /does not treat as its primary payment address/
+    );
+  });
+
+  test('getUtxos filters spendable set to enabled payment addresses', () => {
+    const src = read('api/extension/index.js');
+    expect(src).toMatch(/enabledOwners\.has/);
+    expect(src).toMatch(
+      /Spend only from addresses we can witness/
+    );
+  });
 });

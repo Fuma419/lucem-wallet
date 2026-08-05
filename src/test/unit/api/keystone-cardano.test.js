@@ -141,4 +141,19 @@ describe('keystone-cardano', () => {
       /Keystone did not return account 1/
     );
   });
+
+  test('sign request resolves HD paths for enabled change addresses', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../api/keystone-cardano.js'),
+      'utf8'
+    );
+    expect(src).toMatch(/findEnabledPaymentByAddress/);
+    expect(src).toMatch(/cip1852PaymentPath/);
+    expect(src).not.toMatch(
+      /does not treat as its primary payment address/
+    );
+    expect(src).not.toMatch(/hdPath: `\$\{paymentBase\}\/0`/);
+  });
 });

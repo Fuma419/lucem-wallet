@@ -24,6 +24,15 @@ export const ADDRESS_ROLE = {
 };
 
 /**
+ * BIP-32 path for a CIP-1852 payment key (external or change).
+ * @param {number} accountIndex - CIP-1852 account'
+ * @param {number} role - 0 external / 1 internal
+ * @param {number} addressIndex
+ */
+export const cip1852PaymentPath = (accountIndex, role, addressIndex) =>
+  `m/1852'/1815'/${accountIndex}'/${role}/${addressIndex}`;
+
+/**
  * Enabled external indices for an account. Always includes 0. Missing/legacy
  * accounts default to `[0]` (single-address mode).
  */
@@ -328,4 +337,21 @@ export const listEnabledPaymentAddresses = (
     );
   }
   return out;
+};
+
+/**
+ * Look up an enabled payment/change address row by bech32.
+ * Used when assigning HD paths to tx inputs (Keystone / HW).
+ *
+ * @returns {{ role: number, index: number, paymentAddr: string, paymentKeyHash: string } | null}
+ */
+export const findEnabledPaymentByAddress = (
+  Cardano,
+  account,
+  networkIdNumber,
+  bech32
+) => {
+  if (!bech32) return null;
+  const rows = listEnabledPaymentAddresses(Cardano, account, networkIdNumber);
+  return rows.find((r) => r.paymentAddr === bech32) || null;
 };

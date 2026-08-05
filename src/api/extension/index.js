@@ -841,6 +841,15 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
 
   const fallbackOwner = addressList[0] || currentAccount.paymentAddr;
 
+  // Spend only from addresses we can witness (enabled external + change).
+  // Balance aggregation still uses the full stake set via getBalance.
+  const enabledOwners = new Set(addressList.filter(Boolean));
+  if (enabledOwners.size > 0) {
+    utxos = utxos.filter((utxo) =>
+      enabledOwners.has(utxo.address || fallbackOwner)
+    );
+  }
+
   let convertedUtxos = await Promise.all(
     utxos.map(async (utxo) => {
       const owner = utxo.address || fallbackOwner;

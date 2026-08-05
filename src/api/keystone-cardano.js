@@ -10,6 +10,10 @@ import KeystoneSDK, {
   DerivationAlgorithm,
   QRHardwareCallVersion,
 } from '@keystonehq/keystone-sdk';
+import {
+  cip1852PaymentPath,
+  findEnabledPaymentByAddress,
+} from './extension/multi-address';
 import Loader from './loader';
 
 /**
@@ -505,7 +509,6 @@ export async function buildKeystoneCardanoSignRequest({
   const tx = Loader.Cardano.Transaction.from_bytes(Buffer.from(txHex, 'hex'));
   const inputs = tx.body().inputs();
   const xfp = hw.id;
-  const paymentBase = `m/1852'/1815'/${hw.account}'/0`;
   const keystoneUtxos = [];
 
   for (let i = 0; i < inputs.len(); i++) {
@@ -524,16 +527,18 @@ export async function buildKeystoneCardanoSignRequest({
 
     const output = match.output();
     const addr = Loader.Cardano.Address.from_bytes(output.address().to_bytes());
-    const expected = Loader.Cardano.Address.from_bech32(account.paymentAddr);
-    if (
-      Buffer.from(addr.to_bytes()).compare(Buffer.from(expected.to_bytes())) !==
-      0
-    ) {
+    const addrBech32 = addr.to_bech32();
+    const paymentRow = findEnabledPaymentByAddress(
+      Loader.Cardano,
+      account,
+      addr.network_id(),
+      addrBech32
+    );
+    if (!paymentRow) {
       throw new Error(
-        'This transaction spends from an address this wallet does not treat as its primary payment address.'
+        'This transaction spends from an address that is not an enabled payment or change address for this wallet.'
       );
     }
-    const addrBech32 = addr.to_bech32();
 
     const amount = output.amount().coin().to_str();
     keystoneUtxos.push({
@@ -541,7 +546,11 @@ export async function buildKeystoneCardanoSignRequest({
       index: idx,
       amount,
       xfp,
-      hdPath: `${paymentBase}/0`,
+      hdPath: cip1852PaymentPath(
+        hw.account,
+        paymentRow.role ?? 0,
+        paymentRow.index
+      ),
       address: addrBech32,
     });
   }

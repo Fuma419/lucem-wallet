@@ -1,6 +1,8 @@
 import {
   ADDRESS_ROLE,
+  cip1852PaymentPath,
   deriveExternalPaymentFromAccountPublicKey,
+  findEnabledPaymentByAddress,
   flattenAccountAddressesPayload,
   getExternalIndices,
   getInternalIndices,
@@ -351,5 +353,78 @@ describe('multi-address helpers', () => {
       role: ADDRESS_ROLE.internal,
       index: 1,
     });
+  });
+
+  test('cip1852PaymentPath encodes role and index', () => {
+    expect(cip1852PaymentPath(0, ADDRESS_ROLE.external, 0)).toBe(
+      "m/1852'/1815'/0'/0/0"
+    );
+    expect(cip1852PaymentPath(3, ADDRESS_ROLE.internal, 2)).toBe(
+      "m/1852'/1815'/3'/1/2"
+    );
+  });
+
+  test('findEnabledPaymentByAddress resolves change addresses', () => {
+    const paymentChainFor = (role) => ({
+      derive: (idx) => ({
+        to_raw_key: () => ({
+          hash: () => ({
+            to_bytes: () => Buffer.from(`${role}-${idx}`, 'utf8'),
+            to_bech32: () => `vkh_${role}_${idx}`,
+          }),
+        }),
+      }),
+    });
+    const stakeChain = {
+      derive: () => ({
+        to_raw_key: () => ({
+          hash: () => ({ to_bytes: () => Buffer.from('stake', 'utf8') }),
+        }),
+      }),
+    };
+    const Cardano = {
+      Bip32PublicKey: {
+        from_hex: () => ({
+          derive: (role) =>
+            role === 2 ? stakeChain : paymentChainFor(role),
+        }),
+      },
+      Credential: { from_keyhash: (h) => h },
+      BaseAddress: {
+        new: (_net, paymentCred) => ({
+          to_address: () => ({
+            to_bech32: () =>
+              `addr_${Buffer.from(paymentCred.to_bytes()).toString('utf8')}`,
+          }),
+        }),
+      },
+    };
+
+    const account = {
+      paymentAddr: 'addr_primary',
+      paymentKeyHash: 'pkh0',
+      publicKey: 'pub',
+      externalIndices: [0],
+      internalIndices: [1],
+    };
+
+    expect(
+      findEnabledPaymentByAddress(Cardano, account, 0, 'addr_primary')
+    ).toMatchObject({ role: ADDRESS_ROLE.external, index: 0 });
+
+    const change = findEnabledPaymentByAddress(
+      Cardano,
+      account,
+      0,
+      'addr_1-1'
+    );
+    expect(change).toMatchObject({
+      role: ADDRESS_ROLE.internal,
+      index: 1,
+    });
+
+    expect(
+      findEnabledPaymentByAddress(Cardano, account, 0, 'addr_foreign')
+    ).toBeNull();
   });
 });

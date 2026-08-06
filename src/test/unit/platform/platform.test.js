@@ -115,33 +115,15 @@ describe('import abandon navigation', () => {
     expect(extSrc).toContain('?next=');
   });
 
-  test('import and restore-account steps expose Exit that routes accounts vs welcome', () => {
-    const flowExit = fs.readFileSync(
-      path.join(__dirname, '../../../ui/app/components/flowExit.jsx'),
-      'utf8'
-    );
-    const createWallet = fs.readFileSync(
+  test('import and restore-account steps expose Cancel that routes accounts vs welcome', () => {
+    const src = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),
       'utf8'
     );
-    expect(flowExit).toContain('leaveSetupFlow');
-    expect(flowExit).toContain('readFlowReturnPath');
-    expect(flowExit).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
-    expect(createWallet).toContain('leaveSetupFlow');
-    expect(createWallet).toContain('data-testid="import-abandon-button"');
-  });
-
-  test('openMainRoute allowlist includes /send for Exit from send', () => {
-    const webSrc = fs.readFileSync(
-      path.join(__dirname, '../../../platform/web.js'),
-      'utf8'
-    );
-    const extSrc = fs.readFileSync(
-      path.join(__dirname, '../../../platform/extension.js'),
-      'utf8'
-    );
-    expect(webSrc).toContain("'/send'");
-    expect(extSrc).toContain("'/send'");
+    expect(src).toContain('abandonWalletSetup');
+    expect(src).toContain('data-testid="import-abandon-button"');
+    expect(src).toContain("flow === 'restore-wallet'");
+    expect(src).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
   });
 
   test('main bootstrap honors ?next= deep links before defaulting to /wallet', () => {

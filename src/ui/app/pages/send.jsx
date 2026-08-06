@@ -73,7 +73,6 @@ import {
 import { FixedSizeList as List } from 'react-window';
 import AssetBadge from '../components/assetBadge';
 import { ERROR, HW, NETWORK_ID, TAB } from '../../../config/config';
-import { appendFlowReturnQuery } from '../components/flowExit';
 import { Planet } from 'react-kawaii';
 import Loader from '../../../api/loader';
 import { action, useStoreActions, useStoreState } from 'easy-peasy';
@@ -210,7 +209,6 @@ const Send = () => {
         txHex: tx,
         keyHashes: [...paymentHashes, acc.stakeKeyHash],
         partialSign: false,
-        from: '/send',
       });
       toast({
         title: 'Keystone signing (QR)',
@@ -1123,10 +1121,7 @@ const Send = () => {
           );
           if (hw) {
             if (hw.device === HW.trezor) {
-              return createTab(
-                TAB.trezorTx,
-                appendFlowReturnQuery(`?tx=${tx}`, '/send')
-              );
+              return createTab(TAB.trezorTx, `?tx=${tx}`);
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
@@ -1136,7 +1131,6 @@ const Send = () => {
                   account.current.stakeKeyHash,
                 ],
                 partialSign: false,
-                from: '/send',
               });
             }
             return await signAndSubmitHW(txDes, {

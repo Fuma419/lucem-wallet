@@ -74,8 +74,10 @@ describe('flow exit / abort', () => {
     const src = read('ui/app/components/flowExit.jsx');
     expect(src).toMatch(/clearFlowCredentials/);
     expect(src).toMatch(/input\[type="password"\]/);
-    // Re-arm readonly so iOS won't offer AutoFill during the Exit transition.
+    // Re-arm readonly + drop the password type/autocomplete synchronously so
+    // iOS has no credential-shaped field to fill during the Exit transition.
     expect(src).toMatch(/setAttribute\('readonly', ''\)/);
+    expect(src).toMatch(/el\.type = 'text'/);
     // Blurring a password field can itself pop the iOS AutoFill accessory.
     expect(src).not.toMatch(/\.blur\(\)/);
   });

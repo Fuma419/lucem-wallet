@@ -66,23 +66,27 @@ async function openReturnRoute(path) {
 }
 
 /**
- * Empty any password fields before navigating away so iOS Safari / WKWebView
- * does not treat leaving the page as a completed login and offer to save the
- * value via its Face ID / password-manager sheet. Do NOT call `blur()` here —
+ * Neutralize credential fields synchronously before navigating away so iOS
+ * Safari / WKWebView does not present its "use your saved password" AutoFill
+ * (Face ID) sheet during the Exit transition.
+ *
+ * iOS never offers AutoFill for a `readonly` field, so we re-arm `readonly`
+ * (the create/HW forms load read-only and only drop it on focus — re-arming
+ * covers the case where the user already focused/typed) and clear the value
+ * (so leaving is not seen as a completed login either). Do NOT call `blur()` —
  * blurring a password field can itself pop the AutoFill accessory on iOS.
  */
 function clearFlowCredentials() {
   if (typeof document === 'undefined') return;
   try {
-    document
-      .querySelectorAll('input[type="password"]')
-      .forEach((el) => {
-        try {
-          el.value = '';
-        } catch {
-          /* ignore */
-        }
-      });
+    document.querySelectorAll('input[type="password"]').forEach((el) => {
+      try {
+        el.setAttribute('readonly', '');
+        el.value = '';
+      } catch {
+        /* ignore */
+      }
+    });
   } catch {
     /* ignore */
   }

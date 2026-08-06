@@ -70,10 +70,12 @@ describe('flow exit / abort', () => {
     expect(src).not.toMatch(/detachFlowSensitiveDom/);
   });
 
-  test('leaveSetupFlow clears passwords and does not blur (iOS AutoFill)', () => {
+  test('leaveSetupFlow re-arms readonly + clears passwords, no blur (iOS AutoFill)', () => {
     const src = read('ui/app/components/flowExit.jsx');
     expect(src).toMatch(/clearFlowCredentials/);
     expect(src).toMatch(/input\[type="password"\]/);
+    // Re-arm readonly so iOS won't offer AutoFill during the Exit transition.
+    expect(src).toMatch(/setAttribute\('readonly', ''\)/);
     // Blurring a password field can itself pop the iOS AutoFill accessory.
     expect(src).not.toMatch(/\.blur\(\)/);
   });

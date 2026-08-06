@@ -53,7 +53,7 @@ import { GoHistory } from "react-icons/go";
 import { MdRefresh } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
-import { useColorMode, useColorModeValue } from '@chakra-ui/react';
+import { useColorModeValue } from '@chakra-ui/react';
 
 // Assets
 import Logo from '../../../assets/img/logo.png';
@@ -101,18 +101,13 @@ const Wallet = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const settings = useStoreState((state) => state.settings.settings);
-  const { colorMode } = useColorMode();
   const avatarBg = useColorModeValue('gray.100', 'gray.900');
   const panelBg = useColorModeValue('#f4f6fb', '#080808');
-  /** Light: solid brand tints; dark: filled cyan / gradient class handles Send. */
-  const receiveButton = useColorModeValue('cyan.500', 'cyan.700');
-  const sendButton = useColorModeValue('purple.500', 'yellow.600');
-  const glowOn = settings?.glowEffects !== false;
-  // Neon glow classes in both themes when enabled (was dark-only before).
-  const receiveBtnClass = glowOn ? 'button import-wallet' : undefined;
-  const sendBtnClass = glowOn ? 'button new-wallet' : undefined;
-  const actionBtnColor =
-    glowOn || colorMode === 'dark' ? 'white' : 'black';
+  // Always use neon button classes (same as tray FABs). Glow on/off is owned by
+  // `html[data-glow]` + CSS — do not swap to solid Chakra fills when glow is
+  // off, or dark mode falls back to light-looking brand colors.
+  const receiveBtnClass = 'button import-wallet';
+  const sendBtnClass = 'button new-wallet';
 
   const networkOptions = [
     { id: NETWORK_ID.mainnet, label: 'Mainnet' },
@@ -613,19 +608,10 @@ const Wallet = () => {
                   h="2.6rem"
                   data-testid="wallet-receive"
                   className={receiveBtnClass}
-                  color={actionBtnColor}
-                  background={receiveButton}
-                  _hover={
-                    glowOn
-                      ? undefined
-                      : colorMode === 'light'
-                        ? { bg: 'cyan.600' }
-                        : undefined
-                  }
+                  color="white"
                   rightIcon={<Icon as={BsArrowDownRight} />}
                   size="sm"
                   rounded="2xl"
-                  shadow="md"
                   flexShrink={0}
                   onClick={() => {}}
                 >
@@ -687,19 +673,10 @@ const Wallet = () => {
                   navigate('/send');
                 }}
                 className={sendBtnClass}
-                color={actionBtnColor}
+                color="white"
                 size="sm"
-                background={sendButton}
-                _hover={
-                  glowOn
-                    ? undefined
-                    : colorMode === 'light'
-                      ? { bg: 'purple.600' }
-                      : undefined
-                }
                 rounded="2xl"
                 rightIcon={<Icon as={BsArrowUpRight} />}
-                shadow="md"
                 flexShrink={0}
               >
                 Send

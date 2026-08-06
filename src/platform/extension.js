@@ -129,7 +129,6 @@ const extensionAdapter = {
         '/settings',
         '/staking',
         '/governance',
-        '/send',
       ]);
       const safe = allowed.has(path) ? path : '/wallet';
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {

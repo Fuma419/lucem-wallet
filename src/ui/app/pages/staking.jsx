@@ -35,7 +35,6 @@ import {
 import { FaRegCopy } from 'react-icons/fa';
 import PullToRefresh from '../components/pullToRefresh';
 import { HW, TAB, ERROR } from '../../../config/config';
-import { appendFlowReturnQuery } from '../components/flowExit';
 import {
   createTab,
   getCurrentAccount,
@@ -835,10 +834,7 @@ const Staking = () => {
             if (hw.device === HW.trezor) {
               return createTab(
                 TAB.trezorTx,
-                appendFlowReturnQuery(
-                  `?tx=${Buffer.from(txPreview.tx.to_bytes()).toString('hex')}`,
-                  '/staking'
-                )
+                `?tx=${Buffer.from(txPreview.tx.to_bytes()).toString('hex')}`
               );
             }
             if (hw.device === HW.keystone) {
@@ -846,7 +842,6 @@ const Staking = () => {
                 txHex: Buffer.from(txPreview.tx.to_bytes()).toString('hex'),
                 keyHashes,
                 partialSign: false,
-                from: '/staking',
               });
             }
             return signAndSubmitHW(txPreview.tx, {
@@ -872,7 +867,6 @@ const Staking = () => {
               Boolean
             ),
             partialSign: false,
-            from: '/staking',
           });
         }}
         onConfirm={async (status, signedTx) => {

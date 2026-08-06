@@ -153,24 +153,11 @@ function defaultKeystoneAccountChecks() {
 
 const App = () => {
   const [tab, setTab] = React.useState(0);
-  const [abandoning, setAbandoning] = React.useState(false);
   const data = React.useRef({
     device: '',
     id: '',
     keystoneAccounts: null,
   });
-
-  const abandonSetup = async () => {
-    setAbandoning(true);
-    await new Promise((resolve) => {
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => setTimeout(resolve, 0));
-      } else {
-        setTimeout(resolve, 0);
-      }
-    });
-    await leaveSetupFlow();
-  };
   return (
     <Box
       display="flex"
@@ -226,8 +213,8 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
-          {tab !== 2 && !abandoning ? (
-            <FlowCardCloseButton onClick={() => abandonSetup()} />
+          {tab !== 2 ? (
+            <FlowCardCloseButton onClick={() => leaveSetupFlow()} />
           ) : null}
           <Box
             className="lucem-create-wallet-scroll"
@@ -236,7 +223,7 @@ const App = () => {
             flex="1 1 auto"
             minH={0}
           >
-            {!abandoning && tab === 0 && (
+            {tab === 0 && (
               <ConnectHW
                 onConfirm={({ device, id, keystoneAccounts }) => {
                   data.current = { device, id, keystoneAccounts };
@@ -244,10 +231,10 @@ const App = () => {
                 }}
               />
             )}
-            {!abandoning && tab === 1 && (
+            {tab === 1 && (
               <SelectAccounts data={data.current} onConfirm={() => setTab(2)} />
             )}
-            {!abandoning && tab === 2 && <SuccessAndClose />}
+            {tab === 2 && <SuccessAndClose />}
           </Box>
         </Box>
       </Box>
@@ -1083,8 +1070,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
             </Text>
             <Stack spacing={2}>
               <Input
-                type="text"
-                inputMode="text"
+                type="password"
                 size="sm"
                 rounded="md"
                 variant="filled"
@@ -1105,15 +1091,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 placeholder="Password (min 8 characters)"
                 value={localWalletPassword}
                 onChange={(e) => setLocalWalletPassword(e.target.value)}
-                autoComplete="off"
-                data-form-type="other"
-                data-lpignore="true"
-                data-1p-ignore="true"
-                sx={{ WebkitTextSecurity: 'disc', textSecurity: 'disc' }}
+                autoComplete="new-password"
               />
               <Input
-                type="text"
-                inputMode="text"
+                type="password"
                 size="sm"
                 rounded="md"
                 variant="filled"
@@ -1134,11 +1115,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 placeholder="Confirm password"
                 value={localWalletPasswordConfirm}
                 onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}
-                autoComplete="off"
-                data-form-type="other"
-                data-lpignore="true"
-                data-1p-ignore="true"
-                sx={{ WebkitTextSecurity: 'disc', textSecurity: 'disc' }}
+                autoComplete="new-password"
               />
             </Stack>
           </Box>

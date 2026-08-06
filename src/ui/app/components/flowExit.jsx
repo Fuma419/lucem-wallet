@@ -65,22 +65,8 @@ async function openReturnRoute(path) {
   }
 }
 
-function yieldToWebKit(ms = 150) {
-  return new Promise((resolve) => {
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(() => setTimeout(resolve, ms));
-    } else {
-      setTimeout(resolve, ms);
-    }
-  });
-}
-
-/**
- * Stop iOS Safari / WKWebView / Keychain Face ID from treating Exit as a login.
- * Blur, clear, demote password types, then remove fields from the DOM so document
- * unload is not evaluated as a credential form submit.
- */
-export function scrubSensitiveFormFields(root) {
+/** Drop keyboard focus before navigating away (dismisses the on-screen keyboard). */
+function blurActiveElement() {
   if (typeof document === 'undefined') return;
   try {
     const active = document.activeElement;
@@ -88,95 +74,19 @@ export function scrubSensitiveFormFields(root) {
   } catch {
     /* ignore */
   }
-
-  const scopes = [];
-  if (root) {
-    scopes.push(root);
-  } else {
-    document
-      .querySelectorAll('.create-wallet-modal, .lucem-modal-card')
-      .forEach((el) => scopes.push(el));
-    if (scopes.length === 0) scopes.push(document);
-  }
-
-  const selector = [
-    'input',
-    'textarea',
-    'select',
-    'input[type="password"]',
-    'input[autocomplete="username"]',
-    'input[autocomplete="current-password"]',
-    'input[autocomplete="new-password"]',
-  ].join(', ');
-
-  scopes.forEach((scope) => {
-    let nodes;
-    try {
-      nodes = scope.querySelectorAll(selector);
-    } catch {
-      return;
-    }
-    nodes.forEach((el) => {
-      try {
-        el.setAttribute('autocomplete', 'off');
-        el.setAttribute('readonly', 'readonly');
-        el.removeAttribute('name');
-        el.removeAttribute('id');
-        if ('value' in el) el.value = '';
-        if (el.getAttribute('type') === 'password') {
-          el.setAttribute('type', 'text');
-        }
-        el.disabled = true;
-      } catch {
-        /* ignore */
-      }
-    });
-  });
-}
-
-/**
- * Physically detach credential-like controls before navigation. Scrubbing alone
- * is not enough on iOS: Password AutoFill still fires Face ID on unload if
- * password/seed inputs remain in the document.
- */
-export function detachFlowSensitiveDom(root) {
-  if (typeof document === 'undefined') return;
-  scrubSensitiveFormFields(root);
-
-  const scopes = [];
-  if (root) {
-    scopes.push(root);
-  } else {
-    document
-      .querySelectorAll('.create-wallet-modal, .lucem-modal-card')
-      .forEach((el) => scopes.push(el));
-  }
-
-  scopes.forEach((scope) => {
-    try {
-      scope.querySelectorAll('input, textarea, select, form').forEach((el) => {
-        try {
-          el.remove();
-        } catch {
-          /* ignore */
-        }
-      });
-    } catch {
-      /* ignore */
-    }
-  });
 }
 
 /**
  * Leave create/import/HW account setup without writing anything.
  * Prefers `?from=` (initiator). Falls back to accounts vs welcome.
+ *
+ * Note: suppressing the iOS "AutoFill saved password" (Face ID) prompt is done
+ * at the input level — see `createWallet.jsx` / `hw.jsx` password fields which
+ * use `type="password"` + `autocomplete="new-password"`. DOM scrubbing on exit
+ * is ineffective (WebKit classifies fields structurally), so we do not do it.
  */
 export async function leaveSetupFlow() {
-  detachFlowSensitiveDom();
-  // Give WebKit time to drop the Keychain / Face ID autofill session.
-  await yieldToWebKit(150);
-  detachFlowSensitiveDom();
-
+  blurActiveElement();
   const from = readFlowReturnPath();
   if (from) {
     await openReturnRoute(from);
@@ -199,8 +109,7 @@ export async function leaveSetupFlow() {
  * Leave a HW signing tab (Keystone / Trezor). Prefers `?from=` (e.g. /send).
  */
 export async function leaveSignTabFlow(fallback = '/wallet') {
-  detachFlowSensitiveDom();
-  await yieldToWebKit(50);
+  blurActiveElement();
   const from = readFlowReturnPath() || sanitizeFlowReturnPath(fallback) || '/wallet';
   await openReturnRoute(from);
 }
@@ -230,8 +139,7 @@ function handleExitClick(onClick) {
       e.preventDefault();
       e.stopPropagation();
     }
-    // Scrub/detach before any async leave* work so Face ID never sees live fields.
-    detachFlowSensitiveDom();
+    blurActiveElement();
     if (typeof onClick === 'function') onClick(e);
   };
 }

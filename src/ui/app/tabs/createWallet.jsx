@@ -111,9 +111,6 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [colorTheme, setColorTheme] = React.useState('purple');
-  // Unmount all inputs before navigating away so iOS Password AutoFill / Face ID
-  // does not treat document unload as a credential form submit.
-  const [abandoning, setAbandoning] = React.useState(false);
   // React Router’s navigate callback identity changes when the location changes
   // (see useNavigateUnstable deps). Do not re-run URL bootstrap on that — it would
   // read ?type=generate again and replace /verify with /generate after “Next”.
@@ -223,17 +220,7 @@ const App = () => {
           fontSize="md"
         >
           <FlowCardCloseButton
-            onClick={async () => {
-              setAbandoning(true);
-              await new Promise((resolve) => {
-                if (typeof requestAnimationFrame === 'function') {
-                  requestAnimationFrame(() => setTimeout(resolve, 0));
-                } else {
-                  setTimeout(resolve, 0);
-                }
-              });
-              await leaveSetupFlow();
-            }}
+            onClick={() => leaveSetupFlow()}
             data-testid="import-abandon-button"
           />
           <Box
@@ -243,14 +230,12 @@ const App = () => {
             flex="1 1 auto"
             minH={0}
           >
-            {!abandoning ? (
-              <Routes>
-                <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
-                <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
-                <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
-                <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
-              </Routes>
-            ) : null}
+            <Routes>
+              <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
+              <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
+              <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
+              <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
+            </Routes>
           </Box>
         </Box>
       </Box>
@@ -855,9 +840,6 @@ const MakeAccount = ({ colorTheme }) => {
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
-            data-form-type="other"
-            data-lpignore="true"
-            data-1p-ignore="true"
             variant="outline"
             bg="black"
             borderColor="whiteAlpha.300"
@@ -887,20 +869,11 @@ const MakeAccount = ({ colorTheme }) => {
                 rounded="lg"
                 isInvalid={state.regularPassword === false}
                 pr="4.5rem"
-                type="text"
-                inputMode="text"
+                type={state.show ? 'text' : 'password'}
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                autoComplete="off"
-                data-form-type="other"
-                data-lpignore="true"
-                data-1p-ignore="true"
-                sx={
-                  state.show
-                    ? undefined
-                    : { WebkitTextSecurity: 'disc', textSecurity: 'disc' }
-                }
+                autoComplete="new-password"
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}
@@ -962,10 +935,7 @@ const MakeAccount = ({ colorTheme }) => {
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                autoComplete="off"
-                data-form-type="other"
-                data-lpignore="true"
-                data-1p-ignore="true"
+                autoComplete="new-password"
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}
@@ -978,13 +948,7 @@ const MakeAccount = ({ colorTheme }) => {
                     matchingPassword: v ? v === p : undefined,
                   }));
                 }}
-                type="text"
-                inputMode="text"
-                sx={
-                  state.show
-                    ? undefined
-                    : { WebkitTextSecurity: 'disc', textSecurity: 'disc' }
-                }
+                type={state.show ? 'text' : 'password'}
                 placeholder="Confirm password"
               />
               <InputRightElement width="4.5rem">
@@ -1137,16 +1101,26 @@ const SuccessAndClose = ({ flow }) => {
   );
 };
 
-const root = createRoot(window.document.querySelector(`#${TAB.createWallet}`));
-root.render(
-  <CreateWalletShell>
-    <Router>
-      <>
-        <PreventHistoryBack />
-        <App />
-      </>
-    </Router>
-  </CreateWalletShell>
-);
+// Exported for DOM tests that assert the iOS Password AutoFill signature of the
+// setup forms (see src/test/unit/ui/ios-password-autofill.test.js).
+export { MakeAccount, ImportSeed, GenerateSeed, App };
 
-if (module.hot) module.hot.accept();
+const mountNode =
+  typeof window !== 'undefined' && window.document
+    ? window.document.querySelector(`#${TAB.createWallet}`)
+    : null;
+if (mountNode) {
+  const root = createRoot(mountNode);
+  root.render(
+    <CreateWalletShell>
+      <Router>
+        <>
+          <PreventHistoryBack />
+          <App />
+        </>
+      </Router>
+    </CreateWalletShell>
+  );
+}
+
+if (typeof module !== 'undefined' && module.hot) module.hot.accept();

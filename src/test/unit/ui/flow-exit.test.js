@@ -60,43 +60,36 @@ describe('flow exit / abort', () => {
     ).toBe('/send');
   });
 
-  test('create wallet unmounts inputs before Exit and avoids password type', () => {
+  test('create wallet Exit navigates without DOM scrubbing theater', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
     expect(src).toMatch(/FlowCardCloseButton/);
-    expect(src).toMatch(/leaveSetupFlow/);
+    expect(src).toMatch(/onClick=\{\(\) => leaveSetupFlow\(\)\}/);
     expect(src).toMatch(/data-testid="import-abandon-button"/);
-    expect(src).toMatch(/setAbandoning\(true\)/);
-    expect(src).toMatch(/WebkitTextSecurity/);
-    expect(src).not.toMatch(/as="form"/);
-    expect(src).not.toMatch(/type=\{state\.show \? 'text' : 'password'\}/);
-    expect(src).not.toMatch(/type="password"/);
+    // No unmount/DOM-detach hack — the iOS fix is the input attributes below.
+    expect(src).not.toMatch(/setAbandoning/);
+    expect(src).not.toMatch(/detachFlowSensitiveDom/);
   });
 
-  test('Exit detaches flow fields before leaving setup (iOS Face ID)', () => {
-    const src = read('ui/app/components/flowExit.jsx');
-    expect(src).toMatch(/export function scrubSensitiveFormFields/);
-    expect(src).toMatch(/export function detachFlowSensitiveDom/);
-    expect(src).toMatch(/el\.remove\(\)/);
-    expect(src).toMatch(/detachFlowSensitiveDom\(\);\s*\n\s*if \(typeof onClick/);
-    expect(src).toMatch(/Give WebKit time to drop the Keychain/);
-  });
-
-  test('account setup password fields avoid Keychain autocomplete tokens', () => {
+  // The behavioral guarantee (rendered DOM has no iOS "retrieve saved login"
+  // signature) is enforced by src/test/unit/ui/ios-password-autofill.test.js.
+  // These are cheap source guards that the correct attributes are present.
+  test('account setup password fields use type=password + new-password', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
     expect(src).toMatch(/name="lucem-account-name"/);
     expect(src).toMatch(/name="lucem-account-password"/);
-    expect(src).toMatch(/name="lucem-account-password-confirm"/);
     expect(src).not.toMatch(/name="username"/);
-    expect(src).not.toMatch(/autoComplete="new-password"/);
+    // Documented iOS signal for a NEW password (suppresses saved-login Face ID).
+    expect(src).toMatch(/autoComplete="new-password"/);
     expect(src).not.toMatch(/autoComplete="username"/);
-    expect(src).toMatch(/data-lpignore="true"/);
+    // The ineffective hacks must stay gone.
+    expect(src).not.toMatch(/WebkitTextSecurity/);
+    expect(src).not.toMatch(/data-lpignore/);
   });
 
-  test('openMainRoute uses location.replace to avoid Face ID on history nav', () => {
-    expect(read('platform/web.js')).toMatch(
-      /location\.replace\(`\$\{window\.location\.origin\}\$\{safe\}`\)/
-    );
-    expect(read('platform/extension.js')).toMatch(/location\.replace\(target\)/);
+  test('HW local password fields use type=password + new-password', () => {
+    const src = read('ui/app/tabs/hw.jsx');
+    expect(src).toMatch(/autoComplete="new-password"/);
+    expect(src).not.toMatch(/WebkitTextSecurity/);
   });
 
   test('wallet setup openers pass from= initiator route', () => {

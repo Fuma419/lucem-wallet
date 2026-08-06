@@ -134,11 +134,10 @@ const extensionAdapter = {
       const safe = allowed.has(path) ? path : '/wallet';
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
         const base = chrome.runtime.getURL('mainPopup.html');
-        const target =
+        window.location.href =
           safe === '/wallet'
             ? base
             : `${base}?next=${encodeURIComponent(safe)}`;
-        window.location.replace(target);
       }
       return Promise.resolve(true);
     },

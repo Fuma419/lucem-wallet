@@ -71,6 +71,26 @@ describe('flow exit / abort', () => {
     expect(formExit).not.toMatch(/FlowExitButton|FlowCardCloseButton|leaveSetupFlow/);
   });
 
+  test('Exit scrubs password fields before leaving setup (iOS Face ID)', () => {
+    const src = read('ui/app/components/flowExit.jsx');
+    expect(src).toMatch(/export function scrubSensitiveFormFields/);
+    expect(src).toMatch(/input\[type="password"\]/);
+    expect(src).toMatch(/el\.setAttribute\('type', 'text'\)/);
+    expect(src).toMatch(/scrubSensitiveFormFields\(\);\s*\n\s*if \(typeof onClick/);
+    expect(src).toMatch(/Give WebKit time to drop the Keychain/);
+  });
+
+  test('account setup password fields avoid Keychain autocomplete tokens', () => {
+    const src = read('ui/app/tabs/createWallet.jsx');
+    expect(src).toMatch(/name="lucem-account-name"/);
+    expect(src).toMatch(/name="lucem-account-password"/);
+    expect(src).toMatch(/name="lucem-account-password-confirm"/);
+    expect(src).not.toMatch(/name="username"/);
+    expect(src).not.toMatch(/autoComplete="new-password"/);
+    expect(src).not.toMatch(/autoComplete="username"/);
+    expect(src).toMatch(/data-lpignore="true"/);
+  });
+
   test('wallet setup openers pass from= initiator route', () => {
     const src = read('ui/app/components/walletSetupFlow.jsx');
     expect(src).toMatch(/appendFlowReturnQuery/);

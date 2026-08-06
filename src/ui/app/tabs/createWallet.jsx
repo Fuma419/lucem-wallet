@@ -830,7 +830,7 @@ const MakeAccount = ({ colorTheme }) => {
         <Spacer height="4" />
         <Stack
           as="form"
-          autoComplete="on"
+          autoComplete="off"
           width="100%"
           spacing={3}
           align="stretch"
@@ -841,8 +841,14 @@ const MakeAccount = ({ colorTheme }) => {
         >
           <Input
             id="lucem-account-name"
-            name="username"
-            autoComplete="username"
+            name="lucem-account-name"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-form-type="other"
+            data-lpignore="true"
+            data-1p-ignore="true"
             variant="outline"
             bg="black"
             borderColor="whiteAlpha.300"
@@ -862,7 +868,7 @@ const MakeAccount = ({ colorTheme }) => {
               <Input
                 ref={passwordRef}
                 id="lucem-account-password"
-                name="new-password"
+                name="lucem-account-password"
                 variant="outline"
                 bg="black"
                 borderColor="whiteAlpha.300"
@@ -876,7 +882,10 @@ const MakeAccount = ({ colorTheme }) => {
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                autoComplete="new-password"
+                autoComplete="off"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}
@@ -925,7 +934,7 @@ const MakeAccount = ({ colorTheme }) => {
               <Input
                 ref={confirmRef}
                 id="lucem-account-password-confirm"
-                name="confirm-new-password"
+                name="lucem-account-password-confirm"
                 variant="outline"
                 bg="black"
                 borderColor="whiteAlpha.300"
@@ -938,7 +947,10 @@ const MakeAccount = ({ colorTheme }) => {
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                autoComplete="new-password"
+                autoComplete="off"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}

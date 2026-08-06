@@ -10,7 +10,7 @@ import { Box, Flex, Text, useToast } from '@chakra-ui/react';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import backgroundGreenWebp from '../../../assets/img/background-green.webp';
 import {
-  FlowCardCloseButton,
+  FlowExitButton,
   FlowShellHeader,
   leaveSignTabFlow,
   readFlowReturnPath,
@@ -107,7 +107,7 @@ const App = () => {
       backgroundPosition="center, center"
       backgroundRepeat="no-repeat, no-repeat"
     >
-      <FlowShellHeader logoSrc={LogoWhite} />
+      <FlowShellHeader logoSrc={LogoWhite} onExit={abandon} />
       <Flex
         flex="1"
         align="center"
@@ -120,7 +120,6 @@ const App = () => {
           rounded="2xl"
           px={8}
           py={10}
-          pt={12}
           background="rgba(0, 0, 0, 0.85)"
           color="whiteAlpha.900"
           maxW="420px"
@@ -129,9 +128,7 @@ const App = () => {
           flexDirection="column"
           alignItems="center"
           gap={4}
-          position="relative"
         >
-          <FlowCardCloseButton onClick={abandon} />
           <Text className="walletTitle" fontSize="lg" fontWeight="bold" textAlign="center">
             Waiting for Trezor…
           </Text>
@@ -139,6 +136,7 @@ const App = () => {
             Complete signing on your device. This tab will close when the transaction is
             submitted.
           </Text>
+          <FlowExitButton onClick={abandon}>Exit</FlowExitButton>
         </Box>
       </Flex>
     </Box>

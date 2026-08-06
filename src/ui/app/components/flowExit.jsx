@@ -1,11 +1,10 @@
 /**
  * Shared exit/abort controls for full-page setup and signing flows.
- * Close control matches Chakra modal chrome (icon X on the card).
+ * Always-visible header Exit avoids trapping users mid-wizard.
  * Exit returns to the page that opened the flow (`from` query), when present.
  */
 import React from 'react';
-import { Box, IconButton, Image } from '@chakra-ui/react';
-import { CloseIcon } from '@chakra-ui/icons';
+import { Box, Button, Image } from '@chakra-ui/react';
 import platform from '../../../platform';
 
 /** Main-app routes allowed as Exit destinations / `?from=` values. */
@@ -66,51 +65,10 @@ async function openReturnRoute(path) {
 }
 
 /**
- * Neutralize credential fields synchronously before navigating away so iOS
- * Safari / WKWebView does not present its "use your saved password" AutoFill
- * (Face ID) sheet during the Exit transition.
- *
- * iOS never offers AutoFill for a `readonly` field, so we re-arm `readonly`
- * (the create/HW forms load read-only and only drop it on focus — re-arming
- * covers the case where the user already focused/typed) and clear the value
- * (so leaving is not seen as a completed login either). Do NOT call `blur()` —
- * blurring a password field can itself pop the AutoFill accessory on iOS.
- */
-function clearFlowCredentials() {
-  if (typeof document === 'undefined') return;
-  try {
-    document.querySelectorAll('input[type="password"]').forEach((el) => {
-      try {
-        // Clear the value first, then strip everything WebKit's Password
-        // AutoFill heuristic keys on (password type + credential autocomplete)
-        // and lock the field read-only — synchronously, in this same tap
-        // handler, before the Exit navigation runs. iOS decides whether to
-        // present its "use saved password" sheet from the field's live state,
-        // so by then there is no password-shaped field to offer a credential.
-        el.value = '';
-        el.setAttribute('readonly', '');
-        el.setAttribute('autocomplete', 'off');
-        el.type = 'text';
-      } catch {
-        /* ignore */
-      }
-    });
-  } catch {
-    /* ignore */
-  }
-}
-
-/**
  * Leave create/import/HW account setup without writing anything.
  * Prefers `?from=` (initiator). Falls back to accounts vs welcome.
- *
- * Note: suppressing the iOS "AutoFill saved password" (Face ID) prompt is done
- * at the input level — see `createWallet.jsx` / `hw.jsx` password fields which
- * use `type="password"` + `autocomplete="new-password"`. DOM scrubbing on exit
- * is ineffective (WebKit classifies fields structurally), so we do not do it.
  */
 export async function leaveSetupFlow() {
-  clearFlowCredentials();
   const from = readFlowReturnPath();
   if (from) {
     await openReturnRoute(from);
@@ -133,7 +91,6 @@ export async function leaveSetupFlow() {
  * Leave a HW signing tab (Keystone / Trezor). Prefers `?from=` (e.g. /send).
  */
 export async function leaveSignTabFlow(fallback = '/wallet') {
-  clearFlowCredentials();
   const from = readFlowReturnPath() || sanitizeFlowReturnPath(fallback) || '/wallet';
   await openReturnRoute(from);
 }
@@ -157,66 +114,33 @@ export async function leaveDappApprovalFlow(decline) {
   }
 }
 
-function handleExitClick(onClick) {
-  return (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    clearFlowCredentials();
-    if (typeof onClick === 'function') onClick(e);
-  };
-}
+const EXIT_BUTTON_PROPS = {
+  type: 'button',
+  variant: 'ghost',
+  size: 'sm',
+  color: 'whiteAlpha.800',
+  fontWeight: 'medium',
+  letterSpacing: '0.02em',
+  _hover: { bg: 'whiteAlpha.100', color: 'white' },
+  _active: { bg: 'whiteAlpha.200' },
+  'data-testid': 'flow-exit-button',
+};
 
-/**
- * Modal-style close (X) for full-page flow cards. Never submits enclosing forms.
- */
-export const FlowCardCloseButton = ({ onClick, ...rest }) => (
-  <IconButton
-    type="button"
-    aria-label="Exit"
-    icon={<CloseIcon boxSize="2.5" />}
-    size="sm"
-    variant="ghost"
-    color="whiteAlpha.700"
-    position="absolute"
-    top={{ base: 3, md: 4 }}
-    right={{ base: 3, md: 4 }}
-    zIndex={2}
-    minW="36px"
-    h="36px"
-    rounded="full"
-    _hover={{ bg: 'whiteAlpha.200', color: 'white' }}
-    _active={{ bg: 'whiteAlpha.300' }}
-    onClick={handleExitClick(onClick)}
-    data-testid="flow-exit-button"
-    {...rest}
-  />
-);
-
-/** @deprecated Use FlowCardCloseButton on the modal card instead. */
+/** Subtle ghost Exit — use under primary CTAs or in headers. */
 export const FlowExitButton = ({ onClick, children = 'Exit', ...rest }) => (
-  <IconButton
-    type="button"
-    aria-label={typeof children === 'string' ? children : 'Exit'}
-    icon={<CloseIcon boxSize="2.5" />}
-    size="sm"
-    variant="ghost"
-    color="whiteAlpha.700"
-    rounded="full"
-    _hover={{ bg: 'whiteAlpha.200', color: 'white' }}
-    onClick={handleExitClick(onClick)}
-    data-testid="flow-exit-button"
-    {...rest}
-  />
+  <Button {...EXIT_BUTTON_PROPS} onClick={onClick} {...rest}>
+    {children}
+  </Button>
 );
 
 /**
- * Full-page tab header: logo only (close control lives on the modal card).
+ * Full-page tab header: logo left, Exit right (always available).
  */
 export const FlowShellHeader = ({
   logoSrc,
+  onExit,
   hideLogoOnMobile = false,
+  exitLabel = 'Exit',
 }) => (
   <Box
     as="header"
@@ -224,7 +148,8 @@ export const FlowShellHeader = ({
     flexShrink={0}
     display="flex"
     alignItems="center"
-    justifyContent="flex-start"
+    justifyContent="space-between"
+    gap={3}
     pt={{
       base: hideLogoOnMobile
         ? 'max(0.35rem, env(safe-area-inset-top, 0px))'
@@ -234,19 +159,24 @@ export const FlowShellHeader = ({
     pb={{ base: hideLogoOnMobile ? 0 : 2, md: 2 }}
     px={{ base: 4, md: 8 }}
   >
-    {logoSrc ? (
-      <Image
-        draggable={false}
-        src={logoSrc}
-        width={{ base: '72px', sm: '88px', md: '100px' }}
-        maxW="min(100px, 36vw)"
-        objectFit="contain"
-        alt=""
-        display={{
-          base: hideLogoOnMobile ? 'none' : 'block',
-          md: 'block',
-        }}
-      />
-    ) : null}
+    <Box minW={0} flex="1">
+      {logoSrc ? (
+        <Image
+          draggable={false}
+          src={logoSrc}
+          width={{ base: '72px', sm: '88px', md: '100px' }}
+          maxW="min(100px, 36vw)"
+          objectFit="contain"
+          alt=""
+          display={{
+            base: hideLogoOnMobile ? 'none' : 'block',
+            md: 'block',
+          }}
+        />
+      ) : null}
+    </Box>
+    <FlowExitButton onClick={onExit} flexShrink={0}>
+      {exitLabel}
+    </FlowExitButton>
   </Box>
 );

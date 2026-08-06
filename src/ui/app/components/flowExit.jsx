@@ -65,12 +65,24 @@ async function openReturnRoute(path) {
   }
 }
 
-/** Drop keyboard focus before navigating away (dismisses the on-screen keyboard). */
-function blurActiveElement() {
+/**
+ * Empty any password fields before navigating away so iOS Safari / WKWebView
+ * does not treat leaving the page as a completed login and offer to save the
+ * value via its Face ID / password-manager sheet. Do NOT call `blur()` here —
+ * blurring a password field can itself pop the AutoFill accessory on iOS.
+ */
+function clearFlowCredentials() {
   if (typeof document === 'undefined') return;
   try {
-    const active = document.activeElement;
-    if (active && typeof active.blur === 'function') active.blur();
+    document
+      .querySelectorAll('input[type="password"]')
+      .forEach((el) => {
+        try {
+          el.value = '';
+        } catch {
+          /* ignore */
+        }
+      });
   } catch {
     /* ignore */
   }
@@ -86,7 +98,7 @@ function blurActiveElement() {
  * is ineffective (WebKit classifies fields structurally), so we do not do it.
  */
 export async function leaveSetupFlow() {
-  blurActiveElement();
+  clearFlowCredentials();
   const from = readFlowReturnPath();
   if (from) {
     await openReturnRoute(from);
@@ -109,7 +121,7 @@ export async function leaveSetupFlow() {
  * Leave a HW signing tab (Keystone / Trezor). Prefers `?from=` (e.g. /send).
  */
 export async function leaveSignTabFlow(fallback = '/wallet') {
-  blurActiveElement();
+  clearFlowCredentials();
   const from = readFlowReturnPath() || sanitizeFlowReturnPath(fallback) || '/wallet';
   await openReturnRoute(from);
 }
@@ -139,7 +151,7 @@ function handleExitClick(onClick) {
       e.preventDefault();
       e.stopPropagation();
     }
-    blurActiveElement();
+    clearFlowCredentials();
     if (typeof onClick === 'function') onClick(e);
   };
 }

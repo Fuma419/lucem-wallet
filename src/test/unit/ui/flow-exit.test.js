@@ -60,7 +60,7 @@ describe('flow exit / abort', () => {
     ).toBe('/send');
   });
 
-  test('create wallet Exit navigates without DOM scrubbing theater', () => {
+  test('create wallet Exit clears credentials, no DOM scrubbing theater', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
     expect(src).toMatch(/FlowCardCloseButton/);
     expect(src).toMatch(/onClick=\{\(\) => leaveSetupFlow\(\)\}/);
@@ -70,10 +70,19 @@ describe('flow exit / abort', () => {
     expect(src).not.toMatch(/detachFlowSensitiveDom/);
   });
 
+  test('leaveSetupFlow clears passwords and does not blur (iOS AutoFill)', () => {
+    const src = read('ui/app/components/flowExit.jsx');
+    expect(src).toMatch(/clearFlowCredentials/);
+    expect(src).toMatch(/input\[type="password"\]/);
+    // Blurring a password field can itself pop the iOS AutoFill accessory.
+    expect(src).not.toMatch(/\.blur\(\)/);
+  });
+
   // The behavioral guarantee (rendered DOM has no iOS "retrieve saved login"
-  // signature) is enforced by src/test/unit/ui/ios-password-autofill.test.js.
-  // These are cheap source guards that the correct attributes are present.
-  test('account setup password fields use type=password + new-password', () => {
+  // signature and credential fields load read-only) is enforced by
+  // src/test/unit/ui/ios-password-autofill.test.js. These are cheap source
+  // guards that the correct attributes are present.
+  test('account setup password fields: type=password, new-password, readonly guard', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
     expect(src).toMatch(/name="lucem-account-name"/);
     expect(src).toMatch(/name="lucem-account-password"/);
@@ -81,14 +90,18 @@ describe('flow exit / abort', () => {
     // Documented iOS signal for a NEW password (suppresses saved-login Face ID).
     expect(src).toMatch(/autoComplete="new-password"/);
     expect(src).not.toMatch(/autoComplete="username"/);
+    // readonly-until-focus guard (iOS never autofills read-only fields).
+    expect(src).toMatch(/isReadOnly=\{autofillGuard\}/);
+    expect(src).toMatch(/onFocus=\{releaseAutofillGuard\}/);
     // The ineffective hacks must stay gone.
     expect(src).not.toMatch(/WebkitTextSecurity/);
     expect(src).not.toMatch(/data-lpignore/);
   });
 
-  test('HW local password fields use type=password + new-password', () => {
+  test('HW local password fields: type=password, new-password, readonly guard', () => {
     const src = read('ui/app/tabs/hw.jsx');
     expect(src).toMatch(/autoComplete="new-password"/);
+    expect(src).toMatch(/isReadOnly=\{autofillGuard\}/);
     expect(src).not.toMatch(/WebkitTextSecurity/);
   });
 

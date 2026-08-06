@@ -711,6 +711,16 @@ const MakeAccount = ({ colorTheme }) => {
   const [state, setState] = React.useState({});
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
+  // iOS Safari / WKWebView never shows its Password AutoFill (Face ID) sheet for
+  // a `readonly` field, so the credential inputs load read-only and only become
+  // editable once the user deliberately focuses one. This suppresses the
+  // "use your saved password" sheet that otherwise pops open on this screen
+  // (and lingers when Exit is tapped). Typing is unaffected — focus clears it.
+  const [autofillGuard, setAutofillGuard] = React.useState(true);
+  const releaseAutofillGuard = React.useCallback(
+    () => setAutofillGuard(false),
+    []
+  );
   const { state: navigationState = {} } = useLocation();
   const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
   colorTheme = colorTheme || stateColorTheme || 'purple';
@@ -840,6 +850,8 @@ const MakeAccount = ({ colorTheme }) => {
             autoCorrect="off"
             autoCapitalize="off"
             spellCheck={false}
+            isReadOnly={autofillGuard}
+            onFocus={releaseAutofillGuard}
             variant="outline"
             bg="black"
             borderColor="whiteAlpha.300"
@@ -874,6 +886,8 @@ const MakeAccount = ({ colorTheme }) => {
                 autoCorrect="off"
                 spellCheck={false}
                 autoComplete="new-password"
+                isReadOnly={autofillGuard}
+                onFocus={releaseAutofillGuard}
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}
@@ -936,6 +950,8 @@ const MakeAccount = ({ colorTheme }) => {
                 autoCorrect="off"
                 spellCheck={false}
                 autoComplete="new-password"
+                isReadOnly={autofillGuard}
+                onFocus={releaseAutofillGuard}
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}

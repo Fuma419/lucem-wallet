@@ -50,6 +50,10 @@ function inputs(container) {
   return Array.from(container.querySelectorAll('input, textarea'));
 }
 
+function hasReadonly(el) {
+  return el.hasAttribute('readonly') || el.hasAttribute('readOnly');
+}
+
 function iosRetrieveLoginSignature(container) {
   const fields = inputs(container);
   const passwordFields = fields.filter(
@@ -63,7 +67,16 @@ function iosRetrieveLoginSignature(container) {
       (el.getAttribute('autocomplete') || '').toLowerCase()
     )
   );
-  return { passwordFields, passwordsMissingNewPassword, loginAdvertisingFields };
+  // Fields that are autofill targets on load (iOS shows its Face ID sheet for
+  // these). Read-only fields are exempt, so a credential field must load
+  // read-only to be safe.
+  const autofillableOnLoad = passwordFields.filter((el) => !hasReadonly(el));
+  return {
+    passwordFields,
+    passwordsMissingNewPassword,
+    loginAdvertisingFields,
+    autofillableOnLoad,
+  };
 }
 
 describe('iOS Password AutoFill (Face ID) on wallet setup forms', () => {
@@ -78,8 +91,12 @@ describe('iOS Password AutoFill (Face ID) on wallet setup forms', () => {
       },
     });
 
-    const { passwordFields, passwordsMissingNewPassword, loginAdvertisingFields } =
-      iosRetrieveLoginSignature(container);
+    const {
+      passwordFields,
+      passwordsMissingNewPassword,
+      loginAdvertisingFields,
+      autofillableOnLoad,
+    } = iosRetrieveLoginSignature(container);
 
     // Real password inputs must exist (the masking hack rendered type="text",
     // which iOS still treats as a password field but with no new-password hint).
@@ -90,6 +107,10 @@ describe('iOS Password AutoFill (Face ID) on wallet setup forms', () => {
 
     // Nothing may advertise itself as a login username / current password.
     expect(loginAdvertisingFields).toHaveLength(0);
+
+    // Credential fields must load read-only so iOS cannot show its Password
+    // AutoFill (Face ID) sheet on this screen; focus makes them editable.
+    expect(autofillableOnLoad).toHaveLength(0);
   });
 
   test('import seed step is not shaped like a login form', () => {

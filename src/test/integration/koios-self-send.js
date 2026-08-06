@@ -531,23 +531,23 @@ async function buildSignSubmitAccountTransfer(opts) {
       String(Math.floor(Number(protocolParameters.slot)) + TX.invalid_hereafter)
     );
 
-    let explicitFee = null;
+    let minFeeFloor = null;
     let signed;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const txBuilder = Cardano.TransactionBuilder.new(txConfig);
       for (let i = 0; i < outputs.len(); i += 1) {
         txBuilder.add_output(outputs.get(i));
       }
-      txBuilder.add_inputs_from(
-        utxoCollection,
-        Cardano.CoinSelectionStrategyCIP2.LargestFirst
-      );
       txBuilder.add_required_signer(paymentKey.to_public().hash());
-      if (explicitFee != null) {
-        txBuilder.set_fee(explicitFee);
-      }
-      txBuilder.add_change_if_needed(address);
       txBuilder.set_ttl_bignum(invalidHereafter);
+      if (minFeeFloor != null) {
+        txBuilder.set_min_fee(minFeeFloor);
+      }
+      txBuilder.add_inputs_from_and_change(
+        utxoCollection,
+        Cardano.CoinSelectionStrategyCIP2.LargestFirst,
+        Cardano.ChangeConfig.new(address)
+      );
 
       const txBody = txBuilder.build();
       const emptyWitness = Cardano.TransactionWitnessSet.new();
@@ -574,7 +574,7 @@ async function buildSignSubmitAccountTransfer(opts) {
       if (txBody.fee().compare(required) >= 0) {
         break;
       }
-      explicitFee = required;
+      minFeeFloor = required;
     }
 
     const txHex = Buffer.from(signed.to_bytes()).toString('hex');

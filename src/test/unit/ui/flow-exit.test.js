@@ -60,23 +60,24 @@ describe('flow exit / abort', () => {
     ).toBe('/send');
   });
 
-  test('create wallet uses card close outside the password form', () => {
+  test('create wallet unmounts inputs before Exit and avoids password type', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
     expect(src).toMatch(/FlowCardCloseButton/);
     expect(src).toMatch(/leaveSetupFlow/);
     expect(src).toMatch(/data-testid="import-abandon-button"/);
-    const formIdx = src.indexOf('as="form"');
-    expect(formIdx).toBeGreaterThan(-1);
-    const formExit = src.slice(formIdx, formIdx + 2500);
-    expect(formExit).not.toMatch(/FlowExitButton|FlowCardCloseButton|leaveSetupFlow/);
+    expect(src).toMatch(/setAbandoning\(true\)/);
+    expect(src).toMatch(/WebkitTextSecurity/);
+    expect(src).not.toMatch(/as="form"/);
+    expect(src).not.toMatch(/type=\{state\.show \? 'text' : 'password'\}/);
+    expect(src).not.toMatch(/type="password"/);
   });
 
-  test('Exit scrubs password fields before leaving setup (iOS Face ID)', () => {
+  test('Exit detaches flow fields before leaving setup (iOS Face ID)', () => {
     const src = read('ui/app/components/flowExit.jsx');
     expect(src).toMatch(/export function scrubSensitiveFormFields/);
-    expect(src).toMatch(/input\[type="password"\]/);
-    expect(src).toMatch(/el\.setAttribute\('type', 'text'\)/);
-    expect(src).toMatch(/scrubSensitiveFormFields\(\);\s*\n\s*if \(typeof onClick/);
+    expect(src).toMatch(/export function detachFlowSensitiveDom/);
+    expect(src).toMatch(/el\.remove\(\)/);
+    expect(src).toMatch(/detachFlowSensitiveDom\(\);\s*\n\s*if \(typeof onClick/);
     expect(src).toMatch(/Give WebKit time to drop the Keychain/);
   });
 
@@ -89,6 +90,13 @@ describe('flow exit / abort', () => {
     expect(src).not.toMatch(/autoComplete="new-password"/);
     expect(src).not.toMatch(/autoComplete="username"/);
     expect(src).toMatch(/data-lpignore="true"/);
+  });
+
+  test('openMainRoute uses location.replace to avoid Face ID on history nav', () => {
+    expect(read('platform/web.js')).toMatch(
+      /location\.replace\(`\$\{window\.location\.origin\}\$\{safe\}`\)/
+    );
+    expect(read('platform/extension.js')).toMatch(/location\.replace\(target\)/);
   });
 
   test('wallet setup openers pass from= initiator route', () => {

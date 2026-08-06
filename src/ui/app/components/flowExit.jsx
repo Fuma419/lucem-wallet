@@ -65,9 +65,20 @@ async function openReturnRoute(path) {
   }
 }
 
+function yieldToWebKit(ms = 150) {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => setTimeout(resolve, ms));
+    } else {
+      setTimeout(resolve, ms);
+    }
+  });
+}
+
 /**
- * Stop iOS Safari / Keychain Face ID from treating Exit as a login attempt.
- * Blur focus and neutralize password / username-like fields before navigation.
+ * Stop iOS Safari / WKWebView / Keychain Face ID from treating Exit as a login.
+ * Blur, clear, demote password types, then remove fields from the DOM so document
+ * unload is not evaluated as a credential form submit.
  */
 export function scrubSensitiveFormFields(root) {
   if (typeof document === 'undefined') return;
@@ -78,48 +89,78 @@ export function scrubSensitiveFormFields(root) {
     /* ignore */
   }
 
-  const scope =
-    root ||
-    document.querySelector('.create-wallet-modal') ||
-    document.querySelector('.lucem-modal-card') ||
-    document;
-
-  let nodes;
-  try {
-    nodes = scope.querySelectorAll(
-      [
-        'input[type="password"]',
-        'input[autocomplete="username"]',
-        'input[autocomplete="current-password"]',
-        'input[autocomplete="new-password"]',
-        'input[name="username"]',
-        'input[name="new-password"]',
-        'input[name="confirm-new-password"]',
-        'input[name="password"]',
-        'input[name="lucem-account-name"]',
-        'input[name="lucem-account-password"]',
-        'input[name="lucem-account-password-confirm"]',
-        'input[name="lucem-hw-local-password"]',
-        'input[name="lucem-hw-local-password-confirm"]',
-        '#lucem-account-password',
-        '#lucem-account-password-confirm',
-        '#lucem-account-name',
-      ].join(', ')
-    );
-  } catch {
-    return;
+  const scopes = [];
+  if (root) {
+    scopes.push(root);
+  } else {
+    document
+      .querySelectorAll('.create-wallet-modal, .lucem-modal-card')
+      .forEach((el) => scopes.push(el));
+    if (scopes.length === 0) scopes.push(document);
   }
 
-  nodes.forEach((el) => {
+  const selector = [
+    'input',
+    'textarea',
+    'select',
+    'input[type="password"]',
+    'input[autocomplete="username"]',
+    'input[autocomplete="current-password"]',
+    'input[autocomplete="new-password"]',
+  ].join(', ');
+
+  scopes.forEach((scope) => {
+    let nodes;
     try {
-      el.setAttribute('autocomplete', 'off');
-      el.setAttribute('readonly', 'readonly');
-      el.removeAttribute('name');
-      el.value = '';
-      if (el.getAttribute('type') === 'password') {
-        el.setAttribute('type', 'text');
+      nodes = scope.querySelectorAll(selector);
+    } catch {
+      return;
+    }
+    nodes.forEach((el) => {
+      try {
+        el.setAttribute('autocomplete', 'off');
+        el.setAttribute('readonly', 'readonly');
+        el.removeAttribute('name');
+        el.removeAttribute('id');
+        if ('value' in el) el.value = '';
+        if (el.getAttribute('type') === 'password') {
+          el.setAttribute('type', 'text');
+        }
+        el.disabled = true;
+      } catch {
+        /* ignore */
       }
-      el.disabled = true;
+    });
+  });
+}
+
+/**
+ * Physically detach credential-like controls before navigation. Scrubbing alone
+ * is not enough on iOS: Password AutoFill still fires Face ID on unload if
+ * password/seed inputs remain in the document.
+ */
+export function detachFlowSensitiveDom(root) {
+  if (typeof document === 'undefined') return;
+  scrubSensitiveFormFields(root);
+
+  const scopes = [];
+  if (root) {
+    scopes.push(root);
+  } else {
+    document
+      .querySelectorAll('.create-wallet-modal, .lucem-modal-card')
+      .forEach((el) => scopes.push(el));
+  }
+
+  scopes.forEach((scope) => {
+    try {
+      scope.querySelectorAll('input, textarea, select, form').forEach((el) => {
+        try {
+          el.remove();
+        } catch {
+          /* ignore */
+        }
+      });
     } catch {
       /* ignore */
     }
@@ -131,16 +172,10 @@ export function scrubSensitiveFormFields(root) {
  * Prefers `?from=` (initiator). Falls back to accounts vs welcome.
  */
 export async function leaveSetupFlow() {
-  scrubSensitiveFormFields();
+  detachFlowSensitiveDom();
   // Give WebKit time to drop the Keychain / Face ID autofill session.
-  await new Promise((resolve) => {
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(() => setTimeout(resolve, 50));
-    } else {
-      setTimeout(resolve, 50);
-    }
-  });
-  scrubSensitiveFormFields();
+  await yieldToWebKit(150);
+  detachFlowSensitiveDom();
 
   const from = readFlowReturnPath();
   if (from) {
@@ -164,6 +199,8 @@ export async function leaveSetupFlow() {
  * Leave a HW signing tab (Keystone / Trezor). Prefers `?from=` (e.g. /send).
  */
 export async function leaveSignTabFlow(fallback = '/wallet') {
+  detachFlowSensitiveDom();
+  await yieldToWebKit(50);
   const from = readFlowReturnPath() || sanitizeFlowReturnPath(fallback) || '/wallet';
   await openReturnRoute(from);
 }
@@ -193,8 +230,8 @@ function handleExitClick(onClick) {
       e.preventDefault();
       e.stopPropagation();
     }
-    // Scrub before any async leave* work so Face ID never sees a live password field.
-    scrubSensitiveFormFields();
+    // Scrub/detach before any async leave* work so Face ID never sees live fields.
+    detachFlowSensitiveDom();
     if (typeof onClick === 'function') onClick(e);
   };
 }

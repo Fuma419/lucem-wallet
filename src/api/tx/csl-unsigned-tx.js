@@ -149,34 +149,41 @@ export function buildUnsignedSimpleTx({
     }
   }
 
+  // Prefer multi-asset strategies that account for change min-ADA. Plain
+  // LargestFirst cannot select multi-asset UTxOs.
   const inputSelectionStrategy = containsMultiasset
     ? Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset
     : Cardano.CoinSelectionStrategyCIP2.LargestFirst;
 
-  let explicitFee = null;
+  // Use set_min_fee (floor) — never set_fee (exact upper bound) — before change.
+  // set_fee + leftover in (fee, minUTxO) throws:
+  // "Not enough ADA leftover to include a new change output. And leftovers is bigger than fee upper bound"
+  let minFeeFloor = null;
 
   for (let attempt = 0; attempt < FEE_ALIGN_MAX_ATTEMPTS; attempt += 1) {
     const txBuilder = Cardano.TransactionBuilder.new(txConfig);
     for (let i = 0; i < outputs.len(); i += 1) {
       txBuilder.add_output(outputs.get(i));
     }
-    txBuilder.add_inputs_from(
-      utxoCollection,
-      inputSelectionStrategy
-    );
     for (const hex of requiredVkeyHashesHex) {
       txBuilder.add_required_signer(
         Cardano.Ed25519KeyHash.from_bytes(Buffer.from(hex, 'hex'))
       );
     }
-    if (explicitFee != null) {
-      txBuilder.set_fee(explicitFee);
-    }
-    txBuilder.add_change_if_needed(changeAddress);
+    // TTL / aux before change so size (and fee) include them.
     txBuilder.set_ttl_bignum(invalidHereafter);
     if (auxiliaryData) {
       txBuilder.set_auxiliary_data(auxiliaryData);
     }
+    if (minFeeFloor != null) {
+      txBuilder.set_min_fee(minFeeFloor);
+    }
+    // Coin selection + change in one step (CSL-recommended; considers change min-ADA).
+    txBuilder.add_inputs_from_and_change(
+      utxoCollection,
+      inputSelectionStrategy,
+      Cardano.ChangeConfig.new(changeAddress)
+    );
 
     const txBody = txBuilder.build();
 
@@ -208,7 +215,7 @@ export function buildUnsignedSimpleTx({
       finalTx.set_is_valid(unsigned.is_valid());
       return toCanonicalTransactionCip21(Cardano, finalTx);
     }
-    explicitFee = required;
+    minFeeFloor = required;
   }
 
   throw new Error(

@@ -111,9 +111,27 @@ const koiosPost = async (endpoint, body) => {
   });
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(`Koios ${response.status}: ${text.slice(0, 200)}`);
+    const err = new Error(`Koios ${response.status}: ${text.slice(0, 200)}`);
+    err.koiosStatus = response.status;
+    throw err;
   }
   return text ? JSON.parse(text) : null;
+};
+
+/**
+ * True for infrastructure failures (public Koios tier quota / rate limit /
+ * network), as opposed to a real assertion regression. The public endpoint has
+ * no API key here, so its shared quota can be exhausted (HTTP 429) — that must
+ * not fail this deterministic suite. The fixture-based tests above already
+ * cover the aggregation logic; the live test is a best-effort chain check.
+ */
+const isKoiosInfraError = (e) => {
+  const status = e && e.koiosStatus;
+  if (status === 429 || (status >= 500 && status <= 599)) return true;
+  const msg = e && e.message ? String(e.message) : '';
+  return /Exceeded Tier Limit|fetch failed|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNRESET|network/i.test(
+    msg
+  );
 };
 
 describe('stake-consolidated balance (resolve stake from payment address)', () => {
@@ -212,34 +230,52 @@ describe('stake-consolidated balance (resolve stake from payment address)', () =
       expect(infoReq.endpoint).toBe('/address_info');
       expect(infoReq.body).toEqual({ _addresses: [PRIMARY_PAYMENT] });
 
-      const info = await koiosPost(infoReq.endpoint, infoReq.body);
-      const stakeAddress = stakeAddressFromAddressInfo(info);
-      expect(stakeAddress).toMatch(/^stake1/);
-      expect(stakeKeyHashFromBech32(stakeAddress)).toBe(EXPECTED_STAKE_KEY_HASH);
+      try {
+        const info = await koiosPost(infoReq.endpoint, infoReq.body);
+        const stakeAddress = stakeAddressFromAddressInfo(info);
+        expect(stakeAddress).toMatch(/^stake1/);
+        expect(stakeKeyHashFromBech32(stakeAddress)).toBe(
+          EXPECTED_STAKE_KEY_HASH
+        );
 
-      const stakeReq = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, true);
-      expect(stakeReq.body._extended).toBe(true);
-      const stakeUtxos = await koiosPost(stakeReq.endpoint, stakeReq.body);
-      const stakeAssets = aggregateKoiosUtxosToAssets(stakeUtxos);
+        const stakeReq = KOIOS_REQUESTS.getAccountUtxos(stakeAddress, true);
+        expect(stakeReq.body._extended).toBe(true);
+        const stakeUtxos = await koiosPost(stakeReq.endpoint, stakeReq.body);
+        const stakeAssets = aggregateKoiosUtxosToAssets(stakeUtxos);
 
-      const primaryReq = KOIOS_REQUESTS.getAddressesUtxos(
-        [PRIMARY_PAYMENT],
-        true
-      );
-      const primaryUtxos = await koiosPost(primaryReq.endpoint, primaryReq.body);
-      const primaryAssets = aggregateKoiosUtxosToAssets(primaryUtxos);
+        const primaryReq = KOIOS_REQUESTS.getAddressesUtxos(
+          [PRIMARY_PAYMENT],
+          true
+        );
+        const primaryUtxos = await koiosPost(
+          primaryReq.endpoint,
+          primaryReq.body
+        );
+        const primaryAssets = aggregateKoiosUtxosToAssets(primaryUtxos);
 
-      const stakeAda = BigInt(
-        stakeAssets.find((a) => a.unit === 'lovelace').quantity
-      );
-      const primaryAda = BigInt(
-        primaryAssets.find((a) => a.unit === 'lovelace').quantity
-      );
+        const stakeAda = BigInt(
+          stakeAssets.find((a) => a.unit === 'lovelace').quantity
+        );
+        const primaryAda = BigInt(
+          primaryAssets.find((a) => a.unit === 'lovelace').quantity
+        );
 
-      expect(stakeAda).toBeGreaterThan(primaryAda * 7n);
-      expect(stakeAssets.length).toBeGreaterThan(primaryAssets.length);
-      expect(stakeAssets.some((a) => a.unit === ASSET_XSPO)).toBe(true);
-      expect(stakeAssets.some((a) => a.unit === ASSET_T_MINSWAP)).toBe(true);
+        expect(stakeAda).toBeGreaterThan(primaryAda * 7n);
+        expect(stakeAssets.length).toBeGreaterThan(primaryAssets.length);
+        expect(stakeAssets.some((a) => a.unit === ASSET_XSPO)).toBe(true);
+        expect(stakeAssets.some((a) => a.unit === ASSET_T_MINSWAP)).toBe(true);
+      } catch (e) {
+        // Public Koios has no API key here; a shared-tier 429 (or network
+        // blip) must not fail this deterministic suite and block PRs. Skip on
+        // infra errors; re-throw genuine assertion/logic regressions.
+        if (isKoiosInfraError(e)) {
+          console.warn(
+            `Skipping live Koios stake check (infra): ${e.message}`
+          );
+          return;
+        }
+        throw e;
+      }
     },
     60000
   );

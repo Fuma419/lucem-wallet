@@ -209,6 +209,19 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).toContain('data-tray-side');
     expect(shellSrc).toContain('swapTrays={Boolean(settings.swapTrays)}');
     expect(shellSrc).toContain('glowEffects={settings.glowEffects !== false}');
+    // Send/Receive keep neon classes always; glow is CSS-only via data-glow.
+    // Conditional className on glowEffects made dark+glow-off look like light mode.
+    expect(walletSrc).toContain("className={receiveBtnClass}");
+    expect(walletSrc).toContain("className={sendBtnClass}");
+    expect(walletSrc).toContain(
+      "const receiveBtnClass = 'button import-wallet'"
+    );
+    expect(walletSrc).toContain("const sendBtnClass = 'button new-wallet'");
+    expect(walletSrc).not.toMatch(
+      /receiveBtnClass\s*=\s*glowOn\s*\?/
+    );
+    expect(walletSrc).not.toMatch(/background=\{receiveButton\}/);
+    expect(walletSrc).not.toMatch(/background=\{sendButton\}/);
     expect(governanceSrc).not.toContain('ArrowBackIcon');
     expect(stakingSrc).not.toContain('ArrowBackIcon');
   });

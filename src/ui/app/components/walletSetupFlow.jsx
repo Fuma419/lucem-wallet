@@ -404,6 +404,15 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
             >
               Close
             </Button>
+            <Button
+              className="button hw-wallet"
+              isDisabled={!accepted}
+              minW="120px"
+              data-testid="hw-import-continue"
+              onClick={() => createTab(TAB.hw)}
+            >
+              Continue
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

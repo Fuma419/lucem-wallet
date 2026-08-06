@@ -27,7 +27,7 @@ import { TAB } from '../../../config/config';
 import platform from '../../../platform';
 import PreventHistoryBack from '../components/PreventHistoryBack';
 import {
-  FlowCardCloseButton,
+  FlowExitButton,
   FlowShellHeader,
   leaveSetupFlow,
 } from '../components/flowExit';
@@ -184,6 +184,9 @@ const App = () => {
       <FlowShellHeader
         logoSrc={LogoWhite}
         hideLogoOnMobile={hideHeaderLogoOnMobile}
+        onExit={() => {
+          leaveSetupFlow();
+        }}
       />
       <Box
         flex="1 1 auto"
@@ -204,7 +207,6 @@ const App = () => {
           className={`modal-glow-${colorTheme} create-wallet-modal lucem-modal-card`}
           rounded="2xl"
           shadow="md"
-          position="relative"
           display="flex"
           flexDirection="column"
           alignItems="stretch"
@@ -219,14 +221,9 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
-          <FlowCardCloseButton
-            onClick={() => leaveSetupFlow()}
-            data-testid="import-abandon-button"
-          />
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
-            pt={{ base: 12, sm: 10, md: 10 }}
             flex="1 1 auto"
             minH={0}
           >
@@ -354,6 +351,7 @@ const GenerateSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
+        <FlowExitButton onClick={() => leaveSetupFlow()}>Exit</FlowExitButton>
       </Stack>
     </Box>
   );
@@ -512,6 +510,7 @@ const VerifySeed = ({ colorTheme }) => {
             Next
           </Button>
         </Stack>
+        <FlowExitButton onClick={() => leaveSetupFlow()}>Exit</FlowExitButton>
       </Stack>
     </Box>
   );
@@ -696,6 +695,12 @@ const ImportSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
+        <FlowExitButton
+          onClick={() => leaveSetupFlow()}
+          data-testid="import-abandon-button"
+        >
+          Exit
+        </FlowExitButton>
       </Stack>
     </Box>
   );
@@ -711,16 +716,6 @@ const MakeAccount = ({ colorTheme }) => {
   const [state, setState] = React.useState({});
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
-  // iOS Safari / WKWebView never shows its Password AutoFill (Face ID) sheet for
-  // a `readonly` field, so the credential inputs load read-only and only become
-  // editable once the user deliberately focuses one. This suppresses the
-  // "use your saved password" sheet that otherwise pops open on this screen
-  // (and lingers when Exit is tapped). Typing is unaffected — focus clears it.
-  const [autofillGuard, setAutofillGuard] = React.useState(true);
-  const releaseAutofillGuard = React.useCallback(
-    () => setAutofillGuard(false),
-    []
-  );
   const { state: navigationState = {} } = useLocation();
   const { mnemonic, flow, colorTheme: stateColorTheme } = navigationState;
   colorTheme = colorTheme || stateColorTheme || 'purple';
@@ -839,19 +834,20 @@ const MakeAccount = ({ colorTheme }) => {
         )}
         <Spacer height="4" />
         <Stack
+          as="form"
+          autoComplete="on"
           width="100%"
           spacing={3}
           align="stretch"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submitCreate();
+          }}
         >
           <Input
             id="lucem-account-name"
-            name="lucem-account-name"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            isReadOnly={autofillGuard}
-            onFocus={releaseAutofillGuard}
+            name="username"
+            autoComplete="username"
             variant="outline"
             bg="black"
             borderColor="whiteAlpha.300"
@@ -871,7 +867,7 @@ const MakeAccount = ({ colorTheme }) => {
               <Input
                 ref={passwordRef}
                 id="lucem-account-password"
-                name="lucem-account-password"
+                name="new-password"
                 variant="outline"
                 bg="black"
                 borderColor="whiteAlpha.300"
@@ -886,8 +882,6 @@ const MakeAccount = ({ colorTheme }) => {
                 autoCorrect="off"
                 spellCheck={false}
                 autoComplete="new-password"
-                isReadOnly={autofillGuard}
-                onFocus={releaseAutofillGuard}
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}
@@ -936,7 +930,7 @@ const MakeAccount = ({ colorTheme }) => {
               <Input
                 ref={confirmRef}
                 id="lucem-account-password-confirm"
-                name="lucem-account-password-confirm"
+                name="confirm-new-password"
                 variant="outline"
                 bg="black"
                 borderColor="whiteAlpha.300"
@@ -950,8 +944,6 @@ const MakeAccount = ({ colorTheme }) => {
                 autoCorrect="off"
                 spellCheck={false}
                 autoComplete="new-password"
-                isReadOnly={autofillGuard}
-                onFocus={releaseAutofillGuard}
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}
@@ -1052,7 +1044,7 @@ const MakeAccount = ({ colorTheme }) => {
           )}
 
           <Button
-            type="button"
+            type="submit"
             className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
             isDisabled={!canSubmit}
             isLoading={loading}
@@ -1062,10 +1054,18 @@ const MakeAccount = ({ colorTheme }) => {
             minH="44px"
             mt={1}
             rounded="lg"
-            onClick={() => submitCreate()}
           >
             Create
           </Button>
+          <FlowExitButton
+            isDisabled={loading}
+            onClick={() => leaveSetupFlow()}
+            data-testid={
+              flow === 'restore-wallet' ? 'import-abandon-button' : 'flow-exit-button'
+            }
+          >
+            Exit
+          </FlowExitButton>
         </Stack>
       </Box>
     </Box>
@@ -1117,26 +1117,16 @@ const SuccessAndClose = ({ flow }) => {
   );
 };
 
-// Exported for DOM tests that assert the iOS Password AutoFill signature of the
-// setup forms (see src/test/unit/ui/ios-password-autofill.test.js).
-export { MakeAccount, ImportSeed, GenerateSeed, App };
+const root = createRoot(window.document.querySelector(`#${TAB.createWallet}`));
+root.render(
+  <CreateWalletShell>
+    <Router>
+      <>
+        <PreventHistoryBack />
+        <App />
+      </>
+    </Router>
+  </CreateWalletShell>
+);
 
-const mountNode =
-  typeof window !== 'undefined' && window.document
-    ? window.document.querySelector(`#${TAB.createWallet}`)
-    : null;
-if (mountNode) {
-  const root = createRoot(mountNode);
-  root.render(
-    <CreateWalletShell>
-      <Router>
-        <>
-          <PreventHistoryBack />
-          <App />
-        </>
-      </Router>
-    </CreateWalletShell>
-  );
-}
-
-if (typeof module !== 'undefined' && module.hot) module.hot.accept();
+if (module.hot) module.hot.accept();

@@ -49,7 +49,7 @@ import {
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
-import { leaveDappApprovalFlow } from '../components/flowExit';
+import { leaveDappApprovalFlow, FlowExitButton } from '../components/flowExit';
 
 const KPhase = { load: 'load', show: 'show', scan: 'scan' };
 
@@ -711,11 +711,9 @@ const SignTx = ({ request, controller }) => {
           gap={4}
         >
           <Spinner color="yellow" speed="0.5s" />
-          <Button
-            type="button"
-            height={'50px'}
-            width={{ base: '42%', sm: '180px' }}
-            minW="140px"
+          <FlowExitButton
+            color="gray.500"
+            _hover={{ bg: 'blackAlpha.100', color: 'gray.700' }}
             onClick={async () => {
               await leaveDappApprovalFlow(async () => {
                 await controller.returnData({
@@ -723,10 +721,9 @@ const SignTx = ({ request, controller }) => {
                 });
               });
             }}
-            data-testid="flow-exit-button"
           >
-            Cancel
-          </Button>
+            Exit
+          </FlowExitButton>
         </Box>
       ) : (
         <Box

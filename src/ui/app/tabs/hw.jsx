@@ -34,7 +34,6 @@ import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import TrezorWidget from '../components/trezorWidget';
 import {
-  FlowCardCloseButton,
   FlowShellHeader,
   leaveSetupFlow,
 } from '../components/flowExit';
@@ -158,6 +157,7 @@ const App = () => {
     id: '',
     keystoneAccounts: null,
   });
+
   return (
     <Box
       display="flex"
@@ -177,7 +177,12 @@ const App = () => {
       boxSizing="border-box"
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <FlowShellHeader logoSrc={LogoWhite} />
+      <FlowShellHeader
+        logoSrc={LogoWhite}
+        onExit={() => {
+          leaveSetupFlow();
+        }}
+      />
 
       <Box
         flex="1 1 auto"
@@ -198,7 +203,6 @@ const App = () => {
           className="modal-glow-yellow-green create-wallet-modal lucem-modal-card"
           rounded="2xl"
           shadow="md"
-          position="relative"
           display="flex"
           flexDirection="column"
           alignItems="stretch"
@@ -213,13 +217,9 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
-          {tab !== 2 ? (
-            <FlowCardCloseButton onClick={() => leaveSetupFlow()} />
-          ) : null}
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
-            pt={{ base: tab !== 2 ? 12 : 4, sm: 6, md: 10 }}
             flex="1 1 auto"
             minH={0}
           >
@@ -869,13 +869,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
   const [localWalletPassword, setLocalWalletPassword] = React.useState('');
   const [localWalletPasswordConfirm, setLocalWalletPasswordConfirm] =
     React.useState('');
-  // See createWallet.jsx: load credential inputs read-only so iOS Password
-  // AutoFill (Face ID) cannot pop its saved-password sheet; focus clears it.
-  const [autofillGuard, setAutofillGuard] = React.useState(true);
-  const releaseAutofillGuard = React.useCallback(
-    () => setAutofillGuard(false),
-    []
-  );
 
   const isKeystone =
     data.device === HW.keystone &&
@@ -1094,13 +1087,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   borderColor: HW_LIME,
                   boxShadow: HW_ACCENT.inputFocusRing,
                 }}
-                name="lucem-hw-local-password"
                 placeholder="Password (min 8 characters)"
                 value={localWalletPassword}
                 onChange={(e) => setLocalWalletPassword(e.target.value)}
                 autoComplete="new-password"
-                isReadOnly={autofillGuard}
-                onFocus={releaseAutofillGuard}
               />
               <Input
                 type="password"
@@ -1120,13 +1110,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   borderColor: HW_LIME,
                   boxShadow: HW_ACCENT.inputFocusRing,
                 }}
-                name="lucem-hw-local-password-confirm"
                 placeholder="Confirm password"
                 value={localWalletPasswordConfirm}
                 onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}
                 autoComplete="new-password"
-                isReadOnly={autofillGuard}
-                onFocus={releaseAutofillGuard}
               />
             </Stack>
           </Box>

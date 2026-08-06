@@ -243,10 +243,8 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         const signedMessage = await props.sign(null, { ...hw, appAda });
         await props.onConfirm(true, signedMessage);
       } else {
-        // Close before opening Keystone/Trezor tabs so returning from Exit
-        // does not leave a password/device confirm modal on the prior page.
-        onClose();
         await props.sign(null, hw);
+        onClose();
         return;
       }
     } catch (e) {

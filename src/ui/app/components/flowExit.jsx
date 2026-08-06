@@ -65,12 +65,28 @@ async function openReturnRoute(path) {
   }
 }
 
-/** Drop keyboard focus before navigating away (dismisses the on-screen keyboard). */
-function blurActiveElement() {
+/**
+ * Neutralize credential fields synchronously before navigating away so iOS
+ * Safari / WKWebView does not present its "use your saved password" AutoFill
+ * (Face ID) sheet during the Exit transition.
+ *
+ * iOS never offers AutoFill for a `readonly` field, so we re-arm `readonly`
+ * (the create/HW forms load read-only and only drop it on focus — re-arming
+ * covers the case where the user already focused/typed) and clear the value
+ * (so leaving is not seen as a completed login either). Do NOT call `blur()` —
+ * blurring a password field can itself pop the AutoFill accessory on iOS.
+ */
+function clearFlowCredentials() {
   if (typeof document === 'undefined') return;
   try {
-    const active = document.activeElement;
-    if (active && typeof active.blur === 'function') active.blur();
+    document.querySelectorAll('input[type="password"]').forEach((el) => {
+      try {
+        el.setAttribute('readonly', '');
+        el.value = '';
+      } catch {
+        /* ignore */
+      }
+    });
   } catch {
     /* ignore */
   }
@@ -86,7 +102,7 @@ function blurActiveElement() {
  * is ineffective (WebKit classifies fields structurally), so we do not do it.
  */
 export async function leaveSetupFlow() {
-  blurActiveElement();
+  clearFlowCredentials();
   const from = readFlowReturnPath();
   if (from) {
     await openReturnRoute(from);
@@ -109,7 +125,7 @@ export async function leaveSetupFlow() {
  * Leave a HW signing tab (Keystone / Trezor). Prefers `?from=` (e.g. /send).
  */
 export async function leaveSignTabFlow(fallback = '/wallet') {
-  blurActiveElement();
+  clearFlowCredentials();
   const from = readFlowReturnPath() || sanitizeFlowReturnPath(fallback) || '/wallet';
   await openReturnRoute(from);
 }
@@ -139,7 +155,7 @@ function handleExitClick(onClick) {
       e.preventDefault();
       e.stopPropagation();
     }
-    blurActiveElement();
+    clearFlowCredentials();
     if (typeof onClick === 'function') onClick(e);
   };
 }

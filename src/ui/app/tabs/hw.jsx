@@ -869,6 +869,13 @@ const SelectAccounts = ({ data, onConfirm }) => {
   const [localWalletPassword, setLocalWalletPassword] = React.useState('');
   const [localWalletPasswordConfirm, setLocalWalletPasswordConfirm] =
     React.useState('');
+  // See createWallet.jsx: load credential inputs read-only so iOS Password
+  // AutoFill (Face ID) cannot pop its saved-password sheet; focus clears it.
+  const [autofillGuard, setAutofillGuard] = React.useState(true);
+  const releaseAutofillGuard = React.useCallback(
+    () => setAutofillGuard(false),
+    []
+  );
 
   const isKeystone =
     data.device === HW.keystone &&
@@ -1092,6 +1099,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 value={localWalletPassword}
                 onChange={(e) => setLocalWalletPassword(e.target.value)}
                 autoComplete="new-password"
+                isReadOnly={autofillGuard}
+                onFocus={releaseAutofillGuard}
               />
               <Input
                 type="password"
@@ -1116,6 +1125,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 value={localWalletPasswordConfirm}
                 onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}
                 autoComplete="new-password"
+                isReadOnly={autofillGuard}
+                onFocus={releaseAutofillGuard}
               />
             </Stack>
           </Box>

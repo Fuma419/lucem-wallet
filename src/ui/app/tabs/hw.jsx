@@ -1088,10 +1088,14 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   borderColor: HW_LIME,
                   boxShadow: HW_ACCENT.inputFocusRing,
                 }}
+                name="lucem-hw-local-password"
                 placeholder="Password (min 8 characters)"
                 value={localWalletPassword}
                 onChange={(e) => setLocalWalletPassword(e.target.value)}
-                autoComplete="new-password"
+                autoComplete="off"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
               />
               <Input
                 type="password"
@@ -1111,10 +1115,14 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   borderColor: HW_LIME,
                   boxShadow: HW_ACCENT.inputFocusRing,
                 }}
+                name="lucem-hw-local-password-confirm"
                 placeholder="Confirm password"
                 value={localWalletPasswordConfirm}
                 onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}
-                autoComplete="new-password"
+                autoComplete="off"
+                data-form-type="other"
+                data-lpignore="true"
+                data-1p-ignore="true"
               />
             </Stack>
           </Box>

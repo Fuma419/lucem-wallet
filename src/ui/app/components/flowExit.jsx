@@ -81,8 +81,16 @@ function clearFlowCredentials() {
   try {
     document.querySelectorAll('input[type="password"]').forEach((el) => {
       try {
-        el.setAttribute('readonly', '');
+        // Clear the value first, then strip everything WebKit's Password
+        // AutoFill heuristic keys on (password type + credential autocomplete)
+        // and lock the field read-only — synchronously, in this same tap
+        // handler, before the Exit navigation runs. iOS decides whether to
+        // present its "use saved password" sheet from the field's live state,
+        // so by then there is no password-shaped field to offer a credential.
         el.value = '';
+        el.setAttribute('readonly', '');
+        el.setAttribute('autocomplete', 'off');
+        el.type = 'text';
       } catch {
         /* ignore */
       }

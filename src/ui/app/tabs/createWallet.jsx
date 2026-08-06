@@ -111,6 +111,9 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [colorTheme, setColorTheme] = React.useState('purple');
+  // Unmount all inputs before navigating away so iOS Password AutoFill / Face ID
+  // does not treat document unload as a credential form submit.
+  const [abandoning, setAbandoning] = React.useState(false);
   // React Router’s navigate callback identity changes when the location changes
   // (see useNavigateUnstable deps). Do not re-run URL bootstrap on that — it would
   // read ?type=generate again and replace /verify with /generate after “Next”.
@@ -220,7 +223,17 @@ const App = () => {
           fontSize="md"
         >
           <FlowCardCloseButton
-            onClick={() => leaveSetupFlow()}
+            onClick={async () => {
+              setAbandoning(true);
+              await new Promise((resolve) => {
+                if (typeof requestAnimationFrame === 'function') {
+                  requestAnimationFrame(() => setTimeout(resolve, 0));
+                } else {
+                  setTimeout(resolve, 0);
+                }
+              });
+              await leaveSetupFlow();
+            }}
             data-testid="import-abandon-button"
           />
           <Box
@@ -230,12 +243,14 @@ const App = () => {
             flex="1 1 auto"
             minH={0}
           >
-            <Routes>
-              <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
-              <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
-              <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
-              <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
-            </Routes>
+            {!abandoning ? (
+              <Routes>
+                <Route path="/generate" element={<GenerateSeed colorTheme={colorTheme} />} />
+                <Route path="/verify" element={<VerifySeed colorTheme={colorTheme} />} />
+                <Route path="/account" element={<MakeAccount colorTheme={colorTheme} />} />
+                <Route path="/import" element={<ImportSeed colorTheme={colorTheme} />} />
+              </Routes>
+            ) : null}
           </Box>
         </Box>
       </Box>
@@ -829,15 +844,9 @@ const MakeAccount = ({ colorTheme }) => {
         )}
         <Spacer height="4" />
         <Stack
-          as="form"
-          autoComplete="off"
           width="100%"
           spacing={3}
           align="stretch"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submitCreate();
-          }}
         >
           <Input
             id="lucem-account-name"
@@ -878,7 +887,8 @@ const MakeAccount = ({ colorTheme }) => {
                 rounded="lg"
                 isInvalid={state.regularPassword === false}
                 pr="4.5rem"
-                type={state.show ? 'text' : 'password'}
+                type="text"
+                inputMode="text"
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -886,6 +896,11 @@ const MakeAccount = ({ colorTheme }) => {
                 data-form-type="other"
                 data-lpignore="true"
                 data-1p-ignore="true"
+                sx={
+                  state.show
+                    ? undefined
+                    : { WebkitTextSecurity: 'disc', textSecurity: 'disc' }
+                }
                 defaultValue=""
                 onChange={bumpForm}
                 onInput={bumpForm}
@@ -963,7 +978,13 @@ const MakeAccount = ({ colorTheme }) => {
                     matchingPassword: v ? v === p : undefined,
                   }));
                 }}
-                type={state.show ? 'text' : 'password'}
+                type="text"
+                inputMode="text"
+                sx={
+                  state.show
+                    ? undefined
+                    : { WebkitTextSecurity: 'disc', textSecurity: 'disc' }
+                }
                 placeholder="Confirm password"
               />
               <InputRightElement width="4.5rem">
@@ -1051,7 +1072,7 @@ const MakeAccount = ({ colorTheme }) => {
           )}
 
           <Button
-            type="submit"
+            type="button"
             className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
             isDisabled={!canSubmit}
             isLoading={loading}
@@ -1061,6 +1082,7 @@ const MakeAccount = ({ colorTheme }) => {
             minH="44px"
             mt={1}
             rounded="lg"
+            onClick={() => submitCreate()}
           >
             Create
           </Button>

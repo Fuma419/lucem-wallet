@@ -156,7 +156,8 @@ const webAdapter = {
       ]);
       const safe = allowed.has(path) ? path : '/wallet';
       if (typeof window !== 'undefined') {
-        window.location.assign(`${window.location.origin}${safe}`);
+        // replace: avoid history entries that re-trigger iOS Password AutoFill / Face ID
+        window.location.replace(`${window.location.origin}${safe}`);
       }
       return Promise.resolve(true);
     },

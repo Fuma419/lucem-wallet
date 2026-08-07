@@ -57,6 +57,12 @@ import { isSameAccountIndex } from '../utils/accountIndex';
 const TRAY_CLEARANCE_PB =
   'calc(6.5rem + env(safe-area-inset-bottom, 0px))';
 
+/**
+ * Temporary: hide the Accounts rename field so iOS Face ID / Password AutoFill
+ * can be verified without that input present. Set back to `true` after the check.
+ */
+const ACCOUNT_RENAME_ENABLED = false;
+
 const Accounts = () => {
   const settings = useStoreState((state) => state.settings.settings);
   const deleteAccountRef = React.useRef();
@@ -323,49 +329,54 @@ const Accounts = () => {
             </Stack>
           </Box>
 
-          {currentAccount ? (
+          {currentAccount &&
+          (ACCOUNT_RENAME_ENABLED || !currentSignable) ? (
             <Box
               className="lucem-inset-surface"
               rounded="3xl"
               p={{ base: 4, md: 5 }}
               data-testid="accounts-rename-panel"
             >
-              <Text fontSize="sm" color={mutedFg} mb={2}>
-                Rename selected account
-              </Text>
-              <InputGroup size="md" w="full">
-                <Input
-                  variant="outline"
-                  rounded="xl"
-                  placeholder="Account name"
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && canApplyName) applyName();
-                  }}
-                  pr="4.5rem"
-                  data-testid="accounts-rename-input"
-                />
-                <InputRightElement width="4.5rem" h="full">
-                  {canApplyName ? (
-                    <Button
-                      h="1.75rem"
-                      size="sm"
-                      rounded="md"
-                      onClick={applyName}
-                      data-testid="accounts-rename-apply"
-                    >
-                      Apply
-                    </Button>
-                  ) : (
-                    <Icon mr="-2" as={MdModeEdit} color={mutedFg} />
-                  )}
-                </InputRightElement>
-              </InputGroup>
+              {ACCOUNT_RENAME_ENABLED ? (
+                <>
+                  <Text fontSize="sm" color={mutedFg} mb={2}>
+                    Rename selected account
+                  </Text>
+                  <InputGroup size="md" w="full">
+                    <Input
+                      variant="outline"
+                      rounded="xl"
+                      placeholder="Account name"
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && canApplyName) applyName();
+                      }}
+                      pr="4.5rem"
+                      data-testid="accounts-rename-input"
+                    />
+                    <InputRightElement width="4.5rem" h="full">
+                      {canApplyName ? (
+                        <Button
+                          h="1.75rem"
+                          size="sm"
+                          rounded="md"
+                          onClick={applyName}
+                          data-testid="accounts-rename-apply"
+                        >
+                          Apply
+                        </Button>
+                      ) : (
+                        <Icon mr="-2" as={MdModeEdit} color={mutedFg} />
+                      )}
+                    </InputRightElement>
+                  </InputGroup>
+                </>
+              ) : null}
 
               {!currentSignable ? (
                 <Button
-                  mt={3}
+                  mt={ACCOUNT_RENAME_ENABLED ? 3 : 0}
                   w="full"
                   rounded="xl"
                   h="12"

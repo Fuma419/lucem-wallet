@@ -14,10 +14,12 @@ const path = require('path');
 const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
 
 const {
+  aggregateKoiosUtxosByAddress,
   aggregateKoiosUtxosToAssets,
   stakeAddressFromAddressInfo,
   stakeControlledLovelaceFromAccountInfo,
   summarizeAddressInfo,
+  summarizeUtxosByAddressEntry,
 } = require('../../../api/extension/stake-balance');
 const { KOIOS_REQUESTS } = require('../../../api/koios-endpoints');
 
@@ -229,6 +231,37 @@ describe('stake-consolidated balance (resolve stake from payment address)', () =
     expect(summary.lovelace).toBe('5000000');
     expect(summary.utxoCount).toBe(2);
     expect(summary.nativeAssetCount).toBe(2);
+  });
+
+  test('aggregateKoiosUtxosByAddress groups stake UTxOs for Accounts listing', () => {
+    const byAddr = aggregateKoiosUtxosByAddress([
+      {
+        address: PRIMARY_PAYMENT,
+        value: '1000000',
+        asset_list: [{ policy_id: 'aa', asset_name: '01', quantity: '1' }],
+      },
+      {
+        address: CHANGE_WITH_ASSETS,
+        value: '2000000',
+        asset_list: null,
+      },
+      {
+        address: PRIMARY_PAYMENT,
+        value: '500000',
+        asset_list: [{ policy_id: 'bb', asset_name: '02', quantity: '1' }],
+      },
+    ]);
+    expect(byAddr.size).toBe(2);
+    const primary = summarizeUtxosByAddressEntry(byAddr.get(PRIMARY_PAYMENT));
+    expect(primary.lovelace).toBe('1500000');
+    expect(primary.utxoCount).toBe(2);
+    expect(primary.nativeAssetCount).toBe(2);
+    const change = summarizeUtxosByAddressEntry(
+      byAddr.get(CHANGE_WITH_ASSETS)
+    );
+    expect(change.lovelace).toBe('2000000');
+    expect(change.utxoCount).toBe(1);
+    expect(change.nativeAssetCount).toBe(0);
   });
 
   test('wallet resolves stake via address_info and uses extended account_utxos', () => {

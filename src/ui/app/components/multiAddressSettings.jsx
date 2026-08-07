@@ -110,7 +110,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
         ) : null}
         {rows.map((row) => (
           <Flex
-            key={`${row.role ?? 0}-${row.index}`}
+            key={`${row.role ?? 0}-${row.index ?? row.paymentAddr}`}
             align="flex-start"
             justify="space-between"
             gap={2}
@@ -120,16 +120,19 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
             bg={rowBg}
             borderWidth="1px"
             borderColor={rowBorder}
-            data-testid={`multi-address-row-${row.role ?? 0}-${row.index}`}
+            data-testid={`multi-address-row-${row.role ?? 0}-${row.index ?? 'funded'}`}
           >
             <Box minW={0} flex="1">
               <Text fontSize="xs" fontWeight="bold" color={rowText}>
-                #{row.index}
-                {row.role === 1
-                  ? ' · change'
-                  : row.index === 0
-                    ? ' · primary'
-                    : ' · receive'}
+                {row.index == null
+                  ? 'Funded'
+                  : `#${row.index}${
+                      row.role === 1
+                        ? ' · change'
+                        : row.index === 0
+                          ? ' · primary'
+                          : ' · receive'
+                    }`}
               </Text>
               <Text
                 fontSize="xs"
@@ -138,7 +141,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
                 mt={1}
                 wordBreak="break-all"
                 title={row.paymentAddr}
-                data-testid={`multi-address-addr-${row.role ?? 0}-${row.index}`}
+                data-testid={`multi-address-addr-${row.role ?? 0}-${row.index ?? 'funded'}`}
               >
                 {row.paymentAddr}
               </Text>
@@ -147,7 +150,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
                 gap={3}
                 flexWrap="wrap"
                 align="baseline"
-                data-testid={`multi-address-contents-${row.role ?? 0}-${row.index}`}
+                data-testid={`multi-address-contents-${row.role ?? 0}-${row.index ?? 'funded'}`}
               >
                 <UnitDisplay
                   quantity={row.lovelace ?? '0'}
@@ -167,9 +170,9 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
                 </Text>
               </Flex>
             </Box>
-            {row.role === 1 || row.index === 0 ? (
+            {row.index == null || row.role === 1 || row.index === 0 ? (
               <Text fontSize="xs" color={hintColor} flexShrink={0} pt={0.5}>
-                {row.role === 1 ? 'Auto' : 'Always on'}
+                {row.index == null ? 'On-chain' : row.role === 1 ? 'Auto' : 'Always on'}
               </Text>
             ) : (
               <Button

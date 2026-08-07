@@ -79,6 +79,12 @@ describe('stake-unified wallet source guards', () => {
     expect(api).toMatch(/summarizeAddressInfo/);
     expect(api).toMatch(/filterPaymentAddressesForAccountsDisplay/);
     expect(api).toMatch(/userExternalIndices/);
+    // Accounts listing must discover + use stake UTxOs so funded addresses
+    // appear even when prior index discovery / address_info was incomplete.
+    expect(api).toMatch(/activateDiscoveredExternalAddresses/);
+    expect(api).toMatch(/aggregateKoiosUtxosByAddress/);
+    expect(api).toMatch(/getAccountUtxos/);
+    expect(api).toMatch(/extFromFunded/);
 
     const panel = read('ui/app/components/multiAddressSettings.jsx');
     expect(panel).toMatch(/getEnabledPaymentAddressDetails/);

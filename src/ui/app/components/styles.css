@@ -156,16 +156,31 @@ html[data-theme='light'] .lucem-inset-surface:hover {
     transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Active account: left rail + thin ring (clearer than a heavy orange halo). */
 .lucem-inset-row.is-current {
   box-shadow:
-    0 0 0 2px rgba(255, 140, 0, 0.85),
-    0 0 28px rgba(255, 140, 0, 0.32);
+    inset 3px 0 0 0 #ffb020,
+    0 0 0 1px rgba(255, 176, 32, 0.55);
 }
 
 html[data-theme='light'] .lucem-inset-row.is-current {
   box-shadow:
-    0 0 0 2px rgba(217, 119, 6, 0.7),
-    0 0 22px rgba(217, 119, 6, 0.22);
+    inset 3px 0 0 0 #b45309,
+    0 0 0 1px rgba(180, 83, 9, 0.4);
+}
+
+html:not([data-glow='off']) .lucem-inset-row.is-current {
+  box-shadow:
+    inset 3px 0 0 0 #ffb020,
+    0 0 0 1px rgba(255, 176, 32, 0.6),
+    0 0 18px rgba(255, 176, 32, 0.2);
+}
+
+html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
+  box-shadow:
+    inset 3px 0 0 0 #b45309,
+    0 0 0 1px rgba(180, 83, 9, 0.45),
+    0 0 16px rgba(245, 158, 11, 0.18);
 }
 
 /* Tight “Create Account” card (create-wallet tab + similar). */

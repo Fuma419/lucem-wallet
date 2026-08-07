@@ -145,8 +145,10 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain('Controlled stake');
     expect(accountsSrc).toContain('getAccountsControlledStake');
     expect(css).toMatch(
-      /\.lucem-inset-row\.is-current[\s\S]*0 0 0 2px rgba\(255,\s*140,\s*0/
+      /\.lucem-inset-row\.is-current[\s\S]*inset 3px 0 0 0 #ffb020/
     );
+    expect(accountsSrc).toContain('#FFB020');
+    expect(accountsSrc).toContain('rgba(255, 176, 32, 0.12)');
   });
 
   test('accounts selection compares indexes across string/number forms', () => {

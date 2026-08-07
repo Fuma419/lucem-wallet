@@ -7,12 +7,7 @@ import '../components/styles.css';
 import { HW, STORAGE, TAB } from '../../../config/config';
 import Main from '../../index';
 import PreventHistoryBack from '../components/PreventHistoryBack';
-import {
-  leaveSetupFlow,
-  SetupCancelButton,
-  SetupCardCloseButton,
-  SetupShellHeader,
-} from '../components/flowCancel';
+import { SetupShellHeader } from '../components/flowCancel';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
 import {
@@ -215,7 +210,6 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
-          <SetupCardCloseButton onCancel={() => leaveSetupFlow()} />
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
@@ -845,12 +839,6 @@ const ConnectHW = ({ onConfirm }) => {
       >
         Continue
       </Button>
-      <SetupCancelButton
-        tone="hw"
-        mt={3}
-        alignSelf="center"
-        onClick={() => leaveSetupFlow()}
-      />
 
       {error && (
         <Text mt={3} fontSize="xs" color="red.200" textAlign="center">
@@ -1222,13 +1210,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
         >
           Continue
         </Button>
-        <SetupCancelButton
-          tone="hw"
-          mt={3}
-          alignSelf="center"
-          isDisabled={isLoading}
-          onClick={() => leaveSetupFlow()}
-        />
         {error && (
           <Text mt={3} fontSize="xs" color="red.200" textAlign="center">
             {error}

@@ -1,10 +1,9 @@
 /**
- * Cancel / abort for full-page wallet create, import, and HW setup flows.
- * Cancel returns to the page that opened the flow via `?from=` when present.
+ * Return-path helpers for full-page wallet create, import, and HW setup flows.
+ * Opening modals stamp `?from=`; callers may use leaveSetupFlow when abort UI exists.
  */
 import React from 'react';
-import { Box, Button, IconButton, Image } from '@chakra-ui/react';
-import { CloseIcon } from '@chakra-ui/icons';
+import { Box, Image } from '@chakra-ui/react';
 import platform from '../../../platform';
 
 /** Main-app routes allowed as Cancel destinations / `?from=` values. */
@@ -26,7 +25,7 @@ export function sanitizeFlowReturnPath(path) {
 }
 
 /**
- * Append `from=<route>` so Cancel can return to the initiating page.
+ * Append `from=<route>` so an abort control can return to the initiating page.
  * @param {string} query - existing query (`?type=generate` or `type=generate`)
  * @param {string} fromPath - current SPA route (e.g. `/accounts`)
  */
@@ -84,65 +83,7 @@ export async function leaveSetupFlow() {
   await openReturnRoute(hasAccounts ? '/accounts' : '/welcome');
 }
 
-/**
- * Quiet Cancel under primary neon CTAs — matches welcome-modal Close
- * (ghost, not a second neon outline that competes with Continue).
- * `tone` kept for API compatibility with call sites.
- */
-export const SetupCancelButton = ({
-  onClick,
-  children = 'Cancel',
-  tone: _tone = 'purple',
-  ...rest
-}) => (
-  <Button
-    type="button"
-    variant="ghost"
-    size="md"
-    w="100%"
-    maxW="300px"
-    minH="44px"
-    rounded="lg"
-    fontWeight="medium"
-    letterSpacing="0.06em"
-    textTransform="uppercase"
-    fontFamily="'Barlow', sans-serif"
-    color="whiteAlpha.700"
-    _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
-    _active={{ bg: 'whiteAlpha.200' }}
-    data-testid="setup-cancel-button"
-    onClick={onClick}
-    {...rest}
-  >
-    {children}
-  </Button>
-);
-
-/**
- * Modal-style close control on the glowing setup card (matches welcome modals).
- */
-export const SetupCardCloseButton = ({ onCancel, ...rest }) => (
-  <IconButton
-    type="button"
-    aria-label="Cancel"
-    data-testid="setup-card-close"
-    icon={<CloseIcon boxSize={2.5} />}
-    size="sm"
-    variant="ghost"
-    color="whiteAlpha.700"
-    position="absolute"
-    top={3}
-    right={3}
-    zIndex={2}
-    rounded="md"
-    _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
-    _active={{ bg: 'whiteAlpha.200' }}
-    onClick={onCancel}
-    {...rest}
-  />
-);
-
-/** Logo-only header for full-page setup tabs (Cancel lives on the card). */
+/** Logo-only header for full-page setup tabs. */
 export const SetupShellHeader = ({ logoSrc, hideLogoOnMobile = false }) => (
   <Box
     as="header"

@@ -115,7 +115,7 @@ describe('import abandon navigation', () => {
     expect(extSrc).toContain('?next=');
   });
 
-  test('import and create steps expose Cancel that prefers ?from= then accounts vs welcome', () => {
+  test('create/import tabs keep return-path helpers without Cancel/X UI', () => {
     const createSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),
       'utf8'
@@ -124,13 +124,13 @@ describe('import abandon navigation', () => {
       path.join(__dirname, '../../../ui/app/components/flowCancel.jsx'),
       'utf8'
     );
-    expect(createSrc).toContain('leaveSetupFlow');
-    expect(createSrc).toContain('SetupCardCloseButton');
-    expect(createSrc).toContain('SetupCancelButton');
     expect(createSrc).toContain('SetupShellHeader');
+    expect(createSrc).not.toContain('SetupCancelButton');
+    expect(createSrc).not.toContain('SetupCardCloseButton');
     expect(cancelSrc).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
     expect(cancelSrc).toContain('readFlowReturnPath');
-    expect(cancelSrc).toContain('data-testid="setup-cancel-button"');
+    expect(cancelSrc).not.toContain('setup-cancel-button');
+    expect(cancelSrc).not.toContain('setup-card-close');
   });
 
   test('main bootstrap honors ?next= deep links before defaulting to /wallet', () => {

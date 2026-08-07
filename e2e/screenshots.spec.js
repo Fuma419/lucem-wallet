@@ -39,15 +39,6 @@ async function shot(page, name, opts = {}) {
   console.log(`Wrote ${file}`);
 }
 
-/** Scroll setup Cancel into view so CI shots show the action stack (card scrolls). */
-async function revealSetupActions(page) {
-  const cancel = page.getByTestId('setup-cancel-button');
-  if (await cancel.count()) {
-    await cancel.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(150);
-  }
-}
-
 async function seedTestWallet(page, persistedRoute = '/wallet') {
   await page.evaluate(async (routePath) => {
     const DB_NAME = 'lucem-wallet';
@@ -340,9 +331,6 @@ test.describe('capture static entry UIs', () => {
       waitUntil: 'domcontentloaded',
     });
     await page.getByText('New Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
-    await page.getByTestId('setup-card-close').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.getByTestId('setup-cancel-button').waitFor({ state: 'attached', timeout: 15_000 });
-    await revealSetupActions(page);
     await waitFonts(page);
     await shot(page, '02-create-wallet-generate');
   });
@@ -356,9 +344,6 @@ test.describe('capture static entry UIs', () => {
     await page.getByRole('checkbox').click({ force: true });
     await page.getByRole('button', { name: /^Next$/i }).click();
     await page.getByText('Verify Seed Phrase').waitFor({ state: 'visible', timeout: 30_000 });
-    await page.getByTestId('setup-card-close').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.getByTestId('setup-cancel-button').waitFor({ state: 'attached', timeout: 15_000 });
-    await revealSetupActions(page);
     await waitFonts(page);
     await shot(page, '02b-create-wallet-verify');
   });
@@ -376,9 +361,6 @@ test.describe('capture static entry UIs', () => {
     await page
       .getByText(/Create Account|Add Wallet/i)
       .waitFor({ state: 'visible', timeout: 30_000 });
-    await page.getByTestId('setup-card-close').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.getByTestId('setup-cancel-button').waitFor({ state: 'attached', timeout: 15_000 });
-    await revealSetupActions(page);
     await waitFonts(page);
     await shot(page, '02c-create-wallet-account');
   });
@@ -389,9 +371,6 @@ test.describe('capture static entry UIs', () => {
       waitUntil: 'load',
     });
     await page.getByText('Import Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
-    await page.getByTestId('setup-card-close').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.getByTestId('setup-cancel-button').waitFor({ state: 'attached', timeout: 15_000 });
-    await revealSetupActions(page);
     await waitFonts(page);
     await shot(page, '03-create-wallet-import');
   });
@@ -403,9 +382,6 @@ test.describe('capture static entry UIs', () => {
       state: 'visible',
       timeout: 60_000,
     });
-    await page.getByTestId('setup-card-close').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.getByTestId('setup-cancel-button').waitFor({ state: 'attached', timeout: 15_000 });
-    await revealSetupActions(page);
     await waitFonts(page);
     await shot(page, '04-hw-connect');
   });
@@ -422,9 +398,6 @@ test.describe('capture static entry UIs', () => {
     await page
       .getByRole('button', { name: /Advanced options/i })
       .waitFor({ state: 'visible', timeout: 15_000 });
-    await page.getByTestId('setup-card-close').waitFor({ state: 'visible', timeout: 15_000 });
-    await page.getByTestId('setup-cancel-button').waitFor({ state: 'attached', timeout: 15_000 });
-    await revealSetupActions(page);
     await waitFonts(page);
     await shot(page, '04b-hw-connect-keystone');
   });

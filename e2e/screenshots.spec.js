@@ -39,6 +39,14 @@ async function shot(page, name, opts = {}) {
   console.log(`Wrote ${file}`);
 }
 
+/** Assert Cancel is present and scrolled into the shot (card content scrolls). */
+async function assertSetupCancelVisible(page) {
+  const cancel = page.getByTestId('setup-cancel-button');
+  await cancel.waitFor({ state: 'attached', timeout: 15_000 });
+  await cancel.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(150);
+}
+
 async function seedTestWallet(page, persistedRoute = '/wallet') {
   await page.evaluate(async (routePath) => {
     const DB_NAME = 'lucem-wallet';
@@ -331,6 +339,7 @@ test.describe('capture static entry UIs', () => {
       waitUntil: 'domcontentloaded',
     });
     await page.getByText('New Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
+    await assertSetupCancelVisible(page);
     await waitFonts(page);
     await shot(page, '02-create-wallet-generate');
   });
@@ -344,6 +353,7 @@ test.describe('capture static entry UIs', () => {
     await page.getByRole('checkbox').click({ force: true });
     await page.getByRole('button', { name: /^Next$/i }).click();
     await page.getByText('Verify Seed Phrase').waitFor({ state: 'visible', timeout: 30_000 });
+    await assertSetupCancelVisible(page);
     await waitFonts(page);
     await shot(page, '02b-create-wallet-verify');
   });
@@ -361,6 +371,7 @@ test.describe('capture static entry UIs', () => {
     await page
       .getByText(/Create Account|Add Wallet/i)
       .waitFor({ state: 'visible', timeout: 30_000 });
+    await assertSetupCancelVisible(page);
     await waitFonts(page);
     await shot(page, '02c-create-wallet-account');
   });
@@ -371,8 +382,28 @@ test.describe('capture static entry UIs', () => {
       waitUntil: 'load',
     });
     await page.getByText('Import Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
+    await assertSetupCancelVisible(page);
     await waitFonts(page);
     await shot(page, '03-create-wallet-import');
+  });
+
+  test('03b create wallet — import account', async ({ page }) => {
+    test.setTimeout(90_000);
+    // Valid 12-word BIP-39 phrase (test vector).
+    const phrase =
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    await page.goto('/createWalletTab.html?type=import&length=12', {
+      waitUntil: 'load',
+    });
+    await page.getByText('Import Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
+    await page.locator('#lucem-seed-import-paste').fill(phrase);
+    await page.getByRole('button', { name: /^Next$/i }).click();
+    await page
+      .getByText(/Create Account|Add Wallet/i)
+      .waitFor({ state: 'visible', timeout: 30_000 });
+    await assertSetupCancelVisible(page);
+    await waitFonts(page);
+    await shot(page, '03b-create-wallet-import-account');
   });
 
   test('04 HW connect tab', async ({ page }) => {
@@ -382,6 +413,7 @@ test.describe('capture static entry UIs', () => {
       state: 'visible',
       timeout: 60_000,
     });
+    await assertSetupCancelVisible(page);
     await waitFonts(page);
     await shot(page, '04-hw-connect');
   });
@@ -398,8 +430,26 @@ test.describe('capture static entry UIs', () => {
     await page
       .getByRole('button', { name: /Advanced options/i })
       .waitFor({ state: 'visible', timeout: 15_000 });
+    await assertSetupCancelVisible(page);
     await waitFonts(page);
     await shot(page, '04b-hw-connect-keystone');
+  });
+
+  test('04c HW connect — Keystone step 1 QR', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto('/hwTab.html', { waitUntil: 'domcontentloaded' });
+    await page.getByText('Connect Hardware Wallet').waitFor({
+      state: 'visible',
+      timeout: 60_000,
+    });
+    await page.locator('button').filter({ has: page.locator('img') }).first().click();
+    await page.getByRole('button', { name: /^Continue$/i }).click();
+    await page
+      .getByText(/Step 1 — Keystone scans Lucem/i)
+      .waitFor({ state: 'visible', timeout: 30_000 });
+    await assertSetupCancelVisible(page);
+    await waitFonts(page);
+    await shot(page, '04c-hw-keystone-step1');
   });
 
   test('05 Keystone sign tab shell', async ({ page }) => {

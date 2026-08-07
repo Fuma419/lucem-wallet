@@ -26,7 +26,11 @@ import Theme from '../../theme';
 import { TAB } from '../../../config/config';
 import platform from '../../../platform';
 import PreventHistoryBack from '../components/PreventHistoryBack';
-import { SetupShellHeader } from '../components/flowCancel';
+import {
+  leaveSetupFlow,
+  SetupCancelButton,
+  SetupShellHeader,
+} from '../components/flowCancel';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
 
 /** Two-column seed UI: tighter on phones, standard on tablet/desktop. */
@@ -345,6 +349,7 @@ const GenerateSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
+        <SetupCancelButton onClick={() => leaveSetupFlow()} />
       </Stack>
     </Box>
   );
@@ -468,34 +473,37 @@ const VerifySeed = ({ colorTheme }) => {
         ))}
       </Stack>
       <Spacer height="6" />
-      <Stack alignItems="center" justifyContent="center" direction="row">
-        <Button
-          type="button"
-          fontWeight="medium"
-          className="button"
-          onClick={() => {
-            // Pass the original mnemonic string for account creation
-            navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet', colorTheme },
-            });
-          }}
-        >
-          Skip
-        </Button>
-        <Button
-          type="button"
-          ml="3"
-          className="button new-wallet"
-          isDisabled={!allValid}
-          rightIcon={<ChevronRightIcon />}
-          onClick={() => {
-            navigate('/account', {
-              state: { mnemonic, flow: 'create-wallet', colorTheme },
-            });
-          }}
-        >
-          Next
-        </Button>
+      <Stack alignItems="center" direction="column" spacing={3} w="100%">
+        <Stack alignItems="center" justifyContent="center" direction="row">
+          <Button
+            type="button"
+            fontWeight="medium"
+            className="button"
+            onClick={() => {
+              // Pass the original mnemonic string for account creation
+              navigate('/account', {
+                state: { mnemonic, flow: 'create-wallet', colorTheme },
+              });
+            }}
+          >
+            Skip
+          </Button>
+          <Button
+            type="button"
+            ml="3"
+            className="button new-wallet"
+            isDisabled={!allValid}
+            rightIcon={<ChevronRightIcon />}
+            onClick={() => {
+              navigate('/account', {
+                state: { mnemonic, flow: 'create-wallet', colorTheme },
+              });
+            }}
+          >
+            Next
+          </Button>
+        </Stack>
+        <SetupCancelButton onClick={() => leaveSetupFlow()} />
       </Stack>
     </Box>
   );
@@ -680,6 +688,7 @@ const ImportSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
+        <SetupCancelButton onClick={() => leaveSetupFlow()} />
       </Stack>
     </Box>
   );
@@ -1036,6 +1045,10 @@ const MakeAccount = ({ colorTheme }) => {
           >
             Create
           </Button>
+          <SetupCancelButton
+            isDisabled={loading}
+            onClick={() => leaveSetupFlow()}
+          />
         </Stack>
       </Box>
     </Box>

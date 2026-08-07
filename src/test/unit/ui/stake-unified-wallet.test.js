@@ -42,9 +42,12 @@ describe('stake-unified wallet source guards', () => {
     expect(src).toMatch(/ownStakeCred/);
   });
 
-  test('multi-address Off hides panel without wiping indices', () => {
+  test('multi-address is always on — no toggle; list always visible', () => {
     const src = read('ui/app/components/multiAddressSettings.jsx');
-    expect(src).toMatch(/Collapse the panel only/);
+    expect(src).toMatch(/multi-address-always-on/);
+    expect(src).not.toMatch(/SettingsToggleRow/);
+    expect(src).not.toMatch(/Enable multi-address/);
+    expect(src).not.toMatch(/advancedOn/);
     expect(src).not.toMatch(/setAccountExternalIndices\(\s*\[0\]\s*\)/);
   });
 

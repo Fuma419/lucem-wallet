@@ -1,11 +1,10 @@
 /**
  * CIP-1852 payment address helpers.
  *
- * Lucem historically tracked only role=0 / index=0 per account. Advanced
- * multi-address mode enables additional external (role=0) indices. Import and
- * balance refresh also discover internal/change (role=1) indices so ADA left
- * on change addresses (common after spending from other wallets) is included
- * in balance, UTxOs, and signing.
+ * All accounts are multi-address: external (role=0) indices beyond 0 may be
+ * user-activated, and import/balance refresh discover internal/change (role=1)
+ * indices so ADA left on change addresses is included in balance, UTxOs, and
+ * signing. There is no per-account multi-address toggle.
  *
  * Paths: m/1852'/1815'/account'/role/index
  *   role 0 = external (receive)

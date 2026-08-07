@@ -1,8 +1,8 @@
 # Handoff: iOS Face ID / saved-password sheet on Exit (X)
 
-**Status (current `main` after full Exit revert):** The Exit / X control and all related navigation helpers were **removed** from the product (`flowExit.jsx` deleted; #169/#170 reverted after the Face ID mitigation reverts in #180). There should be **no** upper-right Exit button on setup/sign pages.
+**Status:** iOS Face ID FILL was reproduced as tied to the Accounts **Rename selected account** field (temporarily hidden via `ACCOUNT_RENAME_ENABLED` in #184). Exit/X was not the root cause.
 
-**Why this doc still exists:** Historical record of a persistent iOS Password AutoFill / Face ID FILL sheet that appeared when users used that Exit control. Do **not** reintroduce Exit without a device-verified AutoFill strategy.
+**Cancel reintroduced:** Wallet create/import/HW setup uses `flowCancel.jsx` with a **Cancel** control that returns to the initiator via `?from=` (fallback: accounts vs welcome). Do not reintroduce Face ID DOM hacks for Cancel.
 
 ---
 

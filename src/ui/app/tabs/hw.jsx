@@ -7,6 +7,11 @@ import '../components/styles.css';
 import { HW, STORAGE, TAB } from '../../../config/config';
 import Main from '../../index';
 import PreventHistoryBack from '../components/PreventHistoryBack';
+import {
+  leaveSetupFlow,
+  SetupCancelButton,
+  SetupShellHeader,
+} from '../components/flowCancel';
 import { BrowserRouter as Router } from 'react-router-dom';
 import { createRoot } from 'react-dom/client';
 import {
@@ -173,28 +178,10 @@ const App = () => {
       boxSizing="border-box"
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <Box
-        as="header"
-        width="100%"
-        flexShrink={0}
-        display="flex"
-        justifyContent="flex-start"
-        pt={{
-          base: 'max(1rem, env(safe-area-inset-top, 0px))',
-          md: 8,
-        }}
-        pb={{ base: 2, md: 2 }}
-        px={{ base: 4, md: 8 }}
-      >
-        <Image
-          draggable={false}
-          src={LogoWhite}
-          width={{ base: '72px', sm: '88px', md: '100px' }}
-          maxW="min(100px, 36vw)"
-          objectFit="contain"
-          alt=""
-        />
-      </Box>
+      <SetupShellHeader
+        logoSrc={LogoWhite}
+        onCancel={() => leaveSetupFlow()}
+      />
 
       <Box
         flex="1 1 auto"
@@ -858,6 +845,11 @@ const ConnectHW = ({ onConfirm }) => {
       >
         Continue
       </Button>
+      <SetupCancelButton
+        mt={3}
+        alignSelf="center"
+        onClick={() => leaveSetupFlow()}
+      />
 
       {error && (
         <Text mt={3} fontSize="xs" color="red.200" textAlign="center">
@@ -1229,6 +1221,12 @@ const SelectAccounts = ({ data, onConfirm }) => {
         >
           Continue
         </Button>
+        <SetupCancelButton
+          mt={3}
+          alignSelf="center"
+          isDisabled={isLoading}
+          onClick={() => leaveSetupFlow()}
+        />
         {error && (
           <Text mt={3} fontSize="xs" color="red.200" textAlign="center">
             {error}

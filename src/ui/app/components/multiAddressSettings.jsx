@@ -41,7 +41,10 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
 
   const refreshRows = React.useCallback(async () => {
     try {
-      const next = await getEnabledPaymentAddressDetails();
+      // Accounts list: funded addresses + user-activated externals only.
+      const next = await getEnabledPaymentAddressDetails({
+        accountsDisplay: true,
+      });
       setRows(next);
     } catch (_) {
       setRows([]);
@@ -151,7 +154,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
     <Box w="full">
       <SettingsToggleRow
         label="Multi-address"
-        hint="Lucem automatically includes receive and change addresses with on-chain history. Expand to review each address’s contents."
+        hint="Shows addresses that hold assets, plus receive addresses you activate. Discovered empty addresses stay hidden but remain active for balance and sends."
         isChecked={advancedOn}
         isDisabled={busy}
         onChange={onToggleAdvanced}

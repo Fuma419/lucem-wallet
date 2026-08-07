@@ -72,8 +72,10 @@ import {
   withCache,
 } from '../cache';
 import {
+  filterPaymentAddressesForAccountsDisplay,
   getExternalIndices,
   getInternalIndices,
+  getUserExternalIndices,
   isMultiAddressEnabled,
   listEnabledPaymentAddresses,
   normalizeExternalIndices,
@@ -89,8 +91,10 @@ import {
 } from './multi-address';
 
 export {
+  filterPaymentAddressesForAccountsDisplay,
   getExternalIndices,
   getInternalIndices,
+  getUserExternalIndices,
   isMultiAddressEnabled,
   normalizeExternalIndices,
   normalizeInternalIndices,
@@ -550,8 +554,13 @@ export const getAccountsControlledStake = async () => {
 /**
  * Enabled payment/change addresses for the current account, enriched with
  * `/address_info` contents (ADA, UTxO count, native asset count).
+ *
+ * @param {{ accountsDisplay?: boolean }} [options] - When `accountsDisplay`,
+ *   filter to addresses with assets plus user-activated external indices
+ *   (Accounts multi-address panel only).
  */
-export const getEnabledPaymentAddressDetails = async () => {
+export const getEnabledPaymentAddressDetails = async (options = {}) => {
+  const accountsDisplay = Boolean(options?.accountsDisplay);
   const rows = await getEnabledPaymentAddresses();
   const addressList = rows.map((r) => r.paymentAddr).filter(Boolean);
   if (addressList.length === 0) return [];
@@ -565,7 +574,7 @@ export const getEnabledPaymentAddressDetails = async () => {
     }
   }
 
-  return rows.map((row) => {
+  const details = rows.map((row) => {
     const summary = summarizeAddressInfo(byAddr.get(row.paymentAddr));
     return {
       ...row,
@@ -574,6 +583,10 @@ export const getEnabledPaymentAddressDetails = async () => {
       nativeAssetCount: summary.nativeAssetCount,
     };
   });
+
+  if (!accountsDisplay) return details;
+  const currentAccount = await getCurrentAccount();
+  return filterPaymentAddressesForAccountsDisplay(details, currentAccount);
 };
 
 export const getTransactions = async (paginate = 1, count = 10, { force = false } = {}) => {
@@ -1375,6 +1388,11 @@ export const activateDiscoveredExternalAddresses = async (
   }
 
   try {
+    // Snapshot user-activated externals before discovery expands the enabled
+    // set, so empty discovered addresses stay off the Accounts address list.
+    if (!Array.isArray(accounts[accountIndex].userExternalIndices)) {
+      accounts[accountIndex].userExternalIndices = getExternalIndices(account);
+    }
     const discovered = await discoverUsedPaymentIndices(account, options);
     const mergedExternal = normalizeExternalIndices([
       ...getExternalIndices(account),
@@ -1393,6 +1411,7 @@ export const activateDiscoveredExternalAddresses = async (
       mergedInternal.length === prevInternal.length &&
       mergedInternal.every((n, i) => n === prevInternal[i]);
     if (externalSame && internalSame) {
+      await setStorage({ [STORAGE.accounts]: { ...accounts } });
       return {
         externalIndices: mergedExternal,
         internalIndices: mergedInternal,
@@ -1420,30 +1439,58 @@ export const activateDiscoveredExternalAddresses = async (
 
 /**
  * Enable a single external index (0..MAX) on the current account.
+ * Marks the index as user-activated for the Accounts address list.
  */
 export const enableExternalAddressIndex = async (addressIndex) => {
-  const currentAccount = await getCurrentAccount();
-  const current = getExternalIndices(currentAccount);
+  const currentIndex = await getCurrentAccountIndex();
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts?.[currentIndex];
+  if (!account) throw new Error('Account not found');
   const i = parseInt(addressIndex, 10);
   if (!Number.isFinite(i) || i < 0 || i > MAX_EXTERNAL_ADDRESS_INDEX) {
     throw new Error(
       `Address index must be between 0 and ${MAX_EXTERNAL_ADDRESS_INDEX}`
     );
   }
-  return setAccountExternalIndices([...current, i]);
+  const nextExternal = normalizeExternalIndices([
+    ...getExternalIndices(account),
+    i,
+  ]);
+  const nextUser = normalizeExternalIndices([
+    ...getUserExternalIndices(account),
+    i,
+  ]);
+  accounts[currentIndex].externalIndices = nextExternal;
+  accounts[currentIndex].userExternalIndices = nextUser;
+  await setStorage({ [STORAGE.accounts]: { ...accounts } });
+  invalidateReadCache();
+  return nextExternal;
 };
 
 /**
  * Disable an external index on the current account (index 0 cannot be disabled).
+ * Also clears the user-activated flag for that index.
  */
 export const disableExternalAddressIndex = async (addressIndex) => {
   const i = parseInt(addressIndex, 10);
   if (i === 0) {
     throw new Error('The primary address (index 0) cannot be disabled');
   }
-  const currentAccount = await getCurrentAccount();
-  const current = getExternalIndices(currentAccount).filter((n) => n !== i);
-  return setAccountExternalIndices(current);
+  const currentIndex = await getCurrentAccountIndex();
+  const accounts = await getStorage(STORAGE.accounts);
+  const account = accounts?.[currentIndex];
+  if (!account) throw new Error('Account not found');
+  const nextExternal = normalizeExternalIndices(
+    getExternalIndices(account).filter((n) => n !== i)
+  );
+  const nextUser = normalizeExternalIndices(
+    getUserExternalIndices(account).filter((n) => n !== i)
+  );
+  accounts[currentIndex].externalIndices = nextExternal;
+  accounts[currentIndex].userExternalIndices = nextUser;
+  await setStorage({ [STORAGE.accounts]: { ...accounts } });
+  invalidateReadCache();
+  return nextExternal;
 };
 
 export const getRewardAddress = async () => {

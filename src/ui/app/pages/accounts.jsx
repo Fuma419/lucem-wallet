@@ -441,8 +441,9 @@ const Accounts = () => {
                 Addresses
               </Text>
               <Text fontSize="sm" color={mutedFg} mb={3}>
-                Per-address contents for the selected account. The account total
-                above is stake-controlled across all of these.
+                Addresses with assets, plus receive addresses you activate. The
+                account total above is stake-controlled across all enabled
+                addresses (including hidden empty ones).
               </Text>
               <MultiAddressSettings
                 account={currentAccount}

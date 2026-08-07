@@ -11,7 +11,13 @@
  *   role 0 = external (receive)
  *   role 1 = internal (change)
  * Stake remains role 2 / index 0 for base addresses.
+ *
+ * Accounts UI listing is narrower than the enabled/signing set: show addresses
+ * that currently hold assets, plus external indices the user explicitly
+ * activated (`userExternalIndices`). Discovery still activates for balance /
+ * spend without cluttering an empty-address list.
  */
+import { bigIntLovelace } from '../lovelace-scalar';
 
 /** Max external/internal index users can enable (index 0 .. MAX inclusive). */
 export const MAX_EXTERNAL_ADDRESS_INDEX = 50;
@@ -66,6 +72,44 @@ export const getInternalIndices = (account) => {
 /** True when more than the primary external address is enabled. */
 export const isMultiAddressEnabled = (account) =>
   getExternalIndices(account).length > 1 || getInternalIndices(account).length > 0;
+
+/**
+ * External indices the user explicitly activated (Add address / Remove).
+ * Always includes 0. Distinct from discovery-populated `externalIndices`.
+ *
+ * Legacy accounts without the field fall back to `externalIndices` until
+ * discovery snapshots `userExternalIndices`.
+ */
+export const getUserExternalIndices = (account) => {
+  const raw = account?.userExternalIndices;
+  if (Array.isArray(raw)) {
+    return normalizeExternalIndices(raw);
+  }
+  return getExternalIndices(account);
+};
+
+/** True when an address-details row holds ADA or native assets. */
+export const paymentAddressHasAssets = (row) => {
+  try {
+    if (bigIntLovelace(row?.lovelace) > 0n) return true;
+  } catch (_) {
+    /* ignore malformed lovelace */
+  }
+  return (row?.nativeAssetCount ?? 0) > 0;
+};
+
+/**
+ * Accounts-screen address list: funded addresses + user-activated externals.
+ * Does not affect which addresses are enabled for balance/signing.
+ */
+export const filterPaymentAddressesForAccountsDisplay = (rows, account) => {
+  const userExt = new Set(getUserExternalIndices(account));
+  return (Array.isArray(rows) ? rows : []).filter((row) => {
+    if (paymentAddressHasAssets(row)) return true;
+    const role = row?.role ?? ADDRESS_ROLE.external;
+    return role === ADDRESS_ROLE.external && userExt.has(row.index);
+  });
+};
 
 /**
  * Normalize a proposed external index list: unique, sorted, always includes 0, capped.

@@ -2,10 +2,12 @@ import {
   ADDRESS_ROLE,
   cip1852PaymentPath,
   deriveExternalPaymentFromAccountPublicKey,
+  filterPaymentAddressesForAccountsDisplay,
   findEnabledPaymentByAddress,
   flattenAccountAddressesPayload,
   getExternalIndices,
   getInternalIndices,
+  getUserExternalIndices,
   isMultiAddressEnabled,
   listEnabledPaymentAddresses,
   matchExternalIndicesFromAddresses,
@@ -13,6 +15,7 @@ import {
   MAX_EXTERNAL_ADDRESS_INDEX,
   normalizeExternalIndices,
   normalizeInternalIndices,
+  paymentAddressHasAssets,
 } from '../../../api/extension/multi-address';
 
 describe('multi-address helpers', () => {
@@ -43,6 +46,75 @@ describe('multi-address helpers', () => {
     expect(
       isMultiAddressEnabled({ externalIndices: [0], internalIndices: [0] })
     ).toBe(true);
+  });
+
+  test('getUserExternalIndices prefers userExternalIndices over discovery set', () => {
+    expect(
+      getUserExternalIndices({
+        externalIndices: [0, 1, 2],
+        userExternalIndices: [0, 1],
+      })
+    ).toEqual([0, 1]);
+    expect(getUserExternalIndices({ externalIndices: [0, 3] })).toEqual([0, 3]);
+  });
+
+  test('Accounts display keeps funded + user-activated, hides empty discovered', () => {
+    const account = {
+      externalIndices: [0, 1, 2],
+      userExternalIndices: [0, 1],
+      internalIndices: [0, 1],
+    };
+    const rows = [
+      {
+        role: ADDRESS_ROLE.external,
+        index: 0,
+        lovelace: '0',
+        nativeAssetCount: 0,
+      },
+      {
+        role: ADDRESS_ROLE.external,
+        index: 1,
+        lovelace: '0',
+        nativeAssetCount: 0,
+      },
+      {
+        role: ADDRESS_ROLE.external,
+        index: 2,
+        lovelace: '0',
+        nativeAssetCount: 0,
+      },
+      {
+        role: ADDRESS_ROLE.internal,
+        index: 0,
+        lovelace: '0',
+        nativeAssetCount: 0,
+      },
+      {
+        role: ADDRESS_ROLE.internal,
+        index: 1,
+        lovelace: '2500000',
+        nativeAssetCount: 0,
+      },
+      {
+        role: ADDRESS_ROLE.external,
+        index: 4,
+        lovelace: '0',
+        nativeAssetCount: 1,
+      },
+    ];
+
+    expect(paymentAddressHasAssets(rows[4])).toBe(true);
+    expect(paymentAddressHasAssets(rows[0])).toBe(false);
+
+    const visible = filterPaymentAddressesForAccountsDisplay(rows, account);
+    expect(visible.map((r) => `${r.role}:${r.index}`)).toEqual([
+      '0:0', // user-activated primary (even if empty)
+      '0:1', // user-activated empty receive
+      '1:1', // funded change
+      '0:4', // funded discovered receive (not user-activated)
+    ]);
+    expect(visible.some((r) => r.role === 0 && r.index === 2)).toBe(false);
+    expect(visible.some((r) => r.role === 1 && r.index === 0)).toBe(false);
   });
 
   test('normalizeExternalIndices always keeps 0 and unique sorted', () => {

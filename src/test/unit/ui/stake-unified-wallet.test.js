@@ -74,9 +74,12 @@ describe('stake-unified wallet source guards', () => {
     expect(api).toMatch(/export const getEnabledPaymentAddressDetails/);
     expect(api).toMatch(/getAddressesInfo/);
     expect(api).toMatch(/summarizeAddressInfo/);
+    expect(api).toMatch(/filterPaymentAddressesForAccountsDisplay/);
+    expect(api).toMatch(/userExternalIndices/);
 
     const panel = read('ui/app/components/multiAddressSettings.jsx');
     expect(panel).toMatch(/getEnabledPaymentAddressDetails/);
+    expect(panel).toMatch(/accountsDisplay:\s*true/);
     expect(panel).toMatch(/multi-address-contents-/);
     expect(panel).toMatch(/utxoCount/);
     expect(panel).toMatch(/nativeAssetCount/);

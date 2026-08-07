@@ -252,7 +252,7 @@ const Settings = () => {
                   {account.name || 'Account'}
                 </Text>
                 <Text fontSize="xs" color={subtleFg} mt={0.5}>
-                  Rename on the Accounts page
+                  Change display name on the Accounts page
                 </Text>
               </Box>
               <IconButton

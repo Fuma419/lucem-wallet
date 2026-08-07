@@ -1,8 +1,8 @@
 # Handoff: iOS Face ID / saved-password sheet on Exit (X)
 
-**Status:** iOS Face ID FILL was reproduced as tied to the Accounts **Rename selected account** field (temporarily hidden via `ACCOUNT_RENAME_ENABLED` in #184). Exit/X was not the root cause.
+**Status:** iOS Face ID FILL was tied to the Accounts rename field (not Exit). Rename was restored as a **Display name** control with AutoFill-safe attributes (`autocomplete="nickname"`, readonly-until-focus, non-credential `name`/`id`, password-manager ignore hints). Do not revert to a plain “Account name” username-shaped input.
 
-**Cancel reintroduced:** Wallet create/import/HW setup uses `flowCancel.jsx` with a **Cancel** control that returns to the initiator via `?from=` (fallback: accounts vs welcome). Do not reintroduce Face ID DOM hacks for Cancel.
+**Cancel:** Wallet create/import/HW setup uses `flowCancel.jsx` Cancel under CTAs; returns via `?from=` (fallback accounts/welcome).
 
 ---
 

@@ -1,9 +1,9 @@
 /**
- * Return-path helpers for full-page wallet create, import, and HW setup flows.
- * Opening modals stamp `?from=`; callers may use leaveSetupFlow when abort UI exists.
+ * Cancel + return-path helpers for full-page wallet create, import, and HW setup.
+ * Opening modals stamp `?from=`; Cancel prefers that route (else accounts/welcome).
  */
 import React from 'react';
-import { Box, Image } from '@chakra-ui/react';
+import { Box, Button, Image } from '@chakra-ui/react';
 import platform from '../../../platform';
 
 /** Main-app routes allowed as Cancel destinations / `?from=` values. */
@@ -61,27 +61,69 @@ async function openReturnRoute(path) {
 }
 
 /**
+ * Pure destination for Cancel (unit-testable).
+ * @param {string|null} fromPath - sanitized `?from=`
+ * @param {boolean} hasAccounts
+ */
+export function resolveSetupReturnPath(fromPath, hasAccounts) {
+  return (
+    sanitizeFlowReturnPath(fromPath) ||
+    (hasAccounts ? '/accounts' : '/welcome')
+  );
+}
+
+/**
  * Leave create/import/HW account setup without writing anything.
  * Prefers `?from=` (initiator). Falls back to accounts vs welcome.
  */
 export async function leaveSetupFlow() {
   const from = readFlowReturnPath();
-  if (from) {
-    await openReturnRoute(from);
-    return;
-  }
   let hasAccounts = false;
-  try {
-    const accounts = await platform.storage.get('accounts');
-    hasAccounts =
-      accounts != null &&
-      typeof accounts === 'object' &&
-      Object.keys(accounts).length > 0;
-  } catch {
-    hasAccounts = false;
+  if (!from) {
+    try {
+      const accounts = await platform.storage.get('accounts');
+      hasAccounts =
+        accounts != null &&
+        typeof accounts === 'object' &&
+        Object.keys(accounts).length > 0;
+    } catch {
+      hasAccounts = false;
+    }
   }
-  await openReturnRoute(hasAccounts ? '/accounts' : '/welcome');
+  await openReturnRoute(resolveSetupReturnPath(from, hasAccounts));
 }
+
+/**
+ * Ghost Cancel under primary neon CTAs (welcome-modal Close style).
+ * One control per step — no duplicate card X.
+ */
+export const SetupCancelButton = ({
+  onClick,
+  children = 'Cancel',
+  ...rest
+}) => (
+  <Button
+    type="button"
+    variant="ghost"
+    size="md"
+    w="100%"
+    maxW="300px"
+    minH="44px"
+    rounded="lg"
+    fontWeight="medium"
+    letterSpacing="0.06em"
+    textTransform="uppercase"
+    fontFamily="'Barlow', sans-serif"
+    color="whiteAlpha.700"
+    _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+    _active={{ bg: 'whiteAlpha.200' }}
+    data-testid="setup-cancel-button"
+    onClick={onClick}
+    {...rest}
+  >
+    {children}
+  </Button>
+);
 
 /** Logo-only header for full-page setup tabs. */
 export const SetupShellHeader = ({ logoSrc, hideLogoOnMobile = false }) => (

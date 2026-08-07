@@ -1,5 +1,5 @@
 /**
- * Source guards for setup return-path helpers (no Cancel/X UI on setup pages).
+ * Unit coverage for setup Cancel return-path + presence on create/import/HW pages.
  */
 const fs = require('fs');
 const path = require('path');
@@ -7,45 +7,65 @@ const path = require('path');
 const root = path.join(__dirname, '../../..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
-describe('setup flow return-path helpers', () => {
-  test('shared helpers prefer ?from= and fall back to accounts vs welcome', () => {
+const {
+  resolveSetupReturnPath,
+  sanitizeFlowReturnPath,
+  appendFlowReturnQuery,
+  readFlowReturnPath,
+} = require('../../../ui/app/components/flowCancel');
+
+describe('setup Cancel return-path helpers', () => {
+  test('resolveSetupReturnPath prefers from= then accounts vs welcome', () => {
+    expect(resolveSetupReturnPath('/accounts', false)).toBe('/accounts');
+    expect(resolveSetupReturnPath('/welcome', true)).toBe('/welcome');
+    expect(resolveSetupReturnPath(null, true)).toBe('/accounts');
+    expect(resolveSetupReturnPath(null, false)).toBe('/welcome');
+    expect(resolveSetupReturnPath('/evil', true)).toBe('/accounts');
+    expect(resolveSetupReturnPath('send', false)).toBe('/send');
+  });
+
+  test('appendFlowReturnQuery / readFlowReturnPath round-trip', () => {
+    const q = appendFlowReturnQuery('?type=generate', '/accounts');
+    expect(q).toContain('type=generate');
+    expect(q).toContain('from=%2Faccounts');
+    expect(readFlowReturnPath(q)).toBe('/accounts');
+    expect(sanitizeFlowReturnPath('/settings')).toBe('/settings');
+    expect(sanitizeFlowReturnPath('https://evil.example')).toBe(null);
+  });
+
+  test('SetupCancelButton is exported and leaveSetupFlow exists', () => {
     const src = read('ui/app/components/flowCancel.jsx');
+    expect(src).toMatch(/export const SetupCancelButton/);
     expect(src).toMatch(/export async function leaveSetupFlow/);
-    expect(src).toMatch(/export function appendFlowReturnQuery/);
-    expect(src).toMatch(/export function readFlowReturnPath/);
-    expect(src).toMatch(/export const SetupShellHeader/);
-    expect(src).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
-    expect(src).toContain("'/send'");
-    expect(src).not.toContain('SetupCancelButton');
+    expect(src).toContain('data-testid="setup-cancel-button"');
     expect(src).not.toContain('SetupCardCloseButton');
-    expect(src).not.toContain('setup-cancel-button');
-    expect(src).not.toContain('setup-card-close');
   });
+});
 
-  test('createWallet has no Cancel or card close controls', () => {
+describe('setup pages wire Cancel on every step', () => {
+  test('createWallet: generate, verify, import, account all call leaveSetupFlow', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
-    expect(src).toContain('SetupShellHeader');
-    expect(src).not.toContain('leaveSetupFlow');
-    expect(src).not.toContain('SetupCancelButton');
+    expect(src).toContain('SetupCancelButton');
+    expect(src).toContain('leaveSetupFlow');
+    const cancelCalls = src.match(/SetupCancelButton[\s\S]*?leaveSetupFlow\(\)/g) || [];
+    expect(cancelCalls.length).toBeGreaterThanOrEqual(4);
     expect(src).not.toContain('SetupCardCloseButton');
-    expect(src).not.toContain('setup-cancel-button');
     expect(src).not.toContain('setup-card-close');
   });
 
-  test('hw setup has no Cancel or card close controls', () => {
+  test('hw: pick, keystone steps, and select-accounts expose Cancel', () => {
     const src = read('ui/app/tabs/hw.jsx');
-    expect(src).toContain('SetupShellHeader');
-    expect(src).not.toContain('leaveSetupFlow');
-    expect(src).not.toContain('SetupCancelButton');
+    expect(src).toContain('SetupCancelButton');
+    expect(src).toContain('leaveSetupFlow');
+    const cancelCalls = src.match(/SetupCancelButton[\s\S]*?leaveSetupFlow\(\)/g) || [];
+    // pick Continue, keystone showRequest, keystone scanReply, SelectAccounts
+    expect(cancelCalls.length).toBeGreaterThanOrEqual(4);
     expect(src).not.toContain('SetupCardCloseButton');
-    expect(src).not.toContain('setup-cancel-button');
-    expect(src).not.toContain('setup-card-close');
   });
 
-  test('welcome/accounts modals still pass from= when opening create/import/HW', () => {
+  test('welcome/accounts modals stamp from= for create/import/HW', () => {
     const src = read('ui/app/components/walletSetupFlow.jsx');
     expect(src).toContain('appendFlowReturnQuery');
-    expect(src).toContain('useFlowReturnPath');
     expect(src).toMatch(
       /appendFlowReturnQuery\('\?type=generate', returnTo\)/
     );

@@ -125,10 +125,12 @@ describe('import abandon navigation', () => {
       'utf8'
     );
     expect(createSrc).toContain('leaveSetupFlow');
-    expect(createSrc).toContain('data-testid="import-abandon-button"');
+    expect(createSrc).toContain('SetupCardCloseButton');
+    expect(createSrc).toContain('SetupCancelButton');
     expect(createSrc).toContain('SetupShellHeader');
     expect(cancelSrc).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
     expect(cancelSrc).toContain('readFlowReturnPath');
+    expect(cancelSrc).toContain('data-testid="setup-cancel-button"');
   });
 
   test('main bootstrap honors ?next= deep links before defaulting to /wallet', () => {

@@ -15,26 +15,38 @@ describe('setup flow Cancel / return-to-initiator', () => {
     expect(src).toMatch(/export function readFlowReturnPath/);
     expect(src).toMatch(/export const SetupShellHeader/);
     expect(src).toMatch(/export const SetupCancelButton/);
-    expect(src).toMatch(/data-testid': 'setup-cancel-button'/);
+    expect(src).toMatch(/export const SetupCardCloseButton/);
+    expect(src).toContain('data-testid="setup-cancel-button"');
+    expect(src).toContain('data-testid="setup-card-close"');
     expect(src).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
     expect(src).toContain("'/send'");
+    // Cancel lives on the card (modal close + outline CTA), not the logo header.
+    expect(src).not.toMatch(/SetupShellHeader[\s\S]*onCancel/);
   });
 
-  test('createWallet stamps Cancel via leaveSetupFlow on every step shell', () => {
+  test('createWallet uses card close + themed Cancel under CTAs', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
     expect(src).toContain('leaveSetupFlow');
     expect(src).toContain('SetupShellHeader');
-    expect(src).toContain('data-testid="import-abandon-button"');
-    expect(src).not.toContain('abandonWalletSetup');
-    expect(src).toMatch(/onCancel=\{\(\) => leaveSetupFlow\(\)\}/);
+    expect(src).toContain('SetupCardCloseButton');
+    expect(src).toContain('SetupCancelButton');
+    expect(src).toContain('tone="purple"');
+    expect(src).toContain('tone="cyan"');
+    expect(src).toMatch(
+      /SetupCardCloseButton\s+onCancel=\{\(\) => leaveSetupFlow\(\)\}/
+    );
   });
 
-  test('hw setup exposes Cancel via header and step buttons', () => {
+  test('hw setup uses card close + lime Cancel under CTAs', () => {
     const src = read('ui/app/tabs/hw.jsx');
     expect(src).toContain('leaveSetupFlow');
     expect(src).toContain('SetupShellHeader');
+    expect(src).toContain('SetupCardCloseButton');
     expect(src).toContain('SetupCancelButton');
-    expect(src).toMatch(/onCancel=\{\(\) => leaveSetupFlow\(\)\}/);
+    expect(src).toContain('tone="hw"');
+    expect(src).toMatch(
+      /SetupCardCloseButton\s+onCancel=\{\(\) => leaveSetupFlow\(\)\}/
+    );
   });
 
   test('welcome/accounts modals pass from= when opening create/import/HW', () => {
@@ -47,6 +59,8 @@ describe('setup flow Cancel / return-to-initiator', () => {
     expect(src).toMatch(
       /appendFlowReturnQuery\(`\?type=import&length=\$\{seedLength\}`, returnTo\)/
     );
-    expect(src).toMatch(/createTab\(TAB\.hw, appendFlowReturnQuery\('', returnTo\)\)/);
+    expect(src).toMatch(
+      /createTab\(TAB\.hw, appendFlowReturnQuery\('', returnTo\)\)/
+    );
   });
 });

@@ -59,6 +59,7 @@ import {
   aggregateKoiosUtxosToAssets,
   stakeAddressFromAddressInfo,
   stakeControlledLovelaceFromAccountInfo,
+  summarizeAddressInfo,
 } from './stake-balance';
 import {
   emptyDelegation,
@@ -483,6 +484,96 @@ export const getFullBalance = async () => {
 
   if (result?.error || !result?.[0]) return '0';
   return stakeControlledLovelaceFromAccountInfo(result[0]);
+};
+
+/**
+ * Stake-controlled ADA for every stored account (batch `/account_info`).
+ * Used by the Accounts list so rows show controlled stake — not primary
+ * payment-address contents.
+ *
+ * @returns {Promise<Record<string, { lovelace: string, status: string|null, poolId: string|null }>>}
+ */
+export const getAccountsControlledStake = async () => {
+  const accounts = await getStorage(STORAGE.accounts);
+  const network = await getNetwork();
+  if (!accounts || typeof accounts !== 'object' || !network?.id) {
+    return {};
+  }
+
+  const accountKeysByStake = new Map();
+  for (const key of Object.keys(accounts)) {
+    const rewardAddr = accounts[key]?.[network.id]?.rewardAddr;
+    if (!rewardAddr) continue;
+    const list = accountKeysByStake.get(rewardAddr) || [];
+    list.push(key);
+    accountKeysByStake.set(rewardAddr, list);
+  }
+
+  const stakeAddresses = Array.from(accountKeysByStake.keys());
+  if (stakeAddresses.length === 0) return {};
+
+  const request = KOIOS_REQUESTS.getAccountsInfo(stakeAddresses);
+  const result = await koiosRequest(request.endpoint, {}, request.body);
+  const out = {};
+
+  if (Array.isArray(result)) {
+    for (const row of result) {
+      const stake = row?.stake_address;
+      if (!stake) continue;
+      const keys = accountKeysByStake.get(stake) || [];
+      const lovelace = stakeControlledLovelaceFromAccountInfo(row);
+      const status =
+        row.status ||
+        (row.registered === true
+          ? 'registered'
+          : row.registered === false
+            ? 'unregistered'
+            : null);
+      const poolId = row.delegated_pool || row.pool_id || null;
+      for (const key of keys) {
+        out[key] = { lovelace, status, poolId };
+      }
+    }
+  }
+
+  for (const keys of accountKeysByStake.values()) {
+    for (const key of keys) {
+      if (out[key] == null) {
+        out[key] = { lovelace: '0', status: null, poolId: null };
+      }
+    }
+  }
+
+  return out;
+};
+
+/**
+ * Enabled payment/change addresses for the current account, enriched with
+ * `/address_info` contents (ADA, UTxO count, native asset count).
+ */
+export const getEnabledPaymentAddressDetails = async () => {
+  const rows = await getEnabledPaymentAddresses();
+  const addressList = rows.map((r) => r.paymentAddr).filter(Boolean);
+  if (addressList.length === 0) return [];
+
+  const request = KOIOS_REQUESTS.getAddressesInfo(addressList);
+  const result = await koiosRequest(request.endpoint, {}, request.body);
+  const byAddr = new Map();
+  if (Array.isArray(result)) {
+    for (const row of result) {
+      if (row?.address) byAddr.set(row.address, row);
+    }
+  }
+
+  return rows.map((row) => {
+    const summary = summarizeAddressInfo(byAddr.get(row.paymentAddr));
+    return {
+      ...row,
+      lovelace: summary.lovelace,
+      utxoCount: summary.utxoCount,
+      nativeAssetCount: summary.nativeAssetCount,
+    };
+  });
 };
 
 export const getTransactions = async (paginate = 1, count = 10, { force = false } = {}) => {

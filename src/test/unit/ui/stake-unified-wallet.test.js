@@ -61,6 +61,27 @@ describe('stake-unified wallet source guards', () => {
     );
   });
 
+  test('Accounts list shows controlled stake, not primary-address contents', () => {
+    const src = read('ui/app/pages/accounts.jsx');
+    expect(src).toMatch(/getAccountsControlledStake/);
+    expect(src).toMatch(/Controlled stake/);
+    expect(src).not.toMatch(/paymentAddr/);
+    expect(src).not.toMatch(/Select to load/);
+  });
+
+  test('multi-address panel loads per-address contents via address_info', () => {
+    const api = read('api/extension/index.js');
+    expect(api).toMatch(/export const getEnabledPaymentAddressDetails/);
+    expect(api).toMatch(/getAddressesInfo/);
+    expect(api).toMatch(/summarizeAddressInfo/);
+
+    const panel = read('ui/app/components/multiAddressSettings.jsx');
+    expect(panel).toMatch(/getEnabledPaymentAddressDetails/);
+    expect(panel).toMatch(/multi-address-contents-/);
+    expect(panel).toMatch(/utxoCount/);
+    expect(panel).toMatch(/nativeAssetCount/);
+  });
+
   test('Keystone signing uses enabled payment/change paths not primary-only', () => {
     const src = read('api/keystone-cardano.js');
     expect(src).toMatch(/findEnabledPaymentByAddress/);

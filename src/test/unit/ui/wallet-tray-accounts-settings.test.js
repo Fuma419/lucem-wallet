@@ -103,7 +103,9 @@ describe('wallet tray accounts vs settings FABs', () => {
     // HardwareWalletModal must expose Continue → createTab(TAB.hw). The Exit
     // revert (#181) accidentally dropped it and left only Close.
     expect(setupSrc).toContain('data-testid="hw-import-continue"');
-    expect(setupSrc).toMatch(/createTab\(\s*TAB\.hw\s*\)/);
+    expect(setupSrc).toMatch(
+      /createTab\(\s*TAB\.hw,\s*appendFlowReturnQuery\('', returnTo\)\)/
+    );
     expect(setupSrc).toMatch(
       /HardwareWalletModal[\s\S]*hw-import-continue[\s\S]*Continue/
     );

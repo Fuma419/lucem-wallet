@@ -115,15 +115,20 @@ describe('import abandon navigation', () => {
     expect(extSrc).toContain('?next=');
   });
 
-  test('import and restore-account steps expose Cancel that routes accounts vs welcome', () => {
-    const src = fs.readFileSync(
+  test('import and create steps expose Cancel that prefers ?from= then accounts vs welcome', () => {
+    const createSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),
       'utf8'
     );
-    expect(src).toContain('abandonWalletSetup');
-    expect(src).toContain('data-testid="import-abandon-button"');
-    expect(src).toContain("flow === 'restore-wallet'");
-    expect(src).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
+    const cancelSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/flowCancel.jsx'),
+      'utf8'
+    );
+    expect(createSrc).toContain('leaveSetupFlow');
+    expect(createSrc).toContain('data-testid="import-abandon-button"');
+    expect(createSrc).toContain('SetupShellHeader');
+    expect(cancelSrc).toMatch(/hasAccounts \? '\/accounts' : '\/welcome'/);
+    expect(cancelSrc).toContain('readFlowReturnPath');
   });
 
   test('main bootstrap honors ?next= deep links before defaulting to /wallet', () => {

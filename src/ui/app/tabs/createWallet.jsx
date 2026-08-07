@@ -28,6 +28,8 @@ import platform from '../../../platform';
 import PreventHistoryBack from '../components/PreventHistoryBack';
 import {
   leaveSetupFlow,
+  SetupCancelButton,
+  SetupCardCloseButton,
   SetupShellHeader,
 } from '../components/flowCancel';
 import { generateMnemonic, getDefaultWordlist, validateMnemonic, wordlists } from 'bip39';
@@ -183,7 +185,6 @@ const App = () => {
       <SetupShellHeader
         logoSrc={LogoWhite}
         hideLogoOnMobile={hideHeaderLogoOnMobile}
-        onCancel={() => leaveSetupFlow()}
       />
       <Box
         flex="1 1 auto"
@@ -204,6 +205,7 @@ const App = () => {
           className={`modal-glow-${colorTheme} create-wallet-modal lucem-modal-card`}
           rounded="2xl"
           shadow="md"
+          position="relative"
           display="flex"
           flexDirection="column"
           alignItems="stretch"
@@ -218,6 +220,7 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
+          <SetupCardCloseButton onCancel={() => leaveSetupFlow()} />
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
@@ -348,16 +351,10 @@ const GenerateSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          color="whiteAlpha.800"
-          _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+        <SetupCancelButton
+          tone="purple"
           onClick={() => leaveSetupFlow()}
-          data-testid="import-abandon-button"
-        >
-          Cancel
-        </Button>
+        />
       </Stack>
     </Box>
   );
@@ -511,16 +508,10 @@ const VerifySeed = ({ colorTheme }) => {
             Next
           </Button>
         </Stack>
-        <Button
-          type="button"
-          variant="ghost"
-          color="whiteAlpha.800"
-          _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+        <SetupCancelButton
+          tone="purple"
           onClick={() => leaveSetupFlow()}
-          data-testid="import-abandon-button"
-        >
-          Cancel
-        </Button>
+        />
       </Stack>
     </Box>
   );
@@ -705,16 +696,10 @@ const ImportSeed = ({ colorTheme }) => {
         >
           Next
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          color="whiteAlpha.800"
-          _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+        <SetupCancelButton
+          tone="cyan"
           onClick={() => leaveSetupFlow()}
-          data-testid="import-abandon-button"
-        >
-          Cancel
-        </Button>
+        />
       </Stack>
     </Box>
   );
@@ -1071,17 +1056,11 @@ const MakeAccount = ({ colorTheme }) => {
           >
             Create
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            color="whiteAlpha.800"
-            _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+          <SetupCancelButton
+            tone={flow === 'restore-wallet' ? 'cyan' : 'purple'}
             isDisabled={loading}
             onClick={() => leaveSetupFlow()}
-            data-testid="import-abandon-button"
-          >
-            Cancel
-          </Button>
+          />
         </Stack>
       </Box>
     </Box>

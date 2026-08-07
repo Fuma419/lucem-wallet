@@ -3,7 +3,8 @@
  * Cancel returns to the page that opened the flow via `?from=` when present.
  */
 import React from 'react';
-import { Box, Button, Image } from '@chakra-ui/react';
+import { Box, Button, IconButton, Image } from '@chakra-ui/react';
+import { CloseIcon } from '@chakra-ui/icons';
 import platform from '../../../platform';
 
 /** Main-app routes allowed as Cancel destinations / `?from=` values. */
@@ -83,46 +84,73 @@ export async function leaveSetupFlow() {
   await openReturnRoute(hasAccounts ? '/accounts' : '/welcome');
 }
 
-const CANCEL_BUTTON_PROPS = {
-  type: 'button',
-  variant: 'ghost',
-  size: 'sm',
-  color: 'whiteAlpha.800',
-  fontWeight: 'medium',
-  letterSpacing: '0.02em',
-  _hover: { bg: 'whiteAlpha.100', color: 'white' },
-  _active: { bg: 'whiteAlpha.200' },
-  'data-testid': 'setup-cancel-button',
-};
-
-/** Ghost Cancel — header or under primary CTAs. */
+/**
+ * Quiet Cancel under primary neon CTAs — matches welcome-modal Close
+ * (ghost, not a second neon outline that competes with Continue).
+ * `tone` kept for API compatibility with call sites.
+ */
 export const SetupCancelButton = ({
   onClick,
   children = 'Cancel',
+  tone: _tone = 'purple',
   ...rest
 }) => (
-  <Button {...CANCEL_BUTTON_PROPS} onClick={onClick} {...rest}>
+  <Button
+    type="button"
+    variant="ghost"
+    size="md"
+    w="100%"
+    maxW="300px"
+    minH="44px"
+    rounded="lg"
+    fontWeight="medium"
+    letterSpacing="0.06em"
+    textTransform="uppercase"
+    fontFamily="'Barlow', sans-serif"
+    color="whiteAlpha.700"
+    _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+    _active={{ bg: 'whiteAlpha.200' }}
+    data-testid="setup-cancel-button"
+    onClick={onClick}
+    {...rest}
+  >
     {children}
   </Button>
 );
 
 /**
- * Full-page tab header: logo left, Cancel right (always available).
+ * Modal-style close control on the glowing setup card (matches welcome modals).
  */
-export const SetupShellHeader = ({
-  logoSrc,
-  onCancel,
-  hideLogoOnMobile = false,
-  cancelLabel = 'Cancel',
-}) => (
+export const SetupCardCloseButton = ({ onCancel, ...rest }) => (
+  <IconButton
+    type="button"
+    aria-label="Cancel"
+    data-testid="setup-card-close"
+    icon={<CloseIcon boxSize={2.5} />}
+    size="sm"
+    variant="ghost"
+    color="whiteAlpha.700"
+    position="absolute"
+    top={3}
+    right={3}
+    zIndex={2}
+    rounded="md"
+    _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
+    _active={{ bg: 'whiteAlpha.200' }}
+    onClick={onCancel}
+    {...rest}
+  />
+);
+
+/** Logo-only header for full-page setup tabs (Cancel lives on the card). */
+export const SetupShellHeader = ({ logoSrc, hideLogoOnMobile = false }) => (
   <Box
     as="header"
     width="100%"
     flexShrink={0}
     display="flex"
     alignItems="center"
-    justifyContent="space-between"
-    gap={3}
+    justifyContent="flex-start"
     pt={{
       base: hideLogoOnMobile
         ? 'max(0.35rem, env(safe-area-inset-top, 0px))'
@@ -132,24 +160,19 @@ export const SetupShellHeader = ({
     pb={{ base: hideLogoOnMobile ? 0 : 2, md: 2 }}
     px={{ base: 4, md: 8 }}
   >
-    <Box minW={0} flex="1">
-      {logoSrc ? (
-        <Image
-          draggable={false}
-          src={logoSrc}
-          width={{ base: '72px', sm: '88px', md: '100px' }}
-          maxW="min(100px, 36vw)"
-          objectFit="contain"
-          alt=""
-          display={{
-            base: hideLogoOnMobile ? 'none' : 'block',
-            md: 'block',
-          }}
-        />
-      ) : null}
-    </Box>
-    <SetupCancelButton onClick={onCancel} flexShrink={0}>
-      {cancelLabel}
-    </SetupCancelButton>
+    {logoSrc ? (
+      <Image
+        draggable={false}
+        src={logoSrc}
+        width={{ base: '72px', sm: '88px', md: '100px' }}
+        maxW="min(100px, 36vw)"
+        objectFit="contain"
+        alt=""
+        display={{
+          base: hideLogoOnMobile ? 'none' : 'block',
+          md: 'block',
+        }}
+      />
+    ) : null}
   </Box>
 );

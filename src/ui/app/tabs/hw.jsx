@@ -10,6 +10,7 @@ import PreventHistoryBack from '../components/PreventHistoryBack';
 import {
   leaveSetupFlow,
   SetupCancelButton,
+  SetupCardCloseButton,
   SetupShellHeader,
 } from '../components/flowCancel';
 import { BrowserRouter as Router } from 'react-router-dom';
@@ -178,10 +179,7 @@ const App = () => {
       boxSizing="border-box"
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
     >
-      <SetupShellHeader
-        logoSrc={LogoWhite}
-        onCancel={() => leaveSetupFlow()}
-      />
+      <SetupShellHeader logoSrc={LogoWhite} />
 
       <Box
         flex="1 1 auto"
@@ -202,6 +200,7 @@ const App = () => {
           className="modal-glow-yellow-green create-wallet-modal lucem-modal-card"
           rounded="2xl"
           shadow="md"
+          position="relative"
           display="flex"
           flexDirection="column"
           alignItems="stretch"
@@ -216,6 +215,7 @@ const App = () => {
           color="whiteAlpha.900"
           fontSize="md"
         >
+          <SetupCardCloseButton onCancel={() => leaveSetupFlow()} />
           <Box
             className="lucem-create-wallet-scroll"
             p={{ base: 4, sm: 6, md: 10 }}
@@ -846,6 +846,7 @@ const ConnectHW = ({ onConfirm }) => {
         Continue
       </Button>
       <SetupCancelButton
+        tone="hw"
         mt={3}
         alignSelf="center"
         onClick={() => leaveSetupFlow()}
@@ -1222,6 +1223,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
           Continue
         </Button>
         <SetupCancelButton
+          tone="hw"
           mt={3}
           alignSelf="center"
           isDisabled={isLoading}

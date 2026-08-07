@@ -57,12 +57,6 @@ import { isSameAccountIndex } from '../utils/accountIndex';
 const TRAY_CLEARANCE_PB =
   'calc(6.5rem + env(safe-area-inset-bottom, 0px))';
 
-/**
- * Temporary: hide the Accounts rename field so iOS Face ID / Password AutoFill
- * can be verified without that input present. Set back to `true` after the check.
- */
-const ACCOUNT_RENAME_ENABLED = false;
-
 const Accounts = () => {
   const settings = useStoreState((state) => state.settings.settings);
   const deleteAccountRef = React.useRef();
@@ -85,6 +79,9 @@ const Accounts = () => {
   const [accountsLive, setAccountsLive] = React.useState(null);
   const [busyIndex, setBusyIndex] = React.useState(null);
   const [nameDraft, setNameDraft] = React.useState('');
+  /** Safari/iOS: keep label field readonly until focus so Password AutoFill
+   *  does not treat the Accounts page as a login form (Face ID FILL sheet). */
+  const [renameUnlocked, setRenameUnlocked] = React.useState(false);
   const [signableIds, setSignableIds] = React.useState([]);
 
   const load = React.useCallback(async () => {
@@ -112,6 +109,7 @@ const Accounts = () => {
   // Keep the rename field in sync with whichever account is selected.
   React.useEffect(() => {
     setNameDraft(currentName);
+    setRenameUnlocked(false);
   }, [currentName, currentIndex]);
 
   const canApplyName =
@@ -329,70 +327,87 @@ const Accounts = () => {
             </Stack>
           </Box>
 
-          {currentAccount &&
-          (ACCOUNT_RENAME_ENABLED || !currentSignable) ? (
+          {currentAccount ? (
             <Box
               className="lucem-inset-surface"
               rounded="3xl"
               p={{ base: 4, md: 5 }}
               data-testid="accounts-rename-panel"
             >
-              {ACCOUNT_RENAME_ENABLED ? (
-                <>
-                  <Text fontSize="sm" color={mutedFg} mb={2}>
-                    Rename selected account
-                  </Text>
-                  <InputGroup size="md" w="full">
-                    <Input
-                      variant="outline"
-                      rounded="xl"
-                      placeholder="Account name"
-                      value={nameDraft}
-                      onChange={(e) => setNameDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && canApplyName) applyName();
-                      }}
-                      pr="4.5rem"
-                      data-testid="accounts-rename-input"
-                    />
-                    <InputRightElement width="4.5rem" h="full">
-                      {canApplyName ? (
-                        <Button
-                          h="1.75rem"
-                          size="sm"
-                          rounded="md"
-                          onClick={applyName}
-                          data-testid="accounts-rename-apply"
-                        >
-                          Apply
-                        </Button>
-                      ) : (
-                        <Icon mr="-2" as={MdModeEdit} color={mutedFg} />
-                      )}
-                    </InputRightElement>
-                  </InputGroup>
-                </>
-              ) : null}
-
-              {!currentSignable ? (
-                <Button
-                  mt={ACCOUNT_RENAME_ENABLED ? 3 : 0}
-                  w="full"
+              <Text fontSize="sm" color={mutedFg} mb={2}>
+                Display name
+              </Text>
+              <InputGroup size="md" w="full">
+                <Input
+                  id="lucem-wallet-display-label"
+                  name="lucem-wallet-display-label"
+                  variant="outline"
                   rounded="xl"
-                  h="12"
-                  colorScheme="yellow"
-                  leftIcon={<Icon as={MdVpnKey} />}
-                  onClick={() =>
-                    validateSeedRef.current?.openModal({
-                      accountKey: currentIndex,
-                      name: currentAccount?.name,
-                    })
-                  }
-                  data-testid="accounts-validate-button"
-                >
-                  Import seed to enable signing
-                </Button>
-              ) : null}
+                  placeholder="Display name"
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && canApplyName) applyName();
+                  }}
+                  // Face ID / Password AutoFill avoidance (iOS Safari):
+                  // - nickname (not username/current-password)
+                  // - readonly until focus so the page is not a login form on load
+                  // - non-credential name/id + manager ignore hints
+                  autoComplete="nickname"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  inputMode="text"
+                  isReadOnly={!renameUnlocked}
+                  onFocus={() => setRenameUnlocked(true)}
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  pr="4.5rem"
+                  data-testid="accounts-rename-input"
+                />
+                <InputRightElement width="4.5rem" h="full">
+                  {canApplyName ? (
+                    <Button
+                      h="1.75rem"
+                      size="sm"
+                      rounded="md"
+                      onClick={applyName}
+                      data-testid="accounts-rename-apply"
+                    >
+                      Apply
+                    </Button>
+                  ) : (
+                    <Icon mr="-2" as={MdModeEdit} color={mutedFg} />
+                  )}
+                </InputRightElement>
+              </InputGroup>
+            </Box>
+          ) : null}
+
+          {currentAccount && !currentSignable ? (
+            <Box
+              className="lucem-inset-surface"
+              rounded="3xl"
+              p={{ base: 4, md: 5 }}
+              data-testid="accounts-validate-panel"
+            >
+              <Button
+                w="full"
+                rounded="xl"
+                h="12"
+                colorScheme="yellow"
+                leftIcon={<Icon as={MdVpnKey} />}
+                onClick={() =>
+                  validateSeedRef.current?.openModal({
+                    accountKey: currentIndex,
+                    name: currentAccount?.name,
+                  })
+                }
+                data-testid="accounts-validate-button"
+              >
+                Import seed to enable signing
+              </Button>
             </Box>
           ) : null}
 

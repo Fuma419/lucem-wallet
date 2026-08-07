@@ -14,7 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { test } = require('@playwright/test');
+const { test, expect } = require('@playwright/test');
 
 const defaultOut = path.join(__dirname, 'screenshots', 'output');
 const OUT_DIR = process.env.LUCEM_SCREENSHOT_DIR || defaultOut;
@@ -606,6 +606,27 @@ test.describe('capture seeded wallet pages', () => {
     await page.waitForTimeout(3000);
     await waitFonts(page);
     await shot(page, '14-settings');
+  });
+
+  test('14b accounts — display name rename', async ({ page }) => {
+    test.setTimeout(90_000);
+    await mockAllKoios(page);
+    await page.goto('/mainPopup.html', { waitUntil: 'domcontentloaded' });
+    await seedTestWallet(page, '/accounts');
+    await page.goto('/accounts', { waitUntil: 'domcontentloaded' });
+
+    await page.getByTestId('accounts-rename-input').waitFor({
+      state: 'visible',
+      timeout: 60_000,
+    });
+    // Field must load readonly (Face ID / AutoFill guard).
+    await expect
+      .poll(async () =>
+        page.getByTestId('accounts-rename-input').getAttribute('readonly')
+      )
+      .not.toBe(null);
+    await waitFonts(page);
+    await shot(page, '14b-accounts-display-name');
   });
 
   test('15 staking — delegated state', async ({ page }) => {

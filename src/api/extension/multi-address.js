@@ -106,6 +106,7 @@ export const filterPaymentAddressesForAccountsDisplay = (rows, account) => {
   return (Array.isArray(rows) ? rows : []).filter((row) => {
     if (paymentAddressHasAssets(row)) return true;
     const role = row?.role ?? ADDRESS_ROLE.external;
+    if (row?.index == null || row.index === '') return false;
     return role === ADDRESS_ROLE.external && userExt.has(row.index);
   });
 };

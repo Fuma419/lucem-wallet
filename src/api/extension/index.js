@@ -56,10 +56,12 @@ import {
   selectCollateralCandidates,
 } from './collateral';
 import {
+  aggregateKoiosUtxosByAddress,
   aggregateKoiosUtxosToAssets,
   stakeAddressFromAddressInfo,
   stakeControlledLovelaceFromAccountInfo,
   summarizeAddressInfo,
+  summarizeUtxosByAddressEntry,
 } from './stake-balance';
 import {
   emptyDelegation,
@@ -553,29 +555,144 @@ export const getAccountsControlledStake = async () => {
 
 /**
  * Enabled payment/change addresses for the current account, enriched with
- * `/address_info` contents (ADA, UTxO count, native asset count).
+ * per-address contents (ADA, UTxO count, native asset count).
  *
  * @param {{ accountsDisplay?: boolean }} [options] - When `accountsDisplay`,
- *   filter to addresses with assets plus user-activated external indices
- *   (Accounts multi-address panel only).
+ *   refresh discovery, prefer stake `/account_utxos` for funded addresses
+ *   (so every address holding assets is listed even if prior discovery or
+ *   `/address_info` missed it), then filter to assets + user-activated.
  */
 export const getEnabledPaymentAddressDetails = async (options = {}) => {
   const accountsDisplay = Boolean(options?.accountsDisplay);
-  const rows = await getEnabledPaymentAddresses();
-  const addressList = rows.map((r) => r.paymentAddr).filter(Boolean);
-  if (addressList.length === 0) return [];
+  await Loader.load();
+  const network = await getNetwork();
+  const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
 
-  const request = KOIOS_REQUESTS.getAddressesInfo(addressList);
-  const result = await koiosRequest(request.endpoint, {}, request.body);
-  const byAddr = new Map();
-  if (Array.isArray(result)) {
-    for (const row of result) {
-      if (row?.address) byAddr.set(row.address, row);
+  if (accountsDisplay) {
+    try {
+      const currentIndex = await getCurrentAccountIndex();
+      await activateDiscoveredExternalAddresses(currentIndex, {
+        networkKeys: [network.id],
+      });
+    } catch (error) {
+      console.warn(
+        'Accounts address discovery failed:',
+        error?.message || error
+      );
+    }
+  }
+
+  let currentAccount = await getCurrentAccount();
+  let rows = listEnabledPaymentAddresses(
+    Loader.Cardano,
+    currentAccount,
+    networkId
+  );
+
+  /** @type {Map<string, { lovelace: bigint, utxoCount: number, assetUnits: Set<string> }>} */
+  let fundedByAddr = new Map();
+  if (accountsDisplay && currentAccount.rewardAddr) {
+    try {
+      const utxoReq = KOIOS_REQUESTS.getAccountUtxos(
+        currentAccount.rewardAddr,
+        true
+      );
+      const utxos = await koiosRequest(utxoReq.endpoint, {}, utxoReq.body);
+      if (Array.isArray(utxos)) {
+        fundedByAddr = aggregateKoiosUtxosByAddress(utxos);
+      }
+    } catch (error) {
+      console.warn(
+        'Accounts funded-address scan failed:',
+        error?.message || error
+      );
+    }
+  }
+
+  // Activate any CIP-1852 indices that currently hold UTxOs but were not yet
+  // in externalIndices/internalIndices (common for accounts never soft-refreshed).
+  if (accountsDisplay && currentAccount.publicKey && fundedByAddr.size > 0) {
+    const fundedAddrs = Array.from(fundedByAddr.keys());
+    const extFromFunded = matchExternalIndicesFromAddresses(
+      Loader.Cardano,
+      currentAccount.publicKey,
+      networkId,
+      fundedAddrs
+    );
+    const intFromFunded = matchInternalIndicesFromAddresses(
+      Loader.Cardano,
+      currentAccount.publicKey,
+      networkId,
+      fundedAddrs
+    );
+    const prevExt = getExternalIndices(currentAccount);
+    const prevInt = getInternalIndices(currentAccount);
+    const mergedExt = normalizeExternalIndices([...prevExt, ...extFromFunded]);
+    const mergedInt = normalizeInternalIndices([...prevInt, ...intFromFunded]);
+    const extChanged =
+      mergedExt.length !== prevExt.length ||
+      mergedExt.some((n, i) => n !== prevExt[i]);
+    const intChanged =
+      mergedInt.length !== prevInt.length ||
+      mergedInt.some((n, i) => n !== prevInt[i]);
+    if (extChanged || intChanged) {
+      const currentIndex = await getCurrentAccountIndex();
+      const accounts = await getStorage(STORAGE.accounts);
+      if (accounts?.[currentIndex]) {
+        if (!Array.isArray(accounts[currentIndex].userExternalIndices)) {
+          accounts[currentIndex].userExternalIndices = prevExt;
+        }
+        accounts[currentIndex].externalIndices = mergedExt;
+        accounts[currentIndex].internalIndices = mergedInt;
+        await setStorage({ [STORAGE.accounts]: { ...accounts } });
+        invalidateReadCache();
+        currentAccount = await getCurrentAccount();
+        rows = listEnabledPaymentAddresses(
+          Loader.Cardano,
+          currentAccount,
+          networkId
+        );
+      }
+    }
+  }
+
+  if (rows.length === 0) return [];
+
+  // Prefer stake-UTxO totals for funded addresses; `/address_info` only for the rest
+  // (user-activated empties). Avoids false "empty" rows that the display filter drops.
+  const needInfo = rows
+    .map((r) => r.paymentAddr)
+    .filter((addr) => addr && !fundedByAddr.has(addr));
+  const byAddrInfo = new Map();
+  if (needInfo.length > 0) {
+    try {
+      const infoReq = KOIOS_REQUESTS.getAddressesInfo(needInfo);
+      const infoRows = await koiosRequest(infoReq.endpoint, {}, infoReq.body);
+      if (Array.isArray(infoRows)) {
+        for (const row of infoRows) {
+          if (row?.address) byAddrInfo.set(row.address, row);
+        }
+      }
+    } catch (error) {
+      console.warn(
+        'Accounts address_info enrich failed:',
+        error?.message || error
+      );
     }
   }
 
   const details = rows.map((row) => {
-    const summary = summarizeAddressInfo(byAddr.get(row.paymentAddr));
+    const funded = fundedByAddr.get(row.paymentAddr);
+    if (funded) {
+      const summary = summarizeUtxosByAddressEntry(funded);
+      return {
+        ...row,
+        lovelace: summary.lovelace,
+        utxoCount: summary.utxoCount,
+        nativeAssetCount: summary.nativeAssetCount,
+      };
+    }
+    const summary = summarizeAddressInfo(byAddrInfo.get(row.paymentAddr));
     return {
       ...row,
       lovelace: summary.lovelace,
@@ -584,8 +701,26 @@ export const getEnabledPaymentAddressDetails = async (options = {}) => {
     };
   });
 
+  // Stake UTxOs on addresses we could not map to a known index (e.g. missing
+  // account publicKey, or index beyond the scan cap) still belong in the list.
+  if (accountsDisplay && fundedByAddr.size > 0) {
+    const listed = new Set(details.map((row) => row.paymentAddr));
+    for (const [addr, funded] of fundedByAddr) {
+      if (listed.has(addr)) continue;
+      const summary = summarizeUtxosByAddressEntry(funded);
+      details.push({
+        role: ADDRESS_ROLE.external,
+        index: null,
+        paymentAddr: addr,
+        paymentKeyHash: null,
+        lovelace: summary.lovelace,
+        utxoCount: summary.utxoCount,
+        nativeAssetCount: summary.nativeAssetCount,
+      });
+    }
+  }
+
   if (!accountsDisplay) return details;
-  const currentAccount = await getCurrentAccount();
   return filterPaymentAddressesForAccountsDisplay(details, currentAccount);
 };
 

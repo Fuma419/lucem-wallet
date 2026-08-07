@@ -117,3 +117,47 @@ export const summarizeAddressInfo = (row) => {
     nativeAssetCount: units.size,
   };
 };
+
+/**
+ * Group `/account_utxos` rows by payment address for Accounts address listing.
+ * Prefer this over `/address_info` when deciding which addresses hold assets —
+ * some accounts otherwise miss funded receive/change indices.
+ *
+ * @param {Array<{ address?: string, value?: string|number, asset_list?: Array<{policy_id?:string,asset_name?:string}>|null }>} utxos
+ * @returns {Map<string, { lovelace: bigint, utxoCount: number, assetUnits: Set<string> }>}
+ */
+export const aggregateKoiosUtxosByAddress = (utxos) => {
+  const byAddr = new Map();
+  for (const utxo of utxos || []) {
+    const address = utxo?.address;
+    if (typeof address !== 'string' || !address) continue;
+    let entry = byAddr.get(address);
+    if (!entry) {
+      entry = { lovelace: 0n, utxoCount: 0, assetUnits: new Set() };
+      byAddr.set(address, entry);
+    }
+    entry.lovelace += bigIntLovelace(utxo.value);
+    entry.utxoCount += 1;
+    if (!Array.isArray(utxo.asset_list)) continue;
+    for (const asset of utxo.asset_list) {
+      const unit = `${asset.policy_id || ''}${asset.asset_name || ''}`;
+      if (unit) entry.assetUnits.add(unit);
+    }
+  }
+  return byAddr;
+};
+
+/**
+ * @param {{ lovelace: bigint, utxoCount: number, assetUnits: Set<string> } | undefined} entry
+ * @returns {{ lovelace: string, utxoCount: number, nativeAssetCount: number }}
+ */
+export const summarizeUtxosByAddressEntry = (entry) => {
+  if (!entry) {
+    return { lovelace: '0', utxoCount: 0, nativeAssetCount: 0 };
+  }
+  return {
+    lovelace: entry.lovelace.toString(),
+    utxoCount: entry.utxoCount,
+    nativeAssetCount: entry.assetUnits.size,
+  };
+};

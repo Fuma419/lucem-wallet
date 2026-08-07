@@ -17,6 +17,7 @@ const {
   aggregateKoiosUtxosToAssets,
   stakeAddressFromAddressInfo,
   stakeControlledLovelaceFromAccountInfo,
+  summarizeAddressInfo,
 } = require('../../../api/extension/stake-balance');
 const { KOIOS_REQUESTS } = require('../../../api/koios-endpoints');
 
@@ -205,6 +206,29 @@ describe('stake-consolidated balance (resolve stake from payment address)', () =
         withdrawable_amount: '0',
       })
     ).toBe('20069694472');
+  });
+
+  test('summarizeAddressInfo reports ADA, UTxO count, and native asset units', () => {
+    const summary = summarizeAddressInfo({
+      address: PRIMARY_PAYMENT,
+      balance: '5000000',
+      utxo_set: [
+        {
+          value: '3000000',
+          asset_list: [
+            { policy_id: 'aa', asset_name: '01', quantity: '1' },
+            { policy_id: 'bb', asset_name: '02', quantity: '2' },
+          ],
+        },
+        {
+          value: '2000000',
+          asset_list: [{ policy_id: 'aa', asset_name: '01', quantity: '3' }],
+        },
+      ],
+    });
+    expect(summary.lovelace).toBe('5000000');
+    expect(summary.utxoCount).toBe(2);
+    expect(summary.nativeAssetCount).toBe(2);
   });
 
   test('wallet resolves stake via address_info and uses extended account_utxos', () => {

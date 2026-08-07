@@ -81,3 +81,39 @@ export const stakeControlledLovelaceFromAccountInfo = (row) => {
   );
   return (controlled - withdrawable).toString();
 };
+
+/**
+ * Summarize Koios/Blockfrost-shaped `/address_info` into UI-friendly contents.
+ * Used by the Accounts multi-address panel (per-payment-address details).
+ *
+ * @param {unknown} row
+ * @returns {{ lovelace: string, utxoCount: number, nativeAssetCount: number }}
+ */
+export const summarizeAddressInfo = (row) => {
+  if (!row || typeof row !== 'object') {
+    return { lovelace: '0', utxoCount: 0, nativeAssetCount: 0 };
+  }
+  const utxos = Array.isArray(row.utxo_set) ? row.utxo_set : [];
+  let lovelace =
+    row.balance != null && row.balance !== ''
+      ? bigIntLovelace(row.balance)
+      : 0n;
+  if (row.balance == null || row.balance === '') {
+    for (const utxo of utxos) {
+      lovelace += bigIntLovelace(utxo.value);
+    }
+  }
+  const units = new Set();
+  for (const utxo of utxos) {
+    if (!Array.isArray(utxo.asset_list)) continue;
+    for (const asset of utxo.asset_list) {
+      const unit = `${asset.policy_id || ''}${asset.asset_name || ''}`;
+      if (unit) units.add(unit);
+    }
+  }
+  return {
+    lovelace: lovelace.toString(),
+    utxoCount: utxos.length,
+    nativeAssetCount: units.size,
+  };
+};

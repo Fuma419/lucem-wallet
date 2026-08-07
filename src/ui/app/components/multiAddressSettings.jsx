@@ -8,27 +8,26 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import React from 'react';
+import { useStoreState } from 'easy-peasy';
 import {
   disableExternalAddressIndex,
   enableExternalAddressIndex,
-  getEnabledPaymentAddresses,
+  getEnabledPaymentAddressDetails,
   getExternalIndices,
   isMultiAddressEnabled,
   MAX_EXTERNAL_ADDRESS_INDEX,
 } from '../../../api/extension';
 import { SettingsToggleRow } from './settingsChrome';
-
-const truncateAddr = (addr) => {
-  if (!addr || addr.length < 20) return addr || '';
-  return `${addr.slice(0, 12)}…${addr.slice(-8)}`;
-};
+import UnitDisplay from './unitDisplay';
 
 /**
  * Account panel: review CIP-1852 receive / change addresses for the selected
- * account (balances / UTxOs / signing aggregate across them).
+ * account with per-address contents (ADA, UTxOs, native assets). Account totals
+ * remain stake-controlled across all of these.
  */
 const MultiAddressSettings = ({ account, onIndicesChange }) => {
   const toast = useToast();
+  const settings = useStoreState((state) => state.settings.settings);
   const hintColor = useColorModeValue('gray.600', 'whiteAlpha.500');
   const rowBg = useColorModeValue('gray.100', 'whiteAlpha.50');
   const rowBorder = useColorModeValue('gray.200', 'whiteAlpha.100');
@@ -42,7 +41,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
 
   const refreshRows = React.useCallback(async () => {
     try {
-      const next = await getEnabledPaymentAddresses();
+      const next = await getEnabledPaymentAddressDetails();
       setRows(next);
     } catch (_) {
       setRows([]);
@@ -152,7 +151,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
     <Box w="full">
       <SettingsToggleRow
         label="Multi-address"
-        hint="Lucem automatically includes receive and change addresses with on-chain history. Expand to review them."
+        hint="Lucem automatically includes receive and change addresses with on-chain history. Expand to review each address’s contents."
         isChecked={advancedOn}
         isDisabled={busy}
         onChange={onToggleAdvanced}
@@ -164,37 +163,64 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
           {rows.map((row) => (
             <Flex
               key={`${row.role ?? 0}-${row.index}`}
-              align="center"
+              align="flex-start"
               justify="space-between"
               gap={2}
               px={3}
-              py={2}
+              py={3}
               rounded="lg"
               bg={rowBg}
               borderWidth="1px"
               borderColor={rowBorder}
+              data-testid={`multi-address-row-${row.role ?? 0}-${row.index}`}
             >
-              <Box minW={0}>
+              <Box minW={0} flex="1">
                 <Text fontSize="xs" fontWeight="bold" color={rowText}>
                   #{row.index}
                   {row.role === 1
                     ? ' · change'
                     : row.index === 0
                       ? ' · primary'
-                      : ''}
+                      : ' · receive'}
                 </Text>
                 <Text
                   fontSize="xs"
                   color={hintColor}
                   fontFamily="mono"
-                  noOfLines={1}
+                  mt={1}
+                  wordBreak="break-all"
                   title={row.paymentAddr}
+                  data-testid={`multi-address-addr-${row.role ?? 0}-${row.index}`}
                 >
-                  {truncateAddr(row.paymentAddr)}
+                  {row.paymentAddr}
                 </Text>
+                <Flex
+                  mt={2}
+                  gap={3}
+                  flexWrap="wrap"
+                  align="baseline"
+                  data-testid={`multi-address-contents-${row.role ?? 0}-${row.index}`}
+                >
+                  <UnitDisplay
+                    quantity={row.lovelace ?? '0'}
+                    decimals={6}
+                    symbol={settings.adaSymbol}
+                    fontSize="sm"
+                    fontWeight="semibold"
+                    color={rowText}
+                  />
+                  <Text fontSize="xs" color={hintColor}>
+                    {row.utxoCount ?? 0} UTxO
+                    {(row.utxoCount ?? 0) === 1 ? '' : 's'}
+                  </Text>
+                  <Text fontSize="xs" color={hintColor}>
+                    {row.nativeAssetCount ?? 0} asset
+                    {(row.nativeAssetCount ?? 0) === 1 ? '' : 's'}
+                  </Text>
+                </Flex>
               </Box>
               {row.role === 1 || row.index === 0 ? (
-                <Text fontSize="xs" color={hintColor}>
+                <Text fontSize="xs" color={hintColor} flexShrink={0} pt={0.5}>
                   {row.role === 1 ? 'Auto' : 'Always on'}
                 </Text>
               ) : (
@@ -203,6 +229,7 @@ const MultiAddressSettings = ({ account, onIndicesChange }) => {
                   variant="ghost"
                   isDisabled={busy}
                   onClick={() => removeIndex(row.index)}
+                  flexShrink={0}
                 >
                   Remove
                 </Button>

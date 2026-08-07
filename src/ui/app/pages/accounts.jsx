@@ -34,6 +34,7 @@ import { useStoreState } from 'easy-peasy';
 import {
   deleteAccount,
   getAccounts,
+  getAccountsControlledStake,
   getCurrentAccountIndex,
   getNativeAccounts,
   getSignableWalletIds,
@@ -44,7 +45,6 @@ import {
   switchAccount,
   validateAccountWithSeed,
 } from '../../../api/extension';
-import { bigIntLovelace } from '../../../api/lovelace-scalar';
 import AvatarLoader from '../components/avatarLoader';
 import UnitDisplay from '../components/unitDisplay';
 import TransactionBuilder from '../components/transactionBuilder';
@@ -77,6 +77,8 @@ const Accounts = () => {
   const [currentIndex, setCurrentIndex] = React.useState(null);
   const [accountsMeta, setAccountsMeta] = React.useState({});
   const [accountsLive, setAccountsLive] = React.useState(null);
+  /** Stake-controlled ADA per account index (from `/account_info`). */
+  const [controlledByIndex, setControlledByIndex] = React.useState({});
   const [busyIndex, setBusyIndex] = React.useState(null);
   const [nameDraft, setNameDraft] = React.useState('');
   /** Safari/iOS: keep label field readonly until focus so Password AutoFill
@@ -92,6 +94,12 @@ const Accounts = () => {
     setAccountsMeta(all || {});
     setAccountsLive(all || {});
     setSignableIds(ids || []);
+    try {
+      const controlled = await getAccountsControlledStake();
+      setControlledByIndex(controlled || {});
+    } catch (e) {
+      console.warn('Controlled stake refresh failed', e);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -175,8 +183,8 @@ const Accounts = () => {
             data-testid="accounts-list-panel"
           >
             <Text fontSize="sm" color={mutedFg} mb={3}>
-              Switch the active account. Create, import, or connect hardware to
-              add another wallet.
+              Switch the active account. Each row shows stake-controlled ADA for
+              that account (not primary-address contents).
             </Text>
 
             <Stack spacing={2}>
@@ -187,10 +195,20 @@ const Accounts = () => {
                   accountInfo?.index != null ? accountInfo.index : accountIndex;
                 const isCurrent = isSameAccountIndex(currentIndex, accountKey);
                 const rowSignable = isAccountSignable(accountInfo, signableIds);
-                const networkSlice =
+                const controlled =
+                  controlledByIndex[accountIndex] ||
+                  controlledByIndex[accountKey];
+                const controlledLovelace = controlled?.lovelace;
+                const cachedLovelace =
                   account && settings.network?.id
-                    ? account[settings.network.id]
+                    ? account[settings.network.id]?.lovelace
                     : null;
+                const displayLovelace =
+                  controlledLovelace != null
+                    ? controlledLovelace
+                    : cachedLovelace != null
+                      ? cachedLovelace
+                      : null;
 
                 return (
                   <Button
@@ -261,25 +279,26 @@ const Accounts = () => {
                         >
                           {accountInfo.name}
                         </Text>
-                        {networkSlice &&
-                        networkSlice.lovelace !== null &&
-                        networkSlice.lovelace !== undefined ? (
-                          <UnitDisplay
-                            quantity={(
-                              bigIntLovelace(networkSlice.lovelace) -
-                              bigIntLovelace(networkSlice.minAda) -
-                              bigIntLovelace(networkSlice.collateral?.lovelace)
-                            ).toString()}
-                            decimals={6}
-                            symbol={settings.adaSymbol}
-                          />
+                        {displayLovelace !== null &&
+                        displayLovelace !== undefined ? (
+                          <Box textAlign="left" data-testid={`accounts-controlled-${accountIndex}`}>
+                            <UnitDisplay
+                              quantity={displayLovelace}
+                              decimals={6}
+                              symbol={settings.adaSymbol}
+                              fontSize="sm"
+                            />
+                            <Text fontSize="xs" color={mutedFg} mt={0.5}>
+                              Controlled stake
+                            </Text>
+                          </Box>
                         ) : (
                           <Text
                             fontSize="sm"
                             color={mutedFg}
                             textAlign="left"
                           >
-                            Select to load…
+                            Loading controlled stake…
                           </Text>
                         )}
                       </Box>
@@ -422,7 +441,8 @@ const Accounts = () => {
                 Addresses
               </Text>
               <Text fontSize="sm" color={mutedFg} mb={3}>
-                Receive and change addresses for the selected account.
+                Per-address contents for the selected account. The account total
+                above is stake-controlled across all of these.
               </Text>
               <MultiAddressSettings
                 account={currentAccount}

@@ -64,14 +64,15 @@ const Accounts = () => {
   const validateSeedRef = React.useRef();
 
   const { pageBg, pageFg, cardBg, cardHoverBg, mutedFg } = useSurfaceColors();
-  const currentAccent = useColorModeValue('orange.600', 'orange.300');
+  // Active account: clear amber (reads cleaner than muddy orange fills).
+  const currentAccent = useColorModeValue('#B45309', '#FFB020');
   const currentRowBg = useColorModeValue(
-    'rgba(234, 136, 0, 0.14)',
-    'rgba(255, 140, 0, 0.18)'
+    'rgba(245, 158, 11, 0.12)',
+    'rgba(255, 176, 32, 0.12)'
   );
   const currentRowHoverBg = useColorModeValue(
-    'rgba(234, 136, 0, 0.2)',
-    'rgba(255, 140, 0, 0.26)'
+    'rgba(245, 158, 11, 0.18)',
+    'rgba(255, 176, 32, 0.18)'
   );
 
   const [currentIndex, setCurrentIndex] = React.useState(null);

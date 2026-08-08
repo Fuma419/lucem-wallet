@@ -21,6 +21,35 @@ describe('governance page and wallet network button wiring', () => {
     expect(css).not.toContain('.button.network-preprod');
   });
 
+  test('account tray glow is yellow and, when open, exclusive to the selected account', () => {
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/styles.css'),
+      'utf8'
+    );
+
+    // The shared base rule applies to EVERY account option (selected or not).
+    // It must carry no box-shadow, so non-selected options never glow while the
+    // tray is open — the glow is reserved for the selected account below.
+    const base = css.match(
+      /\.button\.fab-account,\s*\.button\.fab-account-toggle \{([\s\S]*?)\}/
+    );
+    expect(base).toBeTruthy();
+    expect(base[1]).not.toContain('box-shadow');
+    // Ring is yellow, not the old orange.
+    expect(base[1]).toMatch(/rgba\(255,\s*214,\s*0/);
+
+    // Selected account glows yellow.
+    expect(css).toMatch(
+      /\.button\.fab-account\[data-active\][\s\S]*?box-shadow[\s\S]*?rgba\(255,\s*214,\s*0/
+    );
+    // The toggle anchors the tray and keeps a yellow glow.
+    expect(css).toMatch(
+      /\.button\.fab-account-toggle \{[\s\S]*?box-shadow[\s\S]*?rgba\(255,\s*214,\s*0/
+    );
+    // The old orange glow no longer drives the account selector.
+    expect(base[1]).not.toContain('rgba(255, 140, 0');
+  });
+
   test('wallet account tray buttons use circular labeled avatar FABs with no shadow', () => {
     const traysSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/walletTrays.jsx'),

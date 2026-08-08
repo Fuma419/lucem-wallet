@@ -61,6 +61,7 @@ import UnitDisplay from '../components/unitDisplay';
 import {
   buildTx,
   initTx,
+  sendAllTx,
   signAndSubmit,
   signAndSubmitHW,
 } from '../../../api/extension/wallet';
@@ -398,11 +399,14 @@ const Send = () => {
         }
       }
 
-      if (BigInt(minAda) > BigInt(output.amount[0].quantity || '0')) {
+      // In send-all mode the real feasibility check lives in the dedicated
+      // builder (`sendAllTx`), which consumes every UTxO and lets CSL enforce
+      // min-ADA. This single-output pre-check false-positives on token-rich
+      // wallets (it sizes min-ADA for one giant bundle), so only gate the
+      // regular send here.
+      if (!sendAllMode && BigInt(minAda) > BigInt(output.amount[0].quantity || '0')) {
         setFee({
-          error: sendAllMode
-            ? 'Not enough ADA to move all selected assets'
-            : 'Transaction not possible',
+          error: 'Transaction not possible',
         });
         return;
       }
@@ -451,32 +455,21 @@ const Send = () => {
       };
 
       if (sendAllMode) {
-        const totalLovelace = BigInt(txInfo.balance.lovelace || '0');
-        let candidateLovelace = totalLovelace;
-        let finalTx = null;
-        const candidateStep = 500000n;
+        // Sweep the whole wallet in one shot: the dedicated builder forces every
+        // UTxO in and lets a single fee/change pass settle the remainder, so no
+        // funds are stranded and every token moves.
+        const finalTx = await sendAllTx(
+          utxos.current,
+          _address.result,
+          protocolParameters,
+          optionalAuxiliaryData
+        );
 
-        for (let attempt = 0; attempt < 10; attempt += 1) {
-          if (candidateLovelace < BigInt(minAda)) {
-            throw new Error('Send all output dropped below minimum ADA');
-          }
-
-          output.amount[0].quantity = candidateLovelace.toString();
-          try {
-            const candidateTx = await buildTxForOutput(output.amount);
-            finalTx = candidateTx;
-
-            const feeLovelace = BigInt(candidateTx.body().fee().toString());
-            const nextCandidate = totalLovelace - feeLovelace;
-            if (nextCandidate <= 0n || nextCandidate === candidateLovelace) break;
-            candidateLovelace = nextCandidate;
-          } catch (error) {
-            candidateLovelace -= candidateStep;
-          }
-        }
-
-        if (!finalTx) throw new Error('Failed to build send all transaction');
-        const sendAllDisplay = displayUnit(output.amount[0].quantity).toString();
+        const feeLovelace = BigInt(finalTx.body().fee().toString());
+        const sentLovelace = (
+          BigInt(txInfo.balance.lovelace || '0') - feeLovelace
+        ).toString();
+        const sendAllDisplay = displayUnit(sentLovelace).toString();
         setValue({
           ..._value,
           ada: sendAllDisplay,

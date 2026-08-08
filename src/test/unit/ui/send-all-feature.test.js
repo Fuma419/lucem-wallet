@@ -22,10 +22,13 @@ describe('send all safety flow', () => {
     expect(sendSrc).toContain('isDisabled={isSendAll || !assets || assets.length < 1}');
   });
 
-  test('send all tx builder adjusts output coin by computed fee', () => {
+  test('send all delegates to the dedicated all-inputs builder', () => {
+    // Send-all no longer guesses the output with a fee-reduction loop; it calls
+    // the dedicated `sendAllTx` builder, which forces every UTxO in and lets one
+    // fee/change pass settle the remainder (no stranded funds).
+    expect(sendSrc).toContain('const finalTx = await sendAllTx(');
     expect(sendSrc).toContain(
-      "const totalLovelace = BigInt(txInfo.balance.lovelace || '0');"
+      'const feeLovelace = BigInt(finalTx.body().fee().toString());'
     );
-    expect(sendSrc).toContain('const nextCandidate = totalLovelace - feeLovelace;');
   });
 });

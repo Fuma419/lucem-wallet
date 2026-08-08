@@ -2,48 +2,39 @@ const fs = require('fs');
 const path = require('path');
 
 describe('governance page and wallet network button wiring', () => {
-  test('network button CSS matches translucent FAB tray treatment', () => {
+  test('account tray FAB CSS matches translucent circular treatment', () => {
     const css = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/styles.css'),
       'utf8'
     );
 
-    expect(css).toMatch(/\.button\.network-mainnet[\s\S]*opacity:\s*0\.85/);
+    expect(css).toMatch(/\.button\.fab-account[\s\S]*opacity:\s*0\.85/);
+    expect(css).toMatch(/\.button\.fab-account[\s\S]*border-radius:\s*9999px/);
     expect(css).toMatch(
-      /\.button\.network-mainnet\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(206,\s*250,\s*0/
+      /\.button\.fab-account\[data-active\][\s\S]*opacity:\s*1\s*!important/
     );
     expect(css).toMatch(
-      /\.button\.network-preprod\s*\{[\s\S]*radial-gradient\([\s\S]*rgba\(0,\s*122,\s*255/
+      /html\[data-theme='light'\]\s*\.button\.fab-account[\s\S]*box-shadow/
     );
-    expect(css).toMatch(
-      /\.button\.network-preview[\s\S]*radial-gradient\([\s\S]*rgba\(0,\s*230,\s*118/
-    );
-    expect(css).toMatch(
-      /\.button\.network-mainnet\[data-active\][\s\S]*opacity:\s*1\s*!important/
-    );
-    expect(css).toMatch(
-      /html\[data-theme='light'\]\s*\.button\.network-mainnet[\s\S]*color:\s*white/
-    );
-    expect(css).toMatch(
-      /html\[data-theme='light'\]\s*\.button\.network-mainnet\s*\{[\s\S]*radial-gradient/
-    );
+    // Network FAB styles are gone now that network selection lives in Settings.
+    expect(css).not.toContain('.button.network-mainnet');
+    expect(css).not.toContain('.button.network-preprod');
   });
 
-  test('wallet network tray buttons use circular labeled FABs with no shadow', () => {
+  test('wallet account tray buttons use circular labeled avatar FABs with no shadow', () => {
     const traysSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/walletTrays.jsx'),
       'utf8'
     );
 
     expect(traysSrc).toContain('TrayLabeledButton');
-    expect(traysSrc).toContain('networkOptions.map((networkOption)');
-    expect(traysSrc).toMatch(/className=\{`button network-\$\{networkOption\.id\}/);
+    expect(traysSrc).toContain('accountEntries.map');
+    expect(traysSrc).toContain('className="button fab-account"');
     expect(traysSrc).toContain('data-active=');
     expect(traysSrc).toMatch(/shadow:\s*'none'/);
-    expect(traysSrc).toContain('label={networkOption.label}');
     expect(traysSrc).toContain('wallet-tray-backdrop');
     expect(traysSrc).toContain('blackAlpha.700');
-    expect(traysSrc).toMatch(/isNetworkTrayOpen \|\| isTrayOpen/);
+    expect(traysSrc).toMatch(/isAccountTrayOpen \|\| isTrayOpen/);
   });
 
   test('wallet shows colored testnet banner and hides it on mainnet', () => {

@@ -37,7 +37,7 @@ import {
   importAppData,
 } from '../../../api/extension';
 import { useNavigate } from 'react-router-dom';
-import { STORAGE } from '../../../config/config';
+import { STORAGE, NETWORK_ID, NODE } from '../../../config/config';
 import { useStoreState, useStoreActions } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
 import { ChangePasswordModal } from '../components/changePasswordModal';
@@ -105,6 +105,18 @@ const Settings = () => {
   const emptyHint = useColorModeValue('gray.600', 'whiteAlpha.500');
 
   const currency = settings.currency === 'eur' ? 'eur' : 'usd';
+  const networkId = settings.network?.id;
+
+  const onNetworkChange = (nextId) => {
+    if (!nextId || nextId === networkId) return;
+    // setSettings persists the network (store action calls setNetwork) and
+    // recomputes adaSymbol; WalletShell remounts pages on the id change so
+    // balances/history reload for the new network.
+    setSettings({
+      ...settings,
+      network: { ...settings.network, id: nextId, node: NODE[nextId] },
+    });
+  };
 
   const avatarHandler = async () => {
     const avatar = Math.random().toString();
@@ -271,6 +283,25 @@ const Settings = () => {
           </SettingsPanel>
 
           <SettingsPanel
+            title="Network"
+            description="Choose which Cardano network Lucem connects to."
+            testId="settings-network-panel"
+          >
+            <SettingsChoiceField label="Cardano network">
+              <SegmentedChoice
+                aria-label="Cardano network"
+                value={networkId}
+                onChange={onNetworkChange}
+                options={[
+                  { value: NETWORK_ID.mainnet, label: 'Mainnet' },
+                  { value: NETWORK_ID.preprod, label: 'Preprod' },
+                  { value: NETWORK_ID.preview, label: 'Preview' },
+                ]}
+              />
+            </SettingsChoiceField>
+          </SettingsPanel>
+
+          <SettingsPanel
             title="Display"
             testId="settings-preferences-panel"
           >
@@ -307,8 +338,8 @@ const Settings = () => {
                 label="Swap tray positions"
                 hint={
                   settings.swapTrays
-                    ? 'Actions on the left, network on the right.'
-                    : 'Network on the left, actions on the right.'
+                    ? 'Actions on the left, accounts on the right.'
+                    : 'Accounts on the left, actions on the right.'
                 }
                 isChecked={Boolean(settings.swapTrays)}
                 offLabel="Default"

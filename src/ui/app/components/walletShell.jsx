@@ -1,8 +1,13 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { useStoreActions, useStoreState } from 'easy-peasy';
-import { getDelegation, setNetwork, onAccountChange } from '../../../api/extension';
-import { NODE } from '../../../config/config';
+import { Outlet, useLocation } from 'react-router-dom';
+import { useStoreState } from 'easy-peasy';
+import {
+  getDelegation,
+  getAccounts,
+  getCurrentAccountIndex,
+  switchAccount,
+  onAccountChange,
+} from '../../../api/extension';
 import WalletTrays from './walletTrays';
 
 /**
@@ -11,11 +16,10 @@ import WalletTrays from './walletTrays';
  */
 const WalletShell = () => {
   const settings = useStoreState((state) => state.settings.settings);
-  const setSettings = useStoreActions(
-    (actions) => actions.settings.setSettings
-  );
+  const location = useLocation();
   const [delegation, setDelegation] = React.useState(null);
-  const [isNetworkLoading, setIsNetworkLoading] = React.useState(false);
+  const [accounts, setAccounts] = React.useState({});
+  const [currentAccountIndex, setCurrentAccountIndex] = React.useState(null);
 
   const networkId = settings.network?.id;
 
@@ -31,41 +35,61 @@ const WalletShell = () => {
     }
   }, []);
 
+  // The account tray mirrors stored accounts, so it stays in sync as accounts
+  // are added, removed, renamed, or re-avatared.
+  const refreshAccounts = React.useCallback(async () => {
+    try {
+      const [all, index] = await Promise.all([
+        getAccounts(),
+        getCurrentAccountIndex(),
+      ]);
+      setAccounts(all || {});
+      setCurrentAccountIndex(index);
+    } catch (e) {
+      console.warn('WalletShell: failed to load accounts', e);
+    }
+  }, []);
+
   React.useEffect(() => {
     refreshDelegation();
-    const handler = onAccountChange(() => refreshDelegation());
+    refreshAccounts();
+    const handler = onAccountChange(() => {
+      refreshDelegation();
+      refreshAccounts();
+    });
     return () => handler && handler.remove();
-  }, [networkId, refreshDelegation]);
+  }, [networkId, refreshDelegation, refreshAccounts]);
 
-  const onNetworkSelect = async (nextId) => {
-    if (!nextId || nextId === networkId) return;
-    setIsNetworkLoading(true);
+  // Returning from /accounts (where accounts are added/removed/renamed) should
+  // refresh the tray even when no account-change event fired.
+  React.useEffect(() => {
+    refreshAccounts();
+  }, [location.pathname, refreshAccounts]);
+
+  const onAccountSelect = async (nextIndex) => {
+    if (nextIndex == null) return;
     try {
-      const nextNetwork = {
-        ...settings.network,
-        id: nextId,
-        node: NODE[nextId],
-      };
-      await setNetwork(nextNetwork);
-      setSettings({
-        ...settings,
-        network: nextNetwork,
-      });
+      await switchAccount(nextIndex);
+      setCurrentAccountIndex(nextIndex);
+      await refreshAccounts();
     } catch (e) {
-      console.error('WalletShell: network switch failed', e);
-    } finally {
-      setIsNetworkLoading(false);
+      console.error('WalletShell: account switch failed', e);
     }
   };
 
   return (
     <>
-      {/* Remount page content when network changes so balances/history reload cleanly */}
-      <Outlet key={networkId || 'network'} />
+      {/* Remount page content when the network or active account changes so
+          balances/history reload cleanly for the new context. */}
+      <Outlet
+        key={`${networkId || 'network'}:${
+          currentAccountIndex != null ? currentAccountIndex : 'account'
+        }`}
+      />
       <WalletTrays
-        networkId={networkId}
-        onNetworkSelect={onNetworkSelect}
-        isNetworkLoading={isNetworkLoading}
+        accounts={accounts}
+        currentAccountIndex={currentAccountIndex}
+        onAccountSelect={onAccountSelect}
         delegation={delegation}
         swapTrays={Boolean(settings.swapTrays)}
         glowEffects={settings.glowEffects !== false}

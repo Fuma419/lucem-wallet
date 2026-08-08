@@ -51,15 +51,33 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).toContain('labelSide');
   });
 
-  test('left network tray options match circular labeled FAB style', () => {
+  test('left tray is a dynamic account selector with avatar FABs', () => {
     expect(traysSrc).toContain('TrayLabeledButton');
-    expect(traysSrc).toContain('label={networkOption.label}');
-    expect(traysSrc).toContain('MdPublic');
-    expect(traysSrc).toContain('MdScience');
-    expect(traysSrc).toContain('MdVisibility');
-    expect(css).toMatch(
-      /\.button\.network-mainnet[\s\S]*border-radius:\s*9999px/
+    // Options come from the live accounts map, so the tray grows/shrinks as
+    // accounts are added or removed.
+    expect(traysSrc).toContain('accountEntries.map');
+    expect(traysSrc).toContain('AvatarLoader');
+    expect(traysSrc).toContain('onAccountSelect?.(switchKey)');
+    expect(traysSrc).toContain('data-testid="wallet-account-tray"');
+    expect(traysSrc).toContain('data-testid="account-tray-toggle"');
+    expect(traysSrc).toContain('className="button fab-account"');
+    // Network selection moved to Settings — the tray no longer switches networks.
+    expect(traysSrc).not.toContain('networkOptions');
+    expect(traysSrc).not.toContain('onNetworkSelect');
+    expect(css).toMatch(/\.button\.fab-account[\s\S]*border-radius:\s*9999px/);
+  });
+
+  test('network selection lives on the Settings page, not the tray', () => {
+    const settingsSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/pages/settings.jsx'),
+      'utf8'
     );
+    expect(settingsSrc).toContain('testId="settings-network-panel"');
+    expect(settingsSrc).toContain('aria-label="Cardano network"');
+    expect(settingsSrc).toContain('NETWORK_ID.mainnet');
+    expect(settingsSrc).toContain('NETWORK_ID.preprod');
+    expect(settingsSrc).toContain('NETWORK_ID.preview');
+    expect(settingsSrc).toContain('onNetworkChange');
   });
 
   test('wallet home no longer embeds trays or accounts menu', () => {

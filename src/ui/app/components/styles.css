@@ -648,48 +648,63 @@ html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
 
 /* Account tray — circular FABs. Each account option (`fab-account`) is filled
  * by its avatar image; the toggle (`fab-account-toggle`) holds a static account
- * icon. Either way these rules own the amber ring + glow only. */
+ * icon. The glow is YELLOW, and while the tray is open it is reserved for the
+ * selected account — the other options keep a neutral yellow ring, no glow. */
 .button.fab-account,
 .button.fab-account-toggle {
   opacity: 0.85;
   padding: 0;
   overflow: hidden;
-  border: thin solid rgba(255, 140, 0, 1);
-  box-shadow: 0px 0px 15px rgba(255, 140, 0, 0.75);
+  border: thin solid rgba(255, 214, 0, 0.55);
   border-radius: 9999px;
   transition: all 0.3s ease;
 }
 
-.button.fab-account:hover,
+/* The toggle anchors the tray, so it keeps the yellow glow at all times. */
+.button.fab-account-toggle {
+  border-color: rgba(255, 214, 0, 1);
+  box-shadow: 0px 0px 15px rgba(255, 214, 0, 0.75);
+}
+
 .button.fab-account-toggle:hover {
   opacity: 1;
-  box-shadow: 0px 0px 25px rgba(255, 140, 0, 0.9);
+  box-shadow: 0px 0px 25px rgba(255, 214, 0, 0.95);
   transform: none;
 }
 
-/* Active account: brighter amber ring so the selected avatar reads at a glance. */
+/* Selected account: the only option that glows yellow while the tray is open. */
 .button.fab-account[data-active],
 .button.fab-account:focus-visible,
 .button.fab-account-toggle:focus-visible {
   opacity: 1 !important;
-  border-color: rgba(255, 176, 32, 1) !important;
-  box-shadow: 0px 0px 25px rgba(255, 176, 32, 0.9) !important;
+  border-color: rgba(255, 214, 0, 1) !important;
+  box-shadow: 0px 0px 25px rgba(255, 214, 0, 0.95) !important;
   transform: none !important;
 }
 
-/* Light theme keeps the amber ring over the dimmed tray backdrop. */
+/* Non-selected options: opacity lift on hover for affordance, but no glow —
+ * the yellow glow stays exclusive to the selected account. */
+.button.fab-account:hover {
+  opacity: 1;
+}
+
+/* Light theme keeps the yellow ring over the dimmed tray backdrop. */
 html[data-theme='light'] .button.fab-account,
 html[data-theme='light'] .button.fab-account-toggle {
   opacity: 0.95;
-  border: thin solid rgba(255, 140, 0, 1);
-  box-shadow: 0px 0px 18px rgba(255, 140, 0, 0.85);
+  border: thin solid rgba(255, 214, 0, 0.6);
 }
 
-html[data-theme='light'] .button.fab-account:hover,
+html[data-theme='light'] .button.fab-account-toggle {
+  border-color: rgba(255, 214, 0, 1);
+  box-shadow: 0px 0px 18px rgba(255, 214, 0, 0.85);
+}
+
+html[data-theme='light'] .button.fab-account[data-active],
 html[data-theme='light'] .button.fab-account-toggle:hover,
-html[data-theme='light'] .button.fab-account[data-active] {
+html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   opacity: 1;
-  box-shadow: 0px 0px 25px rgba(255, 176, 32, 0.9);
+  box-shadow: 0px 0px 25px rgba(255, 214, 0, 0.95);
 }
 
 /* Overlay testnet rectangle badge — hugs the network name; no full-width bar / layout shift.

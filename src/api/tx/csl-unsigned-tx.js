@@ -319,3 +319,20 @@ export function buildUnsignedSendAllTx({
   );
   return toCanonicalTransactionCip21(Cardano, finalTx);
 }
+
+// Derive the fee and the total lovelace leaving the wallet straight from the
+// built transaction. Send-all produces only recipient outputs (no wallet
+// change), so summing output coins is the amount swept. Reading it back from
+// CSL keeps the UI off `txInfo.balance`, whose persisted/rehydrated values can
+// be non-canonical integer strings that blow up `BigInt()` on stricter engines
+// (JavaScriptCore reports this as "Failed to parse String to BigInt").
+export function summarizeSendAllTx(Cardano, finalTx) {
+  const body = finalTx.body();
+  const fee = body.fee().to_str();
+  let sent = Cardano.BigNum.zero();
+  const outputs = body.outputs();
+  for (let i = 0; i < outputs.len(); i += 1) {
+    sent = sent.checked_add(outputs.get(i).amount().coin());
+  }
+  return { fee, sent: sent.to_str() };
+}

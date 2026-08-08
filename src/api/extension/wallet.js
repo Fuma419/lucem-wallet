@@ -11,6 +11,7 @@ import {
   buildUnsignedSendAllTx,
   buildUnsignedSimpleTx,
   createCslTransactionBuilderConfig,
+  summarizeSendAllTx,
   toCanonicalTransactionCip21,
 } from '../tx/csl-unsigned-tx';
 import {
@@ -196,6 +197,14 @@ export const sendAllTx = async (
     throw e;
   }
 };
+
+/**
+ * Read back the fee and the total lovelace swept by a send-all transaction
+ * directly from the built CSL `Transaction`, so the UI never has to re-derive
+ * these from persisted balance state.
+ */
+export const summarizeSendAll = (finalTx) =>
+  summarizeSendAllTx(Loader.Cardano, finalTx);
 
 export const signAndSubmit = async (
   tx,

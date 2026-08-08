@@ -73,11 +73,28 @@ class BackgroundController {
   };
 
   listen = () => {
-    chrome.runtime.onMessage.addListener((request, _, sendResponse) => {
-      if (request.sender === SENDER.webpage) {
-        this._methodList[request.method](request, sendResponse);
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      // Defense-in-depth: only accept messages whose trusted Chrome `sender` is
+      // THIS extension (our own content scripts / pages). The manifest declares
+      // no `externally_connectable`, so web pages cannot reach the background
+      // directly — but the router must not rely on the payload's `sender` field
+      // alone. Drop anything whose real sender id does not match ours.
+      const runtimeId =
+        typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id
+          ? chrome.runtime.id
+          : null;
+      if (runtimeId && sender && sender.id && sender.id !== runtimeId) {
+        return false;
       }
-      return true;
+      if (
+        request &&
+        request.sender === SENDER.webpage &&
+        typeof this._methodList[request.method] === 'function'
+      ) {
+        this._methodList[request.method](request, sendResponse);
+        return true; // keep the channel open for the async sendResponse
+      }
+      return false;
     });
   };
 }

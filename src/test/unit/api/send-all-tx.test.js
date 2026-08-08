@@ -18,6 +18,7 @@
 const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
 const {
   buildUnsignedSendAllTx,
+  summarizeSendAllTx,
 } = require('../../../api/tx/csl-unsigned-tx');
 const { assetsToValue } = require('../../../api/util');
 
@@ -175,6 +176,59 @@ describe('Send all — token-rich, ADA-light wallet', () => {
     expect(result.error).toBeUndefined();
     expect(inputCount(result.tx)).toBe(6);
     expect(outputTokenCount(result.tx)).toBe(6);
+  });
+});
+
+describe('Send all — fee/amount summary is read from the built tx', () => {
+  // Regression for "Unable to prepare transaction: Failed to parse String to
+  // BigInt" on send-all: the Send page used to compute the swept amount as
+  // `BigInt(txInfo.balance.lovelace) - fee`. When `balance.lovelace` was a
+  // non-canonical string (a rehydrated/persisted value, e.g. scientific
+  // notation or a stray decimal), that native `BigInt()` throws — and on
+  // JavaScriptCore (iOS/Safari WebView) the message is exactly the one users
+  // reported. `summarizeSendAllTx` derives fee + swept amount straight from the
+  // CSL transaction, so it never touches balance state.
+  test('sums output coins for the amount and never touches balance state', async () => {
+    const utxos = [
+      await makeUtxo({ coin: 4_000_000, index: 0, txHash: 'd1'.repeat(32) }),
+      await makeUtxo({ coin: 3_000_000, index: 1, txHash: 'd2'.repeat(32) }),
+    ];
+    const tx = buildUnsignedSendAllTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos,
+      recipientAddressBech32: RECIPIENT_ADDR,
+    });
+
+    const { fee, sent } = summarizeSendAllTx(CSL, tx);
+
+    // fee matches the tx body; sent == output coins == total balance − fee.
+    expect(fee).toBe(tx.body().fee().to_str());
+    expect(BigInt(sent)).toBe(outputLovelaceSum(tx));
+    expect(BigInt(sent) + BigInt(fee)).toBe(7_000_000n);
+    // Both values are canonical base-10 integer strings safe for BigInt().
+    expect(sent).toMatch(/^\d+$/);
+    expect(fee).toMatch(/^\d+$/);
+  });
+
+  test('summary holds for a token-bearing sweep', async () => {
+    const tokenUnit = policy(0xab) + Buffer.from('LUCEM').toString('hex');
+    const utxos = [
+      await makeUtxo({
+        coin: 5_000_000,
+        assets: [{ unit: tokenUnit, quantity: '1000' }],
+      }),
+    ];
+    const tx = buildUnsignedSendAllTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos,
+      recipientAddressBech32: RECIPIENT_ADDR,
+    });
+
+    const { fee, sent } = summarizeSendAllTx(CSL, tx);
+    expect(BigInt(sent) + BigInt(fee)).toBe(5_000_000n);
+    expect(BigInt(sent)).toBe(outputLovelaceSum(tx));
   });
 });
 

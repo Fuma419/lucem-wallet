@@ -27,8 +27,16 @@ describe('send all safety flow', () => {
     // the dedicated `sendAllTx` builder, which forces every UTxO in and lets one
     // fee/change pass settle the remainder (no stranded funds).
     expect(sendSrc).toContain('const finalTx = await sendAllTx(');
-    expect(sendSrc).toContain(
-      'const feeLovelace = BigInt(finalTx.body().fee().toString());'
-    );
+  });
+
+  test('send all reads fee/amount from the built tx, not balance state', () => {
+    // Regression guard for "Failed to parse String to BigInt" on send-all: the
+    // swept amount must come from `summarizeSendAll(finalTx)` (canonical CSL
+    // integer strings), never re-derived from `txInfo.balance.lovelace`, whose
+    // rehydrated values can be non-canonical and throw on stricter engines
+    // (JavaScriptCore / iOS WebView). The old code did
+    // `BigInt(txInfo.balance.lovelace) - feeLovelace`; that intermediate is gone.
+    expect(sendSrc).toContain('const { fee, sent } = summarizeSendAll(finalTx);');
+    expect(sendSrc).not.toContain('feeLovelace');
   });
 });

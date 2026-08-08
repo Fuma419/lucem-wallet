@@ -1,32 +1,199 @@
-const fs = require('fs');
-const path = require('path');
+/**
+ * @jest-environment jsdom
+ *
+ * Behavioral render tests for the redesigned Send page. Previously this suite
+ * only grepped `send.jsx` for testid/label strings, so it could not catch a
+ * page that failed to mount, got stuck on the spinner, or stopped surfacing
+ * preparation errors. These mount the real component against the real
+ * `sendStore` model with mocked data services and assert user-visible behavior:
+ *
+ *   - the redesigned shell + functional selectors actually render,
+ *   - the page leaves its loading state and shows the stable primary action,
+ *   - the primary action is disabled until there is a signable tx,
+ *   - a failed init surfaces a dedicated error alert instead of hanging.
+ */
+import React from 'react';
+import { act } from 'react-dom/test-utils';
+import { createRoot } from 'react-dom/client';
+import { ChakraProvider } from '@chakra-ui/react';
+import { BrowserRouter } from 'react-router-dom';
+import { StoreProvider, createStore, action } from 'easy-peasy';
 
-describe('send page redesigned flow', () => {
-  const sendSrc = fs.readFileSync(
-    path.join(__dirname, '../../../ui/app/pages/send.jsx'),
-    'utf8'
-  );
+global.IS_REACT_ACT_ENVIRONMENT = true;
 
-  test('renders the redesigned send page shell and stable action label', () => {
-    expect(sendSrc).toContain('data-testid="send-page"');
-    expect(sendSrc).toContain('data-testid="send-primary-action"');
-    expect(sendSrc).toContain("'Review transaction'");
-    expect(sendSrc).not.toContain("{fee.error ? fee.error : 'Send'}");
+if (!window.matchMedia) {
+  window.matchMedia = () => ({
+    matches: false,
+    media: '',
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() {
+      return false;
+    },
+  });
+}
+if (!global.ResizeObserver) {
+  global.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
+jest.mock('../../../api/loader', () => ({
+  __esModule: true,
+  default: { load: jest.fn().mockResolvedValue(undefined), Cardano: {} },
+}));
+
+jest.mock('../../../api/extension', () => ({
+  __esModule: true,
+  displayUnit: (quantity, decimals = 6) => Number(quantity) / 10 ** decimals,
+  toUnit: (amount, decimals = 6) =>
+    Math.floor(Number(amount) * 10 ** decimals).toString(),
+  createTab: jest.fn(),
+  openKeystoneSignTxTab: jest.fn(),
+  getAccounts: jest.fn().mockResolvedValue([]),
+  getAdaHandle: jest.fn().mockResolvedValue(null),
+  getAsset: jest.fn().mockResolvedValue(null),
+  getCurrentAccount: jest.fn(),
+  getNetwork: jest.fn().mockResolvedValue({ id: 'preprod' }),
+  getUtxos: jest.fn().mockResolvedValue([]),
+  indexToHw: jest.fn(),
+  isHW: jest.fn().mockReturnValue(false),
+  isValidAddress: jest.fn().mockResolvedValue(false),
+  paymentKeyHashesForSigning: jest.fn().mockResolvedValue([]),
+  prependTxHash: jest.fn(),
+  updateRecentSentToAddress: jest.fn(),
+}));
+
+jest.mock('../../../api/extension/wallet', () => ({
+  __esModule: true,
+  buildTx: jest.fn(),
+  initTx: jest.fn(),
+  sendAllTx: jest.fn(),
+  signAndSubmit: jest.fn(),
+  signAndSubmitHW: jest.fn(),
+}));
+
+import Send, { sendStore } from '../../../ui/app/pages/send';
+import { getCurrentAccount } from '../../../api/extension';
+import Loader from '../../../api/loader';
+
+// A protocol-parameters snapshot in the store makes Send take its short init
+// path (no live Koios / CSL), so the page reaches its loaded state deterministically.
+const seededTxInfo = () => ({
+  protocolParameters: {
+    coinsPerUtxoWord: '4310',
+    minUtxo: '1000000',
+    linearFee: { minFeeA: '44', minFeeB: '155381' },
+    keyDeposit: '2000000',
+  },
+  utxos: [],
+  balance: { lovelace: '0', assets: [] },
+});
+
+function makeStore() {
+  return createStore({
+    globalModel: {
+      sendStore: { ...sendStore, txInfo: seededTxInfo() },
+    },
+    settings: {
+      settings: {
+        network: { id: 'preprod' },
+        adaSymbol: 't₳',
+        currency: 'usd',
+      },
+      setSettings: action(() => {}),
+    },
+  });
+}
+
+async function renderSend() {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  let root;
+  await act(async () => {
+    root = createRoot(container);
+    root.render(
+      <StoreProvider store={makeStore()}>
+        <ChakraProvider>
+          <BrowserRouter>
+            <Send />
+          </BrowserRouter>
+        </ChakraProvider>
+      </StoreProvider>
+    );
+  });
+  // Flush init(): Loader.load + getCurrentAccount + getNetwork all resolve.
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  return { container, root };
+}
+
+function primaryAction(container) {
+  return container.querySelector('[data-testid="send-primary-action"]');
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  Loader.load.mockResolvedValue(undefined);
+  getCurrentAccount.mockResolvedValue({
+    index: 0,
+    paymentAddr: 'addr_test1xyz',
+    paymentKeyHash: 'ab'.repeat(28),
+    stakeKeyHash: 'aa'.repeat(28),
+  });
+});
+
+describe('Send page — behavioral render', () => {
+  test('mounts the redesigned shell and functional selectors', async () => {
+    const { container } = await renderSend();
+    expect(container.querySelector('[data-testid="send-page"]')).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-recipient-input"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-ada-amount"]')
+    ).toBeTruthy();
   });
 
-  test('surfaces preparation failures as a separate alert', () => {
-    expect(sendSrc).toContain('data-testid="send-error-alert"');
-    expect(sendSrc).toContain('sendPreparationErrorMessage(e)');
-    expect(sendSrc).toContain('Unable to prepare transaction');
+  test('leaves the loading state and shows the stable primary action label', async () => {
+    const { container } = await renderSend();
+    const button = primaryAction(container);
+    expect(button).toBeTruthy();
+    expect(button.textContent).toContain('Review transaction');
   });
 
-  test('does not leave the form in an indefinite loading state if init fails', () => {
-    expect(sendSrc).toContain('init().catch');
-    expect(sendSrc).toContain('setIsLoading(false)');
+  test('primary action is disabled until a transaction is prepared', async () => {
+    const { container } = await renderSend();
+    const button = primaryAction(container);
+    // No recipient + no built tx yet → the review action must be blocked.
+    expect(button.hasAttribute('disabled')).toBe(true);
   });
 
-  test('exposes functional selectors for the send form', () => {
-    expect(sendSrc).toContain('data-testid="send-recipient-input"');
-    expect(sendSrc).toContain('data-testid="send-ada-amount"');
+  test('does not render a preparation error on a healthy mount', async () => {
+    const { container } = await renderSend();
+    expect(
+      container.querySelector('[data-testid="send-error-alert"]')
+    ).toBeNull();
+  });
+
+  test('a failed init surfaces a dedicated error alert instead of hanging', async () => {
+    // Fail at the first init await so there is a single, deterministically
+    // caught rejection (init().catch → error alert + setIsLoading(false)).
+    Loader.load.mockRejectedValueOnce(new Error('koios unreachable'));
+    const { container } = await renderSend();
+
+    const alert = container.querySelector('[data-testid="send-error-alert"]');
+    expect(alert).toBeTruthy();
+    expect(alert.textContent).toContain('Unable to prepare transaction');
+    // The form still renders (it did not get stuck on the spinner).
+    expect(primaryAction(container)).toBeTruthy();
   });
 });

@@ -64,6 +64,7 @@ import {
   sendAllTx,
   signAndSubmit,
   signAndSubmitHW,
+  summarizeSendAll,
 } from '../../../api/extension/wallet';
 import {
   sumUtxos,
@@ -96,6 +97,32 @@ const useIsMounted = () => {
 };
 
 let timer = null;
+
+// Build CIP-0020 transaction message metadata (label 674) for an optional note,
+// returning `null` when there is nothing to attach. Extracted so both the
+// regular and send-all paths share one implementation.
+const buildOptionalMessageMetadata = (Cardano, message) => {
+  if (!message) return null;
+  const chunkSubstr = (str, size) => {
+    const numChunks = Math.ceil(str.length / size);
+    const chunks = new Array(numChunks);
+    for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
+      chunks[i] = str.substr(o, size);
+    }
+    return chunks;
+  };
+  const auxiliaryData = Cardano.AuxiliaryData.new();
+  const generalMetadata = Cardano.GeneralTransactionMetadata.new();
+  const msg = { msg: chunkSubstr(message, 64) };
+  generalMetadata.set(
+    BigInt('674'),
+    Cardano.encode_json_str_to_metadatum(JSON.stringify(msg), 1)
+  );
+  if (generalMetadata.len() > 0) {
+    auxiliaryData.add_metadata(generalMetadata);
+  }
+  return auxiliaryData.metadata() ? auxiliaryData : null;
+};
 
 const initialState = {
   fee: { fee: '0' },
@@ -340,29 +367,57 @@ const Send = () => {
     setTx(null);
     await new Promise((res, rej) => setTimeout(() => res()));
     try {
+      // Optional CIP-0020 message metadata is shared by both send paths.
+      const optionalAuxiliaryData = buildOptionalMessageMetadata(
+        Loader.Cardano,
+        _message
+      );
+
+      if (sendAllMode) {
+        // Sweep the whole wallet in one shot: the dedicated builder forces every
+        // UTxO in and lets a single fee/change pass settle the remainder, so no
+        // funds are stranded and every token moves. Feasibility and min-ADA are
+        // enforced inside the builder, so the single-output pre-check below is
+        // deliberately skipped. Fee and swept amount are read straight from the
+        // built transaction — never from `txInfo.balance`, whose rehydrated
+        // values can be non-canonical strings that break `BigInt()` on stricter
+        // engines (JavaScriptCore: "Failed to parse String to BigInt").
+        const finalTx = await sendAllTx(
+          utxos.current,
+          _address.result,
+          protocolParameters,
+          optionalAuxiliaryData
+        );
+
+        const { fee, sent } = summarizeSendAll(finalTx);
+        const sendAllDisplay = displayUnit(sent).toString();
+        setValue({
+          ..._value,
+          ada: sendAllDisplay,
+          personalAda: sendAllDisplay,
+        });
+        setFee({ fee });
+        setTx(Buffer.from(finalTx.to_bytes()).toString('hex'));
+        return;
+      }
+
       const output = {
         address: _address.result,
         amount: [
           {
             unit: 'lovelace',
-            quantity: sendAllMode
-              ? String(txInfo.balance.lovelace || '0')
-              : toUnit(_value.ada || '10000000'),
+            quantity: toUnit(_value.ada || '10000000'),
           },
         ],
       };
 
       for (const asset of _value.assets) {
-        const quantity = sendAllMode
-          ? String(asset.quantity || '0')
-          : toUnit(asset.input, asset.decimals);
+        const quantity = toUnit(asset.input, asset.decimals);
 
-        if (!sendAllMode && (!asset.input || BigInt(quantity || '0') < 1)) {
+        if (!asset.input || BigInt(quantity || '0') < 1) {
           setFee({ error: 'Asset quantity not set' });
           return;
         }
-
-        if (BigInt(quantity || '0') < 1) continue;
 
         output.amount.push({
           unit: asset.unit,
@@ -380,66 +435,29 @@ const Send = () => {
         protocolParameters.coinsPerUtxoWord
       );
 
-      if (!sendAllMode) {
-        if (BigInt(minAda) <= BigInt(toUnit(_value.personalAda || '0'))) {
-          const displayAda = parseFloat(
-            _value.personalAda.replace(/[,\s]/g, '')
-          ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
-          output.amount[0].quantity = toUnit(_value.personalAda || '0');
-          !focus.current && setValue({ ..._value, ada: displayAda });
-        } else if (_value.assets.length > 0) {
-          output.amount[0].quantity = minAda;
-          const minAdaDisplay = parseFloat(
-            displayUnit(minAda).toString().replace(/[,\s]/g, '')
-          ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
-          setValue({
-            ..._value,
-            ada: minAdaDisplay,
-          });
-        }
+      if (BigInt(minAda) <= BigInt(toUnit(_value.personalAda || '0'))) {
+        const displayAda = parseFloat(
+          _value.personalAda.replace(/[,\s]/g, '')
+        ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
+        output.amount[0].quantity = toUnit(_value.personalAda || '0');
+        !focus.current && setValue({ ..._value, ada: displayAda });
+      } else if (_value.assets.length > 0) {
+        output.amount[0].quantity = minAda;
+        const minAdaDisplay = parseFloat(
+          displayUnit(minAda).toString().replace(/[,\s]/g, '')
+        ).toLocaleString('en-EN', { minimumFractionDigits: 6 });
+        setValue({
+          ..._value,
+          ada: minAdaDisplay,
+        });
       }
 
-      // In send-all mode the real feasibility check lives in the dedicated
-      // builder (`sendAllTx`), which consumes every UTxO and lets CSL enforce
-      // min-ADA. This single-output pre-check false-positives on token-rich
-      // wallets (it sizes min-ADA for one giant bundle), so only gate the
-      // regular send here.
-      if (!sendAllMode && BigInt(minAda) > BigInt(output.amount[0].quantity || '0')) {
+      if (BigInt(minAda) > BigInt(output.amount[0].quantity || '0')) {
         setFee({
           error: 'Transaction not possible',
         });
         return;
       }
-
-      const auxiliaryData = Loader.Cardano.AuxiliaryData.new();
-      const generalMetadata = Loader.Cardano.GeneralTransactionMetadata.new();
-
-
-
-      // setting metadata for optional message (CIP-0020)
-      if (_message) {
-        function chunkSubstr(str, size) {
-          const numChunks = Math.ceil(str.length / size);
-          const chunks = new Array(numChunks);
-
-          for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
-            chunks[i] = str.substr(o, size);
-          }
-
-          return chunks;
-        }
-        const msg = { msg: chunkSubstr(_message, 64) };
-        generalMetadata.set(
-          BigInt('674'),
-          Loader.Cardano.encode_json_str_to_metadatum(JSON.stringify(msg), 1)
-        );
-      }
-
-      if (generalMetadata.len() > 0) {
-        auxiliaryData.add_metadata(generalMetadata);
-      }
-
-      const optionalAuxiliaryData = auxiliaryData.metadata() ? auxiliaryData : null;
 
       const buildTxForOutput = async (amount) => {
         const valueForOutput = await assetsToValue(amount);
@@ -453,32 +471,6 @@ const Send = () => {
           optionalAuxiliaryData
         );
       };
-
-      if (sendAllMode) {
-        // Sweep the whole wallet in one shot: the dedicated builder forces every
-        // UTxO in and lets a single fee/change pass settle the remainder, so no
-        // funds are stranded and every token moves.
-        const finalTx = await sendAllTx(
-          utxos.current,
-          _address.result,
-          protocolParameters,
-          optionalAuxiliaryData
-        );
-
-        const feeLovelace = BigInt(finalTx.body().fee().toString());
-        const sentLovelace = (
-          BigInt(txInfo.balance.lovelace || '0') - feeLovelace
-        ).toString();
-        const sendAllDisplay = displayUnit(sentLovelace).toString();
-        setValue({
-          ..._value,
-          ada: sendAllDisplay,
-          personalAda: sendAllDisplay,
-        });
-        setFee({ fee: finalTx.body().fee().toString() });
-        setTx(Buffer.from(finalTx.to_bytes()).toString('hex'));
-        return;
-      }
 
       const tx = await buildTxForOutput(output.amount);
       setFee({ fee: tx.body().fee().toString() });

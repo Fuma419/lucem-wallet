@@ -11,8 +11,16 @@ const FEE_ALIGN_MAX_ATTEMPTS = 5;
 /**
  * @param {*} Cardano - Emurgo CSL namespace
  * @param {object} protocolParameters - snapshot from `buildProtocolParametersSnapshot`
+ * @param {object} [options]
+ * @param {boolean} [options.preferPureChange=true] - split change into a pure-ADA
+ *   output when possible. Send-all disables this so the whole balance (ADA +
+ *   every token) lands in a single consolidated output.
  */
-export function createCslTransactionBuilderConfig(Cardano, protocolParameters) {
+export function createCslTransactionBuilderConfig(
+  Cardano,
+  protocolParameters,
+  { preferPureChange = true } = {}
+) {
   const p = protocolParameters;
   if (!p.linearFee?.minFeeA || !p.linearFee?.minFeeB) {
     throw new Error('Invalid protocol parameters: linearFee');
@@ -37,7 +45,7 @@ export function createCslTransactionBuilderConfig(Cardano, protocolParameters) {
     .coins_per_utxo_byte(Cardano.BigNum.from_str(String(p.coinsPerUtxoWord)))
     .max_value_size(parseInt(String(p.maxValSize), 10))
     .max_tx_size(parseInt(String(p.maxTxSize), 10))
-    .prefer_pure_change(true)
+    .prefer_pure_change(preferPureChange)
     .build();
 }
 
@@ -221,4 +229,93 @@ export function buildUnsignedSimpleTx({
   throw new Error(
     `Could not align transaction fee with ledger minimum after ${FEE_ALIGN_MAX_ATTEMPTS} attempts`
   );
+}
+
+/**
+ * "Send all" unsigned transaction. Forces EVERY provided UTxO in as an input and
+ * sweeps the whole balance — all lovelace plus every native token, minus the
+ * network fee — into a single output at the recipient.
+ *
+ * Unlike `buildUnsignedSimpleTx`, this never runs coin selection: coin selection
+ * only pulls the minimum inputs needed to cover a target output, which strands the
+ * UTxOs it did not pick. A send-all must instead consume the entire UTxO set, so
+ * we add each input explicitly and let one balancing pass compute the fee.
+ *
+ * The recipient doubles as the change address, so `add_change_if_needed` places
+ * the full swept value in one output. CSL sizes the fee (including vkey witnesses
+ * inferred from each input's address) and enforces min-ADA. If the wallet genuinely
+ * cannot cover the fee plus the min-ADA its tokens require, CSL throws and we
+ * surface a clear "not enough ADA" error — the real insufficiency case, not the
+ * spurious one the old fee-reduction heuristic produced.
+ *
+ * @param {object} opts
+ * @param {*} opts.Cardano
+ * @param {object} opts.protocolParameters
+ * @param {Array} opts.utxos - CSL TransactionUnspentOutput[] (all get spent)
+ * @param {string} opts.recipientAddressBech32 - destination for the whole balance
+ * @param {*} [opts.auxiliaryData]
+ */
+export function buildUnsignedSendAllTx({
+  Cardano,
+  protocolParameters,
+  utxos,
+  recipientAddressBech32,
+  auxiliaryData = null,
+}) {
+  if (!utxos?.length) {
+    throw new Error('No UTxOs provided for send all');
+  }
+  const txConfig = createCslTransactionBuilderConfig(
+    Cardano,
+    protocolParameters,
+    { preferPureChange: false }
+  );
+  const txBuilder = Cardano.TransactionBuilder.new(txConfig);
+  const recipientAddress = Cardano.Address.from_bech32(recipientAddressBech32);
+  const invalidHereafter = ttlInvalidHereafterBignum(
+    Cardano,
+    protocolParameters
+  );
+
+  // Force every UTxO in — coin selection would pick a subset and strand funds,
+  // which is the exact bug that made "send all" leave money behind.
+  for (const u of utxos) {
+    txBuilder.add_regular_input(
+      u.output().address(),
+      u.input(),
+      u.output().amount()
+    );
+  }
+
+  // TTL / aux before change so size (and fee) account for them.
+  txBuilder.set_ttl_bignum(invalidHereafter);
+  if (auxiliaryData) {
+    txBuilder.set_auxiliary_data(auxiliaryData);
+  }
+
+  // One balancing pass: with the recipient as the change address and no explicit
+  // outputs, the whole balance minus fee (every token included) lands in a single
+  // output. CSL enforces min-ADA and throws on genuine dust.
+  let added;
+  try {
+    added = txBuilder.add_change_if_needed(recipientAddress);
+  } catch (e) {
+    throw new Error(
+      'Not enough ADA to cover the network fee and the minimum required for the selected assets'
+    );
+  }
+  if (!added) {
+    throw new Error(
+      'Send all could not produce an output — the wallet balance is empty'
+    );
+  }
+
+  const txBody = txBuilder.build();
+  const emptyW = Cardano.TransactionWitnessSet.new();
+  const finalTx = Cardano.Transaction.new(
+    txBody,
+    emptyW,
+    auxiliaryData || undefined
+  );
+  return toCanonicalTransactionCip21(Cardano, finalTx);
 }

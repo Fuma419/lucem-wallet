@@ -8,6 +8,7 @@ import {
   latestEpochParamsRow,
 } from '../tx/protocol-params';
 import {
+  buildUnsignedSendAllTx,
   buildUnsignedSimpleTx,
   createCslTransactionBuilderConfig,
   toCanonicalTransactionCip21,
@@ -155,6 +156,43 @@ export const buildTx = async (
     });
   } catch (e) {
     console.error('Error building transaction:', e);
+    throw e;
+  }
+};
+
+/**
+ * Build an unsigned "send all" transaction that sweeps the entire wallet balance
+ * (all lovelace + every native token, minus fee) to `recipientAddress`. Consumes
+ * every UTxO — unlike `buildTx`, no coin selection runs, so nothing is stranded.
+ * Refreshes the chain tip slot so TTL stays valid when the UI skips `initTx()`.
+ */
+export const sendAllTx = async (
+  utxos,
+  recipientAddress,
+  protocolParameters,
+  auxiliaryData = null
+) => {
+  try {
+    await Loader.load();
+
+    if (!protocolParameters) {
+      throw new Error('Protocol parameters are required but not provided');
+    }
+
+    const params = {
+      ...protocolParameters,
+      slot: await fetchKoiosTipSlot(koiosRequestEnhanced),
+    };
+
+    return buildUnsignedSendAllTx({
+      Cardano: Loader.Cardano,
+      protocolParameters: params,
+      utxos,
+      recipientAddressBech32: recipientAddress,
+      auxiliaryData,
+    });
+  } catch (e) {
+    console.error('Error building send all transaction:', e);
     throw e;
   }
 };

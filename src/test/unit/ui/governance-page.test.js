@@ -35,19 +35,29 @@ describe('governance page and wallet network button wiring', () => {
     );
     expect(base).toBeTruthy();
     expect(base[1]).not.toContain('box-shadow');
-    // Ring is yellow, not the old orange.
-    expect(base[1]).toMatch(/rgba\(255,\s*214,\s*0/);
+    // Ring is a clean yellow (255, 238, 0), not orange/gold.
+    expect(base[1]).toMatch(/rgba\(255,\s*238,\s*0/);
 
     // Selected account glows yellow.
     expect(css).toMatch(
-      /\.button\.fab-account\[data-active\][\s\S]*?box-shadow[\s\S]*?rgba\(255,\s*214,\s*0/
+      /\.button\.fab-account\[data-active\][\s\S]*?box-shadow[\s\S]*?rgba\(255,\s*238,\s*0/
     );
     // The toggle anchors the tray and keeps a yellow glow.
     expect(css).toMatch(
-      /\.button\.fab-account-toggle \{[\s\S]*?box-shadow[\s\S]*?rgba\(255,\s*214,\s*0/
+      /\.button\.fab-account-toggle \{[\s\S]*?box-shadow[\s\S]*?rgba\(255,\s*238,\s*0/
     );
-    // The old orange glow no longer drives the account selector.
+    // Neither the old orange (255,140,0) nor the too-bright gold (255,214,0)
+    // drive the account selector any more.
     expect(base[1]).not.toContain('rgba(255, 140, 0');
+    expect(css).not.toContain('rgba(255, 214, 0');
+
+    // Brightness is dialed to match the actions tray: the account glow never
+    // exceeds that tray's alpha (0.9), so the old 0.95 hot-spots are gone.
+    const toggleRule = css.match(
+      /\.button\.fab-account-toggle \{([\s\S]*?)\}/
+    );
+    expect(toggleRule).toBeTruthy();
+    expect(toggleRule[1]).not.toContain('0.95');
   });
 
   test('wallet account tray buttons use circular labeled avatar FABs with no shadow', () => {

@@ -19,11 +19,9 @@ import {
   MdHome,
   MdHowToVote,
   MdOutlineHowToReg,
-  MdPublic,
-  MdScience,
-  MdVisibility,
 } from 'react-icons/md';
-import { NETWORK_ID } from '../../../config/config';
+import AvatarLoader from './avatarLoader';
+import { isSameAccountIndex } from '../utils/accountIndex';
 
 /**
  * Shared circular FAB chrome. Visual color / glow come from CSS `.button.fab-*`
@@ -87,23 +85,25 @@ const TrayLabeledButton = ({
   </Flex>
 );
 
-const networkOptions = [
-  { id: NETWORK_ID.mainnet, label: 'Mainnet', icon: MdPublic },
-  { id: NETWORK_ID.preprod, label: 'Preprod', icon: MdScience },
-  { id: NETWORK_ID.preview, label: 'Preview', icon: MdVisibility },
-];
+/** Resolve the switch key for an account entry (typed index when present). */
+const accountKeyFor = (accountInfo, fallbackKey) =>
+  accountInfo && accountInfo.index != null ? accountInfo.index : fallbackKey;
 
 /**
- * Fixed bottom trays shared by wallet shell screens. Default: network left,
+ * Fixed bottom trays shared by wallet shell screens. Default: accounts left,
  * actions right. When `swapTrays` is true the sides are reversed.
  *
- * Glow on/off is owned by `html[data-glow]` + CSS (same as network FABs).
+ * The account tray is a live switcher: one avatar FAB per wallet account, so it
+ * grows and shrinks as accounts are added or removed. Network selection now
+ * lives on the Settings page.
+ *
+ * Glow on/off is owned by `html[data-glow]` + CSS.
  * `glowEffects` is accepted for API compatibility with WalletShell.
  */
 const WalletTrays = ({
-  networkId,
-  onNetworkSelect,
-  isNetworkLoading = false,
+  accounts = {},
+  currentAccountIndex = null,
+  onAccountSelect,
   delegation = null,
   swapTrays = false,
   glowEffects: _glowEffects = true,
@@ -111,8 +111,16 @@ const WalletTrays = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [isTrayOpen, setIsTrayOpen] = React.useState(false);
-  const [isNetworkTrayOpen, setIsNetworkTrayOpen] = React.useState(false);
+  const [isAccountTrayOpen, setIsAccountTrayOpen] = React.useState(false);
   const traysSwapped = Boolean(swapTrays);
+
+  const accountEntries = Object.keys(accounts || {}).map((key) => ({
+    key,
+    info: accounts[key],
+  }));
+  const currentAccount = accountEntries.find((entry) =>
+    isSameAccountIndex(currentAccountIndex, accountKeyFor(entry.info, entry.key))
+  );
 
   const path = location.pathname;
   const go = (to) => {
@@ -129,16 +137,16 @@ const WalletTrays = ({
     left: 'calc(env(safe-area-inset-left, 0px) + 1.5rem)',
     right: 'calc(env(safe-area-inset-right, 0px) + 1.5rem)',
   };
-  const networkSideProps = traysSwapped
+  const accountSideProps = traysSwapped
     ? { right: sideInset.right, alignItems: 'flex-end' }
     : { left: sideInset.left, alignItems: 'flex-start' };
   const actionSideProps = traysSwapped
     ? { left: sideInset.left, alignItems: 'flex-start' }
     : { right: sideInset.right, alignItems: 'flex-end' };
   // Labels sit toward screen center (outside the icon relative to the edge).
-  const networkLabelSide = traysSwapped ? 'left' : 'right';
+  const accountLabelSide = traysSwapped ? 'left' : 'right';
   const actionLabelSide = traysSwapped ? 'right' : 'left';
-  const networkMenuClass = traysSwapped
+  const accountMenuClass = traysSwapped
     ? 'lucem-tray-equal-actions'
     : 'lucem-tray-equal-actions is-start';
   const actionMenuClass = traysSwapped
@@ -147,14 +155,14 @@ const WalletTrays = ({
 
   return (
     <>
-      {isNetworkTrayOpen || isTrayOpen ? (
+      {isAccountTrayOpen || isTrayOpen ? (
         <Box
           position="fixed"
           inset={0}
           zIndex={3}
           bg="blackAlpha.700"
           onClick={() => {
-            setIsNetworkTrayOpen(false);
+            setIsAccountTrayOpen(false);
             setIsTrayOpen(false);
           }}
           aria-hidden="true"
@@ -170,54 +178,60 @@ const WalletTrays = ({
         flexDirection="column"
         justifyContent="flex-end"
         gap={2}
-        data-testid="wallet-network-tray"
+        data-testid="wallet-account-tray"
         data-tray-side={traysSwapped ? 'right' : 'left'}
-        {...networkSideProps}
+        {...accountSideProps}
       >
         <Collapse
-          in={isNetworkTrayOpen}
+          in={isAccountTrayOpen}
           animateOpacity
           style={{ overflow: 'visible' }}
         >
-          <Stack spacing={2} mb={2} alignItems="stretch" className={networkMenuClass}>
-            {networkOptions.map((networkOption) => (
-              <TrayLabeledButton
-                key={networkOption.id}
-                label={networkOption.label}
-                labelSide={networkLabelSide}
-                {...walletFabBase}
-                data-active={
-                  networkId === networkOption.id ? 'true' : undefined
-                }
-                className={`button network-${networkOption.id} ${
-                  isNetworkLoading && networkId === networkOption.id
-                    ? 'is-loading'
-                    : ''
-                }`}
-                aria-label={`Switch to ${networkOption.label}`}
-                onClick={() => {
-                  if (networkId !== networkOption.id) {
-                    onNetworkSelect?.(networkOption.id);
+          <Stack spacing={2} mb={2} alignItems="stretch" className={accountMenuClass}>
+            {accountEntries.map(({ key, info }) => {
+              const switchKey = accountKeyFor(info, key);
+              const isActive = isSameAccountIndex(currentAccountIndex, switchKey);
+              const accountName = (info && info.name) || `Account ${key}`;
+              return (
+                <TrayLabeledButton
+                  key={key}
+                  label={accountName}
+                  labelSide={accountLabelSide}
+                  {...walletFabBase}
+                  overflow="hidden"
+                  data-active={isActive ? 'true' : undefined}
+                  aria-current={isActive ? 'true' : undefined}
+                  className="button fab-account"
+                  data-testid={`account-tray-option-${key}`}
+                  aria-label={
+                    isActive
+                      ? `${accountName}, selected`
+                      : `Switch to ${accountName}`
                   }
-                  setIsNetworkTrayOpen(false);
-                }}
-              >
-                <Icon as={networkOption.icon} boxSize={6} color="white" />
-              </TrayLabeledButton>
-            ))}
+                  onClick={() => {
+                    if (!isActive) onAccountSelect?.(switchKey);
+                    setIsAccountTrayOpen(false);
+                  }}
+                >
+                  <AvatarLoader avatar={info && info.avatar} width="100%" />
+                </TrayLabeledButton>
+              );
+            })}
           </Stack>
         </Collapse>
         <Button
           {...walletFabBase}
-          className="button fab-settings"
-          onClick={() => setIsNetworkTrayOpen(!isNetworkTrayOpen)}
-          aria-label="Toggle network menu"
+          overflow="hidden"
+          className="button fab-account-toggle"
+          onClick={() => setIsAccountTrayOpen(!isAccountTrayOpen)}
+          aria-label="Toggle account menu"
+          data-testid="account-tray-toggle"
         >
-          <Icon
-            as={isNetworkTrayOpen ? ChevronDownIcon : ChevronUpIcon}
-            boxSize={8}
-            color="white"
-          />
+          {currentAccount ? (
+            <AvatarLoader avatar={currentAccount.info?.avatar} width="100%" />
+          ) : (
+            <Icon as={MdAccountBalanceWallet} boxSize={6} color="white" />
+          )}
         </Button>
       </Box>
 

@@ -525,10 +525,7 @@ html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
 .button.fab-accounts,
 .button.fab-settings,
 .button.fab-toggle,
-.button.network-mainnet,
-.button.network-preprod,
-.button.network-preview,
-.button.network-testnet {
+.button.fab-account-toggle {
   color: #ffffff !important;
 }
 
@@ -537,10 +534,7 @@ html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
 .button.fab-accounts svg,
 .button.fab-settings svg,
 .button.fab-toggle svg,
-.button.network-mainnet svg,
-.button.network-preprod svg,
-.button.network-preview svg,
-.button.network-testnet svg {
+.button.fab-account-toggle svg {
   color: #ffffff !important;
   fill: currentColor;
 }
@@ -652,130 +646,49 @@ html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
   }
 }
 
-/* Network tray options — circular neon FABs matching vote/stake/settings */
-.button.network-mainnet,
-.button.network-preprod,
-.button.network-preview,
-.button.network-testnet {
-  font-family: 'Barlow', sans-serif;
+/* Account tray — circular avatar FABs (the toggle + each account option).
+ * The avatar image fills the FAB, so these rules own the ring/glow only. */
+.button.fab-account,
+.button.fab-account-toggle {
   opacity: 0.85;
-  letter-spacing: 2px;
-  color: white;
-  transition: all 0.3s ease;
+  padding: 0;
+  overflow: hidden;
+  border: thin solid rgba(255, 140, 0, 1);
+  box-shadow: 0px 0px 15px rgba(255, 140, 0, 0.75);
   border-radius: 9999px;
+  transition: all 0.3s ease;
 }
 
-.button.network-mainnet {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 0.5), rgba(0, 0, 0, 0.5));
-  border: thin solid rgba(206, 250, 0, 1);
-  box-shadow: 0px 0px 15px rgba(206, 250, 0, 0.75);
-}
-
-.button.network-preprod {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 0.5), rgba(0, 0, 0, 0.5));
-  border: thin solid rgba(0, 122, 255, 1);
-  box-shadow: 0px 0px 15px rgba(0, 122, 255, 0.75);
-}
-
-.button.network-preview,
-.button.network-testnet {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 230, 118, 0.5), rgba(0, 0, 0, 0.5));
-  border: thin solid rgba(0, 230, 118, 1);
-  box-shadow: 0px 0px 15px rgba(0, 230, 118, 0.75);
-}
-
-.button.network-mainnet:hover {
+.button.fab-account:hover,
+.button.fab-account-toggle:hover {
   opacity: 1;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, 0.5));
-  box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9);
+  box-shadow: 0px 0px 25px rgba(255, 140, 0, 0.9);
   transform: none;
 }
 
-.button.network-preprod:hover {
-  opacity: 1;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 1), rgba(0, 0, 0, 0.5));
-  box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9);
-  transform: none;
-}
-
-.button.network-preview:hover,
-.button.network-testnet:hover {
-  opacity: 1;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 230, 118, 1), rgba(0, 0, 0, 0.5));
-  box-shadow: 0px 0px 25px rgba(0, 230, 118, 0.9);
-  transform: none;
-}
-
-.button.network-mainnet[data-active],
-.button.network-mainnet:focus-visible {
+/* Active account: brighter amber ring so the selected avatar reads at a glance. */
+.button.fab-account[data-active],
+.button.fab-account:focus-visible,
+.button.fab-account-toggle:focus-visible {
   opacity: 1 !important;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 1), rgba(0, 0, 0, 0.5)) !important;
-  border-color: rgba(206, 250, 0, 1) !important;
-  box-shadow: 0px 0px 25px rgba(206, 250, 0, 0.9) !important;
-  color: white !important;
+  border-color: rgba(255, 176, 32, 1) !important;
+  box-shadow: 0px 0px 25px rgba(255, 176, 32, 0.9) !important;
   transform: none !important;
 }
 
-.button.network-preprod[data-active],
-.button.network-preprod:focus-visible {
-  opacity: 1 !important;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 1), rgba(0, 0, 0, 0.5)) !important;
-  border-color: rgba(0, 122, 255, 1) !important;
-  box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9) !important;
-  color: white !important;
-  transform: none !important;
-}
-
-.button.network-preview[data-active],
-.button.network-testnet[data-active],
-.button.network-preview:focus-visible,
-.button.network-testnet:focus-visible {
-  opacity: 1 !important;
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 230, 118, 1), rgba(0, 0, 0, 0.5)) !important;
-  border-color: rgba(0, 230, 118, 1) !important;
-  box-shadow: 0px 0px 25px rgba(0, 230, 118, 0.9) !important;
-  color: white !important;
-  transform: none !important;
-}
-
-/* Light theme: keep dark neon gradients + white labels (tray opens over a dimmed backdrop) */
-html[data-theme='light'] .button.network-mainnet,
-html[data-theme='light'] .button.network-preprod,
-html[data-theme='light'] .button.network-preview,
-html[data-theme='light'] .button.network-testnet {
+/* Light theme keeps the amber ring over the dimmed tray backdrop. */
+html[data-theme='light'] .button.fab-account,
+html[data-theme='light'] .button.fab-account-toggle {
   opacity: 0.95;
-  color: white;
+  border: thin solid rgba(255, 140, 0, 1);
+  box-shadow: 0px 0px 18px rgba(255, 140, 0, 0.85);
 }
 
-html[data-theme='light'] .button.network-mainnet {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 0.65), rgba(0, 0, 0, 0.72));
-  border: thin solid rgba(206, 250, 0, 1);
-  box-shadow: 0px 0px 18px rgba(206, 250, 0, 0.85);
-}
-
-html[data-theme='light'] .button.network-preprod {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 0.65), rgba(0, 0, 0, 0.72));
-  border: thin solid rgba(0, 122, 255, 1);
-  box-shadow: 0px 0px 18px rgba(0, 122, 255, 0.85);
-}
-
-html[data-theme='light'] .button.network-preview,
-html[data-theme='light'] .button.network-testnet {
-  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 230, 118, 0.65), rgba(0, 0, 0, 0.72));
-  border: thin solid rgba(0, 230, 118, 1);
-  box-shadow: 0px 0px 18px rgba(0, 230, 118, 0.85);
-}
-
-html[data-theme='light'] .button.network-mainnet:hover,
-html[data-theme='light'] .button.network-preprod:hover,
-html[data-theme='light'] .button.network-preview:hover,
-html[data-theme='light'] .button.network-testnet:hover,
-html[data-theme='light'] .button.network-mainnet[data-active],
-html[data-theme='light'] .button.network-preprod[data-active],
-html[data-theme='light'] .button.network-preview[data-active],
-html[data-theme='light'] .button.network-testnet[data-active] {
+html[data-theme='light'] .button.fab-account:hover,
+html[data-theme='light'] .button.fab-account-toggle:hover,
+html[data-theme='light'] .button.fab-account[data-active] {
   opacity: 1;
-  color: white;
+  box-shadow: 0px 0px 25px rgba(255, 176, 32, 0.9);
 }
 
 /* Overlay testnet rectangle badge — hugs the network name; no full-width bar / layout shift.

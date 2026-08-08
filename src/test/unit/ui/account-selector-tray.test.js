@@ -152,14 +152,27 @@ describe('account-selector tray — behavioral render', () => {
     ).toBeNull();
   });
 
-  test('falls back to a wallet icon before accounts load', async () => {
+  test('the toggle is a static account icon, not the active account avatar', async () => {
+    const { container } = await renderTrays();
+    const toggle = container.querySelector('[data-testid="account-tray-toggle"]');
+    // The toggle renders an SVG glyph (react-icons) and never an avatar <img>,
+    // so it stays fixed while the account options below still show avatars.
+    expect(toggle.querySelector('svg')).toBeTruthy();
+    expect(toggle.querySelector('img')).toBeNull();
+    // Account options do carry avatar images, proving the two are distinct.
+    const option = container.querySelector('[data-testid="account-tray-option-0"]');
+    expect(option.querySelector('img')).toBeTruthy();
+  });
+
+  test('the toggle icon is static even when accounts are empty', async () => {
     const { container } = await renderTrays({
       accounts: {},
       currentAccountIndex: null,
     });
     const toggle = container.querySelector('[data-testid="account-tray-toggle"]');
     expect(toggle).toBeTruthy();
-    // No account options while empty, but the toggle still renders (icon fallback).
+    expect(toggle.querySelector('svg')).toBeTruthy();
+    // No account options while empty, but the static toggle icon still renders.
     expect(
       container.querySelectorAll('[data-testid^="account-tray-option-"]').length
     ).toBe(0);

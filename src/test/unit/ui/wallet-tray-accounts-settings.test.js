@@ -61,6 +61,12 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).toContain('data-testid="wallet-account-tray"');
     expect(traysSrc).toContain('data-testid="account-tray-toggle"');
     expect(traysSrc).toContain('className="button fab-account"');
+    // The toggle shows a static glowing account icon, not the active account's
+    // avatar, so it never morphs when switching accounts.
+    expect(traysSrc).toContain('MdSwitchAccount');
+    expect(traysSrc).toMatch(
+      /account-tray-toggle[\s\S]*MdSwitchAccount/
+    );
     // Network selection moved to Settings — the tray no longer switches networks.
     expect(traysSrc).not.toContain('networkOptions');
     expect(traysSrc).not.toContain('onNetworkSelect');

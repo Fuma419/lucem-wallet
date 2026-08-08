@@ -3400,7 +3400,8 @@ export const createHWAccounts = async (accounts) => {
         paymentAddr: paymentAddrTestnet,
         rewardAddr: rewardAddrTestnet,
       },
-      avatar: Math.random().toString(),
+      // Hardware accounts wear their device's brand logo (set at import).
+      avatar: hwAvatarSeed(index),
     };
     added.push({ index, name });
   }
@@ -3512,6 +3513,21 @@ export const indexToHw = (accountIndex) => {
     id,
     account: parseInt(parts[2], 10),
   };
+};
+
+/** Devices whose brand logo doubles as the account icon (see AvatarLoader). */
+const HW_LOGO_DEVICES = [HW.keystone, HW.ledger, HW.trezor];
+
+/**
+ * Account-icon seed for a hardware account, chosen at import time. Hardware
+ * wallets show their brand logo (Keystone / Ledger / Trezor): the stored avatar
+ * is simply the device id, which `AvatarLoader` maps to the imported logo asset.
+ * Anything without a known logo falls back to a random dicebear seed, matching
+ * software accounts.
+ */
+export const hwAvatarSeed = (accountIndex) => {
+  const { device } = indexToHw(accountIndex);
+  return HW_LOGO_DEVICES.includes(device) ? device : Math.random().toString();
 };
 
 /** Row key for Keystone import UI / duplicate detection (`${account}-standard|ledger`). */

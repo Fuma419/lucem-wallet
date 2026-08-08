@@ -218,31 +218,37 @@ NETWORKS.forEach(
         // eslint-disable-next-line no-console
         console.log(`CI_LIVE_TX_HASH network=${name} hash=${hash}`);
         if (shouldPollTx()) {
+          // Verify with the SAME provider that accepted the submit, so a stale
+          // Koios token never masks a real send with a green run (this is what
+          // used to force the whole stage non-gating).
           const status = await waitForTxStatus({
-            baseUrl: koiosBaseUrl,
-            apiKey: koiosApiKey,
+            providerType,
+            baseUrl: txBaseUrl,
+            apiKey: txApiKey,
             txHash: hash,
-            maxAttempts: 30,
-            delayMs: 2000,
+            // Preprod tx indexing on Blockfrost can lag a minute+; give it room.
+            maxAttempts: 50,
+            delayMs: 3000,
             minConfirmations: 0,
           });
           expect(status.tx_hash.toLowerCase()).toBe(hash.toLowerCase());
           expect(status.num_confirmations).not.toBeNull();
         }
       },
-      180000
+      240000
     );
 
     test(
-      'submitted tx appears in /account_txs history (Koios)',
+      'submitted tx appears in account history (active provider)',
       async () => {
         if (!submittedHash) {
           console.warn('Skipping history check — no submitted tx hash');
           return;
         }
         const row = await waitForTxInAccountHistory({
-          baseUrl: koiosBaseUrl,
-          apiKey: koiosApiKey,
+          providerType,
+          baseUrl: txBaseUrl,
+          apiKey: txApiKey,
           mnemonic: phrase,
           txHash: submittedHash,
           maxAttempts: 30,

@@ -148,3 +148,50 @@ describe('Jenkins integration stage stays gating', () => {
     );
   });
 });
+
+describe('coverage gate is owned by the unit run, not the live-send integration run', () => {
+  // Regression guard for a local/Jenkins divergence: the money-path coverage
+  // floor is enabled `isCi`, so it used to also apply to the integration-only
+  // run — where 15 green live-send tests still failed the stage on unrelated
+  // coverage math (src/api/tx + wallet.js exercised only in the unit suites).
+  const CONFIG_PATH = path.join(__dirname, '../../../jest.config.js');
+
+  const loadConfigWithEnv = (env) => {
+    const touched = ['CI', 'JENKINS_URL', 'GITHUB_ACTIONS', 'LUCEM_RUN_INTEGRATION'];
+    const saved = {};
+    touched.forEach((k) => {
+      saved[k] = process.env[k];
+      delete process.env[k];
+    });
+    Object.assign(process.env, env);
+    let cfg;
+    jest.isolateModules(() => {
+      // eslint-disable-next-line global-require
+      cfg = require(CONFIG_PATH);
+    });
+    touched.forEach((k) => {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    });
+    return cfg;
+  };
+
+  test('CI unit run enforces the money-path coverage threshold', () => {
+    const cfg = loadConfigWithEnv({ JENKINS_URL: 'http://jenkins.local' });
+    expect(cfg.collectCoverage).toBe(true);
+    expect(cfg.coverageThreshold).toBeTruthy();
+    expect(cfg.coverageThreshold['./src/api/tx/']).toBeTruthy();
+  });
+
+  test('CI live-send integration run is exempt from that threshold', () => {
+    const cfg = loadConfigWithEnv({
+      JENKINS_URL: 'http://jenkins.local',
+      LUCEM_RUN_INTEGRATION: '1',
+    });
+    // A green live send must never fail on unit-suite coverage math.
+    expect(cfg.coverageThreshold).toBeUndefined();
+    expect(cfg.collectCoverage).toBeUndefined();
+    // ...and it must still actually run the integration suite.
+    expect(cfg.testPathIgnorePatterns).not.toContain('/src/test/integration/');
+  });
+});

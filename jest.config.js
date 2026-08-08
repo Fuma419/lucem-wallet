@@ -10,8 +10,15 @@ const isCi = Boolean(
 // the current numbers so they pass today and can be ratcheted up over time.
 // This turns the "string-grep gives false confidence" finding into an
 // executable floor: these modules can never silently lose real test coverage.
-const coverageGate = isCi
-  ? {
+//
+// The floor is owned by the FULL unit run (`npm test`), whose suites exercise
+// these modules. The integration run (`npm run test:integration`,
+// LUCEM_RUN_INTEGRATION=1) is a narrow live-send smoke that legitimately touches
+// only a slice of the money path, so it is exempt — otherwise a green live send
+// would still fail CI on unrelated coverage math.
+const coverageGate =
+  isCi && !runIntegration
+    ? {
       collectCoverage: true,
       collectCoverageFrom: [
         'src/api/tx/**/*.js',

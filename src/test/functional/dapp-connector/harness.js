@@ -78,6 +78,31 @@ export function installWindowMessageShim() {
   };
 }
 
+/**
+ * Deliver a message straight to the background onMessage router, bypassing the
+ * content-script proxy. Lets tests assert the background's own authorization
+ * (whitelist gate + trusted-sender check) independently of the proxy, i.e. the
+ * defense-in-depth layer. `sender` defaults to this extension; pass a foreign id
+ * to simulate a spoofed / non-extension sender. Resolves with the background's
+ * response, or `undefined` if the router drops the message.
+ */
+export function sendDirectToBackground(
+  message,
+  sender = { id: chrome.runtime.id }
+) {
+  return new Promise((resolve) => {
+    let answered = false;
+    const settle = (value) => {
+      if (answered) return;
+      answered = true;
+      resolve(value);
+    };
+    dispatchToOnMessage(message, sender, (response) => settle(response));
+    // A dropped message never calls sendResponse; resolve undefined next tick.
+    setTimeout(() => settle(undefined), 25);
+  });
+}
+
 /** Reset the bridge between tests while keeping the routing implementation. */
 export function clearBridge() {
   if (chrome.runtime.sendMessage.mockClear) {

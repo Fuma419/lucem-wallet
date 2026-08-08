@@ -5,8 +5,39 @@ const isCi = Boolean(
   process.env.CI || process.env.JENKINS_URL || process.env.GITHUB_ACTIONS
 );
 
+// Coverage gate for the money-path modules (tx assembly + wallet orchestration).
+// Enforced in CI only so local `npx jest` stays fast; thresholds sit just below
+// the current numbers so they pass today and can be ratcheted up over time.
+// This turns the "string-grep gives false confidence" finding into an
+// executable floor: these modules can never silently lose real test coverage.
+const coverageGate = isCi
+  ? {
+      collectCoverage: true,
+      collectCoverageFrom: [
+        'src/api/tx/**/*.js',
+        'src/api/extension/wallet.js',
+      ],
+      coverageReporters: ['text-summary'],
+      coverageThreshold: {
+        './src/api/tx/': {
+          statements: 75,
+          branches: 60,
+          functions: 85,
+          lines: 75,
+        },
+        './src/api/extension/wallet.js': {
+          statements: 55,
+          branches: 45,
+          functions: 55,
+          lines: 55,
+        },
+      },
+    }
+  : {};
+
 module.exports = {
   ...(isCi ? { maxWorkers: 1 } : {}),
+  ...coverageGate,
   testPathIgnorePatterns: [
     '/node_modules/',
     '/yoroi-frontend/',

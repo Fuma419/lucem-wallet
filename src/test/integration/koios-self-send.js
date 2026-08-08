@@ -5,11 +5,13 @@
 
 const Cardano = require('@emurgo/cardano-serialization-lib-nodejs');
 const { mnemonicToEntropy, validateMnemonic } = require('bip39');
+// Exercise the REAL wallet transaction builder in CI (the production code path),
+// not a parallel reimplementation — so a regression in coin selection, change, or
+// fee alignment fails the live send test instead of hiding behind test-only code.
+const { buildUnsignedSimpleTx } = require('../../api/tx/csl-unsigned-tx');
 
 const HARDEN = 0x80000000;
 const harden = (n) => HARDEN + n;
-
-const TX = { invalid_hereafter: 3600 * 6 };
 
 const PROVIDER = {
   blockfrost: 'blockfrost',
@@ -404,11 +406,37 @@ function normalizeSubmitTxHash(submitRes) {
 }
 
 /**
- * Poll Koios until tx appears in tx_status (optionally with confirmations).
- * @param {{ baseUrl: string, apiKey?: string, txHash: string, maxAttempts?: number, delayMs?: number, minConfirmations?: number }} opts
+ * Blockfrost `/txs/{hash}` returns 404 until the tx is on-chain, then the tx
+ * detail (with block_height). Normalized to the Koios tx_status shape so callers
+ * can treat both providers alike.
+ */
+async function fetchTxStatusBlockfrost(base, txHash, apiKey) {
+  const r = await fetch(`${base}/txs/${txHash}`, {
+    headers: authHeaders(PROVIDER.blockfrost, apiKey),
+  });
+  if (r.status === 404) return null;
+  const text = await r.text();
+  if (!r.ok) {
+    throw new Error(`blockfrost GET /txs/${txHash} ${r.status}: ${text.slice(0, 300)}`);
+  }
+  const detail = JSON.parse(text);
+  return {
+    tx_hash: txHash,
+    // On-chain (has a block) ⇒ at least one confirmation for our purposes.
+    num_confirmations: detail && detail.block_height != null ? 1 : 0,
+    block_height: detail ? detail.block_height : null,
+  };
+}
+
+/**
+ * Poll the active provider until the tx is visible (optionally with
+ * confirmations). Uses Blockfrost when `providerType` is blockfrost, else Koios —
+ * so verification never depends on a provider the submit did not use.
+ * @param {{ providerType?: string, baseUrl: string, apiKey?: string, txHash: string, maxAttempts?: number, delayMs?: number, minConfirmations?: number }} opts
  */
 async function waitForTxStatus(opts) {
   const {
+    providerType = PROVIDER.koios,
     baseUrl,
     apiKey,
     txHash,
@@ -421,30 +449,70 @@ async function waitForTxStatus(opts) {
     throw new Error(`Invalid tx hash for polling: ${h}`);
   }
   for (let i = 0; i < maxAttempts; i += 1) {
-    const rows = await koiosPost(
-      baseUrl,
-      '/tx_status',
-      { _tx_hashes: [h] },
-      apiKey
-    );
-    const row = Array.isArray(rows)
-      ? rows.find(
-          (r) => (r.tx_hash || '').toLowerCase().replace(/^"+|"+$/g, '') === h
-        )
-      : null;
-    if (row && row.num_confirmations != null) {
-      const n = Number(row.num_confirmations);
-      if (n >= minConfirmations) return row;
+    if (providerType === PROVIDER.blockfrost) {
+      const status = await fetchTxStatusBlockfrost(baseUrl, h, apiKey);
+      if (status && Number(status.num_confirmations) >= minConfirmations) {
+        return status;
+      }
+    } else {
+      const rows = await koiosPost(
+        baseUrl,
+        '/tx_status',
+        { _tx_hashes: [h] },
+        apiKey
+      );
+      const row = Array.isArray(rows)
+        ? rows.find(
+            (r) => (r.tx_hash || '').toLowerCase().replace(/^"+|"+$/g, '') === h
+          )
+        : null;
+      if (row && row.num_confirmations != null) {
+        const n = Number(row.num_confirmations);
+        if (n >= minConfirmations) return row;
+      }
     }
     await new Promise((r) => setTimeout(r, delayMs));
   }
   throw new Error(
-    `Tx ${h} not visible in Koios /tx_status after ${maxAttempts} attempts`
+    `Tx ${h} not visible in ${providerType} tx status after ${maxAttempts} attempts`
   );
 }
 
 /**
+ * Sign a canonical CSL `Transaction` (from the real wallet builder) with a single
+ * payment key. Mirrors the app's signing: a vkey witness over the canonical body
+ * hash, assembled back onto the same body + auxiliary data.
+ *
+ * @param {*} CardanoNs
+ * @param {*} unsignedTx - CSL Transaction returned by `buildUnsignedSimpleTx`
+ * @param {*} paymentKey - CSL PrivateKey (account 0 payment key)
+ * @returns {*} signed CSL Transaction
+ */
+function signTxWithPaymentKey(CardanoNs, unsignedTx, paymentKey) {
+  const fixedBody = CardanoNs.FixedTransactionBody.from_bytes(
+    unsignedTx.body().to_bytes()
+  );
+  const txHash = fixedBody.tx_hash();
+  if (typeof fixedBody.free === 'function') fixedBody.free();
+
+  const vkeys = CardanoNs.Vkeywitnesses.new();
+  vkeys.add(CardanoNs.make_vkey_witness(txHash, paymentKey));
+  const witnessSet = CardanoNs.TransactionWitnessSet.new();
+  witnessSet.set_vkeys(vkeys);
+
+  const signed = CardanoNs.Transaction.new(
+    unsignedTx.body(),
+    witnessSet,
+    unsignedTx.auxiliary_data()
+  );
+  signed.set_is_valid(unsignedTx.is_valid());
+  return signed;
+}
+
+/**
  * Build, sign, submit transfer of `sendLovelace` from account 0 to account 1.
+ * Builds with the REAL wallet builder (`buildUnsignedSimpleTx`) so this live test
+ * covers production transaction assembly end to end.
  *
  * @param {{ baseUrl: string, apiKey: string | undefined, mnemonic: string, sendLovelace: string }} opts
  * @returns {Promise<string>} submitted tx hash / id from Koios
@@ -456,29 +524,33 @@ async function buildSignSubmitAccountTransfer(opts) {
     mnemonic,
     sendLovelace,
     providerType = PROVIDER.koios,
+    senderAccountIndex = 0,
     recipientAccountIndex = 1,
     recipientBech32: recipientBech32Opt,
   } = opts;
-  const sender = deriveAccountAddress(mnemonic.trim(), 0);
+  const sender = deriveAccountAddress(mnemonic.trim(), senderAccountIndex);
   const recipient = recipientBech32Opt
     ? {
         address: Cardano.Address.from_bech32(String(recipientBech32Opt).trim()),
         bech32: String(recipientBech32Opt).trim(),
       }
     : deriveAccountAddress(mnemonic.trim(), recipientAccountIndex);
-  const { address, bech32, paymentKey } = sender;
+  const { bech32, paymentKey } = sender;
 
   assertTestnetOnly(baseUrl, bech32, { apiKey, providerType });
   assertTestnetOnly(baseUrl, recipient.bech32, { apiKey, providerType });
 
-  // recipientAccountIndex 0 == sender (and no external recipient): genuine self-transfer.
+  // Same account and no external recipient ⇒ a genuine self-transfer.
   const isSelfTransfer =
-    !recipientBech32Opt && recipientAccountIndex === 0;
+    !recipientBech32Opt && recipientAccountIndex === senderAccountIndex;
   if (!isSelfTransfer && bech32 === recipient.bech32) {
     throw new Error('Sender and recipient must be different addresses.');
   }
 
   const protocolParameters = await fetchProtocolParams(baseUrl, apiKey, providerType);
+  const paymentKeyHashHex = Buffer.from(
+    paymentKey.to_public().hash().to_bytes()
+  ).toString('hex');
 
   for (let submitAttempt = 0; submitAttempt < 3; submitAttempt += 1) {
     const utxoJson =
@@ -490,35 +562,23 @@ async function buildSignSubmitAccountTransfer(opts) {
     }
 
     const utxos = utxoJson.map((u) => utxoToCsl(u, bech32));
-    const utxoCollection = Cardano.TransactionUnspentOutputs.new();
-    for (const u of utxos) utxoCollection.add(u);
 
     const totalInputLovelace = utxoJson.reduce((sum, u) => {
       const lovelace = (u.amount || []).find((a) => a.unit === 'lovelace');
       return sum + BigInt(lovelace?.quantity || '0');
     }, 0n);
     const requestedSend = BigInt(String(sendLovelace));
-    const maxSafeSend = totalInputLovelace > 600000n ? totalInputLovelace - 600000n : 0n;
+    // Leave headroom for the fee plus a valid (min-ADA) change output so a
+    // low-balance test wallet still builds; real balances send the full amount.
+    const maxSafeSend =
+      totalInputLovelace > 2000000n ? totalInputLovelace - 2000000n : 0n;
     if (maxSafeSend <= 0n) {
       throw new Error(`Insufficient ADA balance at ${bech32} to build transfer transaction.`);
     }
     const effectiveSend = requestedSend > maxSafeSend ? maxSafeSend : requestedSend;
 
-    const linearFee = Cardano.LinearFee.new(
-      Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeA),
-      Cardano.BigNum.from_str(protocolParameters.linearFee.minFeeB)
-    );
-
-    const txConfig = Cardano.TransactionBuilderConfigBuilder.new()
-      .fee_algo(linearFee)
-      .pool_deposit(Cardano.BigNum.from_str(protocolParameters.poolDeposit))
-      .key_deposit(Cardano.BigNum.from_str(protocolParameters.keyDeposit))
-      .coins_per_utxo_byte(Cardano.BigNum.from_str(protocolParameters.coinsPerUtxoWord))
-      .max_value_size(parseInt(protocolParameters.maxValSize, 10))
-      .max_tx_size(parseInt(protocolParameters.maxTxSize, 10))
-      .prefer_pure_change(true)
-      .build();
-
+    // Build with the REAL wallet builder (production coin selection / change /
+    // fee alignment / CIP-21 canonicalization), then sign as the app does.
     const outputs = Cardano.TransactionOutputs.new();
     outputs.add(
       Cardano.TransactionOutput.new(
@@ -527,56 +587,17 @@ async function buildSignSubmitAccountTransfer(opts) {
       )
     );
 
-    const invalidHereafter = Cardano.BigNum.from_str(
-      String(Math.floor(Number(protocolParameters.slot)) + TX.invalid_hereafter)
-    );
+    const unsignedTx = buildUnsignedSimpleTx({
+      Cardano,
+      protocolParameters,
+      utxos,
+      outputs,
+      changeAddressBech32: bech32,
+      requiredVkeyHashesHex: [paymentKeyHashHex],
+      auxiliaryData: null,
+    });
 
-    let minFeeFloor = null;
-    let signed;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const txBuilder = Cardano.TransactionBuilder.new(txConfig);
-      for (let i = 0; i < outputs.len(); i += 1) {
-        txBuilder.add_output(outputs.get(i));
-      }
-      txBuilder.add_required_signer(paymentKey.to_public().hash());
-      txBuilder.set_ttl_bignum(invalidHereafter);
-      if (minFeeFloor != null) {
-        txBuilder.set_min_fee(minFeeFloor);
-      }
-      txBuilder.add_inputs_from_and_change(
-        utxoCollection,
-        Cardano.CoinSelectionStrategyCIP2.LargestFirst,
-        Cardano.ChangeConfig.new(address)
-      );
-
-      const txBody = txBuilder.build();
-      const emptyWitness = Cardano.TransactionWitnessSet.new();
-      const unsigned = Cardano.Transaction.new(txBody, emptyWitness, undefined);
-
-      const bodyBytes = unsigned.body().to_bytes();
-      const fixedBody = Cardano.FixedTransactionBody.from_bytes(bodyBytes);
-      const txHash = fixedBody.tx_hash();
-      if (typeof fixedBody.free === 'function') fixedBody.free();
-
-      const vkeys = Cardano.Vkeywitnesses.new();
-      vkeys.add(Cardano.make_vkey_witness(txHash, paymentKey));
-      const witnessSet = Cardano.TransactionWitnessSet.new();
-      witnessSet.set_vkeys(vkeys);
-
-      signed = Cardano.Transaction.new(
-        unsigned.body(),
-        witnessSet,
-        unsigned.auxiliary_data()
-      );
-      signed.set_is_valid(unsigned.is_valid());
-
-      const required = Cardano.min_fee(signed, linearFee);
-      if (txBody.fee().compare(required) >= 0) {
-        break;
-      }
-      minFeeFloor = required;
-    }
-
+    const signed = signTxWithPaymentKey(Cardano, unsignedTx, paymentKey);
     const txHex = Buffer.from(signed.to_bytes()).toString('hex');
     const signedBody = Cardano.FixedTransactionBody.from_bytes(signed.body().to_bytes());
     const signedTxHashHex = Buffer.from(signedBody.tx_hash().to_bytes()).toString('hex');
@@ -606,6 +627,7 @@ async function buildSignSubmitAccountTransfer(opts) {
  */
 async function waitForTxInAccountHistory(opts) {
   const {
+    providerType = PROVIDER.koios,
     baseUrl,
     apiKey,
     mnemonic,
@@ -614,6 +636,38 @@ async function waitForTxInAccountHistory(opts) {
     delayMs = 2000,
   } = opts;
   const h = normalizeSubmitTxHash(txHash).toLowerCase();
+
+  // Blockfrost has no stake-scoped tx feed, but account 0 is always involved
+  // (input + change), so its base-address history is the account's history for
+  // this transfer. Query that when submitting via Blockfrost so verification does
+  // not fall back to a provider the submit never used.
+  if (providerType === PROVIDER.blockfrost) {
+    const { bech32 } = deriveAccountAddress(mnemonic.trim(), 0);
+    for (let i = 0; i < maxAttempts; i += 1) {
+      const r = await fetch(
+        `${baseUrl}/addresses/${encodeURIComponent(bech32)}/transactions?order=desc&count=50`,
+        { headers: authHeaders(PROVIDER.blockfrost, apiKey) }
+      );
+      if (r.status !== 404) {
+        const text = await r.text();
+        if (!r.ok) {
+          throw new Error(
+            `blockfrost GET /addresses/${bech32}/transactions ${r.status}: ${text.slice(0, 300)}`
+          );
+        }
+        const rows = JSON.parse(text);
+        if (Array.isArray(rows)) {
+          const match = rows.find((row) => (row.tx_hash || '').toLowerCase() === h);
+          if (match) return match;
+        }
+      }
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
+    throw new Error(
+      `Tx ${h} not visible in Blockfrost address history after ${maxAttempts} attempts`
+    );
+  }
+
   const { stakeKey } = deriveAccountAddress(mnemonic.trim(), 0);
   const rewardAddr = Cardano.RewardAddress.new(
     0,
@@ -645,7 +699,58 @@ async function waitForTxInAccountHistory(opts) {
  * the wallet history classifies it as "Self transfer".
  */
 async function buildSignSubmitSelfTransfer(opts) {
-  return buildSignSubmitAccountTransfer({ ...opts, recipientAccountIndex: 0 });
+  return buildSignSubmitAccountTransfer({
+    ...opts,
+    senderAccountIndex: 0,
+    recipientAccountIndex: 0,
+  });
+}
+
+/** Total spendable lovelace for a bech32 address from the active provider. */
+async function accountLovelace(providerType, baseUrl, bech32, apiKey) {
+  const utxoJson =
+    providerType === PROVIDER.blockfrost
+      ? await fetchUtxosForAddressBlockfrost(baseUrl, bech32, apiKey)
+      : await fetchUtxosForAddress(baseUrl, bech32, apiKey);
+  return utxoJson.reduce((sum, u) => {
+    const lovelace = (u.amount || []).find((a) => a.unit === 'lovelace');
+    return sum + BigInt(lovelace?.quantity || '0');
+  }, 0n);
+}
+
+/**
+ * Cross-address transfer between account 0 and account 1 that never depletes the
+ * wallet: it sends from whichever account currently holds more ADA to the other.
+ *
+ * A one-directional account0→account1 transfer eventually strands all funds in
+ * account 1 and starves account 0 (which is exactly what drained the CI wallet).
+ * "Ping-pong" bounces the same float back and forth, losing only the network fee
+ * each run, so the live send stays fundable indefinitely — while still exercising
+ * a real payment to a genuinely different address (the user's actual scenario).
+ *
+ * @param {{ baseUrl: string, apiKey?: string, mnemonic: string, sendLovelace: string, providerType?: string }} opts
+ * @returns {Promise<string>} submitted tx hash / id
+ */
+async function buildSignSubmitRoundtrip(opts) {
+  const { baseUrl, apiKey, mnemonic, providerType = PROVIDER.koios } = opts;
+  const a0 = deriveAccountAddress(mnemonic.trim(), 0);
+  const a1 = deriveAccountAddress(mnemonic.trim(), 1);
+  assertTestnetOnly(baseUrl, a0.bech32, { apiKey, providerType });
+  assertTestnetOnly(baseUrl, a1.bech32, { apiKey, providerType });
+
+  const [bal0, bal1] = await Promise.all([
+    accountLovelace(providerType, baseUrl, a0.bech32, apiKey),
+    accountLovelace(providerType, baseUrl, a1.bech32, apiKey),
+  ]);
+  // Spend from the richer account so the transfer is always fundable.
+  const senderAccountIndex = bal0 >= bal1 ? 0 : 1;
+  const recipientAccountIndex = senderAccountIndex === 0 ? 1 : 0;
+
+  return buildSignSubmitAccountTransfer({
+    ...opts,
+    senderAccountIndex,
+    recipientAccountIndex,
+  });
 }
 
 const MAINNET_BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
@@ -692,6 +797,7 @@ module.exports = {
   assertTestnetOnly,
   buildSignSubmitAccountTransfer,
   buildSignSubmitSelfTransfer,
+  buildSignSubmitRoundtrip,
   deriveAccountAddress,
   deriveAccount0Address,
   fetchProtocolParams,

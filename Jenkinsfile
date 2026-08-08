@@ -207,17 +207,20 @@ pipeline {
     }
 
     stage('Integration tests') {
-      // TEMP: integration tests are non-gating. They run against live Koios/Blockfrost
-      // and currently fail on an expired Koios subscription token, which is infra —
-      // not a code regression. Keep running them for signal but never fail the
-      // pipeline or block merges. Re-enable gating by restoring the success/failure
-      // post handlers once the Koios token is renewed.
+      // GATING: live-submits a real 5 tADA transfer built by the PRODUCTION wallet
+      // builder (src/api/tx/csl-unsigned-tx.js#buildUnsignedSimpleTx) on both
+      // testnets — Preview self-send and Preprod account0→account1 — then verifies
+      // each tx via the SAME provider that accepted the submit (Blockfrost when a
+      // project id is set, else Koios). A broken send path fails here and blocks
+      // the merge. Never touches mainnet (URL/addr/key allowlist + mainnet creds
+      // stripped below; a read-only guard asserts the mainnet twin is unchanged).
       steps {
         script {
           publishGithubStatus('Integration tests', 'pending', 'Integration tests are running in Jenkins')
         }
         withCredentials([file(credentialsId: 'lucem-wallet-dotenv', variable: 'LUCEM_ENV_FILE')]) {
           sh '''
+            set -e
             export PATH="${NODE20_DIR}/bin:${PATH}"
             set +x
             set -a
@@ -230,14 +233,24 @@ pipeline {
             unset BLOCKFROST_MAINNET_PROJECT_ID BLOCKFROST_PROJECT_ID_MAINNET \
               KOIOS_API_KEY_MAINNET LUCEM_ALLOW_MAINNET_INTEGRATION \
               LUCEM_INTEGRATION_MAINNET_MNEMONIC || true
-            npm run test:integration --if-present || echo "TEMP: integration tests failed but are non-gating"
+            npm run test:integration
           '''
         }
       }
       post {
-        always {
+        success {
           script {
-            publishGithubStatus('Integration tests', 'success', 'Integration tests temporarily non-gating')
+            publishGithubStatus('Integration tests', 'success', 'Integration tests passed in Jenkins')
+          }
+        }
+        failure {
+          script {
+            publishGithubStatus('Integration tests', 'failure', 'Integration tests failed in Jenkins')
+          }
+        }
+        aborted {
+          script {
+            publishGithubStatus('Integration tests', 'error', 'Integration tests were aborted in Jenkins')
           }
         }
       }

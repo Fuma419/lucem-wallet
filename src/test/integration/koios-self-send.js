@@ -524,10 +524,11 @@ async function buildSignSubmitAccountTransfer(opts) {
     mnemonic,
     sendLovelace,
     providerType = PROVIDER.koios,
+    senderAccountIndex = 0,
     recipientAccountIndex = 1,
     recipientBech32: recipientBech32Opt,
   } = opts;
-  const sender = deriveAccountAddress(mnemonic.trim(), 0);
+  const sender = deriveAccountAddress(mnemonic.trim(), senderAccountIndex);
   const recipient = recipientBech32Opt
     ? {
         address: Cardano.Address.from_bech32(String(recipientBech32Opt).trim()),
@@ -539,9 +540,9 @@ async function buildSignSubmitAccountTransfer(opts) {
   assertTestnetOnly(baseUrl, bech32, { apiKey, providerType });
   assertTestnetOnly(baseUrl, recipient.bech32, { apiKey, providerType });
 
-  // recipientAccountIndex 0 == sender (and no external recipient): genuine self-transfer.
+  // Same account and no external recipient ⇒ a genuine self-transfer.
   const isSelfTransfer =
-    !recipientBech32Opt && recipientAccountIndex === 0;
+    !recipientBech32Opt && recipientAccountIndex === senderAccountIndex;
   if (!isSelfTransfer && bech32 === recipient.bech32) {
     throw new Error('Sender and recipient must be different addresses.');
   }
@@ -698,7 +699,58 @@ async function waitForTxInAccountHistory(opts) {
  * the wallet history classifies it as "Self transfer".
  */
 async function buildSignSubmitSelfTransfer(opts) {
-  return buildSignSubmitAccountTransfer({ ...opts, recipientAccountIndex: 0 });
+  return buildSignSubmitAccountTransfer({
+    ...opts,
+    senderAccountIndex: 0,
+    recipientAccountIndex: 0,
+  });
+}
+
+/** Total spendable lovelace for a bech32 address from the active provider. */
+async function accountLovelace(providerType, baseUrl, bech32, apiKey) {
+  const utxoJson =
+    providerType === PROVIDER.blockfrost
+      ? await fetchUtxosForAddressBlockfrost(baseUrl, bech32, apiKey)
+      : await fetchUtxosForAddress(baseUrl, bech32, apiKey);
+  return utxoJson.reduce((sum, u) => {
+    const lovelace = (u.amount || []).find((a) => a.unit === 'lovelace');
+    return sum + BigInt(lovelace?.quantity || '0');
+  }, 0n);
+}
+
+/**
+ * Cross-address transfer between account 0 and account 1 that never depletes the
+ * wallet: it sends from whichever account currently holds more ADA to the other.
+ *
+ * A one-directional account0→account1 transfer eventually strands all funds in
+ * account 1 and starves account 0 (which is exactly what drained the CI wallet).
+ * "Ping-pong" bounces the same float back and forth, losing only the network fee
+ * each run, so the live send stays fundable indefinitely — while still exercising
+ * a real payment to a genuinely different address (the user's actual scenario).
+ *
+ * @param {{ baseUrl: string, apiKey?: string, mnemonic: string, sendLovelace: string, providerType?: string }} opts
+ * @returns {Promise<string>} submitted tx hash / id
+ */
+async function buildSignSubmitRoundtrip(opts) {
+  const { baseUrl, apiKey, mnemonic, providerType = PROVIDER.koios } = opts;
+  const a0 = deriveAccountAddress(mnemonic.trim(), 0);
+  const a1 = deriveAccountAddress(mnemonic.trim(), 1);
+  assertTestnetOnly(baseUrl, a0.bech32, { apiKey, providerType });
+  assertTestnetOnly(baseUrl, a1.bech32, { apiKey, providerType });
+
+  const [bal0, bal1] = await Promise.all([
+    accountLovelace(providerType, baseUrl, a0.bech32, apiKey),
+    accountLovelace(providerType, baseUrl, a1.bech32, apiKey),
+  ]);
+  // Spend from the richer account so the transfer is always fundable.
+  const senderAccountIndex = bal0 >= bal1 ? 0 : 1;
+  const recipientAccountIndex = senderAccountIndex === 0 ? 1 : 0;
+
+  return buildSignSubmitAccountTransfer({
+    ...opts,
+    senderAccountIndex,
+    recipientAccountIndex,
+  });
 }
 
 const MAINNET_BLOCKFROST_BASE = 'https://cardano-mainnet.blockfrost.io/api/v0';
@@ -745,6 +797,7 @@ module.exports = {
   assertTestnetOnly,
   buildSignSubmitAccountTransfer,
   buildSignSubmitSelfTransfer,
+  buildSignSubmitRoundtrip,
   deriveAccountAddress,
   deriveAccount0Address,
   fetchProtocolParams,

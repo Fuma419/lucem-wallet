@@ -8,7 +8,7 @@ require('dotenv').config();
 const { validateMnemonic } = require('bip39');
 const {
   PROVIDER,
-  buildSignSubmitAccountTransfer,
+  buildSignSubmitRoundtrip,
   buildSignSubmitSelfTransfer,
   deriveAccount0Address,
   deriveAccountAddress,
@@ -87,8 +87,11 @@ const NETWORKS = [
   },
   {
     name: 'Preprod',
-    // Preprod stays an account 0 -> account 1 transfer.
-    transferKind: 'account',
+    // Preprod exercises a real cross-address transfer between account 0 and
+    // account 1, "ping-pong" style: it always spends from the richer account so
+    // the float bounces back and forth instead of draining one side (which used
+    // to strand the whole balance in account 1 and starve the CI wallet).
+    transferKind: 'roundtrip',
     koiosBaseUrl: PREPROD_KOIOS_BASE,
     blockfrostBaseUrl: PREPROD_BLOCKFROST_BASE,
     mnemonicEnv: 'LUCEM_INTEGRATION_PREPROD_MNEMONIC',
@@ -162,10 +165,10 @@ NETWORKS.forEach(
   const isSelfTransfer = transferKind === 'self';
   const buildTransfer = isSelfTransfer
     ? buildSignSubmitSelfTransfer
-    : buildSignSubmitAccountTransfer;
+    : buildSignSubmitRoundtrip;
   const transferLabel = isSelfTransfer
     ? 'account0 self-transfer'
-    : 'account0->account1 transfer';
+    : 'account0<->account1 roundtrip';
 
   describeLive(`${name} — 5 tADA ${transferLabel} (Blockfrost preferred)`, () => {
     test('mnemonic is valid BIP-39', () => {

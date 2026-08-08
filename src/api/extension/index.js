@@ -163,30 +163,15 @@ export const decryptWithPassword = async (password, encryptedKeyHex) => {
   return decryptedHex;
 };
 
-export const getWhitelisted = async () => {
-  const result = await getStorage(STORAGE.whitelisted);
-  return result ? result : [];
-};
-
-export const isWhitelisted = async (_origin) => {
-  const whitelisted = await getWhitelisted();
-  let access = false;
-  if (whitelisted.includes(_origin)) access = true;
-  return access;
-};
-
-export const setWhitelisted = async (origin) => {
-  let whitelisted = await getWhitelisted();
-  whitelisted ? whitelisted.push(origin) : (whitelisted = [origin]);
-  return await setStorage({ [STORAGE.whitelisted]: whitelisted });
-};
-
-export const removeWhitelisted = async (origin) => {
-  const whitelisted = await getWhitelisted();
-  const index = whitelisted.indexOf(origin);
-  whitelisted.splice(index, 1);
-  return await setStorage({ [STORAGE.whitelisted]: whitelisted });
-};
+// dApp origin allowlist lives in its own module (the trust anchor for the
+// background authZ gate + content-script proxy). Re-exported here to keep the
+// api/extension public surface stable.
+export {
+  getWhitelisted,
+  isWhitelisted,
+  setWhitelisted,
+  removeWhitelisted,
+} from './dapp-whitelist';
 
 export const getCurrency = () => getStorage(STORAGE.currency);
 

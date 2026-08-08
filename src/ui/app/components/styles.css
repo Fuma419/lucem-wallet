@@ -646,8 +646,9 @@ html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
   }
 }
 
-/* Account tray — circular avatar FABs (the toggle + each account option).
- * The avatar image fills the FAB, so these rules own the ring/glow only. */
+/* Account tray — circular FABs. Each account option (`fab-account`) is filled
+ * by its avatar image; the toggle (`fab-account-toggle`) holds a static account
+ * icon. Either way these rules own the amber ring + glow only. */
 .button.fab-account,
 .button.fab-account-toggle {
   opacity: 0.85;

@@ -19,6 +19,7 @@ import {
   MdHome,
   MdHowToVote,
   MdOutlineHowToReg,
+  MdSwitchAccount,
 } from 'react-icons/md';
 import AvatarLoader from './avatarLoader';
 import { isSameAccountIndex } from '../utils/accountIndex';
@@ -118,9 +119,6 @@ const WalletTrays = ({
     key,
     info: accounts[key],
   }));
-  const currentAccount = accountEntries.find((entry) =>
-    isSameAccountIndex(currentAccountIndex, accountKeyFor(entry.info, entry.key))
-  );
 
   const path = location.pathname;
   const go = (to) => {
@@ -221,17 +219,14 @@ const WalletTrays = ({
         </Collapse>
         <Button
           {...walletFabBase}
-          overflow="hidden"
           className="button fab-account-toggle"
           onClick={() => setIsAccountTrayOpen(!isAccountTrayOpen)}
           aria-label="Toggle account menu"
           data-testid="account-tray-toggle"
         >
-          {currentAccount ? (
-            <AvatarLoader avatar={currentAccount.info?.avatar} width="100%" />
-          ) : (
-            <Icon as={MdAccountBalanceWallet} boxSize={6} color="white" />
-          )}
+          {/* Static glowing account icon — deliberately not the active
+              account's avatar, so the toggle never morphs when switching. */}
+          <Icon as={MdSwitchAccount} boxSize={7} color="white" />
         </Button>
       </Box>
 

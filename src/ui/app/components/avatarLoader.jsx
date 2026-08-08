@@ -1,13 +1,33 @@
 import { Box, Image } from '@chakra-ui/react';
 import React from 'react';
 import { avatarToImage } from '../../../api/extension';
+import { HW } from '../../../config/config';
+import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
+import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
+import TrezorLogo from '../../../assets/img/trezorLogo.svg';
+
+// Hardware accounts store their device id as the avatar (set at import). Map it
+// to the brand logo so every AvatarLoader call site — tray, accounts list,
+// header, settings — shows the same icon without extra plumbing.
+const HW_DEVICE_LOGOS = {
+  [HW.keystone]: KeystoneLogo,
+  [HW.ledger]: LedgerLogo,
+  [HW.trezor]: TrezorLogo,
+};
 
 const AvatarLoader = ({ avatar, width, smallRobot }) => {
   const [src, setSrc] = React.useState('');
+  const hwLogo = avatar ? HW_DEVICE_LOGOS[avatar] : null;
 
   React.useEffect(() => {
     if (!avatar) {
       setSrc('');
+      return undefined;
+    }
+
+    // Brand logo asset URL — render straight through (no blob / dicebear).
+    if (HW_DEVICE_LOGOS[avatar]) {
+      setSrc(HW_DEVICE_LOGOS[avatar]);
       return undefined;
     }
 
@@ -36,7 +56,9 @@ const AvatarLoader = ({ avatar, width, smallRobot }) => {
       rounded="full"
       overflow="hidden"
       position="relative"
-      bg="blackAlpha.400"
+      // Brand wordmarks are dark on transparent, so give them a light chip and
+      // contain them; dicebear art fills the circle as before.
+      bg={hwLogo ? 'white' : 'blackAlpha.400'}
     >
       {src ? (
         <Image
@@ -44,8 +66,9 @@ const AvatarLoader = ({ avatar, width, smallRobot }) => {
           alt=""
           w="100%"
           h="100%"
-          objectFit="cover"
+          objectFit={hwLogo ? 'contain' : 'cover'}
           objectPosition="center"
+          p={hwLogo ? '14%' : 0}
           draggable={false}
         />
       ) : null}

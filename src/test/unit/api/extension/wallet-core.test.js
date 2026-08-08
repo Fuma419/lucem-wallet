@@ -100,6 +100,7 @@ import {
   getNativeAccounts,
   isHW,
   indexToHw,
+  hwAvatarSeed,
   keystoneImportRowKey,
   getHwAccounts,
   displayUnit,
@@ -308,6 +309,25 @@ describe('indexToHw', () => {
     expect(hw.id).toBe('deadbeef');
     expect(hw.account).toBe(3);
     expect(hw.keystoneDerivation).toBe('ledger');
+  });
+});
+
+describe('hwAvatarSeed', () => {
+  // The account icon for a hardware wallet is its device id, which AvatarLoader
+  // maps to the brand logo. This is what pins the Keystone / Ledger logo at import.
+  test('uses the device id as the avatar for each hardware device', () => {
+    expect(hwAvatarSeed('keystone-deadbeef-3')).toBe('keystone');
+    expect(hwAvatarSeed('keystone-deadbeef-3-vledger')).toBe('keystone');
+    expect(hwAvatarSeed('ledger-4117-2')).toBe('ledger');
+    expect(hwAvatarSeed('trezor-xyz-0')).toBe('trezor');
+  });
+
+  test('falls back to a non-device random seed for software / unknown indexes', () => {
+    const seed = hwAvatarSeed(0);
+    expect(typeof seed).toBe('string');
+    expect(['keystone', 'ledger', 'trezor']).not.toContain(seed);
+    // Two calls should not collide on a fixed sentinel (random dicebear seed).
+    expect(hwAvatarSeed(1)).not.toBe('keystone');
   });
 });
 

@@ -18,6 +18,31 @@ export function isNativePlatform() {
   );
 }
 
+/**
+ * Wrap raw bytes for a binary POST (e.g. the CBOR tx submit) so they survive
+ * Capacitor's `fetch` patch on a device.
+ *
+ * With `CapacitorHttp` enabled, the native bridge rewrites `fetch`. Its
+ * `convertBody` UTF-8 *text-decodes* a `Uint8Array`/`Buffer` request body
+ * (unless the Content-Type is exactly `application/octet-stream`) and the
+ * native `HttpRequestHandler` then re-encodes that string as UTF-8 — so
+ * arbitrary bytes like a serialized transaction get mangled (invalid CBOR ⇒ the
+ * node rejects every submit). A `File`, however, is base64-encoded by the
+ * bridge and base64-DECODED back to raw bytes natively (`bodyType === "file"`),
+ * with the Content-Type preserved. So on a device we hand `fetch` a `File`; on
+ * web / extension (real `fetch`) we keep the raw bytes unchanged.
+ *
+ * @param {Uint8Array|Buffer} bytes - request body bytes
+ * @param {string} contentType - preserved as the File's MIME type
+ * @returns {Uint8Array|Buffer|File}
+ */
+export function nativeSafeBinaryBody(bytes, contentType) {
+  if (isNativePlatform() && typeof File !== 'undefined') {
+    return new File([bytes], 'body.bin', { type: contentType });
+  }
+  return bytes;
+}
+
 /** Look up a registered native plugin from the Capacitor bridge, or null. */
 function nativePlugin(name) {
   if (

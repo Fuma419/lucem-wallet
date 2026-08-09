@@ -2,6 +2,7 @@ import { getNetwork } from './extension';
 import provider from '../config/provider';
 import Loader from './loader';
 import { NETWORK_ID } from '../config/config';
+import { nativeSafeBinaryBody } from '../platform/capacitor';
 import AssetFingerprint from '@emurgo/cip14-js';
 import {
   AddressType,
@@ -754,7 +755,7 @@ export async function koiosSubmitTransaction(txHex, signal) {
       const blockfrostResult = await fetch(blockfrostUrl, {
         method: 'POST',
         headers: blockfrostHeaders(networkKey, {}, true),
-        body: Buffer.from(txHex, 'hex'),
+        body: nativeSafeBinaryBody(Buffer.from(txHex, 'hex'), 'application/cbor'),
         signal,
       });
       const text = await blockfrostResult.text();
@@ -776,7 +777,7 @@ export async function koiosSubmitTransaction(txHex, signal) {
   const rawResult = await fetch(fullUrl, {
     method: 'POST',
     headers: requestHeaders,
-    body: Buffer.from(txHex, 'hex'),
+    body: nativeSafeBinaryBody(Buffer.from(txHex, 'hex'), 'application/cbor'),
     signal,
   });
 

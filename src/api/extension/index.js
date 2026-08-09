@@ -16,6 +16,7 @@ import {
 } from '../../config/config';
 import { POPUP_WINDOW } from '../../config/config';
 import platform from '../../platform';
+import { nativeSafeBinaryBody } from '../../platform/capacitor';
 import { mnemonicToEntropy } from 'bip39';
 import cryptoRandomString from 'crypto-random-string';
 import Loader from '../loader';
@@ -2497,7 +2498,7 @@ export const submitTx = async (tx) => {
     const result = await fetch(network[network.id + 'Submit'], {
       method: 'POST',
       headers: { 'Content-Type': 'application/cbor' },
-      body: Buffer.from(txHex, 'hex'),
+      body: nativeSafeBinaryBody(Buffer.from(txHex, 'hex'), 'application/cbor'),
     });
     if (result.ok) {
       // Balance/UTxO/history caches are now stale — drop them so the next read

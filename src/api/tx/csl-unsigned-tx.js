@@ -91,6 +91,71 @@ function ttlInvalidHereafterBignum(Cardano, protocolParameters) {
 }
 
 /**
+ * Largest-first input selection for a PURE-ADA payment that guarantees the change
+ * output clears min-ADA whenever the wallet can afford it — so CSL never folds an
+ * un-splittable leftover into the fee (the "change dead-zone" that makes a 5-ADA
+ * send from a 6-ADA UTxO cost a full 1-ADA fee even when the wallet holds more
+ * UTxOs).
+ *
+ * CSL's `add_inputs_from_and_change` + LargestFirst stops as soon as the selected
+ * inputs nominally cover output+fee; if the resulting leftover lands in
+ * (0, minChangeUTxO) it is burned into the fee instead of pulling another input.
+ * We instead pull UTxOs largest-first until the running total covers
+ *   target(outputs) + a generous fee headroom + min-ADA-for-a-change-output,
+ * so a proper change output can form. If the entire balance is smaller than that
+ * (the leftover genuinely cannot become a valid UTxO) we return everything and let
+ * the caller's single change pass burn the unavoidable remainder — that is
+ * Cardano's constraint, not an overpay.
+ *
+ * Only valid for the pure-ADA path: callers must ensure neither the outputs nor
+ * any UTxO carries native tokens (multi-asset change min-ADA is bundle-specific
+ * and is left to CSL's RandomImproveMultiAsset).
+ *
+ * @returns {Array} CSL TransactionUnspentOutput[] to add as explicit inputs
+ */
+function selectAdaInputsForViableChange({
+  Cardano,
+  utxos,
+  outputs,
+  changeAddress,
+  protocolParameters,
+}) {
+  let target = Cardano.BigNum.zero();
+  for (let i = 0; i < outputs.len(); i += 1) {
+    target = target.checked_add(outputs.get(i).amount().coin());
+  }
+
+  // Min-ADA for a pure-ADA change output at the change address. Probe with a large
+  // nominal coin so the size estimate (and thus the floor) is conservative.
+  const dataCost = Cardano.DataCost.new_coins_per_byte(
+    Cardano.BigNum.from_str(String(protocolParameters.coinsPerUtxoWord))
+  );
+  const changeProbe = Cardano.TransactionOutput.new(
+    changeAddress,
+    Cardano.Value.new(Cardano.BigNum.from_str('1000000000000'))
+  );
+  const minChange = Cardano.min_ada_for_output(changeProbe, dataCost);
+
+  // Fee headroom for selection only; the exact fee is aligned precisely afterward.
+  const feeHeadroom = Cardano.BigNum.from_str('1000000');
+  const wantViable = target.checked_add(feeHeadroom).checked_add(minChange);
+
+  const sorted = [...utxos].sort((a, b) =>
+    b.output().amount().coin().compare(a.output().amount().coin())
+  );
+
+  const picked = [];
+  let sum = Cardano.BigNum.zero();
+  for (const u of sorted) {
+    if (sum.compare(wantViable) >= 0) break;
+    picked.push(u);
+    sum = sum.checked_add(u.output().amount().coin());
+  }
+  if (picked.length === 0 && sorted.length > 0) picked.push(sorted[0]);
+  return picked;
+}
+
+/**
  * Payment-style unsigned transaction: inputs from UTxO set, explicit outputs, change, TTL.
  * Aligns body fee with `Cardano.min_fee` using ephemeral dummy vkeys (no user keys required).
  *
@@ -157,11 +222,20 @@ export function buildUnsignedSimpleTx({
     }
   }
 
-  // Prefer multi-asset strategies that account for change min-ADA. Plain
-  // LargestFirst cannot select multi-asset UTxOs.
-  const inputSelectionStrategy = containsMultiasset
-    ? Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset
-    : Cardano.CoinSelectionStrategyCIP2.LargestFirst;
+  // Multi-asset transfers keep CSL's coin selection (it balances change min-ADA
+  // across token bundles). Pure-ADA transfers instead use our own largest-first
+  // selection that pulls enough inputs to form a valid change output, avoiding the
+  // dead-zone where CSL burns an un-splittable leftover into the fee. See
+  // `selectAdaInputsForViableChange`.
+  const preSelectedAdaInputs = containsMultiasset
+    ? null
+    : selectAdaInputsForViableChange({
+        Cardano,
+        utxos,
+        outputs,
+        changeAddress,
+        protocolParameters,
+      });
 
   // Use set_min_fee (floor) — never set_fee (exact upper bound) — before change.
   // set_fee + leftover in (fee, minUTxO) throws:
@@ -186,12 +260,27 @@ export function buildUnsignedSimpleTx({
     if (minFeeFloor != null) {
       txBuilder.set_min_fee(minFeeFloor);
     }
-    // Coin selection + change in one step (CSL-recommended; considers change min-ADA).
-    txBuilder.add_inputs_from_and_change(
-      utxoCollection,
-      inputSelectionStrategy,
-      Cardano.ChangeConfig.new(changeAddress)
-    );
+    if (containsMultiasset) {
+      // CSL coin selection + change in one step for multi-asset transfers
+      // (RandomImproveMultiAsset is the only strategy that selects token UTxOs).
+      txBuilder.add_inputs_from_and_change(
+        utxoCollection,
+        Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset,
+        Cardano.ChangeConfig.new(changeAddress)
+      );
+    } else {
+      // Pure-ADA: add our change-aware, largest-first input selection explicitly,
+      // then a single change pass. With `set_min_fee` (floor, not exact) CSL only
+      // burns a leftover into the fee when it is genuinely un-splittable.
+      for (const u of preSelectedAdaInputs) {
+        txBuilder.add_regular_input(
+          u.output().address(),
+          u.input(),
+          u.output().amount()
+        );
+      }
+      txBuilder.add_change_if_needed(changeAddress);
+    }
 
     const txBody = txBuilder.build();
 

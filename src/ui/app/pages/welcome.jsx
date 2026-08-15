@@ -37,7 +37,7 @@ const Welcome = () => {
     >
       <Box
         flexShrink={0}
-        pt="max(1rem, var(--lucem-safe-top))"
+        pt="max(1rem, env(safe-area-inset-top, 0px))"
         px={4}
         pb={1}
         overflow="visible"

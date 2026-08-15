@@ -488,7 +488,7 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
       `/governance/dreps?order=desc&count=${drepLimit}&page=1`,
       options.signal
     );
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     fallbackReason = `Blockfrost DRep list unavailable; using Koios DRep list instead (${error.message})`;
     try {
       drepList = await koiosRequestEnhanced(
@@ -498,7 +498,7 @@ const fetchBlockfrostGovernance = async (networkId, options) => {
         options.signal,
         networkId
       );
-    } catch (koiosError) {
+    } catch (/** @type {any} */ koiosError) {
       fallbackReason = `${fallbackReason}. Koios DRep fallback failed (${koiosError.message})`;
       drepList = [];
     }
@@ -673,7 +673,7 @@ export const fetchGovernanceOverview = async (
 
   try {
     return await fetchBlockfrostGovernance(networkId, options);
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     blockfrostError = error;
   }
 

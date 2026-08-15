@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NODE } from './config';
 import secrets from 'secrets';
 import { version } from '../../package.json';

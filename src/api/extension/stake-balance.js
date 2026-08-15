@@ -86,7 +86,7 @@ export const stakeControlledLovelaceFromAccountInfo = (row) => {
  * Summarize Koios/Blockfrost-shaped `/address_info` into UI-friendly contents.
  * Used by the Accounts multi-address panel (per-payment-address details).
  *
- * @param {unknown} row
+ * @param {*} row
  * @returns {{ lovelace: string, utxoCount: number, nativeAssetCount: number }}
  */
 export const summarizeAddressInfo = (row) => {

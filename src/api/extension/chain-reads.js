@@ -7,7 +7,7 @@ import {
   NETWORKD_ID_NUMBER,
   STORAGE,
 } from '../../config/config';
-import { cacheKey, withCache } from '../cache';
+import { cacheKey, invalidateAll as invalidateReadCache, withCache } from '../cache';
 import { KOIOS_REQUESTS } from '../koios-endpoints';
 import Loader from '../loader';
 import {
@@ -30,8 +30,15 @@ import {
   getRewardAddress,
 } from './addresses';
 import {
+  ADDRESS_ROLE,
   filterPaymentAddressesForAccountsDisplay,
+  getExternalIndices,
+  getInternalIndices,
   listEnabledPaymentAddresses,
+  matchExternalIndicesFromAddresses,
+  matchInternalIndicesFromAddresses,
+  normalizeExternalIndices,
+  normalizeInternalIndices,
 } from './multi-address';
 import {
   aggregateKoiosUtxosByAddress,
@@ -60,7 +67,7 @@ const compareValues = (value1, value2) => {
     }
 
     return 0;
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     // If we catch an underflow error, value1 is less than value2
     return -1;
   }
@@ -205,7 +212,7 @@ export const resolveStakeAddressFromPaymentAddress = async (paymentAddr) => {
     const result = await koiosRequest(request.endpoint, {}, request.body);
     if (result?.error) return null;
     return stakeAddressFromAddressInfo(result);
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.warn(
       'resolveStakeAddressFromPaymentAddress failed:',
       error.message || error
@@ -367,6 +374,7 @@ export const getAccountsControlledStake = async () => {
 
   const request = KOIOS_REQUESTS.getAccountsInfo(stakeAddresses);
   const result = await koiosRequest(request.endpoint, {}, request.body);
+  /** @type {Record<string, { lovelace: string, status: string|null, poolId: string|null }>} */
   const out = {};
 
   if (Array.isArray(result)) {
@@ -421,7 +429,7 @@ export const getEnabledPaymentAddressDetails = async (options = {}) => {
       await activateDiscoveredExternalAddresses(currentIndex, {
         networkKeys: [network.id],
       });
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       console.warn(
         'Accounts address discovery failed:',
         error?.message || error
@@ -448,7 +456,7 @@ export const getEnabledPaymentAddressDetails = async (options = {}) => {
       if (Array.isArray(utxos)) {
         fundedByAddr = aggregateKoiosUtxosByAddress(utxos);
       }
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       console.warn(
         'Accounts funded-address scan failed:',
         error?.message || error
@@ -520,7 +528,7 @@ export const getEnabledPaymentAddressDetails = async (options = {}) => {
           if (row?.address) byAddrInfo.set(row.address, row);
         }
       }
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       console.warn(
         'Accounts address_info enrich failed:',
         error?.message || error
@@ -528,6 +536,7 @@ export const getEnabledPaymentAddressDetails = async (options = {}) => {
     }
   }
 
+  /** @type {any[]} */
   const details = rows.map((row) => {
     const funded = fundedByAddr.get(row.paymentAddr);
     if (funded) {
@@ -602,7 +611,7 @@ const fetchTransactions = async (stakeAddress) => {
       request.body,
       controller.signal
     );
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.warn('getTransactions failed:', error?.message || error);
     return [];
   } finally {
@@ -884,10 +893,8 @@ export const getSpecificUtxo = async (txHash, txId) => {
 
 /**
  *
- * @param {string} amount - cbor value
- * @param {Object} paginate
- * @param {number} paginate.page
- * @param {number} paginate.limit
+ * @param {string} [amount] - cbor value
+ * @param {{ page: number, limit: number }} [paginate]
  * @returns
  */
 export const getUtxos = async (amount = undefined, paginate = undefined) => {
@@ -961,7 +968,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
     let filterValue;
     try {
       filterValue = Loader.Cardano.Value.from_bytes(Buffer.from(amount, 'hex'));
-    } catch (e) {
+    } catch (/** @type {any} */ e) {
       throw APIError.InvalidRequest;
     }
 
@@ -981,7 +988,7 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
 /**
  * Clear stale reserved collateral when the UTxO is no longer on-chain.
  * Mutates `currentAccount[network.id].collateral` in place.
- * @returns {boolean} true when collateral was cleared (caller should persist)
+ * @returns {Promise<boolean>} true when collateral was cleared (caller should persist)
  */
 export const checkCollateral = async (currentAccount, network, checkTx) => {
   const reserved = currentAccount[network.id].collateral;
@@ -1021,12 +1028,12 @@ const decodeCollateralCoinCbor = (hex) => {
   const bytes = Buffer.from(hex, 'hex');
   try {
     return BigInt(Loader.Cardano.BigNum.from_bytes(bytes).to_str());
-  } catch (_) {
+  } catch (/** @type {any} */ _) {
     // fall through — some dApps send a CBOR Value instead of a bare Coin
   }
   try {
     return BigInt(Loader.Cardano.Value.from_bytes(bytes).coin().to_str());
-  } catch (_) {
+  } catch (/** @type {any} */ _) {
     throw new Error('could not parse collateral amount');
   }
 };
@@ -1034,7 +1041,7 @@ const decodeCollateralCoinCbor = (hex) => {
 /**
  * CIP-30 getCollateral (deprecated; prefer CIP-40 collateral return).
  * @param {{ amount?: string|number }|string|number|undefined} params
- * @returns {Promise<import('@emurgo/cardano-serialization-lib-browser').TransactionUnspentOutput[]|null>}
+ * @returns {Promise<any[]|null>}
  */
 export const getCollateral = async (params) => {
   await Loader.load();
@@ -1056,7 +1063,7 @@ export const getCollateral = async (params) => {
     minLovelace = parseCollateralAmount(amountRaw, {
       decodeCoin: decodeCollateralCoinCbor,
     });
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     throw {
       ...APIError.InvalidRequest,
       info: e?.message || APIError.InvalidRequest.info,

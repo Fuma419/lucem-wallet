@@ -19,6 +19,7 @@ import Loader from '../loader';
 import { buildVkeyWitnessSet } from '../tx/sign-witness-set';
 import {
   koiosSubmitTransaction,
+  networkNameToId,
   txToLedger,
   txToTrezor,
 } from '../util';
@@ -46,7 +47,7 @@ const isValidAddressBytes = async (address) => {
     )
       return true;
     return false;
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   try {
     const addr = Loader.Cardano.ByronAddress.from_bytes(address);
     if (
@@ -58,7 +59,7 @@ const isValidAddressBytes = async (address) => {
     )
       return true;
     return false;
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   return false;
 };
 
@@ -80,25 +81,25 @@ export const extractKeyHash = async (address) => {
       Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment_cred().to_keyhash().to_bech32('addr_vkh');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   try {
     const addr = Loader.Cardano.EnterpriseAddress.from_address(
       Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment_cred().to_keyhash().to_bech32('addr_vkh');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   try {
     const addr = Loader.Cardano.PointerAddress.from_address(
       Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment_cred().to_keyhash().to_bech32('addr_vkh');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   try {
     const addr = Loader.Cardano.RewardAddress.from_address(
       Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
     );
     return addr.payment_cred().to_keyhash().to_bech32('stake_vkh');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   throw DataSignError.AddressNotPK;
 };
 
@@ -117,7 +118,7 @@ export const extractKeyOrScriptHash = async (address) => {
       return credential.to_keyhash().to_bech32('addr_vkh');
     if (credential.kind() === 1)
       return credential.to_scripthash().to_bech32('script');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   try {
     const addr = Loader.Cardano.EnterpriseAddress.from_address(
       Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
@@ -127,7 +128,7 @@ export const extractKeyOrScriptHash = async (address) => {
       return credential.to_keyhash().to_bech32('addr_vkh');
     if (credential.kind() === 1)
       return credential.to_scripthash().to_bech32('script');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   try {
     const addr = Loader.Cardano.PointerAddress.from_address(
       Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
@@ -137,7 +138,7 @@ export const extractKeyOrScriptHash = async (address) => {
       return credential.to_keyhash().to_bech32('addr_vkh');
     if (credential.kind() === 1)
       return credential.to_scripthash().to_bech32('script');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   try {
     const addr = Loader.Cardano.RewardAddress.from_address(
       Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'))
@@ -147,7 +148,7 @@ export const extractKeyOrScriptHash = async (address) => {
       return credential.to_keyhash().to_bech32('stake_vkh');
     if (credential.kind() === 1)
       return credential.to_scripthash().to_bech32('script');
-  } catch (e) {}
+  } catch (/** @type {any} */ e) {}
   throw new Error('No address type matched.');
 };
 
@@ -155,7 +156,7 @@ export const verifySigStructure = async (sigStructure) => {
   await Loader.load();
   try {
     Loader.Message.SigStructure.from_bytes(Buffer.from(sigStructure, 'hex'));
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     throw DataSignError.InvalidFormat;
   }
 };
@@ -177,7 +178,7 @@ export const verifyTx = async (tx) => {
       networkId = parseTx.body().outputs().get(0).address().network_id();
     }
     if (networkId != networkNameToId(network.id)) throw Error('Wrong network');
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     throw APIError.InvalidRequest;
   }
 };
@@ -417,7 +418,7 @@ export const signTx = async (
     extraPaymentKeys.forEach((k) => {
       try {
         k.free();
-      } catch (_) {
+      } catch (/** @type {any} */ _) {
         /* ignore */
       }
     });
@@ -437,6 +438,7 @@ export const signTxHW = async (
   const rawTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
   const address = Loader.Cardano.Address.from_bech32(account.paymentAddr);
   const network = address.network_id();
+  /** @type {any} */
   const keys = {
     payment: { hash: null, path: null },
     stake: { hash: null, path: null },
@@ -628,7 +630,7 @@ export const submitTx = async (tx) => {
     const result = await koiosSubmitTransaction(txHex);
     invalidateReadCache();
     return result;
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.error('Koios transaction submission error:', error);
     throw new Error(`Transaction submission failed: ${error.message}`);
   }

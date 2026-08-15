@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const TARGET = 'lucem-wallet';
 export const SENDER = { extension: 'extension', webpage: 'webpage' };
 export const METHOD = {

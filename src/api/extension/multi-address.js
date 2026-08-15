@@ -91,7 +91,7 @@ export const getUserExternalIndices = (account) => {
 export const paymentAddressHasAssets = (row) => {
   try {
     if (bigIntLovelace(row?.lovelace) > 0n) return true;
-  } catch (_) {
+  } catch (/** @type {any} */ _) {
     /* ignore malformed lovelace */
   }
   return (row?.nativeAssetCount ?? 0) > 0;
@@ -147,7 +147,7 @@ export const normalizeInternalIndices = (indices) => {
  * Derive payment key hash + base address for CIP-1852 role/index from an
  * account-level BIP32 public key.
  *
- * @param {object} Cardano - CSL module
+ * @param {*} Cardano - CSL module
  * @param {string} accountPublicKeyHex
  * @param {number} networkId - Shelley network id (1 mainnet, 0 testnet)
  * @param {number} role - 0 external, 1 internal
@@ -387,7 +387,7 @@ export const listEnabledPaymentAddresses = (
  * Look up an enabled payment/change address row by bech32.
  * Used when assigning HD paths to tx inputs (Keystone / HW).
  *
- * @returns {{ role: number, index: number, paymentAddr: string, paymentKeyHash: string } | null}
+ * @returns {{ role: number, index: number|null, paymentAddr: string, paymentKeyHash: string } | null}
  */
 export const findEnabledPaymentByAddress = (
   Cardano,

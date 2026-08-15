@@ -18,7 +18,7 @@ import Loader from './loader';
 
 /**
  * Transaction input index: CSL v15 returns a plain number; older bindings used BigNum with to_str().
- * @param {{ index(): unknown }} input
+ * @param {*} input
  */
 function transactionInputIndex(input) {
   const idx = input.index();
@@ -79,7 +79,7 @@ function keystoneTextField(value) {
   if (typeof value === 'object' && typeof value.toString === 'function') {
     try {
       return String(value.toString('utf8'));
-    } catch (_) {
+    } catch (/** @type {any} */ _) {
       return String(value);
     }
   }
@@ -158,8 +158,8 @@ export function cip1852AccountPath(accountIndex) {
  * Stored / UI label: account index (the CIP-1852 path variable) + the derivation
  * profile in the device's own wording ("Ledger" vs "Cardano Native"). Kept short
  * so it reads well in the account list.
- * @param {number} accountIndex — 0-based CIP-1852 account index
- * @param {KeystoneDerivationProfile} [profile]
+ * @param {number} accountIndex - 0-based CIP-1852 account index
+ * @param {string} [profile]
  */
 export function formatKeystoneCardanoAccountLabel(
   accountIndex,
@@ -177,8 +177,8 @@ export function formatKeystoneCardanoAccountLabel(
  * mean a larger QR and more approvals on the device.
  * @param {object} [opts]
  * @param {string} [opts.origin]
- * @param {number[]} [opts.accountIndices] — 0-based CIP-1852 indices (deduped, sorted). Default `[0]`.
- * @param {number} [opts.accountIndex] — Shorthand for a single index (tests / callers).
+ * @param {number[]} [opts.accountIndices] - 0-based CIP-1852 indices (deduped, sorted). Default `[0]`.
+ * @param {number} [opts.accountIndex] - Shorthand for a single index (tests / callers).
  * @see https://dev.keyst.one/docs/integration-tutorial-advanced/hardware-call
  */
 export function generateCardanoKeystoneKeyDerivationUr({
@@ -492,11 +492,12 @@ function buildKeystoneExtraSigners(tx, account, hw, keyHashes) {
 
 /**
  * Build UR for Keystone to scan (unsigned tx).
- * @param {string} txHex - Full transaction CBOR hex
- * @param {object} account - Current account object from storage
- * @param {{ device: string, id: string, account: number }} hw - From indexToHw
- * @param {Array} utxos - CSL TransactionUnspentOutput[] from getUtxos()
- * @param {string[]} keyHashes - Key hashes requested for signing
+ * @param {object} opts
+ * @param {string} opts.txHex - Full transaction CBOR hex
+ * @param {object} opts.account - Current account object from storage
+ * @param {{ device: string, id: string, account: number }} opts.hw - From indexToHw
+ * @param {Array} opts.utxos - CSL TransactionUnspentOutput[] from getUtxos()
+ * @param {string[]} opts.keyHashes - Key hashes requested for signing
  */
 export async function buildKeystoneCardanoSignRequest({
   txHex,
@@ -549,7 +550,7 @@ export async function buildKeystoneCardanoSignRequest({
       hdPath: cip1852PaymentPath(
         hw.account,
         paymentRow.role ?? 0,
-        paymentRow.index
+        paymentRow.index ?? 0
       ),
       address: addrBech32,
     });

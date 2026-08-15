@@ -33,12 +33,13 @@ export const decryptWithPassword = async (password, encryptedKeyHex) => {
       passwordHex,
       encryptedKeyHex
     );
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     throw new Error(ERROR.wrongPassword);
   }
   return decryptedHex;
 };
 
+/** @param {number} num */
 export const harden = (num) => {
   return 0x80000000 + num;
 };
@@ -73,6 +74,12 @@ const resolveEncryptedRootKey = async (walletId) => {
   throw new Error(`No stored key for wallet ${id}`);
 };
 
+/**
+ * @param {string} password
+ * @param {string|number} accountIndex
+ * @param {string|null} [walletId]
+ * @returns {Promise<{ accountKey: any, paymentKey: any, stakeKey: any }>}
+ */
 export const requestAccountKey = async (password, accountIndex, walletId = null) => {
   await Loader.load();
   const encryptedRootKey = await resolveEncryptedRootKey(walletId);
@@ -80,7 +87,7 @@ export const requestAccountKey = async (password, accountIndex, walletId = null)
   let decryptedHex;
   try {
     decryptedHex = await decryptWithPassword(password, encryptedRootKey);
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     throw ERROR.wrongPassword;
   }
   try {
@@ -89,8 +96,8 @@ export const requestAccountKey = async (password, accountIndex, walletId = null)
     )
       .derive(harden(1852)) // purpose
       .derive(harden(1815)) // coin type
-      .derive(harden(parseInt(accountIndex)));
-  } catch (e) {
+      .derive(harden(Number(accountIndex)));
+  } catch (/** @type {any} */ e) {
     console.error('Key derivation failed after successful decryption:', e);
     throw ERROR.wrongPassword;
   }
@@ -113,7 +120,7 @@ export const changeWalletPassword = async (currentPassword, newPassword) => {
     let decryptedHex;
     try {
       decryptedHex = await decryptWithPassword(currentPassword, encryptedHex);
-    } catch (e) {
+    } catch (/** @type {any} */ e) {
       throw ERROR.wrongPassword;
     }
     let rootKey = Loader.Cardano.Bip32PrivateKey.from_bytes(

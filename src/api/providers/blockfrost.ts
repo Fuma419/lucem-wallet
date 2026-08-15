@@ -185,7 +185,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/address_info' && body && Array.isArray(body._addresses)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const address of body._addresses) {
       const utxos = await fetchBlockfrostAddressUtxos(networkKey, address, signal);
       const utxoSet = utxos.map(blockfrostUtxoToKoios);
@@ -252,7 +252,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/tx_status' && body && Array.isArray(body._tx_hashes)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const txHash of body._tx_hashes) {
       try {
         const tx = await fetchBlockfrostJson(networkKey, `/txs/${txHash}`, signal);
@@ -270,7 +270,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/tx_info' && body && Array.isArray(body._tx_hashes)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const txHash of body._tx_hashes) {
       const txPayload = await fetchBlockfrostJson(networkKey, `/txs/${txHash}`, signal);
       rows.push(blockfrostTxToKoiosTxInfo(txHash, txPayload));
@@ -279,7 +279,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/tx_utxos' && body && Array.isArray(body._tx_hashes)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const txHash of body._tx_hashes) {
       const txUtxos = await fetchBlockfrostJson(networkKey, `/txs/${txHash}/utxos`, signal);
       const inputs = Array.isArray(txUtxos?.inputs)
@@ -312,7 +312,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/tx_metadata' && body && Array.isArray(body._tx_hashes)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const txHash of body._tx_hashes) {
       const metadata = await fetchBlockfrostJson(networkKey, `/txs/${txHash}/metadata`, signal);
       rows.push({ tx_hash: txHash, metadata: Array.isArray(metadata) ? metadata : [] });
@@ -321,7 +321,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/block_info' && body && Array.isArray(body._block_hashes)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const blockHash of body._block_hashes) {
       const block = await fetchBlockfrostJson(networkKey, `/blocks/${blockHash}`, signal);
       rows.push({
@@ -396,7 +396,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/account_addresses' && body && Array.isArray(body._stake_addresses)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const stakeAddress of body._stake_addresses) {
       const addresses: string[] = [];
       let page = 1;
@@ -468,7 +468,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/asset_info' && body && Array.isArray(body._asset_list)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const unit of body._asset_list) {
       try {
         const asset = await fetchBlockfrostJson(
@@ -501,7 +501,7 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint === '/pool_info' && body && Array.isArray(body._pool_bech32_ids)) {
-    const rows = [];
+    const rows: any[] = [];
     for (const poolId of body._pool_bech32_ids) {
       try {
         const pool = await fetchBlockfrostJson(networkKey, `/pools/${poolId}`, signal);

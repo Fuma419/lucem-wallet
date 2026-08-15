@@ -6,7 +6,10 @@ import * as wasm2 from '../wasm/cardano_message_signing/cardano_message_signing.
  */
 
 class Loader {
+  /** @type {any} */
   _wasm = wasm;
+  /** @type {any} */
+  _wasm2;
 
   /**
    * Instantiate message signing library.
@@ -16,7 +19,7 @@ class Loader {
     if (this._wasm2) return;
     try {
       await wasm2.instantiate();
-    } catch (_e) {
+    } catch (/** @type {any} */ _e) {
       // Only happens when running with Jest (Node.js)
     }
 
@@ -26,10 +29,12 @@ class Loader {
     this._wasm2 = wasm2;
   }
 
+  /** @returns {any} */
   get Cardano() {
     return this._wasm;
   }
 
+  /** @returns {any} */
   get Message() {
     return this._wasm2;
   }

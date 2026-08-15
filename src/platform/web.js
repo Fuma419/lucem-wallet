@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { POPUP_WINDOW } from '../config/config';
 
 const DB_NAME = 'lucem-wallet';

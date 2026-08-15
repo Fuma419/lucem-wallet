@@ -72,7 +72,7 @@ export async function withCache(key, fetcher, { ttlMs = DEFAULT_TTL_MS, force = 
   inflight.set(key, promise);
   try {
     return await promise;
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     entries.delete(key);
     throw error;
   } finally {

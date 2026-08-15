@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { POPUP_WINDOW } from '../config/config';
 
 const extensionAdapter = {

@@ -1,7 +1,8 @@
 /**
  * Typed Blockfrost / Koios credential and header helpers.
- * Request adapters stay in `util.js`; this module owns network keys and
- * project-id resolution so a wrong network cannot silently pick a dummy key.
+ * Request adapters live in `providers/blockfrost.ts`; this module owns
+ * network keys and project-id resolution so a wrong network cannot silently
+ * pick a dummy key.
  */
 
 import provider from '../config/provider';

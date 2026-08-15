@@ -32,6 +32,54 @@ export type KoiosTipRow = {
   slot?: string | number;
 };
 
+export type BlockfrostAmount = {
+  unit: string;
+  quantity: string;
+};
+
+export type BlockfrostUtxo = {
+  tx_hash: string;
+  output_index: number;
+  amount?: BlockfrostAmount[];
+  address?: string;
+  stake_address?: string;
+  data_hash?: string | null;
+  inline_datum?: string | null;
+  reference_script_hash?: string | null;
+};
+
+export type KoiosAsset = {
+  policy_id: string;
+  asset_name: string;
+  quantity: string;
+};
+
+export type KoiosUtxoRow = {
+  tx_hash: string;
+  tx_index: number;
+  output_index: number;
+  value: string;
+  asset_list: KoiosAsset[];
+  address?: string | null;
+  stake_addr?: string | null;
+  datum_hash?: string | null;
+  inline_datum?: { value: string } | null;
+  reference_script?: { hash: string } | null;
+};
+
+export type KoiosAccountInfoRow = {
+  stake_address: string;
+  registered: boolean;
+  active?: boolean;
+  pool_id: string | null;
+  withdrawable_amount: string;
+  rewards_available: string;
+  controlled_amount: string;
+  utxo: string;
+  total_balance: string;
+  status: string;
+};
+
 export type KoiosEpochParamsRow = {
   min_fee_a?: string | number;
   min_fee_b?: string | number;

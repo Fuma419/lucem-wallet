@@ -27,7 +27,7 @@ import {
   ListItem,
 } from '@chakra-ui/react';
 import { GoStop } from 'react-icons/go';
-import { ERROR, HW, TAB } from '../../../config/config';
+import { ERROR, HW, TAB, submitErrorMessage } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';
 import {
@@ -230,6 +230,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           } else
             toast({
               title: 'Withdrawal failed',
+              description: submitErrorMessage(signedTx),
               status: 'error',
               duration: 3000,
             });
@@ -337,6 +338,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           } else
             toast({
               title: 'Transaction failed',
+              description: submitErrorMessage(signedTx),
               status: 'error',
               duration: 3000,
             });
@@ -463,6 +465,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           } else
             toast({
               title: 'Transaction failed',
+              description: submitErrorMessage(signedTx),
               status: 'error',
               duration: 3000,
             });

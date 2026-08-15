@@ -147,6 +147,19 @@ export const ERROR = {
     'Lucem can hold up to 30 accounts. Remove one before adding another.',
 };
 
+/** True for the legacy string token or an Error tagged with `code: ERROR.submit`. */
+export const isSubmitError = (error) =>
+  error === ERROR.submit || error?.code === ERROR.submit;
+
+export const submitErrorMessage = (
+  error,
+  fallback = 'Transaction could not be submitted.'
+) => {
+  if (error == null || error === ERROR.submit) return fallback;
+  if (typeof error === 'string') return error;
+  return error.message || fallback;
+};
+
 /** Maximum accounts (across every seed and hardware device) a single vault holds. */
 export const MAX_TOTAL_ACCOUNTS = 30;
 

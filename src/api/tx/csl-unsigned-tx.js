@@ -425,3 +425,88 @@ export function summarizeSendAllTx(Cardano, finalTx) {
   }
   return { fee, sent: sent.to_str() };
 }
+
+const DEFAULT_CERT_TX_RETRIES = 5;
+
+function retryCertTx(error, retriesRemaining, label, totalAttempts) {
+  const nextRetries = retriesRemaining - 1;
+  if (nextRetries <= 0) {
+    throw new Error(
+      `${label} failed after ${totalAttempts} attempts: ${error?.message || String(error)}`
+    );
+  }
+  return nextRetries;
+}
+
+/**
+ * Shared skeleton for certificate / withdrawal / voting transactions.
+ * Callers install certs, withdrawals, or votes via `configure(txBuilder, Cardano)`.
+ *
+ * @param {object} opts
+ * @param {*} opts.Cardano
+ * @param {object} opts.protocolParameters
+ * @param {string} opts.changeAddressBech32
+ * @param {() => Promise<Array>|Array} opts.getUtxos
+ * @param {(txBuilder: *, Cardano: *) => void} opts.configure
+ * @param {number} [opts.retries=5]
+ * @param {string} [opts.emptyUtxosMessage]
+ * @param {string} [opts.label]
+ */
+export async function assembleCertTx({
+  Cardano,
+  protocolParameters,
+  changeAddressBech32,
+  getUtxos,
+  configure,
+  retries = DEFAULT_CERT_TX_RETRIES,
+  emptyUtxosMessage = 'No UTxOs available to pay the transaction fee',
+  label = 'Certificate transaction',
+}) {
+  if (!changeAddressBech32) {
+    throw new Error('Payment address is required to build the transaction');
+  }
+  if (typeof configure !== 'function') {
+    throw new Error('assembleCertTx requires a configure(txBuilder, Cardano) callback');
+  }
+  if (typeof getUtxos !== 'function') {
+    throw new Error('assembleCertTx requires getUtxos()');
+  }
+
+  const totalAttempts = retries;
+  let selectionRetries = retries;
+
+  while (selectionRetries > 0) {
+    try {
+      const txBuilder = Cardano.TransactionBuilder.new(
+        createCslTransactionBuilderConfig(Cardano, protocolParameters)
+      );
+      configure(txBuilder, Cardano);
+      txBuilder.set_ttl_bignum(
+        ttlInvalidHereafterBignum(Cardano, protocolParameters)
+      );
+
+      const utxos = await getUtxos();
+      if (!utxos || utxos.length === 0) {
+        throw new Error(emptyUtxosMessage);
+      }
+
+      const changeAddress = Cardano.Address.from_bech32(changeAddressBech32);
+      const utxoCollection = Cardano.TransactionUnspentOutputs.new();
+      utxos.forEach((utxo) => utxoCollection.add(utxo));
+      txBuilder.add_inputs_from(
+        utxoCollection,
+        Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset
+      );
+      txBuilder.add_change_if_needed(changeAddress);
+
+      const txBody = txBuilder.build();
+      const tx = Cardano.Transaction.new(
+        txBody,
+        Cardano.TransactionWitnessSet.new()
+      );
+      return toCanonicalTransactionCip21(Cardano, tx);
+    } catch (error) {
+      selectionRetries = retryCertTx(error, selectionRetries, label, totalAttempts);
+    }
+  }
+}

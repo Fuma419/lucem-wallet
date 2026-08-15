@@ -25,6 +25,7 @@ body {
 body {
   -webkit-tap-highlight-color: transparent;
   font-size: var(--lucem-font-md);
+  overscroll-behavior-x: none;
 }
 
 html[data-theme='light'],
@@ -63,6 +64,32 @@ html {
   font-size: 100%;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  overscroll-behavior-x: none;
+}
+
+/*
+ * Keep create/import cards out of Android's edge-back swipe strip. That OS
+ * handle is a vertical pill on the left-center of the screen; sitting content
+ * in the gesture inset makes it pop up while tapping seed words.
+ */
+.lucem-setup-inset {
+  padding-left: max(
+    1rem,
+    env(safe-area-inset-left, 0px),
+    env(system-gesture-inset-left, 0px)
+  );
+  padding-right: max(
+    1rem,
+    env(safe-area-inset-right, 0px),
+    env(system-gesture-inset-right, 0px)
+  );
+}
+
+@media (min-width: 48em) {
+  .lucem-setup-inset {
+    padding-left: max(2rem, env(safe-area-inset-left, 0px));
+    padding-right: max(2rem, env(safe-area-inset-right, 0px));
+  }
 }
 
 .lucem-create-wallet-scroll {

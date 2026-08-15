@@ -112,6 +112,38 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(css).toMatch(/\.lucem-create-wallet-scroll/);
   });
 
+  test('create/import shells pad past Android edge-back gesture insets', () => {
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/styles.css'),
+      'utf8'
+    );
+    const createSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/createWallet.jsx'),
+      'utf8'
+    );
+    const hwSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/hw.jsx'),
+      'utf8'
+    );
+    expect(css).toMatch(/overscroll-behavior-x:\s*none/);
+    expect(css).toMatch(/\.lucem-setup-inset/);
+    expect(css).toMatch(/system-gesture-inset-left/);
+    expect(createSrc).toContain('lucem-setup-inset');
+    expect(hwSrc).toContain('lucem-setup-inset');
+  });
+
+  test('Android MainActivity excludes the mid-screen edge-back zone', () => {
+    const src = fs.readFileSync(
+      path.join(
+        __dirname,
+        '../../../android/app/src/main/java/xyz/lucem/wallet/MainActivity.java'
+      ),
+      'utf8'
+    );
+    expect(src).toContain('setSystemGestureExclusionRects');
+    expect(src).toContain('EXCLUSION_HEIGHT_DP');
+  });
+
   test('send.jsx should not pin the primary action bar with position absolute bottom', () => {
     const sendSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/send.jsx'),

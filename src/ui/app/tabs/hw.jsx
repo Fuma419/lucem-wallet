@@ -188,7 +188,7 @@ const App = () => {
         alignItems="center"
         justifyContent={{ base: 'flex-start', md: 'center' }}
         width="100%"
-        px={{ base: 4, md: 8 }}
+        className="lucem-setup-inset"
         pb={{
           base: 'max(1.5rem, env(safe-area-inset-bottom, 0px))',
           md: 12,

@@ -22,6 +22,7 @@ const {
   generateCardanoKeystoneKeyDerivationUr,
   inferKeystoneDerivationProfile,
   inferKeystoneDerivationProfileOrNull,
+  resolveKeystoneConnectProfile,
   parseCip1852AccountIndexFromPath,
   trimKeystoneConnectKeysToOne,
 } = require('../../../api/keystone-cardano');
@@ -60,6 +61,9 @@ describe('keystone-cardano', () => {
     expect(inferKeystoneDerivationProfile('', 'Yoroi export')).toBe(
       KEYSTONE_DERIVATION.standard
     );
+    expect(inferKeystoneDerivationProfile('', 'Cardano Native')).toBe(
+      KEYSTONE_DERIVATION.standard
+    );
     expect(inferKeystoneDerivationProfile('', 'Cardano wallet')).toBe(
       KEYSTONE_DERIVATION.standard
     );
@@ -71,6 +75,24 @@ describe('keystone-cardano', () => {
   test('inferKeystoneDerivationProfileOrNull is null when UR has no hint', () => {
     expect(inferKeystoneDerivationProfileOrNull('', '')).toBe(null);
     expect(inferKeystoneDerivationProfileOrNull('', 'Cardano')).toBe(null);
+  });
+
+  test('resolveKeystoneConnectProfile does not rewrite Ledger metadata as Native', () => {
+    expect(
+      resolveKeystoneConnectProfile(
+        KEYSTONE_DERIVATION.ledger,
+        KEYSTONE_DERIVATION.standard
+      )
+    ).toBe(KEYSTONE_DERIVATION.ledger);
+    expect(
+      resolveKeystoneConnectProfile(null, KEYSTONE_DERIVATION.ledger)
+    ).toBe(KEYSTONE_DERIVATION.ledger);
+    expect(
+      resolveKeystoneConnectProfile(undefined, KEYSTONE_DERIVATION.standard)
+    ).toBe(KEYSTONE_DERIVATION.standard);
+    expect(resolveKeystoneConnectProfile(null, null)).toBe(
+      KEYSTONE_DERIVATION.standard
+    );
   });
 
   test('formatKeystoneCardanoAccountLabel', () => {
@@ -160,6 +182,16 @@ describe('keystone-cardano', () => {
       '0-standard',
       '1-ledger',
     ]);
+  });
+
+  test('preferredKeystoneImportRowKeys honors an explicit Ledger choice', () => {
+    const keys = [
+      { account: 0, rowKey: '0-ledger', profile: KEYSTONE_DERIVATION.ledger },
+      { account: 0, rowKey: '0-standard', profile: KEYSTONE_DERIVATION.standard },
+    ];
+    expect(
+      preferredKeystoneImportRowKeys(keys, KEYSTONE_DERIVATION.ledger)
+    ).toEqual(['0-ledger']);
   });
 
   test('filterKeystoneKeysForRequestedAccount', () => {

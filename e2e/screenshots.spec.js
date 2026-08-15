@@ -443,6 +443,7 @@ test.describe('capture static entry UIs', () => {
       timeout: 60_000,
     });
     await page.locator('button').filter({ has: page.locator('img') }).first().click();
+    await page.getByTestId('keystone-profile-native').click();
     await page.getByRole('button', { name: /^Continue$/i }).click();
     await page
       .getByText(/Step 1 — Keystone scans Lucem/i)

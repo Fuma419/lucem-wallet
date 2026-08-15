@@ -64,7 +64,7 @@ const LEDGER_DERIVATION_HINT =
   /ledger|bit\s*box|bitbox|lbx2|\blbx\b|ledger_live|ledger_legacy/i;
 /** Avoid matching generic “Cardano” in wallet names — that falsely implied standard. */
 const STANDARD_DERIVATION_HINT =
-  /\bicarus\b|\byoroi\b|\bdaedalus\b|\beternl\b|\btyphon\b|\bnami\b|account\.standard\b/i;
+  /\bicarus\b|\byoroi\b|\bdaedalus\b|\beternl\b|\btyphon\b|\bnami\b|account\.standard\b|\bcardano\s*native\b/i;
 
 export function normalizeKeystonePath(path) {
   if (!path || typeof path !== 'string') return '';
@@ -141,6 +141,30 @@ export function inferKeystoneDerivationProfile(note, name) {
   return (
     inferKeystoneDerivationProfileOrNull(note, name) ?? KEYSTONE_DERIVATION.standard
   );
+}
+
+/**
+ * Stored profile for one connect-UR row. Device metadata wins. When the UR
+ * has no hint, use the Lucem/device choice so a Ledger export is not relabeled
+ * Cardano Native (the CIP-1852 path string is the same for both).
+ * @param {KeystoneDerivationProfile | null | undefined} inferred
+ * @param {KeystoneDerivationProfile | null | undefined} forceExportProfile
+ * @returns {KeystoneDerivationProfile}
+ */
+export function resolveKeystoneConnectProfile(inferred, forceExportProfile) {
+  if (inferred === KEYSTONE_DERIVATION.ledger) {
+    return 'ledger';
+  }
+  if (inferred === KEYSTONE_DERIVATION.standard) {
+    return 'standard';
+  }
+  if (forceExportProfile === KEYSTONE_DERIVATION.ledger) {
+    return 'ledger';
+  }
+  if (forceExportProfile === KEYSTONE_DERIVATION.standard) {
+    return 'standard';
+  }
+  return 'standard';
 }
 
 /** Storage suffix so account 0 Ledger vs standard can coexist */
@@ -296,13 +320,18 @@ export function filterKeystoneKeysForRequestedAccounts(keys, requestedIndices) {
 }
 
 /**
- * Default-checked import rows: Cardano Native when both profiles exist for an
- * account. Keystone's on-device receive address is Native unless the user
- * switched the ⋮ menu to Ledger.
+ * Default-checked import rows for the profile the user matched on Keystone.
+ * When both Native and Ledger exist, honor `preferredProfile` — do not rewrite
+ * a Ledger export as Cardano Native.
  * @param {Array<{ account: number, profile: string, rowKey: string }>} keys
+ * @param {string} [preferredProfile]
  * @returns {string[]}
  */
-export function preferredKeystoneImportRowKeys(keys) {
+export function preferredKeystoneImportRowKeys(keys, preferredProfile) {
+  const prefer =
+    preferredProfile === KEYSTONE_DERIVATION.ledger
+      ? KEYSTONE_DERIVATION.ledger
+      : KEYSTONE_DERIVATION.standard;
   const byAccount = new Map();
   for (const k of keys || []) {
     if (!byAccount.has(k.account)) byAccount.set(k.account, []);
@@ -310,8 +339,8 @@ export function preferredKeystoneImportRowKeys(keys) {
   }
   const out = [];
   for (const rows of byAccount.values()) {
-    const native = rows.find((r) => r.profile === KEYSTONE_DERIVATION.standard);
-    out.push((native || rows[0]).rowKey);
+    const match = rows.find((r) => r.profile === prefer);
+    out.push((match || rows[0]).rowKey);
   }
   return out;
 }
@@ -434,7 +463,7 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
     const rows = byAccount.get(account);
     if (!forcedProfile) {
       for (const r of rows) {
-        const profile = r.inferred ?? KEYSTONE_DERIVATION.standard;
+        const profile = resolveKeystoneConnectProfile(r.inferred, null);
         adaAccounts.push({
           account,
           publicKey: r.publicKey,

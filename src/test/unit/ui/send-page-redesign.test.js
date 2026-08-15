@@ -163,11 +163,32 @@ describe('Send page — behavioral render', () => {
   test('mounts the redesigned shell and functional selectors', async () => {
     const { container } = await renderSend();
     expect(container.querySelector('[data-testid="send-page"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="send-page-title"]')?.textContent).toBe(
+      'Send'
+    );
+    expect(
+      container.querySelector('[data-testid="send-network-badge"]')?.textContent
+    ).toMatch(/Preprod/i);
     expect(
       container.querySelector('[data-testid="send-recipient-input"]')
     ).toBeTruthy();
     expect(
       container.querySelector('[data-testid="send-ada-amount"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-available-balance"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-percent-max"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-note-input"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-tokens-empty"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-blocked-reason"]')
     ).toBeTruthy();
   });
 

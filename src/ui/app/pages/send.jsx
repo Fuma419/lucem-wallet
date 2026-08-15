@@ -84,11 +84,53 @@ import AvatarLoader from '../components/avatarLoader';
 import { NumericFormat } from 'react-number-format';
 import Copy from '../components/copy';
 import AssetsModal from '../components/assetsModal';
-import { MdModeEdit, MdVpnKey } from 'react-icons/md';
+import { MdContentPaste, MdModeEdit, MdVpnKey } from 'react-icons/md';
 import ValidateSeedModal from '../components/validateSeedModal';
+import useSurfaceColors from '../hooks/useSurfaceColors';
 import useConstant from 'use-constant';
 import debouncePromise from 'debounce-promise';
 import latest from 'promise-latest';
+
+const NETWORK_LABEL = {
+  [NETWORK_ID.mainnet]: 'Mainnet',
+  [NETWORK_ID.preprod]: 'Preprod',
+  [NETWORK_ID.preview]: 'Preview',
+  [NETWORK_ID.testnet]: 'Testnet',
+};
+
+const stripAdaInput = (raw) => String(raw || '').replace(/[,\s]/g, '');
+
+const adaInputToLovelace = (raw) => {
+  const cleaned = stripAdaInput(raw);
+  if (!cleaned || cleaned === '.') return 0n;
+  try {
+    return BigInt(toUnit(cleaned));
+  } catch {
+    return 0n;
+  }
+};
+
+const reviewBlockedReason = ({
+  accountSignable,
+  address,
+  value,
+  feeError,
+  tx,
+  sendAllRiskAccepted,
+}) => {
+  if (!accountSignable) return 'Import this account’s seed to sign.';
+  if (address?.error) return address.error;
+  if (!address?.result) return 'Enter a recipient address.';
+  if (!value?.sendAll && !value?.ada && !(value?.assets || []).length) {
+    return 'Enter an amount to send.';
+  }
+  if (value?.sendAll && !sendAllRiskAccepted) {
+    return 'Confirm you understand send-all risk.';
+  }
+  if (feeError) return feeError;
+  if (!tx) return 'Preparing transaction…';
+  return '';
+};
 
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
@@ -182,6 +224,8 @@ export const sendStore = {
 const Send = () => {
   const isMounted = useIsMounted();
   const settings = useStoreState((state) => state.settings.settings);
+  const { pageBg, pageFg, mutedFg, subtleFg, inputBg, yellowLink } =
+    useSurfaceColors();
   const [address, setAddress] = [
     useStoreState((state) => state.globalModel.sendStore.address),
     useStoreActions((actions) => actions.globalModel.sendStore.setAddress),
@@ -282,7 +326,6 @@ const Send = () => {
   }, [tx, toast]);
   const [isLoading, setIsLoading] = React.useState(true);
   const focus = React.useRef(false);
-  const background = useColorModeValue('yellow.500', 'yellow.500');
   const [sendAllRiskAccepted, setSendAllRiskAccepted] = React.useState(false);
   // Software accounts restored from a sterilized backup have metadata but no
   // vault key. They can *build* a tx and then die at sign with
@@ -602,6 +645,71 @@ const Send = () => {
   }));
   const feeError = fee.error ? String(fee.error) : '';
   const actionLabel = value.sendAll ? 'Review send all' : 'Review transaction';
+  const availableLovelace = BigInt(txInfo.balance?.lovelace || '0');
+  const availableAda = displayUnit(availableLovelace.toString()).toString();
+  const amountLovelace = adaInputToLovelace(value.ada);
+  const minUtxo = BigInt(txInfo.protocolParameters?.minUtxo || '0');
+  const amountTooSmall =
+    !value.sendAll && amountLovelace > 0n && minUtxo > 0n && amountLovelace < minUtxo;
+  const amountTooLarge =
+    !value.sendAll && amountLovelace > 0n && amountLovelace > availableLovelace;
+  const feeReady = Boolean(fee.fee && fee.fee !== '0' && /^\d+$/.test(String(fee.fee)));
+  const isPreparing = Boolean(
+    !fee.fee &&
+      !feeError &&
+      address.result &&
+      !address.error &&
+      (value.ada || value.assets.length > 0)
+  );
+  const blockedReason = reviewBlockedReason({
+    accountSignable,
+    address,
+    value,
+    feeError,
+    tx,
+    sendAllRiskAccepted,
+  });
+  const networkLabel =
+    NETWORK_LABEL[settings.network?.id] || settings.network?.id || 'Network';
+  const isMainnet = settings.network?.id === NETWORK_ID.mainnet;
+  const resolvedHandle =
+    address.display &&
+    String(address.display).startsWith('$') &&
+    address.result &&
+    !address.error
+      ? address.result
+      : '';
+
+  const applyAdaShare = (numerator, denominator) => {
+    if (value.sendAll || isLoading || availableLovelace <= 0n) return;
+    let share = (availableLovelace * BigInt(numerator)) / BigInt(denominator);
+    // "Max" on a regular send leaves a small fee headroom so change can form.
+    if (numerator === denominator && share > 200000n) share -= 200000n;
+    const display = displayUnit(share.toString()).toString();
+    triggerTxUpdate(() =>
+      setValue({
+        ...value,
+        ada: display,
+        personalAda: display,
+      })
+    );
+  };
+
+  const openReview = () => {
+    if (!accountSignable) return;
+    if (blockedReason && blockedReason !== 'Preparing transaction…') return;
+    if (!tx) return;
+    const idx = account.current?.index;
+    if (
+      idx != null &&
+      isHW(idx) &&
+      indexToHw(idx).device === HW.keystone
+    ) {
+      void startKeystoneQrSign();
+      return;
+    }
+    ref.current?.openModal(idx);
+  };
 
   return (
     <>
@@ -615,268 +723,314 @@ const Send = () => {
         position="relative"
         w="full"
         maxW="100%"
-        bg="black"
-        color="white"
+        bg={pageBg}
+        color={pageFg}
         overflow="hidden"
-        className="lucem-wallet-main-column"
+        className="lucem-wallet-main-column lucem-settings-shell"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            const tag = (e.target && e.target.tagName) || '';
+            if (tag === 'TEXTAREA') return;
+            if (!blockedReason && tx) {
+              e.preventDefault();
+              openReview();
+            }
+          }
+        }}
       >
-        {/* Edge glow */}
-        <Box
-          position="absolute"
-          inset="0"
-          pointerEvents="none"
-          zIndex={1}
-          sx={{
-            boxShadow: 'inset 0 0 60px 8px rgba(200,170,255,0.07), inset 0 0 120px 20px rgba(100,80,200,0.04)',
-          }}
-        />
         {txInfo.protocolParameters && isLoading ? (
-          <Box
+          <Flex
             flex="1"
             minH="40vh"
             width="full"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
+            align="center"
+            justify="center"
+            direction="column"
+            gap={3}
           >
-            <Spinner color="yellow" speed="0.5s" />
-          </Box>
+            <Spinner color="yellow.400" speed="0.5s" />
+            <Text fontSize="sm" color={mutedFg} data-testid="send-loading-copy">
+              Loading your wallet…
+            </Text>
+          </Flex>
         ) : (
           <>
-            <IconButton
-              position="absolute"
-              top={3}
-              left={3}
-              zIndex={2}
-              rounded="md"
-              onClick={() => navigate('/wallet', { replace: true })}
-              variant="ghost"
-              color="whiteAlpha.900"
-              _hover={{ bg: 'whiteAlpha.100' }}
-              icon={<ChevronLeftIcon boxSize="6" />}
-              aria-label="Go back"
-            />
+            <Flex
+              align="center"
+              px={{ base: 3, md: 5 }}
+              pt="calc(0.75rem + env(safe-area-inset-top, 0px))"
+              pb={2}
+              gap={2}
+            >
+              <IconButton
+                rounded="xl"
+                onClick={() => navigate('/wallet', { replace: true })}
+                variant="ghost"
+                color={pageFg}
+                _hover={{ bg: 'whiteAlpha.100' }}
+                icon={<ChevronLeftIcon boxSize="6" />}
+                aria-label="Go back"
+              />
+              <Text
+                flex="1"
+                textAlign="center"
+                fontSize="xl"
+                fontWeight="bold"
+                data-testid="send-page-title"
+              >
+                Send
+              </Text>
+              <Text
+                as="span"
+                data-testid="send-network-badge"
+                fontSize="xs"
+                fontWeight="bold"
+                px={2.5}
+                py={1}
+                rounded="full"
+                bg={isMainnet ? 'red.500' : 'whiteAlpha.200'}
+                color={isMainnet ? 'white' : yellowLink}
+                letterSpacing="0.04em"
+              >
+                {networkLabel}
+              </Text>
+            </Flex>
+
             <Box
               flex="1"
               minH={0}
               overflowY="auto"
               w="full"
-              display="flex"
-              flexDirection="column"
-              alignItems="center"
-              px={{ base: 2, md: 4 }}
-              pt={6}
+              px={{ base: 4, md: 6 }}
+              pt={1}
               pb={4}
             >
-            <Box
-              display="flex"
-              alignItems="center"
-              flexDirection="column"
-              justifyContent="flex-start"
-              width={{ base: '94%', md: '80%' }}
-              maxW="560px"
-              rounded="3xl"
-              bg="whiteAlpha.50"
-              borderWidth="1px"
-              borderColor="whiteAlpha.200"
-              px={{ base: 4, md: 6 }}
-              py={5}
-            >
-              <AddressPopup
-                setAddress={setAddress}
-                address={address}
-                removeAllAssets={removeAllAssets}
-                triggerTxUpdate={triggerTxUpdate}
-                txInfo={txInfo}
-                isLoading={isLoading}
-              />
-              {address.error && (
-                <Text
-                  mb={-2}
-                  mt={1}
-                  width="full"
-                  textAlign="left"
-                  color="red.300"
-                >
-                  {address.error}
-                </Text>
-              )}
-
-              <Box height="5" />
-              <Flex width="96%" justifyContent="space-between" alignItems="center">
-                <Text fontSize="xs" opacity={0.8}>
-                  Amount
-                </Text>
-                <Button
-                  data-testid="send-all-toggle"
-                  size="xs"
-                  colorScheme={value.sendAll ? 'red' : 'yellow'}
-                  variant={value.sendAll ? 'solid' : 'outline'}
-                  isDisabled={isLoading}
-                  onClick={() => setSendAllMode(!value.sendAll)}
-                >
-                  {value.sendAll ? 'Disable send all' : 'Send all'}
-                </Button>
-              </Flex>
-              <Box height="2" />
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <InputGroup size="sm" flex={3}>
-                  <InputLeftElement
-                    children={
-                      <Box pl={4}>
-                        {!isLoading ? (
-                          <Box>{settings.adaSymbol}</Box>
-                        ) : (
-                          <Spinner
-                            color="yellow"
-                            speed="0.5s"
-                            boxSize="9px"
-                            size="xs"
-                          />
-                        )}
-                      </Box>
-                    }
-                  />
-                  <NumericFormat
-                    data-testid="send-ada-amount"
-                    pl="10"
-                    allowNegative={false}
-                    thousandsGroupStyle="thousand"
-                    value={value.ada}
-                    decimalSeparator="."
-                    displayType="input"
-                    type="text"
-                    thousandSeparator={true}
-                    fixedDecimalScale={true}
-                    decimalScale={6}
-                    onInput={(e) => {
-                      const val = e.target.value;
-                      value.ada = val;
-                      value.personalAda = val;
-                      const v = value;
-                      triggerTxUpdate(() =>
-                        setValue({
-                          ...v,
-                        })
-                      );
-                    }}
-                    variant="filled"
-                    isDisabled={isLoading || value.sendAll}
-                    isInvalid={
-                      !value.sendAll &&
-                      value.ada &&
-                      (BigInt(toUnit(value.ada)) <
-                        BigInt(txInfo.protocolParameters.minUtxo) ||
-                      BigInt(toUnit(value.ada)) >
-                        BigInt(txInfo.balance.lovelace || '0'))
-                    }
-                    onFocus={() => (focus.current = true)}
-                    placeholder="0.000000"
-                    customInput={Input}
-                  />
-                </InputGroup>
-                <Box w={4} />
-                <AssetsSelector
-                  addAssets={addAssets}
-                  assets={txInfo.balance.assets}
-                  setValue={setValue}
-                  value={value}
-                  isSendAll={value.sendAll}
-                />
-              </Stack>
-              {value.sendAll && (
-                <Box
-                  data-testid="send-all-warning"
-                  mt={3}
-                  width="96%"
-                  borderWidth="1px"
-                  borderColor="red.300"
-                  bg="red.900"
-                  rounded="md"
-                  px={3}
-                  py={2}
-                >
-                  <Text fontSize="xs" color="red.100" mb={2}>
-                    Send all attempts to transfer every spendable ADA and token from this account. Transactions are irreversible and a wrong address can permanently lose funds.
-                  </Text>
-                  <Checkbox
-                    size="sm"
-                    colorScheme="red"
-                    isChecked={sendAllRiskAccepted}
-                    onChange={(e) => setSendAllRiskAccepted(e.target.checked)}
-                  >
-                    <Text fontSize="xs" color="red.100">
-                      I understand this is a high-risk action
-                    </Text>
-                  </Checkbox>
-                </Box>
-              )}
-              <Box height="4" />
-              <Box
-                width={'96%'}
-                display={'flex'}
-                alignItems={'center'}
-                justifyContent={'center'}
-              >
-                <InputGroup size="sm">
-                  <InputLeftElement children={<Icon as={MdModeEdit} />} />
-                  <Input
-                    value={message}
-                    onInput={(e) => {
-                      const msg = e.target.value;
-                      triggerTxUpdate(() => setMessage(msg));
-                    }}
-                    size={'sm'}
-                    variant={'flushed'}
-                    placeholder="Optional message"
-                    fontSize={'xs'}
-                  />
-                </InputGroup>
-              </Box>
-              <Box height="4" />
-              <Box
-                w="full"
-                sx={{
-                  height: value.sendAll ? 'auto' : 'min(200px, 35vh)',
-                  '@supports (height: 100dvh)': {
-                    height: value.sendAll ? 'auto' : 'min(200px, 32dvh)',
-                  },
-                }}
-              >
-                {value.sendAll ? (
-                  <Box
-                    mt={1}
-                    width="96%"
-                    borderWidth="1px"
-                    borderColor="whiteAlpha.200"
-                    rounded="md"
-                    px={3}
-                    py={2}
+              <Stack spacing={4} w="full" maxW="sm" mx="auto">
+                <Box className="lucem-inset-surface" rounded="3xl" p={4}>
+                  <Text
                     fontSize="xs"
-                    opacity={0.9}
+                    fontWeight="bold"
+                    letterSpacing="0.06em"
+                    textTransform="uppercase"
+                    color={subtleFg}
+                    mb={2}
                   >
-                    Sending all wallet assets ({value.assets.length} token
-                    {value.assets.length === 1 ? '' : 's'}) to the destination.
-                  </Box>
-                ) : (
-                  <Scrollbars
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                    }}
-                  >
-                    <Box
-                      display="flex"
-                      width="full"
-                      flexWrap="wrap"
-                      paddingRight="2"
+                    To
+                  </Text>
+                  <AddressPopup
+                    setAddress={setAddress}
+                    address={address}
+                    removeAllAssets={removeAllAssets}
+                    triggerTxUpdate={triggerTxUpdate}
+                    txInfo={txInfo}
+                    isLoading={isLoading}
+                  />
+                  {resolvedHandle ? (
+                    <Text
+                      mt={2}
+                      fontSize="xs"
+                      color={mutedFg}
+                      data-testid="send-handle-resolved"
                     >
+                      Resolves to{' '}
+                      <Box as="span" fontFamily="mono">
+                        {`${resolvedHandle.slice(0, 12)}…${resolvedHandle.slice(-8)}`}
+                      </Box>
+                    </Text>
+                  ) : null}
+                  {address.error ? (
+                    <Text
+                      mt={2}
+                      fontSize="sm"
+                      color="red.400"
+                      data-testid="send-address-error"
+                    >
+                      {address.error}
+                    </Text>
+                  ) : null}
+                </Box>
+
+                <Box className="lucem-inset-surface" rounded="3xl" p={4}>
+                  <Flex justify="space-between" align="center" mb={2}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="bold"
+                      letterSpacing="0.06em"
+                      textTransform="uppercase"
+                      color={subtleFg}
+                    >
+                      Amount
+                    </Text>
+                    <Text
+                      fontSize="xs"
+                      color={mutedFg}
+                      data-testid="send-available-balance"
+                    >
+                      Available {availableAda} {settings.adaSymbol}
+                    </Text>
+                  </Flex>
+                  <InputGroup size="lg">
+                    <InputLeftElement
+                      h="56px"
+                      children={
+                        isLoading ? (
+                          <Spinner color="yellow.400" size="xs" />
+                        ) : (
+                          <Text fontWeight="bold">{settings.adaSymbol}</Text>
+                        )
+                      }
+                    />
+                    <NumericFormat
+                      data-testid="send-ada-amount"
+                      className="lucem-send-amount"
+                      h="56px"
+                      pl="12"
+                      allowNegative={false}
+                      thousandsGroupStyle="thousand"
+                      value={value.ada}
+                      decimalSeparator="."
+                      displayType="input"
+                      type="text"
+                      thousandSeparator={true}
+                      fixedDecimalScale={true}
+                      decimalScale={6}
+                      onInput={(e) => {
+                        const val = e.target.value;
+                        value.ada = val;
+                        value.personalAda = val;
+                        const v = value;
+                        triggerTxUpdate(() => setValue({ ...v }));
+                      }}
+                      variant="filled"
+                      bg={inputBg}
+                      isDisabled={isLoading || value.sendAll}
+                      isInvalid={amountTooSmall || amountTooLarge}
+                      onFocus={() => (focus.current = true)}
+                      placeholder="0.000000"
+                      customInput={Input}
+                      fontSize="xl"
+                      fontWeight="semibold"
+                      rounded="xl"
+                    />
+                  </InputGroup>
+                  {amountTooSmall ? (
+                    <Text mt={2} fontSize="xs" color="red.400" data-testid="send-amount-hint">
+                      Below the minimum ADA this output needs.
+                    </Text>
+                  ) : null}
+                  {amountTooLarge ? (
+                    <Text mt={2} fontSize="xs" color="red.400" data-testid="send-amount-hint">
+                      Exceeds the available balance.
+                    </Text>
+                  ) : null}
+                  {!value.sendAll ? (
+                    <Flex mt={3} gap={2} wrap="wrap">
+                      {[
+                        { label: '25%', n: 1, d: 4, id: 'send-percent-25' },
+                        { label: '50%', n: 1, d: 2, id: 'send-percent-50' },
+                        { label: '75%', n: 3, d: 4, id: 'send-percent-75' },
+                        { label: 'Max', n: 1, d: 1, id: 'send-percent-max' },
+                      ].map((chip) => (
+                        <Button
+                          key={chip.id}
+                          data-testid={chip.id}
+                          size="xs"
+                          variant="outline"
+                          rounded="full"
+                          isDisabled={isLoading || availableLovelace <= 0n}
+                          onClick={() => applyAdaShare(chip.n, chip.d)}
+                        >
+                          {chip.label}
+                        </Button>
+                      ))}
+                      <Button
+                        data-testid="send-all-toggle"
+                        size="xs"
+                        rounded="full"
+                        colorScheme={value.sendAll ? 'red' : 'gray'}
+                        variant={value.sendAll ? 'solid' : 'ghost'}
+                        isDisabled={isLoading}
+                        onClick={() => setSendAllMode(!value.sendAll)}
+                        ml="auto"
+                      >
+                        Send all
+                      </Button>
+                    </Flex>
+                  ) : (
+                    <Flex mt={3} justify="flex-end">
+                      <Button
+                        data-testid="send-all-toggle"
+                        size="xs"
+                        rounded="full"
+                        colorScheme="red"
+                        isDisabled={isLoading}
+                        onClick={() => setSendAllMode(false)}
+                      >
+                        Disable send all
+                      </Button>
+                    </Flex>
+                  )}
+                  {value.sendAll && (
+                    <Box
+                      data-testid="send-all-warning"
+                      mt={3}
+                      borderWidth="1px"
+                      borderColor="red.400"
+                      bg="red.900"
+                      color="red.100"
+                      rounded="xl"
+                      px={3}
+                      py={3}
+                    >
+                      <Text fontSize="xs" mb={2}>
+                        Send all attempts to transfer every spendable ADA and token from this account. Transactions are irreversible and a wrong address can permanently lose funds.
+                      </Text>
+                      <Checkbox
+                        size="sm"
+                        colorScheme="red"
+                        isChecked={sendAllRiskAccepted}
+                        onChange={(e) => setSendAllRiskAccepted(e.target.checked)}
+                      >
+                        <Text fontSize="xs">
+                          I understand this is a high-risk action
+                        </Text>
+                      </Checkbox>
+                    </Box>
+                  )}
+                </Box>
+
+                <Box className="lucem-inset-surface" rounded="3xl" p={4}>
+                  <Flex justify="space-between" align="center" mb={2}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="bold"
+                      letterSpacing="0.06em"
+                      textTransform="uppercase"
+                      color={subtleFg}
+                    >
+                      Tokens
+                    </Text>
+                    <AssetsSelector
+                      addAssets={addAssets}
+                      assets={txInfo.balance.assets}
+                      setValue={setValue}
+                      value={value}
+                      isSendAll={value.sendAll}
+                    />
+                  </Flex>
+                  {value.sendAll ? (
+                    <Text fontSize="sm" color={mutedFg}>
+                      Sending all wallet assets ({value.assets.length} token
+                      {value.assets.length === 1 ? '' : 's'}) to the destination.
+                    </Text>
+                  ) : value.assets.length === 0 ? (
+                    <Text fontSize="sm" color={mutedFg} data-testid="send-tokens-empty">
+                      No tokens selected. ADA-only is fine.
+                    </Text>
+                  ) : (
+                    <Flex wrap="wrap" gap={2}>
                       {value.assets.map((asset, index) => (
-                        <Box key={index}>
+                        <Box key={asset.unit || index}>
                           <AssetBadge
                             onRemove={() => {
                               removeAsset(asset);
@@ -898,26 +1052,97 @@ const Send = () => {
                           />
                         </Box>
                       ))}
+                    </Flex>
+                  )}
+                </Box>
+
+                <Box className="lucem-inset-surface" rounded="3xl" p={4}>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="bold"
+                    letterSpacing="0.06em"
+                    textTransform="uppercase"
+                    color={subtleFg}
+                    mb={2}
+                  >
+                    Note
+                    <Box as="span" fontWeight="normal" ml={2} color={mutedFg}>
+                      optional
                     </Box>
-                  </Scrollbars>
-                )}
-              </Box>
-            </Box>
+                  </Text>
+                  <InputGroup>
+                    <InputLeftElement children={<Icon as={MdModeEdit} color={mutedFg} />} />
+                    <Input
+                      value={message}
+                      onInput={(e) => {
+                        const msg = e.target.value;
+                        triggerTxUpdate(() => setMessage(msg));
+                      }}
+                      variant="filled"
+                      bg={inputBg}
+                      rounded="xl"
+                      placeholder="Optional message (on-chain metadata)"
+                      fontSize="sm"
+                      data-testid="send-note-input"
+                    />
+                  </InputGroup>
+                </Box>
+              </Stack>
             </Box>
 
             <Box
               flexShrink={0}
               w="full"
-              py={3}
-              px={2}
-              pb="calc(0.75rem + env(safe-area-inset-bottom, 0px))"
+              px={{ base: 4, md: 6 }}
+              pt={3}
+              pb="calc(0.85rem + env(safe-area-inset-bottom, 0px))"
               borderTopWidth="1px"
               borderTopColor="whiteAlpha.100"
               display="flex"
               alignItems="center"
               justifyContent="center"
               flexDirection="column"
+              bg={pageBg}
             >
+              {(feeReady || isPreparing) && (
+                <Flex
+                  data-testid="send-fee-preview"
+                  w="full"
+                  maxW="sm"
+                  mb={3}
+                  px={1}
+                  justify="space-between"
+                  fontSize="sm"
+                  color={mutedFg}
+                >
+                  <Text>Network fee</Text>
+                  <Text fontWeight="semibold" color={pageFg}>
+                    {isPreparing
+                      ? 'Estimating…'
+                      : `${displayUnit(fee.fee).toString()} ${settings.adaSymbol}`}
+                  </Text>
+                </Flex>
+              )}
+              {feeReady && amountLovelace > 0n ? (
+                <Flex
+                  data-testid="send-total-preview"
+                  w="full"
+                  maxW="sm"
+                  mb={3}
+                  px={1}
+                  justify="space-between"
+                  fontSize="sm"
+                  color={mutedFg}
+                >
+                  <Text>Total leaving wallet</Text>
+                  <Text fontWeight="bold" color={pageFg}>
+                    {displayUnit(
+                      (amountLovelace + BigInt(fee.fee)).toString()
+                    ).toString()}{' '}
+                    {settings.adaSymbol}
+                  </Text>
+                </Flex>
+              ) : null}
               {!accountSignable && (
                 <Alert
                   data-testid="send-needs-seed-alert"
@@ -986,18 +1211,26 @@ const Send = () => {
                   </AlertDescription>
                 </Alert>
               )}
+              {blockedReason && !isPreparing ? (
+                <Text
+                  data-testid="send-blocked-reason"
+                  fontSize="xs"
+                  color={mutedFg}
+                  mb={2}
+                  textAlign="center"
+                  maxW="sm"
+                >
+                  {blockedReason}
+                </Text>
+              ) : null}
               <Button
                 data-testid="send-primary-action"
-                isLoading={
-                  !fee.fee &&
-                  !feeError &&
-                  address.result &&
-                  !address.error &&
-                  (value.ada || value.assets.length > 0)
-                }
-                width={{ base: '90%', md: '366px' }}
-                maxWidth="366px"
-                height={'50px'}
+                isLoading={isPreparing}
+                loadingText="Estimating fee…"
+                width="full"
+                maxW="sm"
+                height="52px"
+                rounded="2xl"
                 isDisabled={
                   !accountSignable ||
                   !tx ||
@@ -1021,19 +1254,7 @@ const Send = () => {
                   transform: 'none',
                   opacity: 1,
                 }}
-                onClick={() => {
-                  if (!accountSignable) return;
-                  const idx = account.current?.index;
-                  if (
-                    idx != null &&
-                    isHW(idx) &&
-                    indexToHw(idx).device === HW.keystone
-                  ) {
-                    void startKeystoneQrSign();
-                    return;
-                  }
-                  ref.current?.openModal(idx);
-                }}
+                onClick={openReview}
               >
                 {actionLabel}
               </Button>
@@ -1045,25 +1266,22 @@ const Send = () => {
       <ConfirmModal
         title={'Confirm transaction'}
         info={
-          <Box
-            width={'full'}
-            display={'flex'}
-            alignItems={'center'}
-            justifyContent={'center'}
-            flexDirection={'column'}
-          >
-            <UnitDisplay
-              fontSize="2xl"
-              fontWeight="medium"
-              hide
-              quantity={toUnit(value.ada || '0', 6)}
-              decimals={6}
-              symbol={'₳'}
-            />
+          <Box width="full" data-testid="send-confirm-breakdown">
+            <Flex justify="space-between" mb={2} fontSize="sm">
+              <Text color={mutedFg}>You send</Text>
+              <UnitDisplay
+                fontWeight="bold"
+                hide
+                quantity={toUnit(stripAdaInput(value.ada) || '0', 6)}
+                decimals={6}
+                symbol={settings.adaSymbol || '₳'}
+              />
+            </Flex>
             {confirmAssets.length > 0 && (
               <Button
-                mt={1}
-                size={'xs'}
+                mb={2}
+                size="xs"
+                variant="outline"
                 onClick={() =>
                   assetsModalRef.current.openModal({
                     userInput: true,
@@ -1073,7 +1291,7 @@ const Send = () => {
                     title: (
                       <Box>
                         Sending{' '}
-                        <Box as={'span'} color={'red.400'}>
+                        <Box as="span" color="red.400">
                           {confirmAssets.length}
                         </Box>{' '}
                         {confirmAssets.length == 1 ? 'asset' : 'assets'}
@@ -1083,76 +1301,54 @@ const Send = () => {
                 }
               >
                 + {confirmAssets.length}{' '}
-                {confirmAssets.length > 1 ? 'Assets' : 'Asset'}
+                {confirmAssets.length > 1 ? 'tokens' : 'token'}
               </Button>
             )}
+            <Flex justify="space-between" mb={2} fontSize="sm" align="center">
+              <Text color={mutedFg}>To</Text>
+              <Copy label="Copied address" copy={address.result}>
+                <Box
+                  maxW="180px"
+                  fontFamily="mono"
+                  fontSize="xs"
+                  cursor="pointer"
+                >
+                  <MiddleEllipsis>
+                    <span>{address.result}</span>
+                  </MiddleEllipsis>
+                </Box>
+              </Copy>
+            </Flex>
+            {feeReady ? (
+              <Flex justify="space-between" mb={2} fontSize="sm">
+                <Text color={mutedFg}>Network fee</Text>
+                <UnitDisplay
+                  quantity={fee.fee}
+                  decimals={6}
+                  symbol={settings.adaSymbol || '₳'}
+                />
+              </Flex>
+            ) : null}
             {value.sendAll && (
               <Box
-                mt={3}
-                rounded="md"
+                mt={2}
+                rounded="xl"
                 borderWidth="1px"
                 borderColor="red.300"
                 bg="red.900"
                 px={3}
                 py={2}
-                width="full"
               >
-                <Text fontSize="xs" color="red.100" textAlign="center">
+                <Text fontSize="xs" color="red.100">
                   Send all is enabled. This transaction attempts to empty the account except for network fees and cannot be undone.
                 </Text>
               </Box>
             )}
-            <Box h={3} />
-            <Box fontSize={'sm'}>to</Box>
-            <Box h={2} />
-            <Box
-              position={'relative'}
-              background={background}
-              color="black"
-              rounded={'xl'}
-              p={2}
-            >
-              <Copy label="Copied address" copy={address.result}>
-                <Box
-                  width="180px"
-                  whiteSpace="nowrap"
-                  fontWeight="normal"
-                  textAlign={'center'}
-                  display={'flex'}
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                  flexDirection={'column'}
-                >
-                  <MiddleEllipsis>
-                    <span style={{ cursor: 'pointer', color: 'black' }}>{address.result}</span>
-                  </MiddleEllipsis>
-                </Box>
-              </Copy>
-            </Box>
-            <Box h={4} />
-            {fee.fee && fee.fee !== '0' && /^\d+$/.test(fee.fee) && (
-              <Box
-                width={'full'}
-                display={'flex'}
-                alignItems={'center'}
-                justifyContent={'center'}
-                fontSize={'sm'}
-              >
-                <UnitDisplay quantity={fee.fee} decimals={6} symbol={'₳'} />{' '}
-                <Box ml={1} fontWeight={'medium'}>
-                  fee
-                </Box>
-              </Box>
-            )}
             {address.isM1 && (
-              <>
-                <Box h={4} />
-                <Box fontWeight={'bold'} fontSize={'sm'}>
-                  Sending to Milkomeda ⚠️
-                </Box>
-              </>
+              <Text mt={2} fontWeight="bold" fontSize="sm" color="orange.300">
+                Sending to Milkomeda
+              </Text>
             )}
-            <Box h={6} />
           </Box>
         }
         ref={ref}
@@ -1201,16 +1397,13 @@ const Send = () => {
           if (status === true) {
             toast({
               title: 'Transaction submitted',
+              description:
+                typeof signedTx === 'string' && /^[a-f0-9]{64}$/i.test(signedTx)
+                  ? `${signedTx.slice(0, 8)}…${signedTx.slice(-8)}`
+                  : undefined,
               status: 'success',
-              duration: 2000,
-              variant: 'success',
+              duration: 4000,
               isClosable: true,
-              containerStyle: {
-                background: 'cyan.300',
-                color: 'black',
-                borderRadius: 'lg',
-                padding: '.5rem',
-              },
             });
             if (typeof signedTx === 'string' && /^[a-f0-9]{64}$/i.test(signedTx)) {
               await prependTxHash(signedTx);
@@ -1408,7 +1601,7 @@ const AddressPopup = ({
       gutter={1}
     >
       <PopoverTrigger>
-        <InputGroup>
+        <InputGroup size="md">
           <Input
             disabled={isLoading}
             variant="filled"
@@ -1416,6 +1609,8 @@ const AddressPopup = ({
             autoComplete="off"
             value={address.display}
             spellCheck={false}
+            rounded="xl"
+            h="48px"
             onBlur={async (e) => {
               await new Promise((res, rej) => setTimeout(() => res()));
               if (ref.current) {
@@ -1425,8 +1620,8 @@ const AddressPopup = ({
               onClose();
               setTimeout(() => e.target.blur());
             }}
-            fontSize="xs"
-            placeholder="Address or $handle"
+            fontSize="sm"
+            placeholder="Address, $handle, or paste"
             onInput={async (e) => {
               const handleInputToken = latestHandleInputToken.current + 1;
               latestHandleInputToken.current = handleInputToken;
@@ -1443,11 +1638,46 @@ const AddressPopup = ({
             }}
             isInvalid={address.error}
           />
-          {address.result && !address.error && (
-            <InputRightElement
-              children={<CheckIcon boxSize="3" color={checkColor} />}
-            />
-          )}
+          <InputRightElement w="auto" pr={2} gap={1}>
+            {address.result && !address.error ? (
+              <CheckIcon boxSize="3" color={checkColor} mr={1} />
+            ) : null}
+            {address.display ? (
+              <IconButton
+                aria-label="Clear recipient"
+                data-testid="send-recipient-clear"
+                size="xs"
+                variant="ghost"
+                icon={<SmallCloseIcon />}
+                onClick={() => {
+                  triggerTxUpdate(() =>
+                    setAddress({ result: '', display: '' })
+                  );
+                }}
+              />
+            ) : (
+              <IconButton
+                aria-label="Paste recipient"
+                data-testid="send-recipient-paste"
+                size="xs"
+                variant="ghost"
+                icon={<Icon as={MdContentPaste} />}
+                onClick={async () => {
+                  try {
+                    const text =
+                      (await navigator.clipboard.readText())?.trim() || '';
+                    if (!text) return;
+                    const fake = { target: { value: text } };
+                    setAddress({ display: text });
+                    const addr = await handleInput(fake);
+                    triggerTxUpdate(() => setAddress(addr));
+                  } catch {
+                    /* clipboard denied — user can still paste natively */
+                  }
+                }}
+              />
+            )}
+          </InputRightElement>
         </InputGroup>
       </PopoverTrigger>
       <PopoverContent
@@ -1640,13 +1870,15 @@ const AssetsSelector = ({ assets, addAssets, value, isSendAll }) => {
       <PopoverTrigger>
         <Button
           isDisabled={isSendAll || !assets || assets.length < 1}
-          flex={1}
-          size="sm"
+          size="xs"
+          rounded="full"
+          variant="outline"
+          data-testid="send-add-tokens"
         >
-          + Assets
+          {isSendAll ? 'Tokens included' : '+ Add tokens'}
         </Button>
       </PopoverTrigger>
-      <PopoverContent w="98%" sx={{ backgroundColor: '#2D3748 !important' }}>
+      <PopoverContent w="98%" className="lucem-inset-surface">
         <PopoverArrow ml="4px" />
         <PopoverHeader
           display="flex"

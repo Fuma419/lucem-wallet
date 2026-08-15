@@ -33,6 +33,12 @@ import {
   TabPanel,
   Tooltip,
   IconButton,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
 } from '@chakra-ui/react';
 import {
   InfoOutlineIcon,
@@ -106,6 +112,11 @@ const Wallet = () => {
   // off, or dark mode falls back to light-looking brand colors.
   const receiveBtnClass = 'button import-wallet';
   const sendBtnClass = 'button new-wallet';
+  const {
+    isOpen: isReceiveOpen,
+    onOpen: onReceiveOpen,
+    onClose: onReceiveClose,
+  } = useDisclosure();
 
   const networkOptions = [
     { id: NETWORK_ID.mainnet, label: 'Mainnet' },
@@ -599,43 +610,48 @@ const Wallet = () => {
             flexShrink={0}
           >
           <Box flex={1} display="flex" justifyContent="flex-end">
-            <Popover isLazy>
-              <PopoverTrigger>
-                <Button
-                  w="120px"
-                  h="2.6rem"
-                  data-testid="wallet-receive"
-                  className={receiveBtnClass}
-                  color="white"
-                  rightIcon={<Icon as={BsArrowDownRight} />}
-                  size="sm"
-                  rounded="2xl"
-                  flexShrink={0}
-                  onClick={() => {}}
-                >
-                  Receive
-                </Button>
-              </PopoverTrigger>
-            <Portal>
-              <PopoverContent
+            <Button
+              w="120px"
+              h="2.6rem"
+              data-testid="wallet-receive"
+              className={receiveBtnClass}
+              color="white"
+              rightIcon={<Icon as={BsArrowDownRight} />}
+              size="sm"
+              rounded="2xl"
+              flexShrink={0}
+              onClick={onReceiveOpen}
+            >
+              Receive
+            </Button>
+            <Modal
+              isOpen={isReceiveOpen}
+              onClose={onReceiveClose}
+              isCentered
+              size="sm"
+            >
+              <ModalOverlay />
+              <ModalContent
                 className="lucem-inset-surface"
-                width="calc(100vw - 2rem)"
-                maxWidth="22rem"
+                mx={4}
+                my="auto"
+                w="calc(100vw - 2rem)"
+                maxW="22rem"
+                maxH="calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))"
+                overflowY="auto"
                 rounded="3xl"
                 border="none"
-                overflow="hidden"
                 data-testid="receive-popover"
               >
-                <PopoverArrow />
-                <PopoverBody p={5}>
+                <ModalCloseButton />
+                <ModalBody p={5}>
                   <ReceivePanel
                     address={info.paymentAddr}
                     accountName={info.name}
                   />
-                </PopoverBody>
-              </PopoverContent>
-            </Portal>
-          </Popover>
+                </ModalBody>
+              </ModalContent>
+            </Modal>
           </Box>
 
           <Box flex={1} display="flex" justifyContent="flex-start">

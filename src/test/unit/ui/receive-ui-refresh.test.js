@@ -26,6 +26,15 @@ describe('Receive UI refresh — structural contracts', () => {
     expect(walletSrc).not.toContain("from '../components/qrCode'");
   });
 
+  test('Receive card is a viewport-centered modal on mobile', () => {
+    expect(walletSrc).toContain('isCentered');
+    expect(walletSrc).toContain('100dvh');
+    expect(walletSrc).toContain('safe-area-inset-top');
+    expect(walletSrc).toContain('safe-area-inset-bottom');
+    expect(walletSrc).toContain('w="calc(100vw - 2rem)"');
+    expect(walletSrc).toMatch(/<Modal[\s\S]*isCentered/);
+  });
+
   test('panel has a title, helper copy, copy button, and explorer link', () => {
     expect(panelSrc).toContain('data-testid="receive-title"');
     expect(panelSrc).toContain('Share this address to get ADA and native tokens.');

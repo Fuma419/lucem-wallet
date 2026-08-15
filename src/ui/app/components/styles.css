@@ -792,6 +792,13 @@ html[data-theme='light'] .network-banner-testnet {
 }
 
 
+/* Send amount — large, tabular figures so 1.000000 doesn't jump. */
+.lucem-send-amount,
+input.lucem-send-amount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
 /* Global glow kill-switch (Settings → Button glow effects). */
 html[data-glow='off'] .button,
 html[data-glow='off'] .button:hover,

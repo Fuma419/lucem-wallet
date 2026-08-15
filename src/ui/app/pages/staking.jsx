@@ -491,6 +491,7 @@ const Staking = () => {
       bg={pageBg}
       color={pageFg}
       px={{ base: 4, md: 6 }}
+      className="lucem-tray-clearance"
       py={5}
       pb="calc(6.5rem + env(safe-area-inset-bottom, 0px))"
     >

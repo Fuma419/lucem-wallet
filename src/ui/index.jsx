@@ -1,5 +1,5 @@
 import React from 'react';
-import { POPUP, POPUP_WINDOW, TAB } from '../config/config';
+import { POPUP, POPUP_WINDOW } from '../config/config';
 import {
   Scrollbars,
   lucemTransparentScrollView,
@@ -9,25 +9,30 @@ import Theme from './theme';
 import StoreProvider from './store';
 import { Box, IconButton } from '@chakra-ui/react';
 import { ChevronUpIcon } from '@chakra-ui/icons';
+import {
+  detectIsExtensionPopup,
+  detectIsFullBleedWalletTab,
+  LUCEM_LAYOUT,
+} from './layout/surface';
+import {
+  LayoutSurfaceProvider,
+  useLayoutSurface,
+} from './layout/LayoutSurfaceProvider';
 
 /** Main wallet popup (`mainPopup.html`) */
 const isMainPopup = window.document.querySelector(`#${POPUP.main}`);
-/** dApp approval popup (`internalPopup.html`); must use POPUP_WINDOW like main */
-const isInternalPopup = window.document.querySelector(`#${POPUP.internal}`);
 /** Full-page wallet HTML entries (not the 400px popup) — use full width; no gray scroll panel. */
-const isFullBleedWalletTab =
-  !!window.document.querySelector(`#${TAB.hw}`) ||
-  !!window.document.querySelector(`#${TAB.keystoneTx}`) ||
-  !!window.document.querySelector(`#${TAB.createWallet}`) ||
-  !!window.document.querySelector(`#${TAB.trezorTx}`);
-const isExtensionPopup =
-  (isMainPopup || isInternalPopup) &&
-  typeof chrome !== 'undefined' &&
-  typeof chrome.runtime !== 'undefined' &&
-  typeof chrome.runtime.id !== 'undefined';
+const isFullBleedWalletTab = detectIsFullBleedWalletTab(window.document);
+const isExtensionPopup = detectIsExtensionPopup(
+  window.document,
+  typeof chrome !== 'undefined' ? chrome : undefined
+);
 
-const Main = ({ children }) => {
+const MainFrame = ({ children }) => {
+  const surface = useLayoutSurface();
   const [scroll, setScroll] = React.useState({ el: null, y: 0 });
+  const isPhoneColumn =
+    surface === LUCEM_LAYOUT.touch && !isFullBleedWalletTab;
 
   React.useEffect(() => {
     window.document.body.addEventListener(
@@ -50,9 +55,9 @@ const Main = ({ children }) => {
     <Box
       width={isExtensionPopup ? POPUP_WINDOW.width + 'px' : '100%'}
       height={isExtensionPopup ? POPUP_WINDOW.height + 'px' : '100vh'}
-      maxW={isExtensionPopup || isFullBleedWalletTab ? undefined : '480px'}
+      maxW={isPhoneColumn ? '480px' : undefined}
       minW={0}
-      mx={isExtensionPopup || isFullBleedWalletTab ? undefined : 'auto'}
+      mx={isPhoneColumn ? 'auto' : undefined}
       bg="transparent"
       sx={
         !isExtensionPopup
@@ -110,5 +115,11 @@ const Main = ({ children }) => {
     </Box>
   );
 };
+
+const Main = ({ children }) => (
+  <LayoutSurfaceProvider>
+    <MainFrame>{children}</MainFrame>
+  </LayoutSurfaceProvider>
+);
 
 export default Main;

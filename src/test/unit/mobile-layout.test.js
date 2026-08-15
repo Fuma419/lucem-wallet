@@ -277,6 +277,7 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
     expect(src).toMatch(/id="scroll"/);
     expect(src).toMatch(/isExtensionPopup/);
+    expect(src).toMatch(/isPhoneColumn/);
     expect(src).toMatch(/height:\s*['"]100vh['"]/);
     expect(src).toMatch(/height:\s*['"]100%['"]/);
   });

@@ -9,8 +9,10 @@ import {
   getAsset,
   getCurrentAccount,
   getNetwork,
+  getSignableWalletIds,
   getUtxos,
   indexToHw,
+  isAccountSignable,
   isHW,
   isValidAddress,
   paymentKeyHashesForSigning,
@@ -82,7 +84,8 @@ import AvatarLoader from '../components/avatarLoader';
 import { NumericFormat } from 'react-number-format';
 import Copy from '../components/copy';
 import AssetsModal from '../components/assetsModal';
-import { MdModeEdit } from 'react-icons/md';
+import { MdModeEdit, MdVpnKey } from 'react-icons/md';
+import ValidateSeedModal from '../components/validateSeedModal';
 import useConstant from 'use-constant';
 import debouncePromise from 'debounce-promise';
 import latest from 'promise-latest';
@@ -281,6 +284,12 @@ const Send = () => {
   const focus = React.useRef(false);
   const background = useColorModeValue('yellow.500', 'yellow.500');
   const [sendAllRiskAccepted, setSendAllRiskAccepted] = React.useState(false);
+  // Software accounts restored from a sterilized backup have metadata but no
+  // vault key. They can *build* a tx and then die at sign with
+  // "No stored key for wallet …". Detect that up front so Send prompts to
+  // re-enter the recovery phrase instead of a dead-end confirm error.
+  const [accountSignable, setAccountSignable] = React.useState(true);
+  const validateSeedRef = React.useRef();
 
   const network = React.useRef();
   const assetsModalRef = React.useRef();
@@ -493,6 +502,16 @@ const Send = () => {
     const _network = await getNetwork();
     network.current = _network;
     account.current = currentAccount;
+    try {
+      const ids = await getSignableWalletIds();
+      if (isMounted.current) {
+        setAccountSignable(isAccountSignable(currentAccount, ids));
+      }
+    } catch (e) {
+      // Fail open only if the vault lookup itself throws; a missing seed is
+      // reported as an empty id list, not an exception.
+      console.warn('Could not determine account signability', e);
+    }
     if (txInfo.protocolParameters) {
       const _utxos = txInfo.utxos.map((utxo) =>
         Loader.Cardano.TransactionUnspentOutput.from_bytes(
@@ -899,6 +918,49 @@ const Send = () => {
               justifyContent="center"
               flexDirection="column"
             >
+              {!accountSignable && (
+                <Alert
+                  data-testid="send-needs-seed-alert"
+                  status="warning"
+                  rounded="2xl"
+                  bg="yellow.900"
+                  color="yellow.100"
+                  width={{ base: '90%', md: '366px' }}
+                  maxWidth="366px"
+                  mb={3}
+                  flexDirection="column"
+                  alignItems="stretch"
+                >
+                  <Flex align="flex-start">
+                    <AlertIcon mt={1} />
+                    <Box>
+                      <Text fontWeight="bold" fontSize="sm">
+                        Re-enter your recovery phrase
+                      </Text>
+                      <AlertDescription fontSize="sm">
+                        This account can see balances but cannot sign. Import
+                        the seed to enable sending.
+                      </AlertDescription>
+                    </Box>
+                  </Flex>
+                  <Button
+                    mt={3}
+                    w="full"
+                    rounded="xl"
+                    colorScheme="yellow"
+                    leftIcon={<Icon as={MdVpnKey} />}
+                    data-testid="send-validate-seed-button"
+                    onClick={() =>
+                      validateSeedRef.current?.openModal({
+                        accountKey: account.current?.index,
+                        name: account.current?.name,
+                      })
+                    }
+                  >
+                    Import seed to enable signing
+                  </Button>
+                </Alert>
+              )}
               {feeError && (
                 <Alert
                   data-testid="send-error-alert"
@@ -937,6 +999,7 @@ const Send = () => {
                 maxWidth="366px"
                 height={'50px'}
                 isDisabled={
+                  !accountSignable ||
                   !tx ||
                   !address.result ||
                   Boolean(feeError) ||
@@ -959,6 +1022,7 @@ const Send = () => {
                   opacity: 1,
                 }}
                 onClick={() => {
+                  if (!accountSignable) return;
                   const idx = account.current?.index;
                   if (
                     idx != null &&
@@ -1225,6 +1289,19 @@ const Send = () => {
           setTimeout(() => {
             navigate('/wallet', { replace: true, state: status === true ? { postTx: true } : undefined });
           }, 200);
+        }}
+      />
+      <ValidateSeedModal
+        ref={validateSeedRef}
+        onValidated={async () => {
+          const acc = account.current;
+          if (!acc) return;
+          try {
+            const ids = await getSignableWalletIds();
+            setAccountSignable(isAccountSignable(acc, ids));
+          } catch (e) {
+            console.warn('Could not refresh account signability', e);
+          }
         }}
       />
     </>

@@ -60,9 +60,15 @@ jest.mock('../../../api/extension', () => ({
   getAsset: jest.fn().mockResolvedValue(null),
   getCurrentAccount: jest.fn(),
   getNetwork: jest.fn().mockResolvedValue({ id: 'preprod' }),
+  getSignableWalletIds: jest.fn().mockResolvedValue(['0']),
   getUtxos: jest.fn().mockResolvedValue([]),
   indexToHw: jest.fn(),
+  isAccountSignable: jest.fn((account, ids) => {
+    const walletId = account?.walletId != null ? String(account.walletId) : '0';
+    return (ids || []).includes(walletId);
+  }),
   isHW: jest.fn().mockReturnValue(false),
+  validateAccountWithSeed: jest.fn(),
   isValidAddress: jest.fn().mockResolvedValue(false),
   paymentKeyHashesForSigning: jest.fn().mockResolvedValue([]),
   prependTxHash: jest.fn(),
@@ -79,7 +85,7 @@ jest.mock('../../../api/extension/wallet', () => ({
 }));
 
 import Send, { sendStore } from '../../../ui/app/pages/send';
-import { getCurrentAccount } from '../../../api/extension';
+import { getCurrentAccount, getSignableWalletIds } from '../../../api/extension';
 import Loader from '../../../api/loader';
 
 // A protocol-parameters snapshot in the store makes Send take its short init
@@ -127,8 +133,10 @@ async function renderSend() {
       </StoreProvider>
     );
   });
-  // Flush init(): Loader.load + getCurrentAccount + getNetwork all resolve.
+  // Flush init(): Loader.load + getCurrentAccount + getNetwork +
+  // getSignableWalletIds all resolve.
   await act(async () => {
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
@@ -181,6 +189,28 @@ describe('Send page — behavioral render', () => {
     const { container } = await renderSend();
     expect(
       container.querySelector('[data-testid="send-error-alert"]')
+    ).toBeNull();
+  });
+
+  test('a sterilized (needs-seed) account shows the import prompt and blocks Review', async () => {
+    getSignableWalletIds.mockResolvedValueOnce([]);
+    const { container } = await renderSend();
+
+    const banner = container.querySelector('[data-testid="send-needs-seed-alert"]');
+    expect(banner).toBeTruthy();
+    expect(banner.textContent).toMatch(/Re-enter your recovery phrase/i);
+    expect(
+      container.querySelector('[data-testid="send-validate-seed-button"]')
+    ).toBeTruthy();
+
+    const button = primaryAction(container);
+    expect(button.hasAttribute('disabled')).toBe(true);
+  });
+
+  test('a signable account does not show the needs-seed banner', async () => {
+    const { container } = await renderSend();
+    expect(
+      container.querySelector('[data-testid="send-needs-seed-alert"]')
     ).toBeNull();
   });
 

@@ -246,7 +246,7 @@ Only servers that provide **unique** capabilities beyond native tools are config
 | Server | Purpose | Notes |
 |--------|---------|-------|
 | `code-rag` | BM25 keyword search over chunked source index | Rebuild: call `code_rag_rebuild_index` tool or run indexer script |
-| `jenkins` | Jenkins REST API (jobs, builds, logs, pipelines) | Needs `JENKINS_API_TOKEN` env var; generate in Jenkins → admin → Configure → API Token |
+| `jenkins` | Jenkins REST API (jobs, builds, logs, pipelines) | Token: `~/.config/agent-secrets/jenkins_api_token`. `JENKINS_USER` must be that token’s owner (`admin` on this host). Wrapper prefers nvm Node so Cursor-agent `npx` works. |
 
 **Removed (redundant with native tools):** `@modelcontextprotocol/server-filesystem` (→ Read/Write/Glob/Grep), `server-git` (→ Shell git), `server-github` (→ github-* MCP tools), `server-fetch` (→ WebFetch), `server-puppeteer` (→ puppeteer-* tools).
 

@@ -12,7 +12,9 @@ const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
 describe('stake-unified wallet source guards', () => {
   test('exports paymentKeyHashesForSigning for fee and witnesses', () => {
-    const src = read('api/extension/index.js');
+    const barrel = read('api/extension/index.js');
+    const src = read('api/extension/addresses.js');
+    expect(barrel).toMatch(/paymentKeyHashesForSigning/);
     expect(src).toMatch(/export const paymentKeyHashesForSigning/);
     expect(src).toMatch(/listEnabledPaymentAddresses/);
   });
@@ -73,7 +75,7 @@ describe('stake-unified wallet source guards', () => {
   });
 
   test('multi-address panel loads per-address contents via address_info', () => {
-    const api = read('api/extension/index.js');
+    const api = read('api/extension/chain-reads.js');
     expect(api).toMatch(/export const getEnabledPaymentAddressDetails/);
     expect(api).toMatch(/getAddressesInfo/);
     expect(api).toMatch(/summarizeAddressInfo/);
@@ -104,7 +106,7 @@ describe('stake-unified wallet source guards', () => {
   });
 
   test('getUtxos filters spendable set to enabled payment addresses', () => {
-    const src = read('api/extension/index.js');
+    const src = read('api/extension/chain-reads.js');
     expect(src).toMatch(/enabledOwners\.has/);
     expect(src).toMatch(
       /Spend only from addresses we can witness/

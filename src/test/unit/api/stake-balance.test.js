@@ -265,7 +265,7 @@ describe('stake-consolidated balance (resolve stake from payment address)', () =
   });
 
   test('wallet resolves stake via address_info and uses extended account_utxos', () => {
-    const src = readSrc('api/extension/index.js');
+    const src = readSrc('api/extension/chain-reads.js');
     expect(src).toMatch(/resolveStakeAddressFromPaymentAddress/);
     expect(src).toMatch(/getAccountStakeAddress/);
     expect(src).toMatch(/stakeAddressFromAddressInfo/);

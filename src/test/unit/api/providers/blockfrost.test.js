@@ -219,6 +219,16 @@ describe('Blockfrost → Koios adapter', () => {
     });
   });
 
+  test('/pool_list ticker search falls through to Koios', async () => {
+    global.fetch = jest.fn();
+    const result = await blockfrostKoiosCompatibleRequest(
+      'preview',
+      '/pool_list?pool_status=eq.registered&ticker=ilike.*wave*&limit=20'
+    );
+    expect(result).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   test('/tx_status skips 404 hashes and keeps confirmed rows', async () => {
     global.fetch = jest.fn(async (url) => {
       const href = String(url);

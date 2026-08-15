@@ -12,6 +12,7 @@ import { KOIOS_REQUESTS } from '../koios-endpoints';
 import Loader from '../loader';
 import {
   emptyDelegation,
+  buildStakePoolSearchRequest,
   normalizeDelegationRow,
   normalizeStakePool,
 } from '../staking';
@@ -156,19 +157,25 @@ export const getPoolMetadata = async (poolId) => {
 };
 
 export const searchPools = async (query) => {
-  if (!query) return [];
-  const searchLower = encodeURIComponent(query.trim().toLowerCase());
+  const request = buildStakePoolSearchRequest(query);
+  if (request.kind === 'empty') return [];
 
-  // Use Koios PostgREST filtering for server-side search
-  const listEndpoint = `/pool_list?pool_status=eq.registered&or=(ticker.ilike.*${searchLower}*,pool_id_bech32.ilike.*${searchLower}*)&limit=20`;
-  const poolList = await koiosRequest(listEndpoint);
+  if (request.kind === 'poolId') {
+    try {
+      return [await getPoolMetadata(request.poolId)];
+    } catch {
+      return [];
+    }
+  }
+
+  const poolList = await koiosRequest(request.endpoint);
 
   if (!poolList || poolList.error || !Array.isArray(poolList) || poolList.length === 0) {
     return [];
   }
 
-  // Get detailed info for the matches
-  const poolIds = poolList.map(m => m.pool_id_bech32);
+  const poolIds = poolList.map((m) => m.pool_id_bech32).filter(Boolean);
+  if (poolIds.length === 0) return [];
   const infoRequest = KOIOS_REQUESTS.getPoolInfo(poolIds);
   const detailedPools = await koiosRequest(infoRequest.endpoint, {}, infoRequest.body);
 

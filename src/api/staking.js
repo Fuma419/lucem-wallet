@@ -44,6 +44,31 @@ export const normalizeStakePool = (pool = {}, fallbackPoolId = '') => {
   };
 };
 
+const POOL_ID_BECH32_RE = /^pool1[a-z0-9]+$/i;
+const POOL_ID_HEX_RE = /^[0-9a-f]{56}$/i;
+
+/**
+ * Build the provider lookup for stake-center search.
+ * Ticker queries go to Koios `/pool_list` (Blockfrost cannot filter tickers).
+ * A bech32/hex pool id is resolved via `/pool_info` instead of an `or=` list
+ * filter that some adapters ignore.
+ * @param {string} query
+ * @returns {{ kind: 'empty' } | { kind: 'poolId', poolId: string } | { kind: 'ticker', endpoint: string }}
+ */
+export function buildStakePoolSearchRequest(query) {
+  const trimmed = String(query || '').trim();
+  if (trimmed.length < 2) return { kind: 'empty' };
+  if (POOL_ID_BECH32_RE.test(trimmed) || POOL_ID_HEX_RE.test(trimmed)) {
+    return { kind: 'poolId', poolId: trimmed };
+  }
+  const needle = trimmed.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  if (needle.length < 2) return { kind: 'empty' };
+  return {
+    kind: 'ticker',
+    endpoint: `/pool_list?pool_status=eq.registered&ticker=ilike.*${encodeURIComponent(needle)}*&limit=20`,
+  };
+}
+
 export const normalizeDelegationRow = (stakeRow = {}, stakeAddress = '') => ({
   ...emptyDelegation(stakeAddress),
   registered: true,

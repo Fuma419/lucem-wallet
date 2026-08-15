@@ -123,6 +123,26 @@ function buttonByText(container, text) {
   );
 }
 
+async function typeSearch(container, value) {
+  const input = container.querySelector('[data-testid="stake-pool-search"]');
+  expect(input).toBeTruthy();
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value'
+    ).set;
+    setter.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await act(async () => {
+    jest.advanceTimersByTime(350);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+  return input;
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
@@ -155,20 +175,51 @@ describe('Staking page — behavioral render', () => {
   test('lists stake pools returned by the search service', async () => {
     getDelegation.mockResolvedValue({ registered: false, active: false, rewards: '0' });
     const { container } = await renderStaking();
+    expect(container.querySelector('[data-testid="stake-pool-search"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="stake-pool-results"]')).toBeTruthy();
     expect(container.textContent).toContain('HODLR');
+    expect(searchPools).toHaveBeenCalledWith('HODLR');
+  });
+
+  test('typing a ticker keeps the search field open and shows those results', async () => {
+    getDelegation.mockResolvedValue({ registered: false, active: false, rewards: '0' });
+    const wave = {
+      ...POOL,
+      id: 'pool1wave',
+      poolId: 'pool1wave',
+      ticker: 'WAVE',
+      name: 'WAVE Pool',
+    };
+    const { container } = await renderStaking();
+    expect(container.querySelector('[data-testid="stake-pool-search"]')).toBeTruthy();
+
+    searchPools.mockResolvedValue([wave]);
+    await typeSearch(container, 'WAVE');
+
+    expect(searchPools).toHaveBeenCalledWith('WAVE');
+    expect(container.textContent).toContain('WAVE');
+    expect(container.textContent).toContain('WAVE Pool');
+    expect(
+      container.querySelector('[data-testid="stake-pool-result-WAVE"]')
+    ).toBeTruthy();
+    expect(container.querySelector('[data-testid="stake-pool-results-empty"]')).toBeFalsy();
+  });
+
+  test('a ticker with no matches shows the empty search state', async () => {
+    getDelegation.mockResolvedValue({ registered: false, active: false, rewards: '0' });
+    const { container } = await renderStaking();
+    searchPools.mockResolvedValue([]);
+    await typeSearch(container, 'ZZZZ');
+    expect(searchPools).toHaveBeenCalledWith('ZZZZ');
+    expect(
+      container.querySelector('[data-testid="stake-pool-results-empty"]')
+    ).toBeTruthy();
+    expect(container.textContent).toContain('No stake pools found.');
   });
 
   test('selecting a pool from search builds a delegation preview ready to sign', async () => {
     getDelegation.mockResolvedValue({ registered: false, active: false, rewards: '0' });
     const { container } = await renderStaking();
-
-    // The featured pool auto-selects and collapses search; reopen it, then pick
-    // the pool from the results list (the working delegation entry point).
-    const changePool = buttonByText(container, 'Change Pool');
-    expect(changePool).toBeTruthy();
-    await act(async () => {
-      changePool.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
 
     const poolButton = buttonByText(container, 'HODLR Pool');
     expect(poolButton).toBeTruthy();
@@ -184,35 +235,24 @@ describe('Staking page — behavioral render', () => {
     ).toBeTruthy();
   });
 
-  // KNOWN BUG (tracked): after the page auto-features a pool (default query
-  // "HODLR"), the selected PoolCard is wired to a no-op `onSelect={() => {}}` and
-  // there is no delegate CTA. So a user who clicks the highlighted featured pool
-  // gets no delegation preview — `delegationTx` is never called. The only way to
-  // delegate is the non-obvious "Change Pool" → search → reselect path.
-  //
-  // Marked `test.failing` so CI stays green while the regression is tracked.
-  // Remove `.failing` once clicking the featured pool starts a delegation.
-  test.failing(
-    'clicking the auto-featured pool should start a delegation preview',
-    async () => {
-      getDelegation.mockResolvedValue({
-        registered: false,
-        active: false,
-        rewards: '0',
-      });
-      const { container } = await renderStaking();
+  test('clicking the auto-featured pool starts a delegation preview', async () => {
+    getDelegation.mockResolvedValue({
+      registered: false,
+      active: false,
+      rewards: '0',
+    });
+    const { container } = await renderStaking();
 
-      const featured = buttonByText(container, 'HODLR Pool');
-      expect(featured).toBeTruthy();
-      await act(async () => {
-        featured.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        await Promise.resolve();
-        await Promise.resolve();
-      });
+    const featured = buttonByText(container, 'HODLR Pool');
+    expect(featured).toBeTruthy();
+    await act(async () => {
+      featured.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
 
-      expect(delegationTx).toHaveBeenCalled();
-    }
-  );
+    expect(delegationTx).toHaveBeenCalled();
+  });
 
   test('reward withdrawal is disabled below the 2 ADA minimum', async () => {
     getDelegation.mockResolvedValue({

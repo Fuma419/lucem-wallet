@@ -1,4 +1,5 @@
 import {
+  buildStakePoolSearchRequest,
   emptyDelegation,
   normalizeDelegationRow,
   normalizeStakePool,
@@ -79,6 +80,24 @@ describe('staking normalization', () => {
       registered: true,
       active: false,
       poolId: '',
+    });
+  });
+
+  test('buildStakePoolSearchRequest uses ticker ilike and pool-id lookup', () => {
+    expect(buildStakePoolSearchRequest('')).toEqual({ kind: 'empty' });
+    expect(buildStakePoolSearchRequest('H')).toEqual({ kind: 'empty' });
+    expect(buildStakePoolSearchRequest('WAVE')).toEqual({
+      kind: 'ticker',
+      endpoint:
+        '/pool_list?pool_status=eq.registered&ticker=ilike.*wave*&limit=20',
+    });
+    expect(
+      buildStakePoolSearchRequest(
+        'pool1pu5jlj4q9w9jlxeu370a3c9myx47md5j5m2str0naunn2q3lkdy'
+      )
+    ).toEqual({
+      kind: 'poolId',
+      poolId: 'pool1pu5jlj4q9w9jlxeu370a3c9myx47md5j5m2str0naunn2q3lkdy',
     });
   });
 

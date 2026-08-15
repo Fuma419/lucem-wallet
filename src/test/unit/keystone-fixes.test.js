@@ -131,6 +131,14 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
   test('Keystone typo "Keysone" is not present', () => {
     expect(hwSrc).not.toMatch(/Keysone/);
   });
+
+  test('hardware picker shows Keystone and Ledger names next to the marks', () => {
+    expect(hwSrc).toMatch(/alt="Keystone"/);
+    expect(hwSrc).toMatch(/alt="Ledger"/);
+    expect(hwSrc).toMatch(/>\s*Keystone\s*</);
+    expect(hwSrc).toMatch(/>\s*Ledger\s*</);
+    expect(hwSrc).toMatch(/preferredKeystoneImportRowKeys/);
+  });
 });
 
 // ── 5. signTxHW / initHW Keystone guards ─────────────────────────────

@@ -93,6 +93,11 @@ export function parseCip1852AccountIndexFromPath(path) {
   return m ? parseInt(m[1], 10) : null;
 }
 
+/** Account-node only (`m/1852'/1815'/N'`). Payment/stake leaves must not be stored as xpubs. */
+export function isCip1852AccountNodePath(path) {
+  return /^m\/1852'\/1815'\/\d+'$/i.test(normalizeKeystonePath(path));
+}
+
 /**
  * Infer Ledger-compatible vs Cardano-standard export from Keystone UR metadata.
  * Firmware uses {@link AccountNote} strings on `note` (e.g. `account.ledger_live`).
@@ -268,14 +273,45 @@ export function filterKeystoneKeysForRequestedAccounts(keys, requestedIndices) {
   const list = keys || [];
   const out = [];
   for (const i of order) {
-    const row = list.find((k) => k.account === i);
-    if (!row) {
+    const rows = list.filter((k) => k.account === i);
+    if (rows.length === 0) {
       throw new Error(
         `Keystone did not return account ${i} (${cip1852AccountPath(i)}). ` +
           'Export again from the device with the same accounts selected in Lucem.'
       );
     }
-    out.push(row);
+    const standard = rows.filter(
+      (r) => r.profile === KEYSTONE_DERIVATION.standard
+    );
+    const ledger = rows.filter((r) => r.profile === KEYSTONE_DERIVATION.ledger);
+    const other = rows.filter(
+      (r) =>
+        r.profile !== KEYSTONE_DERIVATION.standard &&
+        r.profile !== KEYSTONE_DERIVATION.ledger
+    );
+    // Cardano Native first — that is the receive address Keystone shows by default.
+    out.push(...standard, ...ledger, ...other);
+  }
+  return out;
+}
+
+/**
+ * Default-checked import rows: Cardano Native when both profiles exist for an
+ * account. Keystone's on-device receive address is Native unless the user
+ * switched the ⋮ menu to Ledger.
+ * @param {Array<{ account: number, profile: string, rowKey: string }>} keys
+ * @returns {string[]}
+ */
+export function preferredKeystoneImportRowKeys(keys) {
+  const byAccount = new Map();
+  for (const k of keys || []) {
+    if (!byAccount.has(k.account)) byAccount.set(k.account, []);
+    byAccount.get(k.account).push(k);
+  }
+  const out = [];
+  for (const rows of byAccount.values()) {
+    const native = rows.find((r) => r.profile === KEYSTONE_DERIVATION.standard);
+    out.push((native || rows[0]).rowKey);
   }
   return out;
 }
@@ -351,10 +387,15 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
 
   /** Raw ADA rows with profile inferred from UR only (never UI override). */
   const rawAdaRows = [];
+  let skippedNonAccountNode = false;
   for (const k of keys) {
     if (k.chain !== 'ADA') continue;
     const account = parseCip1852AccountIndexFromPath(k.path || '');
     if (account == null) continue;
+    if (!isCip1852AccountNodePath(k.path || '')) {
+      skippedNonAccountNode = true;
+      continue;
+    }
     const pub = (k.publicKey || '').toLowerCase();
     const chain = (k.chainCode || '').toLowerCase();
     if (pub.length !== 64 || chain.length !== 64) {
@@ -372,7 +413,9 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
 
   if (rawAdaRows.length === 0) {
     throw new Error(
-      'No Cardano (ADA) account keys found in this QR. Use CIP-1852 paths m/1852\'/1815\'/… on the device (Ledger-compatible or Cardano standard).'
+      skippedNonAccountNode
+        ? "Keystone exported a payment or stake key instead of the account key (m/1852'/1815'/N'). Export the Cardano account again from the device."
+        : "No Cardano (ADA) account keys found in this QR. Use CIP-1852 paths m/1852'/1815'/… on the device (Ledger-compatible or Cardano standard)."
     );
   }
 

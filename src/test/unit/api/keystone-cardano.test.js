@@ -17,6 +17,8 @@ const {
   filterKeystoneKeysForRequestedAccount,
   filterKeystoneKeysForRequestedAccounts,
   formatKeystoneCardanoAccountLabel,
+  isCip1852AccountNodePath,
+  preferredKeystoneImportRowKeys,
   generateCardanoKeystoneKeyDerivationUr,
   inferKeystoneDerivationProfile,
   inferKeystoneDerivationProfileOrNull,
@@ -34,6 +36,12 @@ describe('keystone-cardano', () => {
     expect(parseCip1852AccountIndexFromPath("m/1852'/1815'/5'")).toBe(5);
     expect(parseCip1852AccountIndexFromPath("M/1852'/1815'/2'/0/0")).toBe(2);
     expect(parseCip1852AccountIndexFromPath("m/44'/1815'/0'")).toBe(null);
+  });
+
+  test('isCip1852AccountNodePath rejects payment/stake leaves', () => {
+    expect(isCip1852AccountNodePath("m/1852'/1815'/0'")).toBe(true);
+    expect(isCip1852AccountNodePath("m/1852'/1815'/2'/0/0")).toBe(false);
+    expect(isCip1852AccountNodePath("m/1852'/1815'/0'/2/0")).toBe(false);
   });
 
   test('inferKeystoneDerivationProfile', () => {
@@ -129,6 +137,29 @@ describe('keystone-cardano', () => {
     expect(() =>
       filterKeystoneKeysForRequestedAccounts(keys, [0, 1])
     ).toThrow(/did not return account 1/);
+  });
+
+  test('filterKeystoneKeysForRequestedAccounts keeps Native and Ledger for the same account', () => {
+    const keys = [
+      { account: 0, rowKey: '0-ledger', profile: KEYSTONE_DERIVATION.ledger },
+      { account: 0, rowKey: '0-standard', profile: KEYSTONE_DERIVATION.standard },
+    ];
+    expect(filterKeystoneKeysForRequestedAccounts(keys, [0])).toEqual([
+      keys[1],
+      keys[0],
+    ]);
+  });
+
+  test('preferredKeystoneImportRowKeys defaults to Cardano Native', () => {
+    const keys = [
+      { account: 0, rowKey: '0-ledger', profile: KEYSTONE_DERIVATION.ledger },
+      { account: 0, rowKey: '0-standard', profile: KEYSTONE_DERIVATION.standard },
+      { account: 1, rowKey: '1-ledger', profile: KEYSTONE_DERIVATION.ledger },
+    ];
+    expect(preferredKeystoneImportRowKeys(keys)).toEqual([
+      '0-standard',
+      '1-ledger',
+    ]);
   });
 
   test('filterKeystoneKeysForRequestedAccount', () => {

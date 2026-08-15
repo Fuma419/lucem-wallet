@@ -7,7 +7,6 @@ import {
   Image,
   Link,
   Text,
-  useColorMode,
   useColorModeValue,
 } from '@chakra-ui/react';
 import Logo from '../../../assets/img/logo.png';
@@ -17,7 +16,6 @@ import { WalletSetupButtons } from '../components/walletSetupFlow';
 
 const Welcome = () => {
   const navigate = useNavigate();
-  const { colorMode } = useColorMode();
   const pageBg = useColorModeValue('#f4f6fb', '#121212');
   const pageFg = useColorModeValue('#1a2233', '#ffffff');
   const [hasWallet, setHasWallet] = React.useState(false);
@@ -25,22 +23,6 @@ const Welcome = () => {
   React.useEffect(() => {
     hasStoredAccounts().then(setHasWallet);
   }, []);
-
-  React.useEffect(() => {
-    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    const originalColor = metaThemeColor
-      ? metaThemeColor.getAttribute('content')
-      : null;
-    const next = colorMode === 'light' ? '#f4f6fb' : '#121212';
-    if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', next);
-    }
-    return () => {
-      if (metaThemeColor && originalColor !== null) {
-        metaThemeColor.setAttribute('content', originalColor);
-      }
-    };
-  }, [colorMode]);
 
   return (
     <Box
@@ -55,7 +37,7 @@ const Welcome = () => {
     >
       <Box
         flexShrink={0}
-        pt="max(1rem, env(safe-area-inset-top, 0px))"
+        pt="max(1rem, var(--lucem-safe-top))"
         px={4}
         pb={1}
         overflow="visible"

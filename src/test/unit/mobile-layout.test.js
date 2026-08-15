@@ -195,7 +195,7 @@ describe('mobile layout - no hardcoded overflow widths', () => {
       path.join(__dirname, '../../ui/app/pages/welcome.jsx'),
       'utf8'
     );
-    expect(src).toMatch(/safe-area-inset-top/);
+    expect(src).toMatch(/--lucem-safe-top|safe-area-inset-top/);
     expect(src).toMatch(/safe-area-inset-bottom/);
     expect(src).not.toMatch(/position=["']absolute["'][\s\S]{0,30}top=["']9["']/);
   });
@@ -338,6 +338,52 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
     expect(assetPopoverSrc).toMatch(/maxWidth=\{330\}/);
     expect(assetPopoverSrc).not.toMatch(/\bwidth=\{330\}/);
+  });
+});
+
+describe('mobile layout - iOS PWA top chrome', () => {
+  test('mainPopup.html reports safe-area insets and does not advertise a black theme', () => {
+    const html = fs.readFileSync(
+      path.join(__dirname, '../../pages/Popup/mainPopup.html'),
+      'utf8'
+    );
+    expect(html).toMatch(/viewport-fit=cover/);
+    expect(html).toMatch(/theme-color" content="#080808"/);
+    expect(html).not.toMatch(/theme-color" content="#000000"/);
+    expect(html).not.toMatch(/background-color: #000000/);
+  });
+
+  test('wallet header, settings, and accounts sit below --lucem-safe-top', () => {
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
+      'utf8'
+    );
+    const settingsSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/settings.jsx'),
+      'utf8'
+    );
+    const accountsSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/pages/accounts.jsx'),
+      'utf8'
+    );
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/styles.css'),
+      'utf8'
+    );
+    expect(walletSrc).toMatch(/pt="var\(--lucem-safe-top\)"/);
+    expect(settingsSrc).toMatch(/var\(--lucem-safe-top\)/);
+    expect(accountsSrc).toMatch(/var\(--lucem-safe-top\)/);
+    expect(css).toMatch(/--lucem-safe-top:\s*max\(env\(safe-area-inset-top/);
+  });
+
+  test('theme.jsx keeps PWA theme-color on the app surface', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/theme.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/SyncPwaThemeColor/);
+    expect(src).toMatch(/#080808/);
+    expect(src).toMatch(/#f4f6fb/);
   });
 });
 

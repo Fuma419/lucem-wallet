@@ -58,6 +58,8 @@ import { MdRefresh } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorModeValue } from '@chakra-ui/react';
+import { LUCEM_LAYOUT } from '../../layout/surface';
+import { useLayoutSurface } from '../../layout/LayoutSurfaceProvider';
 
 // Assets
 import Logo from '../../../assets/img/logo.png';
@@ -106,6 +108,7 @@ const Wallet = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const settings = useStoreState((state) => state.settings.settings);
+  const isDesktop = useLayoutSurface() === LUCEM_LAYOUT.desktop;
   const avatarBg = useColorModeValue('gray.100', 'gray.900');
   const panelBg = useColorModeValue('#f4f6fb', '#080808');
   // Always use neon button classes (same as tray FABs). Glow on/off is owned by
@@ -354,6 +357,29 @@ const Wallet = () => {
         )
       : undefined;
 
+  const assetsViewer = (
+    <CollectiblesViewer
+      assets={collectibleAssets}
+      onUpdateAvatar={() => getData({ skipUpdate: true })}
+    />
+  );
+  const historyViewer = (
+    <HistoryViewer
+      key={`${settings.network.id}:${
+        (state.account && state.account.paymentAddr) || ''
+      }`}
+      network={state.network}
+      history={state.account && state.account.history}
+      currentAddr={state.account && state.account.paymentAddr}
+      addresses={
+        state.accounts &&
+        Object.keys(state.accounts).map(
+          (index) => state.accounts[index].paymentAddr
+        )
+      }
+    />
+  );
+
   return (
     <PullToRefresh onRefresh={() => getData({ forceUpdate: true })}>
       <Box
@@ -365,7 +391,7 @@ const Wallet = () => {
         w="full"
         maxW="100%"
       >
-        <Box className="lucem-wallet-main-column" flex="1" display="flex" flexDirection="column">
+        <Box className="lucem-wallet-main-column lucem-wallet-home" flex="1" display="flex" flexDirection="column">
         <Box
           background={panelBg}
           shadow="md"
@@ -428,7 +454,13 @@ const Wallet = () => {
             </Box>
           </Flex>
 
-          <Box px={{ base: 3, md: 4 }} pb={1} flexShrink={0} textAlign="center">
+          <Box
+            className="lucem-wallet-name"
+            px={{ base: 3, md: 4 }}
+            pb={1}
+            flexShrink={0}
+            textAlign="center"
+          >
             <Text
               className="lineClamp"
               fontSize={{ base: 'lg', md: 'xl' }}
@@ -441,6 +473,7 @@ const Wallet = () => {
           </Box>
 
           <Flex
+            className="lucem-wallet-balance"
             direction="column"
             align="center"
             justify="center"
@@ -471,7 +504,7 @@ const Wallet = () => {
                         keep the ADA figure visible (or blank) without a Skeleton. */}
                     <UnitDisplay
                       className="lineClamp"
-                      fontSize={{ base: 'xl', md: '2xl' }}
+                      fontSize={isDesktop ? '4xl' : { base: 'xl', md: '2xl' }}
                       fontWeight="bold"
                       quantity={displayTotalAda}
                       decimals={6}
@@ -612,6 +645,7 @@ const Wallet = () => {
 
           {/* Receive, delegation, Send — flows under balance (no overlap). */}
           <Flex
+            className="lucem-wallet-actions"
             flexWrap="wrap"
             justifyContent="center"
             alignItems="center"
@@ -695,6 +729,31 @@ const Wallet = () => {
           </Flex>
         </Box>
         <Box height="8" />
+        {isDesktop ? (
+          <Flex
+            className="lucem-wallet-desktop-panels"
+            data-testid="wallet-desktop-panels"
+            align="flex-start"
+            gap={8}
+            w="full"
+            px={{ base: 2, md: 4 }}
+          >
+            <Box flex="1" minW={0} data-testid="wallet-desktop-assets">
+              <Flex align="center" gap={2} mb={3}>
+                <Icon as={RxTokens} boxSize={5} />
+                <Text fontWeight="semibold">Assets</Text>
+              </Flex>
+              {assetsViewer}
+            </Box>
+            <Box flex="1" minW={0} data-testid="wallet-desktop-history">
+              <Flex align="center" gap={2} mb={3}>
+                <Icon as={GoHistory} boxSize={5} />
+                <Text fontWeight="semibold">History</Text>
+              </Flex>
+              {historyViewer}
+            </Box>
+          </Flex>
+        ) : (
         <Tabs
           isLazy={true}
           lazyBehavior="unmount"
@@ -720,32 +779,21 @@ const Wallet = () => {
           </TabList>
           <TabPanels>
             <TabPanel>
-              <CollectiblesViewer
-                assets={collectibleAssets}
-                onUpdateAvatar={() => getData({ skipUpdate: true })}
-              />
+              {assetsViewer}
             </TabPanel>
             <TabPanel>
-              <HistoryViewer
-                key={`${settings.network.id}:${
-                  (state.account && state.account.paymentAddr) || ''
-                }`}
-                network={state.network}
-                history={state.account && state.account.history}
-                currentAddr={state.account && state.account.paymentAddr}
-                addresses={
-                  state.accounts &&
-                  Object.keys(state.accounts).map(
-                    (index) => state.accounts[index].paymentAddr
-                  )
-                }
-              />
+              {historyViewer}
             </TabPanel>
           </TabPanels>
         </Tabs>
+        )}
         </Box>
-        {/* Clearance for fixed lower trays from WalletShell */}
-        <Box pb="calc(5.5rem + env(safe-area-inset-bottom, 0px))" flexShrink={0} />
+        {/* Clearance for fixed lower trays from WalletShell (hidden on desktop). */}
+        <Box
+          className="lucem-tray-clearance"
+          pb="calc(5.5rem + env(safe-area-inset-bottom, 0px))"
+          flexShrink={0}
+        />
       </Box>
     </PullToRefresh>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { Box } from '@chakra-ui/react';
 import { useStoreState } from 'easy-peasy';
 import {
   getDelegation,
@@ -8,15 +9,20 @@ import {
   switchAccount,
   onAccountChange,
 } from '../../../api/extension';
+import { LUCEM_LAYOUT } from '../../layout/surface';
+import { useLayoutSurface } from '../../layout/LayoutSurfaceProvider';
+import DesktopNav from './desktopNav';
 import WalletTrays from './walletTrays';
 
 /**
- * Shell for wallet-home secondary screens: keeps lower trays mounted while
- * navigating between /wallet, /accounts, /settings, /staking, /governance.
+ * Shell for wallet-home secondary screens. Touch / extension keep corner FABs;
+ * laptop / desktop web uses a persistent sidebar next to the page.
  */
 const WalletShell = () => {
   const settings = useStoreState((state) => state.settings.settings);
   const location = useLocation();
+  const surface = useLayoutSurface();
+  const isDesktop = surface === LUCEM_LAYOUT.desktop;
   const [delegation, setDelegation] = React.useState(null);
   const [accounts, setAccounts] = React.useState({});
   const [currentAccountIndex, setCurrentAccountIndex] = React.useState(null);
@@ -77,15 +83,33 @@ const WalletShell = () => {
     }
   };
 
+  const page = (
+    <Outlet
+      key={`${networkId || 'network'}:${
+        currentAccountIndex != null ? currentAccountIndex : 'account'
+      }`}
+    />
+  );
+
+  if (isDesktop) {
+    return (
+      <Box className="lucem-desktop-shell" data-testid="lucem-desktop-shell">
+        <DesktopNav
+          accounts={accounts}
+          currentAccountIndex={currentAccountIndex}
+          onAccountSelect={onAccountSelect}
+          delegation={delegation}
+        />
+        <Box className="lucem-desktop-main" data-testid="lucem-desktop-main">
+          {page}
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <>
-      {/* Remount page content when the network or active account changes so
-          balances/history reload cleanly for the new context. */}
-      <Outlet
-        key={`${networkId || 'network'}:${
-          currentAccountIndex != null ? currentAccountIndex : 'account'
-        }`}
-      />
+      {page}
       <WalletTrays
         accounts={accounts}
         currentAccountIndex={currentAccountIndex}

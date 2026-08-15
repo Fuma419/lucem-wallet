@@ -94,6 +94,7 @@ describe('wallet tray accounts vs settings FABs', () => {
 
   test('WalletShell mounts trays with Outlet for nested routes', () => {
     expect(shellSrc).toContain('WalletTrays');
+    expect(shellSrc).toContain('DesktopNav');
     expect(shellSrc).toContain('<Outlet');
     expect(mainSrc).toContain('WalletShell');
     expect(mainSrc).toContain('path="/accounts"');

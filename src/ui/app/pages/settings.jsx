@@ -240,6 +240,7 @@ const Settings = () => {
         minH={0}
         overflowY="auto"
         w="full"
+        className="lucem-tray-clearance"
         px={{ base: 4, md: 6 }}
         pb={TRAY_CLEARANCE_PB}
       >

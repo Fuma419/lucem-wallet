@@ -138,6 +138,18 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toMatch(/>\s*Keystone\s*</);
     expect(hwSrc).toMatch(/>\s*Ledger\s*</);
     expect(hwSrc).toMatch(/preferredKeystoneImportRowKeys/);
+    expect(hwSrc).toMatch(/forceExportProfile/);
+    expect(hwSrc).toMatch(/keystone-profile-ledger/);
+    expect(hwSrc).toMatch(/keystone-profile-native/);
+    expect(hwSrc).toMatch(/KeystoneDerivationPicker/);
+  });
+
+  test('Keystone e2e step-1 shot picks an account type before Continue', () => {
+    const e2eSrc = fs.readFileSync(
+      path.join(__dirname, '../../../e2e/screenshots.spec.js'),
+      'utf8'
+    );
+    expect(e2eSrc).toMatch(/keystone-profile-native/);
   });
 });
 

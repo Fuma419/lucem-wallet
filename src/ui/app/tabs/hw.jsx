@@ -153,6 +153,66 @@ function defaultKeystoneAccountChecks() {
   return o;
 }
 
+/** Native vs Ledger — same CIP-1852 path; the device ⋮ menu chooses the xpub. */
+function KeystoneDerivationPicker({ value, onChange }) {
+  const options = [
+    {
+      id: KEYSTONE_DERIVATION.standard,
+      label: 'Cardano Native',
+      testId: 'keystone-profile-native',
+    },
+    {
+      id: KEYSTONE_DERIVATION.ledger,
+      label: 'Ledger',
+      testId: 'keystone-profile-ledger',
+    },
+  ];
+  return (
+    <Box w="full" maxW="400px" alignSelf="stretch" mx="auto">
+      <Text
+        fontSize="sm"
+        fontWeight="semibold"
+        color="whiteAlpha.900"
+        textAlign="center"
+      >
+        Account type on Keystone
+      </Text>
+      <Text fontSize="xs" color="whiteAlpha.650" textAlign="center" mt={1} mb={2}>
+        Open the Cardano ⋮ menu and pick the same type here. A Ledger export
+        must stay Ledger — Lucem will not rewrite it as Cardano Native.
+      </Text>
+      <Box display="flex" gap={3} justifyContent="center">
+        {options.map((opt) => {
+          const selected = value === opt.id;
+          return (
+            <Box
+              key={opt.id}
+              as="button"
+              type="button"
+              data-testid={opt.testId}
+              flex="1"
+              maxW="180px"
+              py={2.5}
+              px={2}
+              rounded="lg"
+              border="solid 2px"
+              borderColor={selected ? HW_ACCENT.border : 'whiteAlpha.400'}
+              bg={selected ? HW_ACCENT.bgSelected : 'rgba(255, 255, 255, 0.06)'}
+              boxShadow={selected ? HW_ACCENT.glow : HW_ACCENT.inset}
+              color="white"
+              fontWeight="bold"
+              fontSize="sm"
+              onClick={() => onChange(opt.id)}
+            >
+              {opt.label}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+}
+
 const App = () => {
   const [tab, setTab] = React.useState(0);
   const data = React.useRef({
@@ -224,8 +284,18 @@ const App = () => {
           >
             {tab === 0 && (
               <ConnectHW
-                onConfirm={({ device, id, keystoneAccounts }) => {
-                  data.current = { device, id, keystoneAccounts };
+                onConfirm={({
+                  device,
+                  id,
+                  keystoneAccounts,
+                  keystoneExportProfile,
+                }) => {
+                  data.current = {
+                    device,
+                    id,
+                    keystoneAccounts,
+                    keystoneExportProfile,
+                  };
                   setTab(1);
                 }}
               />
@@ -253,6 +323,11 @@ const ConnectHW = ({ onConfirm }) => {
   const [keystoneAccountChecks, setKeystoneAccountChecks] = React.useState(
     () => defaultKeystoneAccountChecks()
   );
+  const [keystoneExportProfile, setKeystoneExportProfile] = React.useState(null);
+  const keystoneExportProfileRef = React.useRef(null);
+  React.useLayoutEffect(() => {
+    keystoneExportProfileRef.current = keystoneExportProfile;
+  }, [keystoneExportProfile]);
 
   const keystoneRequestedIndices = React.useMemo(() => {
     return Object.keys(keystoneAccountChecks)
@@ -313,9 +388,14 @@ const ConnectHW = ({ onConfirm }) => {
               ? `account ${keystoneRequestedIndices[0]}`
               : `${keystoneRequestedIndices.length} accounts (${keystoneRequestedIndices.join(', ')})`}
           </b>
-          . Open the <b>scanner</b>, scan this QR, and approve. Lucem imports
-          whatever ADA derivation the device is set to, so the addresses always
-          match Keystone. More accounts take longer on the device.
+          . Open the <b>scanner</b>, scan this QR, and approve. You chose{' '}
+          <b>
+            {keystoneExportProfile === KEYSTONE_DERIVATION.ledger
+              ? 'Ledger'
+              : 'Cardano Native'}
+          </b>{' '}
+          — Lucem stores that profile (same CIP-1852 path, different xpub).
+          More accounts take longer on the device.
         </Text>
         <Box h={4} />
         <Box
@@ -433,9 +513,14 @@ const ConnectHW = ({ onConfirm }) => {
             fontWeight="semibold"
             textAlign="center"
           >
-            Before you scan, pick the account compatibility you want on
-            Keystone — <b>Cardano Native</b> or <b>Ledger</b>. Lucem imports
-            whichever the device exports, so choose it on the device first.
+            Scanning for{' '}
+            <b>
+              {keystoneExportProfile === KEYSTONE_DERIVATION.ledger
+                ? 'Ledger'
+                : 'Cardano Native'}
+            </b>
+            . The device ⋮ menu must match — Lucem will not relabel a Ledger
+            export as Cardano Native.
           </Text>
         </Box>
         <Box h={4} />
@@ -455,7 +540,9 @@ const ConnectHW = ({ onConfirm }) => {
                 if (keystoneScanConsumedRef.current) return;
                 const indices = keystoneRequestedIndicesRef.current;
                 const { masterFingerprint, keys } =
-                  parseKeystoneCardanoConnectUr(data);
+                  parseKeystoneCardanoConnectUr(data, {
+                    forceExportProfile: keystoneExportProfileRef.current,
+                  });
                 const filtered = filterKeystoneKeysForRequestedAccounts(
                   keys,
                   indices
@@ -465,6 +552,7 @@ const ConnectHW = ({ onConfirm }) => {
                   device: HW.keystone,
                   id: masterFingerprint,
                   keystoneAccounts: filtered,
+                  keystoneExportProfile: keystoneExportProfileRef.current,
                 });
               } catch (e) {
                 setScanError(e.message || 'Could not read QR');
@@ -559,6 +647,7 @@ const ConnectHW = ({ onConfirm }) => {
             setKeystoneStep('pick');
             keystoneScanConsumedRef.current = false;
             setKeystoneAccountChecks(defaultKeystoneAccountChecks());
+            setKeystoneExportProfile(null);
             setKeystoneAdvancedOpen(false);
             setError('');
             setScanError('');
@@ -681,11 +770,18 @@ const ConnectHW = ({ onConfirm }) => {
           alignItems="center"
         >
           <Text width="100%" fontSize="sm" color="whiteAlpha.800" textAlign="center">
-            By default Lucem connects <b>account 0</b> (CIP-1852). Open{' '}
-            <b>Advanced options</b> to request more accounts. Lucem imports
-            whatever ADA derivation the device is set to, so the addresses always
-            match Keystone.
+            By default Lucem connects <b>account 0</b> (CIP-1852). Choose
+            Cardano Native or Ledger to match the Keystone ⋮ menu, then
+            Continue. Open <b>Advanced options</b> to request more accounts.
           </Text>
+          <Box h={4} />
+          <KeystoneDerivationPicker
+            value={keystoneExportProfile}
+            onChange={(profile) => {
+              setKeystoneExportProfile(profile);
+              setError('');
+            }}
+          />
           <Box h={4} />
           <Button
             type="button"
@@ -764,10 +860,9 @@ const ConnectHW = ({ onConfirm }) => {
                 )}
               </Stack>
               <Text fontSize="xs" color="whiteAlpha.650" mt={3} maxW="340px">
-                Lucem imports each account exactly as your Keystone exports it —
-                whichever ADA derivation (Cardano standard or Ledger-compatible)
-                the device is currently set to. There is nothing to match here;
-                the resulting addresses always follow the device.
+                The account-type choice above (Cardano Native or Ledger) is
+                stored with the import. Both use m/1852&apos;/1815&apos;/N&apos;;
+                only the device xpub differs.
               </Text>
             </Box>
           </Collapse>
@@ -803,7 +898,8 @@ const ConnectHW = ({ onConfirm }) => {
         minH="44px"
         isDisabled={
           isLoading ||
-          !selected
+          !selected ||
+          (selected === HW.keystone && !keystoneExportProfile)
         }
         isLoading={isLoading}
         mt={8}
@@ -815,6 +911,12 @@ const ConnectHW = ({ onConfirm }) => {
         onClick={async () => {
           setError('');
           if (selected === HW.keystone) {
+            if (!keystoneExportProfile) {
+              setError(
+                'Choose Cardano Native or Ledger to match the Keystone account type.'
+              );
+              return;
+            }
             if (keystoneRequestedIndices.length < 1) {
               setError('Select at least one Cardano account (Advanced).');
               return;
@@ -959,7 +1061,9 @@ const SelectAccounts = ({ data, onConfirm }) => {
   React.useEffect(() => {
     if (!isInit || !isKeystone) return;
     const newOnes = data.keystoneAccounts.filter((k) => !existing[k.rowKey]);
-    const preferred = new Set(preferredKeystoneImportRowKeys(newOnes));
+    const preferred = new Set(
+      preferredKeystoneImportRowKeys(newOnes, data.keystoneExportProfile)
+    );
     const next = {};
     newOnes.forEach((k) => {
       next[k.rowKey] = preferred.has(k.rowKey);
@@ -1007,8 +1111,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
             ? keystoneNewAccounts.length === 0
               ? 'Every Cardano account in this sync is already in Lucem. Close this tab or run the Keystone flow again to export a different account.'
               : keystoneNewAccounts.length === 1
-                ? 'Confirm adding this account. Cardano Native matches the receive address Keystone shows first; Ledger is the device’s Ledger-compatible address.'
-                : 'Confirm which accounts to add (at least one). Cardano Native is selected by default so the address matches Keystone’s receive screen.'
+                ? 'Confirm adding this account. The label is the Keystone account type you chose (Cardano Native or Ledger).'
+                : 'Confirm which accounts to add (at least one). The checked row matches the Cardano Native or Ledger type you chose on the previous step.'
             : Object.keys(existing).length > 0 &&
                 Object.keys(selected).filter((s) => selected[s] && !existing[s])
                   .length === 0
@@ -1016,6 +1120,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
               : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device. Accounts already in Lucem are marked and cannot be selected again.'}
         </Text>
         {isKeystone &&
+        data.keystoneExportProfile !== KEYSTONE_DERIVATION.ledger &&
         data.keystoneAccounts.every(
           (k) => k.profile === KEYSTONE_DERIVATION.ledger
         ) ? (

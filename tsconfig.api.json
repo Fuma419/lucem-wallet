@@ -18,6 +18,7 @@
     "src/api/types.ts",
     "src/api/lovelace-scalar.ts",
     "src/api/provider-http.ts",
+    "src/api/providers/**/*.ts",
     "src/api/tx/**/*.ts",
     "src/api/extension/wallet.ts"
   ]

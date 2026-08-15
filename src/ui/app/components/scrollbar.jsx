@@ -12,6 +12,7 @@ export function lucemTransparentScrollView({ style, ...props }) {
       style={{
         ...style,
         backgroundColor: 'transparent',
+        overscrollBehavior: 'none',
       }}
     />
   );

@@ -40,6 +40,10 @@ describe('stake center page wiring', () => {
 
     expect(stakingSrc).toContain('data-testid="stake-center-page"');
     expect(stakingSrc).toContain('data-testid="stake-pool-search"');
+    expect(stakingSrc).toContain('data-testid="stake-pool-results"');
+    expect(stakingSrc).toContain('data-testid="stake-pool-results-empty"');
+    expect(stakingSrc).not.toContain('setShowPoolSearch(false)');
+    expect(stakingSrc).not.toContain('showPoolSearch');
     expect(stakingSrc).toContain('data-testid="stake-pool-details"');
     expect(stakingSrc).toContain('data-testid="stake-confirm-transaction"');
     expect(stakingSrc).toContain('data-testid="stake-reward-actions"');

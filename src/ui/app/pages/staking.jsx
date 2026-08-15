@@ -134,7 +134,7 @@ const Metric = ({ label, value }) => {
   );
 };
 
-const PoolCard = ({ pool, selected, onSelect }) => {
+const PoolCard = ({ pool, selected, onSelect, ...cardProps }) => {
   const {
     panelBorder,
     poolIdleBg,
@@ -150,6 +150,7 @@ const PoolCard = ({ pool, selected, onSelect }) => {
       textAlign="left"
       width="full"
       onClick={() => onSelect(pool)}
+      {...cardProps}
       borderWidth="1px"
       borderColor={selected ? 'yellow.300' : panelBorder}
       bg={selected ? 'yellow.400' : poolIdleBg}
@@ -271,7 +272,6 @@ const Staking = () => {
   const [isBuilding, setIsBuilding] = React.useState(false);
   const [error, setError] = React.useState('');
   const [poolError, setPoolError] = React.useState('');
-  const [showPoolSearch, setShowPoolSearch] = React.useState(true);
   const didAutoSelect = React.useRef(false);
   const [submittedTx, setSubmittedTx] = React.useState('');
   const {
@@ -338,7 +338,6 @@ const Staking = () => {
             if (hodlr) {
               didAutoSelect.current = true;
               setSelectedPool(hodlr);
-              setShowPoolSearch(false);
             }
           }
         }
@@ -366,7 +365,6 @@ const Staking = () => {
     setTxPreview(null);
     setTxMode('delegate');
     setSelectedPool(pool);
-    setShowPoolSearch(false);
     try {
       if (!account || !delegation || !protocolParameters) {
         throw new Error('Staking data is still loading. Try again in a moment.');
@@ -609,28 +607,7 @@ const Staking = () => {
               {isPoolsLoading && <Spinner color="yellow.400" size="sm" />}
             </HStack>
 
-            {selectedPool && !showPoolSearch && (
-              <Box mt={3}>
-                <PoolCard
-                  pool={selectedPool}
-                  selected
-                  onSelect={() => {}}
-                />
-                <Button
-                  mt={2}
-                  size="sm"
-                  width="full"
-                  variant="outline"
-                  colorScheme="yellow"
-                  onClick={() => setShowPoolSearch(true)}
-                >
-                  Change Pool
-                </Button>
-              </Box>
-            )}
-
-            {showPoolSearch && (
-              <Box mt={3}>
+            <Box mt={3}>
                 <InputGroup>
                   <InputLeftElement pointerEvents="none">
                     <SearchIcon color={subtleFg} />
@@ -666,23 +643,35 @@ const Staking = () => {
                     <AlertDescription>{poolError}</AlertDescription>
                   </Alert>
                 )}
-                <Stack spacing={3} mt={3} maxH="400px" overflowY="auto" pr={1}>
+                <Stack
+                  spacing={3}
+                  mt={3}
+                  maxH="400px"
+                  overflowY="auto"
+                  pr={1}
+                  data-testid="stake-pool-results"
+                >
                   {pools.map((pool) => (
                     <PoolCard
-                      key={poolId(pool)}
+                      key={poolId(pool) || pool.ticker}
                       pool={pool}
                       selected={poolId(pool) === poolId(selectedPool)}
                       onSelect={buildDelegatePreview}
+                      data-testid={`stake-pool-result-${pool.ticker || poolId(pool)}`}
                     />
                   ))}
                   {!isPoolsLoading && pools.length === 0 && (
-                    <Box textAlign="center" color={mutedFg} py={4}>
+                    <Box
+                      textAlign="center"
+                      color={mutedFg}
+                      py={4}
+                      data-testid="stake-pool-results-empty"
+                    >
                       No stake pools found.
                     </Box>
                   )}
                 </Stack>
               </Box>
-            )}
           </Box>
 
           <Stack

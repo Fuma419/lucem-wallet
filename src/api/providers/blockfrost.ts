@@ -532,6 +532,11 @@ export async function blockfrostKoiosCompatibleRequest(
   }
 
   if (endpoint.startsWith('/pool_list')) {
+    // Ticker / pool-id filters are PostgREST (Koios). Blockfrost /pools is an
+    // unfiltered page of ids — claiming this endpoint would hide search hits.
+    if (/[?&](ticker|or|pool_id_bech32)=/.test(endpoint)) {
+      return undefined;
+    }
     const queryIndex = endpoint.indexOf('?');
     const query = queryIndex >= 0 ? endpoint.slice(queryIndex + 1) : '';
     const queryParams = new URLSearchParams(query);

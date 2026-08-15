@@ -741,7 +741,7 @@ html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   box-shadow: 0px 0px 25px rgba(255, 238, 0, 0.8);
 }
 
-/* In-flow testnet badge — centered in the wallet header icon row (not pinned to the panel top). */
+/* In-flow testnet badge — below the header orbs (not in the punch-hole row). */
 .network-banner {
   position: relative;
   z-index: 5;

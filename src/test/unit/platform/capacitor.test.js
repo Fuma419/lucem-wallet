@@ -67,13 +67,14 @@ describe('platform/capacitor native shell helpers', () => {
 
   test('initNativeShell wires status bar, splash, and back button on native', async () => {
     const setStyle = jest.fn().mockResolvedValue(undefined);
+    const setBackgroundColor = jest.fn().mockResolvedValue(undefined);
     const setOverlaysWebView = jest.fn().mockResolvedValue(undefined);
     const hide = jest.fn().mockResolvedValue(undefined);
     const addListener = jest.fn();
     window.Capacitor = {
       isNativePlatform: () => true,
       Plugins: {
-        StatusBar: { setStyle, setOverlaysWebView },
+        StatusBar: { setStyle, setBackgroundColor, setOverlaysWebView },
         SplashScreen: { hide },
         App: { addListener, exitApp: jest.fn() },
       },
@@ -81,7 +82,8 @@ describe('platform/capacitor native shell helpers', () => {
 
     await capacitor.initNativeShell();
 
-    expect(setStyle).toHaveBeenCalledWith({ style: 'DARK' });
+    expect(setStyle).toHaveBeenCalledWith({ style: 'LIGHT' });
+    expect(setBackgroundColor).toHaveBeenCalledWith({ color: '#080808' });
     expect(setOverlaysWebView).toHaveBeenCalledWith({ overlay: false });
     expect(hide).toHaveBeenCalled();
     expect(addListener).toHaveBeenCalledWith('backButton', expect.any(Function));

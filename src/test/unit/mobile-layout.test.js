@@ -143,6 +143,22 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
     expect(src).toContain('setSystemGestureExclusionRects');
     expect(src).toContain('EXCLUSION_HEIGHT_DP');
+    expect(src).toContain('setDecorFitsSystemWindows(window, true)');
+    expect(src).toContain('LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT');
+    expect(src).toContain('setAppearanceLightStatusBars(false)');
+  });
+
+  test('Android themes opt out of API 35 edge-to-edge so the camera stays in chrome', () => {
+    const src = fs.readFileSync(
+      path.join(
+        __dirname,
+        '../../../android/app/src/main/res/values/styles.xml'
+      ),
+      'utf8'
+    );
+    expect(src).toContain('windowOptOutEdgeToEdgeEnforcement');
+    expect(src).toContain('android:statusBarColor');
+    expect(src).toContain('#080808');
   });
 
   test('send.jsx should not pin the primary action bar with position absolute bottom', () => {
@@ -300,6 +316,8 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
     expect(src).toMatch(/androidScaleType:\s*'CENTER_INSIDE'/);
     expect(src).not.toMatch(/CENTER_CROP/);
+    expect(src).toMatch(/overlaysWebView:\s*false/);
+    expect(src).toMatch(/style:\s*'LIGHT'/);
   });
 
   test('termsOfUse.jsx legal scroll region should cap height with viewport (not fixed 400px only)', () => {
@@ -382,7 +400,8 @@ describe('mobile layout - iOS PWA top chrome', () => {
       'utf8'
     );
     expect(html).not.toMatch(/viewport-fit=cover/);
-    expect(html).toMatch(/black-translucent/);
+    expect(html).toMatch(/apple-mobile-web-app-status-bar-style" content="black"/);
+    expect(html).not.toMatch(/black-translucent/);
     expect(html).not.toMatch(/class="lucem-ios-top-edge"/);
     expect(html).toMatch(/theme-color" content="#080808"/);
     expect(html).not.toMatch(/theme-color" content="#000000"/);
@@ -420,7 +439,8 @@ describe('mobile layout - iOS PWA top chrome', () => {
     expect(src).toMatch(/SyncPwaThemeColor/);
     expect(src).toMatch(/#080808/);
     expect(src).toMatch(/#f4f6fb/);
-    expect(src).not.toMatch(/apple-mobile-web-app-status-bar-style/);
+    expect(src).toMatch(/apple-mobile-web-app-status-bar-style/);
+    expect(src).toMatch(/colorMode === 'light' \? 'default' : 'black'/);
   });
 });
 

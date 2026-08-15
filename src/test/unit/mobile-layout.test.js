@@ -374,12 +374,12 @@ describe('mobile layout - no hardcoded overflow widths', () => {
 });
 
 describe('mobile layout - iOS PWA top chrome', () => {
-  test('mainPopup.html keeps a translucent status bar and reports safe-area insets', () => {
+  test('mainPopup.html does not use viewport-fit=cover (avoids iOS 27 shell shift)', () => {
     const html = fs.readFileSync(
       path.join(__dirname, '../../pages/Popup/mainPopup.html'),
       'utf8'
     );
-    expect(html).toMatch(/viewport-fit=cover/);
+    expect(html).not.toMatch(/viewport-fit=cover/);
     expect(html).toMatch(/black-translucent/);
     expect(html).not.toMatch(/class="lucem-ios-top-edge"/);
     expect(html).toMatch(/theme-color" content="#080808"/);
@@ -387,7 +387,7 @@ describe('mobile layout - iOS PWA top chrome', () => {
     expect(html).not.toMatch(/background-color: #000000/);
   });
 
-  test('wallet header, settings, and accounts sit below --lucem-safe-top', () => {
+  test('wallet/settings/accounts do not force a standalone 59px top floor', () => {
     const walletSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
       'utf8'
@@ -404,12 +404,10 @@ describe('mobile layout - iOS PWA top chrome', () => {
       path.join(__dirname, '../../ui/app/components/styles.css'),
       'utf8'
     );
-    expect(walletSrc).toMatch(/pt="var\(--lucem-safe-top\)"/);
-    expect(settingsSrc).toMatch(/var\(--lucem-safe-top\)/);
-    expect(accountsSrc).toMatch(/var\(--lucem-safe-top\)/);
-    expect(css).toMatch(
-      /--lucem-safe-top:\s*max\(env\(safe-area-inset-top,\s*0px\),\s*59px\)/
-    );
+    expect(walletSrc).not.toMatch(/pt="var\(--lucem-safe-top\)"/);
+    expect(settingsSrc).not.toMatch(/calc\(1rem \+ var\(--lucem-safe-top\)\)/);
+    expect(accountsSrc).not.toMatch(/calc\(1rem \+ var\(--lucem-safe-top\)\)/);
+    expect(css).not.toMatch(/--lucem-safe-top:\s*max\(env\(safe-area-inset-top/);
   });
 
   test('theme.jsx keeps PWA theme-color on the app surface', () => {

@@ -149,12 +149,7 @@ const Accounts = () => {
       className="lucem-wallet-main-column"
       data-testid="accounts-page"
     >
-      <Flex
-        align="center"
-        px={{ base: 4, md: 6 }}
-        pt="calc(1rem + var(--lucem-safe-top))"
-        pb={2}
-      >
+      <Flex align="center" px={{ base: 4, md: 6 }} pt={4} pb={2}>
         <Text
           flex="1"
           textAlign="center"

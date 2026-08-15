@@ -229,12 +229,7 @@ const Settings = () => {
       className="lucem-settings-shell lucem-wallet-main-column"
       data-testid="settings-page"
     >
-      <Flex
-        align="center"
-        px={{ base: 3, md: 4 }}
-        pt="calc(1rem + var(--lucem-safe-top))"
-        pb={2}
-      >
+      <Flex align="center" px={{ base: 3, md: 4 }} pt={4} pb={2}>
         <Text flex="1" textAlign="center" fontSize="xl" fontWeight="bold">
           Settings
         </Text>

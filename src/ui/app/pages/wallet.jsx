@@ -372,7 +372,6 @@ const Wallet = () => {
           maxWidth="100%"
           position="relative"
           overflow="visible"
-          pt="var(--lucem-safe-top)"
           pb={{ base: 4, md: 6 }}
         >
           {testnetBanner ? (

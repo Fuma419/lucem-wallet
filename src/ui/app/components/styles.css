@@ -60,19 +60,6 @@ html[data-theme='light'] .message {
   --lucem-font-xl: calc(1.5rem * var(--lucem-font-scale));
 }
 
-/*
- * iOS 26+ standalone often reports env(safe-area-inset-top) as 0, and the
- * Liquid Glass overlay still covers the status-bar band. Keep a Dynamic
- * Island-sized floor so header chrome stays below that overlay.
- */
-@supports (-webkit-touch-callout: none) {
-  @media (display-mode: standalone) {
-    :root {
-      --lucem-safe-top: max(env(safe-area-inset-top, 0px), 59px);
-    }
-  }
-}
-
 html {
   font-size: 100%;
   -webkit-text-size-adjust: 100%;

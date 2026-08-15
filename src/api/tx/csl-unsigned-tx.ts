@@ -158,7 +158,7 @@ function selectAdaInputsForViableChange({
     b.output().amount().coin().compare(a.output().amount().coin())
   );
 
-  const picked = [];
+  const picked: any[] = [];
   let sum = Cardano.BigNum.zero();
   for (const u of sorted) {
     if (sum.compare(wantViable) >= 0) break;

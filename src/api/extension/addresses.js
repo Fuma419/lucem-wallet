@@ -148,9 +148,9 @@ const EXTERNAL_ADDRESS_SCAN_GAP = 5;
  * Query Koios/Blockfrost for payment addresses on a stake key, then match
  * them to CIP-1852 external (role=0) and internal/change (role=1) indices.
  *
- * @param {object} account
+ * @param {*} account
  * @param {{ networkKeys?: string[] }} [options]
- * @returns {{ externalIndices: number[], internalIndices: number[] }}
+ * @returns {Promise<{ externalIndices: number[], internalIndices: number[] }>}
  */
 export const discoverUsedPaymentIndices = async (account, options = {}) => {
   await Loader.load();
@@ -215,7 +215,7 @@ export const discoverUsedPaymentIndices = async (account, options = {}) => {
         internalFound.add(i);
       }
       continue;
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       console.warn(
         `account_addresses scan failed (${networkKey}):`,
         error.message || error
@@ -257,7 +257,7 @@ export const discoverUsedPaymentIndices = async (account, options = {}) => {
             if (gap >= EXTERNAL_ADDRESS_SCAN_GAP) break;
           }
         }
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         console.warn(
           `address_txs role=${role} scan failed (${networkKey}):`,
           error.message || error
@@ -284,7 +284,7 @@ export const discoverUsedExternalIndices = async (account, options = {}) => {
  *
  * @param {string|number} accountIndex
  * @param {{ networkKeys?: string[] }} [options]
- * @returns {{ externalIndices: number[], internalIndices: number[] }}
+ * @returns {Promise<{ externalIndices: number[], internalIndices: number[] }>}
  */
 export const activateDiscoveredExternalAddresses = async (
   accountIndex,
@@ -334,7 +334,7 @@ export const activateDiscoveredExternalAddresses = async (
       externalIndices: mergedExternal,
       internalIndices: mergedInternal,
     };
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.warn(
       'External address activation failed:',
       error.message || error
@@ -440,12 +440,12 @@ export const getAccountDRepId = async () => {
   let drepIdLegacy = '';
   try {
     drepIdCip129 = drep.to_bech32(true);
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     drepIdCip129 = '';
   }
   try {
     drepIdLegacy = drep.to_bech32(false);
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     drepIdLegacy = '';
   }
   return { drepKeyHashHex, drepIdCip129, drepIdLegacy };

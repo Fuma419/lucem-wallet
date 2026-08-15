@@ -299,7 +299,7 @@ export const isValidAddress = async (address) => {
     ) {
       return Buffer.from(addr.to_bytes());
     }
-      } catch (e) {
+      } catch (/** @type {any} */ e) {
       console.log('Bech32 parsing failed:', e);
       // If bech32 fails, try raw bytes
       try {
@@ -314,7 +314,7 @@ export const isValidAddress = async (address) => {
       ) {
         return Buffer.from(addr.to_bytes());
       }
-          } catch (e2) {
+          } catch (/** @type {any} */ e2) {
         console.log('Hex parsing failed:', e2);
         // Both parsing methods failed
         return false;
@@ -388,19 +388,20 @@ const clearBrowserWalletCaches = () => {
         }
       });
     }
-  } catch (_) {
+  } catch (/** @type {any} */ _) {
     /* ignore quota / private mode */
   }
   try {
     if (window.sessionStorage) {
       window.sessionStorage.clear();
     }
-  } catch (_) {
+  } catch (/** @type {any} */ _) {
     /* ignore */
   }
 };
 
 /** PWA / web build uses IndexedDB `lucem-wallet`; extension may have none (harmless delete). */
+/** @returns {Promise<void>} */
 const clearIndexedDbWalletDb = () =>
   new Promise((resolve) => {
     if (typeof indexedDB === 'undefined') {
@@ -412,7 +413,7 @@ const clearIndexedDbWalletDb = () =>
       req.onsuccess = () => resolve();
       req.onerror = () => resolve();
       req.onblocked = () => resolve();
-    } catch (_) {
+    } catch (/** @type {any} */ _) {
       resolve();
     }
   });
@@ -421,7 +422,7 @@ async function wipeAllLocalWalletData() {
   await platform.storage.clear();
   try {
     localStorage.removeItem('chakra-ui-color-mode');
-  } catch (_) {
+  } catch (/** @type {any} */ _) {
     /* ignore */
   }
   clearBrowserWalletCaches();
@@ -511,7 +512,9 @@ export const deriveAccountPublicKeyFromMnemonic = async (
   accountIndex = 0
 ) => {
   await Loader.load();
+  /** @type {any} */
   let entropy = mnemonicToEntropy(seedPhrase);
+  /** @type {any} */
   let rootKey = Loader.Cardano.Bip32PrivateKey.from_bip39_entropy(
     Buffer.from(entropy, 'hex'),
     Buffer.from('')
@@ -522,19 +525,19 @@ export const deriveAccountPublicKeyFromMnemonic = async (
     accountKey = rootKey
       .derive(harden(1852))
       .derive(harden(1815))
-      .derive(harden(parseInt(accountIndex, 10)));
+      .derive(harden(Number(accountIndex)));
     return accountKey.to_public().to_hex();
   } finally {
     if (accountKey) {
       try {
         accountKey.free();
-      } catch (_) {
+      } catch (/** @type {any} */ _) {
         /* ignore */
       }
     }
     try {
       rootKey.free();
-    } catch (_) {
+    } catch (/** @type {any} */ _) {
       /* ignore */
     }
     rootKey = null;
@@ -678,7 +681,7 @@ export const importAppData = async (backup) => {
   if (!currentValid && keys.length > 0) {
     const first = keys[0];
     patch[STORAGE.currentAccount] =
-      isHW(first) || isNaN(first) ? first : parseInt(first, 10);
+      isHW(first) || Number.isNaN(Number(first)) ? first : /** @type {any} */ (parseInt(first, 10));
   }
 
   await setStorage(patch);
@@ -739,7 +742,7 @@ export const validateAccountWithSeed = async (
       seedPhrase,
       derivationIndex
     );
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     throw new Error('Invalid recovery phrase.');
   }
   if (account.publicKey && derivedPublicKey !== account.publicKey) {
@@ -754,14 +757,16 @@ export const validateAccountWithSeed = async (
   if (probe) {
     try {
       await decryptWithPassword(password, probe);
-    } catch (e) {
+    } catch (/** @type {any} */ e) {
       throw new Error(
         `${ERROR.wrongPassword}: enter your existing Lucem password.`
       );
     }
   }
 
+  /** @type {any} */
   let entropy = mnemonicToEntropy(seedPhrase);
+  /** @type {any} */
   let rootKey = Loader.Cardano.Bip32PrivateKey.from_bip39_entropy(
     Buffer.from(entropy, 'hex'),
     Buffer.from('')
@@ -822,6 +827,7 @@ const nextWalletId = async () => {
  * @param {object} [options]
  * @param {string} [options.walletId] - seed id (multi-seed). Defaults to "0".
  * @param {number} [options.derivationIndex] - CIP-1852 account index in the seed.
+ * @param {number|string} [options.slot] - storage slot (decoupled from derivation).
  */
 export const createAccount = async (
   name,
@@ -838,9 +844,9 @@ export const createAccount = async (
   // CIP-1852 account index inside the seed.
   const derivationIndex =
     options.derivationIndex != null
-      ? parseInt(options.derivationIndex, 10)
-      : accountIndex !== null && accountIndex !== undefined && accountIndex !== ''
-        ? parseInt(accountIndex, 10)
+      ? Number(options.derivationIndex)
+      : accountIndex != null
+        ? Number(accountIndex)
         : existingAccounts
           ? Object.keys(getNativeAccounts(existingAccounts)).length
           : 0;
@@ -876,7 +882,7 @@ export const createAccount = async (
   // derivation index as their slot for backwards compatibility.
   let slot;
   if (options.slot != null) {
-    slot = parseInt(options.slot, 10);
+    slot = Number(options.slot);
   } else if (
     isLegacySeed &&
     (!existingAccounts || existingAccounts[derivationIndex] == null)
@@ -991,7 +997,7 @@ export const createAccount = async (
   // Import/create: activate every used external address under this stake key.
   try {
     await activateDiscoveredExternalAddresses(index);
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.warn(
       'Post-create address discovery skipped:',
       error.message || error
@@ -1141,7 +1147,7 @@ export const createHWAccounts = async (accounts) => {
   for (const { index: hwIndex } of added) {
     try {
       await activateDiscoveredExternalAddresses(hwIndex);
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       console.warn(
         `HW address discovery skipped (${hwIndex}):`,
         error.message || error
@@ -1209,7 +1215,7 @@ export const indexToHw = (accountIndex) => {
           id: Buffer.from(idHex, 'hex').toString('utf8'),
           account,
         };
-      } catch (e) {
+      } catch (/** @type {any} */ e) {
         /* fall through */
       }
     }
@@ -1314,7 +1320,7 @@ export const initHW = async ({ device, id, bleDevice }) => {
           appUrl: 'https://www.hodlerstaking.com/',
         },
       });
-    } catch (e) {}
+    } catch (/** @type {any} */ e) {}
   } else if (device == HW.keystone) {
     throw new Error('Keystone hardware wallet uses QR-based signing, not USB initialization');
   }
@@ -1347,7 +1353,7 @@ export const getAdaHandle = async (assetName) => {
     return data && data.resolved_addresses && data.resolved_addresses.ada
       ? data.resolved_addresses.ada
       : null;
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     return null;
   }
 };
@@ -1411,7 +1417,7 @@ export const getMilkomedaData = async (ethAddress) => {
       };
     }
     return result;
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.error('Error fetching Milkomeda data:', error);
     throw error;
   }
@@ -1432,7 +1438,7 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
   // Always include account 0 so the same seed is caught even if the user only
   // selected higher indices in Advanced options.
   const indicesToCheck = Array.from(
-    new Set([0, ...accountIndices.map((i) => parseInt(i, 10))])
+    new Set([0, ...accountIndices.map((i) => Number(i))])
   ).filter((i) => Number.isFinite(i) && i >= 0);
   const existingMatch = await findExistingAccountForMnemonic(
     seedPhrase,
@@ -1460,7 +1466,7 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
     // existing one instead of silently creating a second, unreachable password.
     try {
       await decryptWithPassword(password, existingEncryptedKey);
-    } catch (e) {
+    } catch (/** @type {any} */ e) {
       throw new Error(
         `${ERROR.wrongPassword}: enter your existing Lucem password to add another wallet.`
       );
@@ -1474,7 +1480,9 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
     walletId = await nextWalletId();
   }
 
+  /** @type {any} */
   let entropy = mnemonicToEntropy(seedPhrase);
+  /** @type {any} */
   let rootKey = Loader.Cardano.Bip32PrivateKey.from_bip39_entropy(
     Buffer.from(entropy, 'hex'),
     Buffer.from('')
@@ -1505,7 +1513,7 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
     });
   }
 
-  const primaryIndex = parseInt(explicitAccounts[0], 10);
+  const primaryIndex = Number(explicitAccounts[0]);
   const index = await createAccount(name, password, primaryIndex, {
     walletId,
     derivationIndex: primaryIndex,
@@ -1513,7 +1521,7 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
 
   // Create additional explicitly selected accounts
   for (let i = 1; i < explicitAccounts.length; i++) {
-    const derivationIndex = parseInt(explicitAccounts[i], 10);
+    const derivationIndex = Number(explicitAccounts[i]);
     await createAccount(`Account ${derivationIndex}`, password, derivationIndex, {
       walletId,
       derivationIndex,
@@ -1522,7 +1530,7 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
 
   // Discover additional used derivation indices via Koios POST /address_txs (legacy GET /addresses/.../txs was removed).
   const MAX_SUB_ACCOUNT_SCAN = 20;
-  let searchIndex = Math.max(...explicitAccounts.map((i) => parseInt(i, 10))) + 1;
+  let searchIndex = Math.max(...explicitAccounts.map((i) => Number(i))) + 1;
   while (searchIndex <= MAX_SUB_ACCOUNT_SCAN) {
     // Respect the global cap; stop discovering rather than throwing mid-import.
     if (totalAccountCount(await getStorage(STORAGE.accounts)) >= MAX_TOTAL_ACCOUNTS) {
@@ -1561,7 +1569,7 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
       } else {
         break;
       }
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       if (error.message && error.message.includes('404')) {
         break;
       }
@@ -1618,6 +1626,7 @@ const getRandomShape = () => {
 };
 
 export const avatarToImage = (avatar) => {
+  // @ts-expect-error dicebear v4 createAvatar + v9 shapes style types do not overlap
   const svg = createAvatar(shapes, {
     seed: avatar,
     shape1: ["line", "ellipse", "ellipseFilled", "polygonFilled", "rectangleFilled", "rectangle"],
@@ -1692,7 +1701,7 @@ export const getAsset = async (unit) => {
         asset.displayName = metadata.name;
         asset.image = extractMetadataImage(metadata) || '';
         asset.decimals = 0;
-      } catch (_e) {
+      } catch (/** @type {any} */ _e) {
         asset.displayName = asset.name;
         asset.mint = true;
       }
@@ -1719,7 +1728,7 @@ export const getAsset = async (unit) => {
         asset.displayName = metadata.name;
         asset.image = linkToSrc(convertMetadataPropToString(metadata.logo)) || '';
         asset.decimals = metadata.decimals || 0;
-      } catch (_e) {
+      } catch (/** @type {any} */ _e) {
         asset.displayName = asset.name;
         asset.mint = true;
       }
@@ -1810,7 +1819,7 @@ export const updateBalance = async (currentAccount, network, { force = false } =
           dataCost
         ).toString();
         currentAccount[network.id].minAda = normalizeLovelaceScalar(minAda);
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         // Stake-wide multiasset values can fail the single-output min-ada probe
         // (or protocol-params fetch). Do not fail the whole balance refresh.
         console.warn('minAda probe failed:', error.message || error);
@@ -1981,7 +1990,7 @@ export const updateAccount = async (forceUpdate = false) => {
       });
       invalidateReadCache();
     }
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.warn(
       'Address discovery failed:',
       error.message || error
@@ -2066,7 +2075,7 @@ export const toUnit = (amount, decimals = 6) => {
   const split = result.split('.');
   const front = split[0].replace(/[,\s]/g, '');
   result =
-    (front == 0 ? '' : front) + (split[1] ? split[1].slice(0, decimals) : '');
+    (front === '0' ? '' : front) + (split[1] ? split[1].slice(0, decimals) : '');
   if (!result) return '0';
   else if (result == 'NaN') return '0';
   return result;

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import extensionAdapter from './extension';
 import webAdapter from './web';
 

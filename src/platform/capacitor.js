@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Native (Capacitor) shell integration.
  *

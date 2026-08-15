@@ -20,13 +20,13 @@ class InternalController {
       name: 'internal-background-popup-communication',
     });
     this.tabId = new Promise((_res, _rej) =>
-      chrome.tabs.getCurrent((tab) => _res(tab.id))
+      chrome.tabs.getCurrent((tab) => _res(tab?.id))
     );
   }
   requestData = () =>
     new Promise(async (res, rej) => {
       this.tabId = await new Promise((_res, _rej) =>
-        chrome.tabs.getCurrent((tab) => _res(tab.id))
+        chrome.tabs.getCurrent((tab) => _res(tab?.id))
       );
       const self = this;
       this.port.onMessage.addListener(function messageHandler(response) {
@@ -108,6 +108,7 @@ export const Messaging = {
       )
     );
   },
+  /** @param {{ method: any, data?: any }} payload */
   sendToContent: function ({ method, data }) {
     return new Promise((res, rej) => {
       const requestId = Math.random().toString(36).substr(2, 9);

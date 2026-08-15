@@ -42,4 +42,17 @@ describe('api/extension domain split', () => {
     expect(src).not.toMatch(/from '\.\/index'/);
     expect(src).not.toMatch(/from '\.\/wallet'/);
   });
+
+  test('chain-reads.js imports address-match helpers used by accounts display', () => {
+    const src = read('api/extension/chain-reads.js');
+    expect(src).toMatch(/matchExternalIndicesFromAddresses/);
+    expect(src).toMatch(/matchInternalIndicesFromAddresses/);
+    expect(src).toMatch(/invalidateAll as invalidateReadCache/);
+    expect(src).toMatch(/ADDRESS_ROLE/);
+  });
+
+  test('signing.js imports networkNameToId for verifyTx', () => {
+    const src = read('api/extension/signing.js');
+    expect(src).toMatch(/networkNameToId/);
+  });
 });

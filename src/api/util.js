@@ -74,10 +74,11 @@ function getKoiosBaseUrl(networkKey) {
   return base;
 }
 
+/** @returns {Promise<void>} */
 export async function delay(delayInMs) {
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve();
+      resolve(undefined);
     }, delayInMs);
   });
 }
@@ -135,17 +136,17 @@ export async function koiosRequest(endpoint, headers, body, signal, networkOverr
       if (blockfrostResult !== undefined) {
         return blockfrostResult;
       }
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       blockfrostError = error;
     }
   }
 
   try {
     return await koiosRequestDirect(networkKey, endpoint, headers, body, signal);
-  } catch (koiosError) {
+  } catch (/** @type {any} */ koiosError) {
     if (blockfrostError) {
       throw new Error(
-        `Blockfrost failed then Koios failed: ${blockfrostError.message} | ${koiosError.message}`
+        `Blockfrost failed then Koios failed: ${/** @type {any} */ (blockfrostError).message} | ${/** @type {any} */ (koiosError).message}`
       );
     }
     throw koiosError;
@@ -179,8 +180,8 @@ export async function koiosSubmitTransaction(txHex, signal) {
       throw new Error(
         `Blockfrost API error: ${blockfrostResult.status} ${blockfrostResult.statusText} ${text.slice(0, 500)}`
       );
-    } catch (error) {
-      console.warn('Blockfrost submit failed, falling back to Koios:', error.message || error);
+    } catch (/** @type {any} */ error) {
+      console.warn('Blockfrost submit failed, falling back to Koios:', /** @type {any} */ (error).message || error);
     }
   }
 
@@ -256,7 +257,7 @@ export const networkNameToId = (name) => {
 
 /**
  *
- * @param {MultiAsset} multiAsset
+ * @param {*} multiAsset
  * @returns
  */
 export const multiAssetCount = async (multiAsset) => {
@@ -279,7 +280,7 @@ export const multiAssetCount = async (multiAsset) => {
 /**
  * @typedef {Object} Amount - Unit/Quantity pair
  * @property {string} unit - Token Type
- * @property {int} quantity - Token Amount
+ * @property {string|number} quantity - Token Amount
  */
 
 /**
@@ -411,8 +412,8 @@ export const linkToSrc = (link, base64 = false) => {
 
 /**
  *
- * @param {JSON} output
- * @param {BaseAddress} address
+ * @param {object} output
+ * @param {string} address
  * @returns
  */
 export const utxoFromJson = async (output, address) => {
@@ -429,12 +430,12 @@ export const utxoFromJson = async (output, address) => {
   try {
     // Try to parse as bech32 address first
     parsedAddress = Loader.Cardano.Address.from_bech32(address);
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     try {
       // If bech32 fails, try as hex
       parsedAddress = Loader.Cardano.Address.from_bytes(Buffer.from(address, 'hex'));
-    } catch (e2) {
-      throw new Error(`Invalid address format: ${address}. Error: ${e2.message}`);
+    } catch (/** @type {any} */ e2) {
+      throw new Error(`Invalid address format: ${address}. Error: ${/** @type {any} */ (e2).message}`);
     }
   }
   
@@ -454,7 +455,7 @@ export const utxoFromJson = async (output, address) => {
 
 /**
  *
- * @param {TransactionUnspentOutput[]} utxos
+ * @param {any[]} utxos
  * @returns
  */
 export const sumUtxos = async (utxos) => {
@@ -468,7 +469,7 @@ export const sumUtxos = async (utxos) => {
  *
  *
  *
- * @param {TransactionUnspentOutput} utxo
+ * @param {*} utxo
  * @returns
  */
 export const utxoToJson = async (utxo) => {
@@ -520,7 +521,7 @@ export const assetsToValue = async (assets) => {
 
 /**
  *
- * @param {Value} value
+ * @param {*} value
  */
 export const valueToAssets = async (value) => {
   await Loader.load();
@@ -610,17 +611,17 @@ const outputsToTrezor = (outputs, address, index) => {
         return Loader.Cardano.BaseAddress.from_address(output.address())
           .to_address()
           .to_bech32();
-      } catch (e) {}
+      } catch (/** @type {any} */ e) {}
       try {
         return Loader.Cardano.EnterpriseAddress.from_address(output.address())
           .to_address()
           .to_bech32();
-      } catch (e) {}
+      } catch (/** @type {any} */ e) {}
       try {
         return Loader.Cardano.PointerAddress.from_address(output.address())
           .to_address()
           .to_bech32();
-      } catch (e) {}
+      } catch (/** @type {any} */ e) {}
       return Loader.Cardano.ByronAddress.from_address(
         output.address()
       ).to_base58();
@@ -649,6 +650,7 @@ const outputsToTrezor = (outputs, address, index) => {
     const referenceScript = output.script_ref()
               ? Buffer.from(output.script_ref().to_bytes()).toString('hex')
       : null;
+    /** @type {any} */
     const outputRes = {
       amount: output.amount().coin().to_str(),
       tokenBundle,
@@ -670,7 +672,7 @@ const outputsToTrezor = (outputs, address, index) => {
 
 /**
  *
- * @param {Transaction} tx
+ * @param {*} tx
  */
 export const txToTrezor = async (tx, network, keys, address, index) => {
   await Loader.load();
@@ -1109,7 +1111,7 @@ const outputsToLedger = (outputs, address, index) => {
 
 /**
  *
- * @param {Transaction} tx
+ * @param {*} tx
  */
 export const txToLedger = async (tx, network, keys, address, index) => {
   await Loader.load();
@@ -1631,11 +1633,11 @@ export class Data {
           return Loader.Cardano.PlutusData.new_map(plutusMap);
         }
         throw new Error('Unsupported type');
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         throw new Error('Could not serialize the data: ' + error);
       }
     }
-    return toHex(serialize(plutusData).to_bytes());
+    return Buffer.from(serialize(plutusData).to_bytes()).toString('hex');
   }
 
   /** Convert Cbor encoded data to PlutusData */

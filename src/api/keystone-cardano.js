@@ -248,8 +248,8 @@ export function filterKeystoneKeysForRequestedAccount(
 }
 
 /**
- * Keep one parsed row per requested account index (in ascending index order).
- * @param {Array<{ account: number }>} keys
+ * Keep parsed rows for each requested account index (Native first, then Ledger).
+ * @param {Array<{ account: number, profile?: string, rowKey?: string }>} keys
  * @param {number[]} requestedIndices
  */
 export function filterKeystoneKeysForRequestedAccounts(keys, requestedIndices) {

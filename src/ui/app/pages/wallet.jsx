@@ -35,15 +35,13 @@ import {
   IconButton,
 } from '@chakra-ui/react';
 import {
-  CopyIcon,
   InfoOutlineIcon,
 } from '@chakra-ui/icons';
-import QrCode from '../components/qrCode';
+import ReceivePanel from '../components/receivePanel';
 import UnitDisplay from '../components/unitDisplay';
 import PullToRefresh from '../components/pullToRefresh';
 import { onAccountChange } from '../../../api/extension';
 import HistoryViewer from '../components/historyViewer';
-import Copy from '../components/copy';
 import { useStoreState } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
 import { currencyToSymbol, fromAssetUnit } from '../../../api/util';
@@ -619,40 +617,21 @@ const Wallet = () => {
                 </Button>
               </PopoverTrigger>
             <Portal>
-              <PopoverContent width="calc(100vw - 2rem)" maxWidth="calc(3.5in + 2rem)">
+              <PopoverContent
+                className="lucem-inset-surface"
+                width="calc(100vw - 2rem)"
+                maxWidth="22rem"
+                rounded="3xl"
+                border="none"
+                overflow="hidden"
+                data-testid="receive-popover"
+              >
                 <PopoverArrow />
-                <PopoverBody
-                  mt="5"
-                  p="4"
-                  alignItems="center"
-                  justifyContent="center"
-                  display="flex"
-                  flexDirection="column"
-                  textAlign="center"
-                >
-                  <>
-                    <Box width="100%" display="flex" justifyContent="center">
-                      <QrCode value={info.paymentAddr} />
-                    </Box>
-                    <Box height="4" />
-                    <Copy
-                      label="Copied address"
-                      copy={info.paymentAddr}
-                      onClick={() => {
-                      }}
-                    >
-                      <Text
-                        maxWidth="250px"
-                        fontSize="xs"
-                        lineHeight="1.2"
-                        cursor="pointer"
-                        wordBreak="break-all"
-                      >
-                        {info.paymentAddr} <CopyIcon />
-                      </Text>
-                    </Copy>
-                    <Box height="2" />
-                  </>
+                <PopoverBody p={5}>
+                  <ReceivePanel
+                    address={info.paymentAddr}
+                    accountName={info.name}
+                  />
                 </PopoverBody>
               </PopoverContent>
             </Portal>

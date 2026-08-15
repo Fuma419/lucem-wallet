@@ -1,118 +1,103 @@
 import React from 'react';
 import QRCodeStyling from 'qr-code-styling';
 import Ada from '../../../assets/img/ada.png';
-import { useTheme, useColorModeValue, Box, Link } from '@chakra-ui/react';
-import { getNetwork } from '../../../api/extension';  // Assuming you have this function
+import { useTheme, useColorModeValue, Box } from '@chakra-ui/react';
+import { getNetwork } from '../../../api/extension';
+import { explorerAddressUrl } from './explorerUrl';
 
-// Initialize QRCodeStyling
+export { explorerAddressUrl, NETWORK_EXPLORERS } from './explorerUrl';
+
 const qrCode = new QRCodeStyling({
-  width: 336,
-  height: 336,
+  width: 280,
+  height: 280,
   image: Ada,
   dotsOptions: {
-    color: '#ffffff', // This will be updated dynamically
+    color: '#111827',
     type: 'dots',
   },
-  cornersSquareOptions: { type: 'extra-rounded', color: '#DD6B20' }, // This will also be updated dynamically
+  cornersSquareOptions: { type: 'extra-rounded', color: '#0891b2' },
+  backgroundOptions: {
+    color: '#ffffff',
+  },
   imageOptions: {
     crossOrigin: 'anonymous',
-    margin: 8,
+    margin: 10,
   },
 });
 
-const QrCode = ({ value }) => {
+const QrCode = ({ value, explorerUrl: explorerUrlProp }) => {
   const ref = React.useRef(null);
-  const theme = useTheme(); // Access the theme object
-
-  // Define network-based URLs
-  const networkUrls = {
-    mainnet: 'https://cexplorer.io',
-    preprod: 'https://preprod.cexplorer.io',
-    preview: 'https://preview.cexplorer.io',
-  };
-
-  const [networkUrl, setNetworkUrl] = React.useState(networkUrls.mainnet); // Default to mainnet
-
-  // Fetch the network and set the URL accordingly
-  React.useEffect(() => {
-    async function fetchNetwork() {
-      const network = await getNetwork();
-      if (network.id === 'mainnet') {
-        setNetworkUrl(networkUrls.mainnet);
-      } else if (network.id === 'preprod') {
-        setNetworkUrl(networkUrls.preprod);
-      } else if (network.id === 'preview') {
-        setNetworkUrl(networkUrls.preview);
-      }
-    }
-
-    fetchNetwork();
-  }, []);
-
-  // Use theme-based dynamic colors
-  const contentColor = useColorModeValue(
-    {
-      corner: theme.colors.cyan[500],
-      dots: theme.colors.gray[900],
-    },
-    {
-      corner: theme.colors.purple[500],
-      dots: theme.colors.gray[900],
-    }
+  const theme = useTheme();
+  const [fetchedUrl, setFetchedUrl] = React.useState(
+    explorerAddressUrl('mainnet', value)
   );
 
-  // Append the QRCode when the component mounts
+  React.useEffect(() => {
+    if (explorerUrlProp) return undefined;
+    let cancelled = false;
+    (async () => {
+      const network = await getNetwork();
+      if (cancelled) return;
+      setFetchedUrl(explorerAddressUrl(network?.id, value));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [value, explorerUrlProp]);
+
+  const explorerUrl = explorerUrlProp || fetchedUrl;
+  const cornerColor = useColorModeValue(
+    theme.colors.cyan[600],
+    theme.colors.purple[400]
+  );
+
   React.useEffect(() => {
     qrCode.append(ref.current);
   }, []);
 
-  // Update the QR code dynamically when the value, network URL, or colors change
   React.useEffect(() => {
     qrCode.update({
-      data: `${networkUrl}/address/${value}`, // Use dynamic URL
-      backgroundOptions: {
-        color: theme.colors.cyan[600], // Set the background color using the theme
-      },
-      dotsOptions: {
-        color: contentColor.dots, // Dynamic dots color
-      },
-      cornersSquareOptions: { color: contentColor.corner }, // Dynamic corner square color
+      data: explorerUrl,
+      backgroundOptions: { color: '#ffffff' },
+      dotsOptions: { color: '#111827' },
+      cornersSquareOptions: { color: cornerColor },
     });
-  }, [value, contentColor, networkUrl, theme.colors.cyan]);
+  }, [explorerUrl, cornerColor]);
 
-  const qrCodeUrl = `${networkUrl}/address/${value}`; // Create the dynamic URL
-
-  // Extension popups do not reliably follow an <a target="_blank"> default
-  // navigation (especially with a <canvas> child), so open the explorer tab
-  // programmatically — the same pattern used elsewhere in the app.
   const openExplorer = (e) => {
     if (e) e.preventDefault();
     if (!value) return;
-    window.open(qrCodeUrl, '_blank', 'noopener,noreferrer');
+    window.open(explorerUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <Link
-      href={qrCodeUrl}
-      isExternal
-      target="_blank"
-      rel="noopener noreferrer"
+    <Box
+      as="button"
+      type="button"
+      aria-label="Open address on explorer"
       onClick={openExplorer}
-      style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
-    >
-      <Box
-        background={theme.colors.cyan[600]}
-        className='modal-glow-cyan'
-        borderRadius="lg"  // Adds rounded corners to the outer container
-        ref={ref}
-        width="100%"
-        maxWidth="3.5in"
-        sx={{
-          '& canvas': { width: '100% !important', height: 'auto !important', display: 'block' },
-          '& svg': { width: '100% !important', height: 'auto !important', display: 'block' }
-        }}
-      />
-    </Link>
+      bg="white"
+      rounded="2xl"
+      p={3}
+      ref={ref}
+      width="100%"
+      maxWidth="17.5rem"
+      data-testid="receive-qr"
+      boxShadow="0 8px 28px rgba(15, 23, 42, 0.12)"
+      sx={{
+        '& canvas': {
+          width: '100% !important',
+          height: 'auto !important',
+          display: 'block',
+          borderRadius: '0.75rem',
+        },
+        '& svg': {
+          width: '100% !important',
+          height: 'auto !important',
+          display: 'block',
+        },
+      }}
+    />
   );
 };
 

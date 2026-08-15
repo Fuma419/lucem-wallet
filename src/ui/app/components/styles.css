@@ -741,13 +741,9 @@ html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   box-shadow: 0px 0px 25px rgba(255, 238, 0, 0.8);
 }
 
-/* Overlay testnet rectangle badge — hugs the network name; no full-width bar / layout shift.
- * Top aligns with the Lucem logo row (wallet.jsx header Flex pt base:3 / md:4). */
+/* In-flow testnet badge — centered in the wallet header icon row (not pinned to the panel top). */
 .network-banner {
-  position: absolute;
-  top: 0.75rem; /* chakra space 3 — matches header logo row padding-top on base */
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
   z-index: 5;
   display: flex;
   align-items: center;
@@ -760,7 +756,7 @@ html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   text-align: center;
   line-height: 1;
   width: auto;
-  max-width: calc(100% - 2rem);
+  max-width: 100%;
   opacity: 0.85;
   color: white;
   /* Equal padding; extra left pad offsets trailing letter-spacing so glyphs sit centered */
@@ -772,12 +768,6 @@ html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   border-right: thin solid transparent;
   border-bottom: thin solid transparent;
   border-radius: 1rem;
-}
-
-@media (min-width: 48em) {
-  .network-banner {
-    top: 1rem; /* chakra space 4 — matches header logo row padding-top on md+ */
-  }
 }
 
 .network-banner-preprod {

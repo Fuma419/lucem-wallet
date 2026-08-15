@@ -63,10 +63,11 @@ import { useColorModeValue } from '@chakra-ui/react';
 import Logo from '../../../assets/img/logo.png';
 
 /**
- * Lucem `logo.png` includes soft glow around the disc. Draw at 100% / contain so
- * the full mark stays inside the circular clip (overscan previously cropped it).
+ * `logo.png` packs most of its box in soft glow; the disc is smaller than the
+ * file edges. Avatars fill the clip. Matching only `boxSize` leaves the Lucem
+ * orb looking smaller — overscan so the disc matches the account chip.
  */
-const WALLET_HEADER_LOGO_BG_SIZE = '100%';
+const WALLET_HEADER_LOGO_BG_SIZE = '138%';
 
 const walletHeaderOrbShellProps = {
   boxSize: { base: '12', sm: '13', md: '14' },
@@ -374,19 +375,9 @@ const Wallet = () => {
           overflow="visible"
           pb={{ base: 4, md: 6 }}
         >
-          {testnetBanner ? (
-            <Box
-              className={`network-banner network-banner-${testnetBanner.id}`}
-              role="status"
-              aria-label={`Connected to ${testnetBanner.label}`}
-              data-testid="wallet-network-banner"
-            >
-              {testnetBanner.label}
-            </Box>
-          ) : null}
-
-          {/* Icon row — flow layout (no absolute stacking over balance). */}
+          {/* Icon row — orbs + in-flow network badge (not absolutely pinned to the panel top). */}
           <Flex
+            className="lucem-wallet-header"
             zIndex={2}
             w="full"
             maxW="100%"
@@ -397,19 +388,42 @@ const Wallet = () => {
             justify="space-between"
             flexShrink={0}
           >
+            <Box flex="1" display="flex" justifyContent="flex-start" minW={0}>
+              <Box
+                {...walletHeaderOrbShellProps}
+                role="img"
+                aria-label="Lucem"
+                bg="blackAlpha.500"
+                backgroundImage={`url(${Logo})`}
+                backgroundRepeat="no-repeat"
+                backgroundPosition="50% 50%"
+                backgroundSize={`${WALLET_HEADER_LOGO_BG_SIZE} ${WALLET_HEADER_LOGO_BG_SIZE}`}
+              />
+            </Box>
             <Box
-              {...walletHeaderOrbShellProps}
-              role="img"
-              aria-label="Lucem"
-              bg="blackAlpha.500"
-              backgroundImage={`url(${Logo})`}
-              backgroundRepeat="no-repeat"
-              backgroundPosition="50% 50%"
-              backgroundSize={`${WALLET_HEADER_LOGO_BG_SIZE} ${WALLET_HEADER_LOGO_BG_SIZE}`}
-            />
-            <Box {...walletHeaderOrbShellProps} bg={avatarBg} position="relative">
-              <Box position="absolute" inset={0}>
-                <AvatarLoader avatar={info.avatar} width="100%" />
+              flex="1"
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              minW={0}
+              px={2}
+            >
+              {testnetBanner ? (
+                <Box
+                  className={`network-banner network-banner-${testnetBanner.id}`}
+                  role="status"
+                  aria-label={`Connected to ${testnetBanner.label}`}
+                  data-testid="wallet-network-banner"
+                >
+                  {testnetBanner.label}
+                </Box>
+              ) : null}
+            </Box>
+            <Box flex="1" display="flex" justifyContent="flex-end" minW={0}>
+              <Box {...walletHeaderOrbShellProps} bg={avatarBg} position="relative">
+                <Box position="absolute" inset={0}>
+                  <AvatarLoader avatar={info.avatar} width="100%" />
+                </Box>
               </Box>
             </Box>
           </Flex>

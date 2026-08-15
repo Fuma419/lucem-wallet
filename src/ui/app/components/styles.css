@@ -17,12 +17,17 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+html,
 body {
   background-color: #080808;
+}
+
+body {
   -webkit-tap-highlight-color: transparent;
   font-size: var(--lucem-font-md);
 }
 
+html[data-theme='light'],
 html[data-theme='light'] body {
   background-color: #f4f6fb;
 }
@@ -52,6 +57,19 @@ html[data-theme='light'] .message {
   --lucem-font-md: calc(1rem * var(--lucem-font-scale));
   --lucem-font-lg: calc(1.125rem * var(--lucem-font-scale));
   --lucem-font-xl: calc(1.5rem * var(--lucem-font-scale));
+}
+
+/*
+ * iOS 26+ standalone PWAs sometimes report env(safe-area-inset-top) as 0
+ * even under a translucent status bar. Keep a notch-sized floor so header
+ * icons sit below the Liquid Glass scroll-edge fade.
+ */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    :root {
+      --lucem-safe-top: max(env(safe-area-inset-top, 0px), 47px);
+    }
+  }
 }
 
 html {

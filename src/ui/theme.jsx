@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChakraProvider, extendTheme, createLocalStorageManager } from '@chakra-ui/react';
+import { ChakraProvider, extendTheme, createLocalStorageManager, useColorMode } from '@chakra-ui/react';
 import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
 import { AppearancePreferenceProvider } from './appearanceContext';
@@ -284,6 +284,7 @@ const theme = extendTheme({
       html: {
         WebkitTextSizeAdjust: '100%',
         textSizeAdjust: '100%',
+        bg: props.colorMode === 'dark' ? '#080808' : '#f4f6fb',
       },
       body: {
         overflow: 'hidden',
@@ -299,9 +300,27 @@ const theme = extendTheme({
   },
 });
 
+const PWA_THEME_COLOR = {
+  light: '#f4f6fb',
+  dark: '#080808',
+};
+
+/** Keep Safari / iOS PWA chrome sampled from the app surface, not #000. */
+function SyncPwaThemeColor() {
+  const { colorMode } = useColorMode();
+  React.useEffect(() => {
+    const color = PWA_THEME_COLOR[colorMode] || PWA_THEME_COLOR.dark;
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', color);
+    document.documentElement.style.backgroundColor = color;
+  }, [colorMode]);
+  return null;
+}
+
 // Wrap the ChakraProvider with the custom theme
 const Theme = ({ children }) => (
   <ChakraProvider theme={theme} colorModeManager={lucemChakraColorModeManager}>
+    <SyncPwaThemeColor />
     <AppearancePreferenceProvider>{children}</AppearancePreferenceProvider>
   </ChakraProvider>
 );

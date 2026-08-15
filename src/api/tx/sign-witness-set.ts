@@ -3,24 +3,19 @@
  * Testable independently of the extension environment.
  */
 
+import type { Csl, HexString } from '../types';
+
 /**
  * Build a TransactionWitnessSet with vkey witnesses for the given signing keys.
- *
- * @param {object} Cardano - CSL namespace
- * @param {string} txHex - transaction CBOR as hex
- * @param {Map<string, PrivateKey>} keyHashToSigningKey - map of key-hash hex → CSL PrivateKey
- * @param {string[]} requestedKeyHashes - which key hashes to sign with
- * @param {boolean} [partialSign=false] - if false, throws when a requested hash has no key
- * @returns {TransactionWitnessSet}
  */
 export function buildVkeyWitnessSet(
-  Cardano,
-  txHex,
-  keyHashToSigningKey,
-  requestedKeyHashes,
+  Cardano: Csl,
+  txHex: string,
+  keyHashToSigningKey: Map<string, unknown>,
+  requestedKeyHashes: string[],
   partialSign = false
 ) {
-  const rawTx = Cardano.Transaction.from_bytes(Buffer.from(txHex, 'hex'));
+  const rawTx = Cardano.Transaction.from_bytes(Buffer.from(txHex as HexString, 'hex'));
   const fixedBody = Cardano.FixedTransactionBody.from_bytes(
     rawTx.body().to_bytes()
   );

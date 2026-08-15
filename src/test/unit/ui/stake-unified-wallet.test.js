@@ -20,7 +20,7 @@ describe('stake-unified wallet source guards', () => {
   });
 
   test('buildTx sizes fees for all enabled payment key hashes', () => {
-    const src = read('api/extension/wallet.js');
+    const src = read('api/extension/wallet.ts');
     expect(src).toMatch(/paymentKeyHashesForSigning\(account\)/);
     expect(src).toMatch(/requiredVkeyHashesHex/);
   });

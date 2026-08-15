@@ -22,8 +22,8 @@ describe('api/extension domain split', () => {
     expect(src).toMatch(/requestAccountKey/);
   });
 
-  test('wallet.js imports leaf modules instead of the index barrel', () => {
-    const src = read('api/extension/wallet.js');
+  test('wallet.ts imports leaf modules instead of the index barrel', () => {
+    const src = read('api/extension/wallet.ts');
     expect(src).toMatch(/from '\.\/storage'/);
     expect(src).toMatch(/from '\.\/chain-reads'/);
     expect(src).toMatch(/from '\.\/addresses'/);

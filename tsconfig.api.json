@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "ES2020",
+    "jsx": "react",
+    "isolatedModules": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/api/types.ts",
+    "src/api/lovelace-scalar.ts",
+    "src/api/provider-http.ts",
+    "src/api/tx/**/*.ts",
+    "src/api/extension/wallet.ts"
+  ]
+}

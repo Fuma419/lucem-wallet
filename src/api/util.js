@@ -5,6 +5,13 @@ import { NETWORK_ID } from '../config/config';
 import { nativeSafeBinaryBody } from '../platform/capacitor';
 import AssetFingerprint from '@emurgo/cip14-js';
 import {
+  BLOCKFROST_BASE,
+  blockfrostHeaders,
+  koiosHeaders,
+  normalizeNetworkKey,
+  resolveBlockfrostProjectId,
+} from './provider-http';
+import {
   AddressType,
   CertificateType,
   DatumType,
@@ -21,23 +28,6 @@ import {
   TxRequiredSignerType,
 } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import { crc8 } from 'crc';
-
-const BLOCKFROST_BASE = {
-  mainnet: 'https://cardano-mainnet.blockfrost.io/api/v0',
-  testnet: 'https://cardano-preprod.blockfrost.io/api/v0',
-  preview: 'https://cardano-preview.blockfrost.io/api/v0',
-  preprod: 'https://cardano-preprod.blockfrost.io/api/v0',
-};
-
-const PLACEHOLDER_KEYS = new Set([
-  'dummy',
-  'your-koios-api-key-here',
-  'your-blockfrost-project-id',
-  'DUMMY_MAINNET',
-  'DUMMY_TESTNET',
-  'DUMMY_PREVIEW',
-  'DUMMY_PREPROD',
-]);
 
 function isExtensionRuntime() {
   return (
@@ -81,69 +71,6 @@ function getKoiosBaseUrl(networkKey) {
     return `${window.location.origin}/api/koios/${networkKey}`;
   }
   return base;
-}
-
-function getEnvVar(key) {
-  if (typeof process !== 'undefined' && process.env) {
-    return process.env[key] || null;
-  }
-  return null;
-}
-
-function isUsableKey(key) {
-  return typeof key === 'string' && key.trim() && !PLACEHOLDER_KEYS.has(key.trim());
-}
-
-function normalizeNetworkKey(network) {
-  const key = network?.name || network?.id || 'mainnet';
-  if (Object.prototype.hasOwnProperty.call(BLOCKFROST_BASE, key)) {
-    return key;
-  }
-  return 'mainnet';
-}
-
-function resolveKoiosApiKey(networkKey) {
-  const envKey = getEnvVar(`KOIOS_API_KEY_${networkKey.toUpperCase()}`);
-  return isUsableKey(envKey) ? envKey : null;
-}
-
-function resolveBlockfrostProjectId(networkKey) {
-  const envCandidates = [
-    `BLOCKFROST_PROJECT_ID_${networkKey.toUpperCase()}`,
-    `BLOCKFROST_${networkKey.toUpperCase()}_PROJECT_ID`,
-  ];
-  for (const key of envCandidates) {
-    const envValue = getEnvVar(key);
-    if (isUsableKey(envValue)) return envValue;
-  }
-  const providerId = provider?.api?.key?.(networkKey)?.blockfrost_project_id;
-  return isUsableKey(providerId) ? providerId : null;
-}
-
-function koiosHeaders(networkKey, headers = {}, isCbor = false) {
-  const requestHeaders = {
-    Accept: 'application/json',
-    'Content-Type': isCbor ? 'application/cbor' : 'application/json',
-    'Cache-Control': 'no-cache',
-    ...headers,
-  };
-  const apiKey = resolveKoiosApiKey(networkKey);
-  if (apiKey) {
-    requestHeaders.Authorization = `Bearer ${apiKey}`;
-  }
-  return requestHeaders;
-}
-
-function blockfrostHeaders(networkKey, headers = {}, isCbor = false) {
-  const projectId = resolveBlockfrostProjectId(networkKey);
-  if (!projectId) {
-    throw new Error(`Missing Blockfrost project_id for ${networkKey}`);
-  }
-  return {
-    project_id: projectId,
-    'Content-Type': isCbor ? 'application/cbor' : 'application/json',
-    ...headers,
-  };
 }
 
 export async function delay(delayInMs) {

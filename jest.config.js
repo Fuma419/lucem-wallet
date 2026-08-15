@@ -21,8 +21,8 @@ const coverageGate =
     ? {
       collectCoverage: true,
       collectCoverageFrom: [
-        'src/api/tx/**/*.js',
-        'src/api/extension/wallet.js',
+        'src/api/tx/**/*.{js,ts}',
+        'src/api/extension/wallet.{js,ts}',
       ],
       coverageReporters: ['text-summary'],
       coverageThreshold: {
@@ -32,7 +32,7 @@ const coverageGate =
           functions: 85,
           lines: 75,
         },
-        './src/api/extension/wallet.js': {
+        './src/api/extension/wallet.ts': {
           statements: 55,
           branches: 45,
           functions: 55,
@@ -63,7 +63,10 @@ module.exports = {
     secrets: '../../secrets.testing.js',
   },
   transform: {
-    '^.+\\.(ts|tsx)?$': 'ts-jest',
+    '^.+\\.(ts|tsx)?$': [
+      'ts-jest',
+      { tsconfig: '<rootDir>/tsconfig.api.json' },
+    ],
     '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './babel.config.js' }],
     'src/wasm/cardano_multiplatform_lib/cardano_multiplatform_lib.generated\\.js$': ['babel-jest', { configFile: './babel.config.js' }],
   },

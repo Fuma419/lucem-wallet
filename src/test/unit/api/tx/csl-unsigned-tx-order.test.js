@@ -4,7 +4,7 @@ const path = require('path');
 describe('CSL unsigned transaction builder ordering', () => {
   test('adds outputs before coin selection + change', () => {
     const src = fs.readFileSync(
-      path.join(__dirname, '../../../../api/tx/csl-unsigned-tx.js'),
+      path.join(__dirname, '../../../../api/tx/csl-unsigned-tx.ts'),
       'utf8'
     );
     const loopStart = src.indexOf(

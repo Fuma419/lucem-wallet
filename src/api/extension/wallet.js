@@ -1,4 +1,7 @@
-import { getNetwork, getUtxos, paymentKeyHashesForSigning, signTx, signTxHW, submitTx } from '.';
+import { paymentKeyHashesForSigning } from './addresses';
+import { getUtxos } from './chain-reads';
+import { signTx, signTxHW, submitTx } from './signing';
+import { getNetwork } from './storage';
 import { ERROR } from '../../config/config';
 import { cacheKey, withCache } from '../cache';
 import Loader from '../loader';

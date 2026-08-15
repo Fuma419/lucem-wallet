@@ -5,22 +5,32 @@
  * a broken certificate/voting/withdrawal path fails here instead of silently
  * shipping.
  *
- * `getUtxos` and other `src/api/extension` side effects are mocked; everything
+ * `getUtxos` and other leaf-module side effects are mocked; everything
  * else (CSL assembly, CIP-21 canonicalization) runs for real.
  */
 const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
 
-jest.mock('../../../api/extension', () => ({
+jest.mock('../../../api/extension/chain-reads', () => ({
   __esModule: true,
   getUtxos: jest.fn(),
+}));
+jest.mock('../../../api/extension/storage', () => ({
+  __esModule: true,
   getNetwork: jest.fn().mockResolvedValue({ id: 'preprod' }),
+}));
+jest.mock('../../../api/extension/addresses', () => ({
+  __esModule: true,
   paymentKeyHashesForSigning: jest.fn().mockResolvedValue([]),
+}));
+jest.mock('../../../api/extension/signing', () => ({
+  __esModule: true,
   signTx: jest.fn(),
   signTxHW: jest.fn(),
   submitTx: jest.fn(),
 }));
 
-import { getUtxos, signTxHW, submitTx } from '../../../api/extension';
+import { getUtxos } from '../../../api/extension/chain-reads';
+import { signTxHW, submitTx } from '../../../api/extension/signing';
 import {
   delegationTx,
   withdrawalTx,

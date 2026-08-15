@@ -135,14 +135,18 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
 
 // ── 5. signTxHW / initHW Keystone guards ─────────────────────────────
 
-describe('Keystone guards in extension/index.js', () => {
+describe('Keystone guards in extension signing / index', () => {
   const indexSrc = fs.readFileSync(
     path.join(__dirname, '../../api/extension/index.js'),
     'utf8'
   );
+  const signingSrc = fs.readFileSync(
+    path.join(__dirname, '../../api/extension/signing.js'),
+    'utf8'
+  );
 
   test('signTxHW has Keystone guard before WASM loading', () => {
-    expect(indexSrc).toMatch(
+    expect(signingSrc).toMatch(
       /hw\.device\s*===\s*HW\.keystone[\s\S]*?throw new Error/
     );
   });

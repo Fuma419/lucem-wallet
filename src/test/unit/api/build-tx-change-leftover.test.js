@@ -89,7 +89,7 @@ describe('change leftover / fee upper bound', () => {
 
   test('fee-align loop must use set_min_fee (not set_fee) before change', () => {
     const src = fs.readFileSync(
-      path.join(__dirname, '../../../api/tx/csl-unsigned-tx.js'),
+      path.join(__dirname, '../../../api/tx/csl-unsigned-tx.ts'),
       'utf8'
     );
     const loopStart = src.indexOf(

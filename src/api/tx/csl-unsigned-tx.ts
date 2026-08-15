@@ -5,6 +5,7 @@
 
 import { decodeTx, encodeTx, transformTx } from 'cardano-hw-interop-lib';
 import { TX } from '../../config/config';
+import type { Csl, ProtocolParametersSnapshot } from '../types';
 
 const FEE_ALIGN_MAX_ATTEMPTS = 5;
 
@@ -17,9 +18,9 @@ const FEE_ALIGN_MAX_ATTEMPTS = 5;
  *   every token) lands in a single consolidated output.
  */
 export function createCslTransactionBuilderConfig(
-  Cardano,
-  protocolParameters,
-  { preferPureChange = true } = {}
+  Cardano: Csl,
+  protocolParameters: ProtocolParametersSnapshot,
+  { preferPureChange = true }: { preferPureChange?: boolean } = {}
 ) {
   const p = protocolParameters;
   if (!p.linearFee?.minFeeA || !p.linearFee?.minFeeB) {
@@ -54,7 +55,7 @@ export function createCslTransactionBuilderConfig(
  * @param {*} Cardano
  * @param {*} tx - CSL Transaction
  */
-export function toCanonicalTransactionCip21(Cardano, tx) {
+export function toCanonicalTransactionCip21(Cardano: Csl, tx: any) {
   const canonicalCbor = encodeTx(transformTx(decodeTx(tx.to_bytes())));
   return Cardano.Transaction.from_bytes(canonicalCbor);
 }
@@ -64,7 +65,11 @@ export function toCanonicalTransactionCip21(Cardano, tx) {
  * @param {*} body - TransactionBody
  * @param {string[]} requiredVkeyHashesHex
  */
-function dummyWitnessSetForMinFee(Cardano, body, requiredVkeyHashesHex) {
+function dummyWitnessSetForMinFee(
+  Cardano: Csl,
+  body: any,
+  requiredVkeyHashesHex: string[]
+) {
   const bodyBytes = body.to_bytes();
   const fixedBody = Cardano.FixedTransactionBody.from_bytes(bodyBytes);
   const txHash = fixedBody.tx_hash();
@@ -82,7 +87,10 @@ function dummyWitnessSetForMinFee(Cardano, body, requiredVkeyHashesHex) {
   return witnessSet;
 }
 
-function ttlInvalidHereafterBignum(Cardano, protocolParameters) {
+function ttlInvalidHereafterBignum(
+  Cardano: Csl,
+  protocolParameters: ProtocolParametersSnapshot
+) {
   const base = Math.floor(Number(protocolParameters.slot));
   if (!Number.isFinite(base) || base < 0) {
     throw new Error('Invalid chain slot in protocol parameters');
@@ -119,6 +127,12 @@ function selectAdaInputsForViableChange({
   outputs,
   changeAddress,
   protocolParameters,
+}: {
+  Cardano: Csl;
+  utxos: any[];
+  outputs: any;
+  changeAddress: any;
+  protocolParameters: ProtocolParametersSnapshot;
 }) {
   let target = Cardano.BigNum.zero();
   for (let i = 0; i < outputs.len(); i += 1) {
@@ -176,6 +190,14 @@ export function buildUnsignedSimpleTx({
   changeAddressBech32,
   requiredVkeyHashesHex,
   auxiliaryData = null,
+}: {
+  Cardano: Csl;
+  protocolParameters: ProtocolParametersSnapshot;
+  utxos: any[];
+  outputs: any;
+  changeAddressBech32: string;
+  requiredVkeyHashesHex: string[];
+  auxiliaryData?: any;
 }) {
   if (!requiredVkeyHashesHex?.length) {
     throw new Error(
@@ -272,7 +294,7 @@ export function buildUnsignedSimpleTx({
       // Pure-ADA: add our change-aware, largest-first input selection explicitly,
       // then a single change pass. With `set_min_fee` (floor, not exact) CSL only
       // burns a leftover into the fee when it is genuinely un-splittable.
-      for (const u of preSelectedAdaInputs) {
+      for (const u of preSelectedAdaInputs || []) {
         txBuilder.add_regular_input(
           u.output().address(),
           u.input(),
@@ -350,6 +372,12 @@ export function buildUnsignedSendAllTx({
   utxos,
   recipientAddressBech32,
   auxiliaryData = null,
+}: {
+  Cardano: Csl;
+  protocolParameters: ProtocolParametersSnapshot;
+  utxos: any[];
+  recipientAddressBech32: string;
+  auxiliaryData?: any;
 }) {
   if (!utxos?.length) {
     throw new Error('No UTxOs provided for send all');
@@ -415,7 +443,7 @@ export function buildUnsignedSendAllTx({
 // CSL keeps the UI off `txInfo.balance`, whose persisted/rehydrated values can
 // be non-canonical integer strings that blow up `BigInt()` on stricter engines
 // (JavaScriptCore reports this as "Failed to parse String to BigInt").
-export function summarizeSendAllTx(Cardano, finalTx) {
+export function summarizeSendAllTx(Cardano: Csl, finalTx: any) {
   const body = finalTx.body();
   const fee = body.fee().to_str();
   let sent = Cardano.BigNum.zero();
@@ -428,11 +456,18 @@ export function summarizeSendAllTx(Cardano, finalTx) {
 
 const DEFAULT_CERT_TX_RETRIES = 5;
 
-function retryCertTx(error, retriesRemaining, label, totalAttempts) {
+function retryCertTx(
+  error: unknown,
+  retriesRemaining: number,
+  label: string,
+  totalAttempts: number
+) {
   const nextRetries = retriesRemaining - 1;
   if (nextRetries <= 0) {
     throw new Error(
-      `${label} failed after ${totalAttempts} attempts: ${error?.message || String(error)}`
+      `${label} failed after ${totalAttempts} attempts: ${
+        error instanceof Error ? error.message : String(error)
+      }`
     );
   }
   return nextRetries;
@@ -461,6 +496,15 @@ export async function assembleCertTx({
   retries = DEFAULT_CERT_TX_RETRIES,
   emptyUtxosMessage = 'No UTxOs available to pay the transaction fee',
   label = 'Certificate transaction',
+}: {
+  Cardano: Csl;
+  protocolParameters: ProtocolParametersSnapshot;
+  changeAddressBech32: string;
+  getUtxos: () => Promise<any[]> | any[];
+  configure: (txBuilder: any, Cardano: Csl) => void;
+  retries?: number;
+  emptyUtxosMessage?: string;
+  label?: string;
 }) {
   if (!changeAddressBech32) {
     throw new Error('Payment address is required to build the transaction');

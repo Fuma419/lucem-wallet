@@ -20,9 +20,45 @@ import {
   createStakeDelegationCertificate,
   createStakeRegistrationCertificate,
 } from '../tx/staking-certificates';
-import { koiosRequestEnhanced } from '../util';
+import type {
+  Csl,
+  KoiosEpochParamsRow,
+  KoiosRequestEnhanced,
+  ProtocolParametersSnapshot,
+} from '../types';
+import { koiosRequestEnhanced as koiosRequestEnhancedUntyped } from '../util';
 
-function assertDelegationBuildInputs(account, protocolParameters, poolKeyHash) {
+const koiosRequestEnhanced = koiosRequestEnhancedUntyped as KoiosRequestEnhanced;
+
+type WalletAccount = {
+  paymentAddr: string;
+  rewardAddr?: string;
+  stakeKeyHash: string;
+  paymentKeyHash?: string;
+  index?: number | string;
+};
+
+type DelegationState = {
+  registered?: boolean;
+  active?: boolean;
+  rewards?: string | number;
+};
+
+const utxosOrEmpty = async () => (await getUtxos()) || [];
+
+const txToHex = (tx: { to_bytes: () => Uint8Array }) =>
+  Buffer.from(tx.to_bytes()).toString('hex');
+
+const rewardLovelace = (delegation: DelegationState) =>
+  Number(delegation.rewards ?? 0);
+
+type SubmitError = Error & { code: string; cause?: unknown };
+
+function assertDelegationBuildInputs(
+  account: WalletAccount,
+  protocolParameters: ProtocolParametersSnapshot,
+  poolKeyHash: string
+) {
   if (!account?.paymentAddr) {
     throw new Error('Payment address is required to build delegation transaction');
   }
@@ -43,7 +79,10 @@ function assertDelegationBuildInputs(account, protocolParameters, poolKeyHash) {
  * The old 4-argument form (…, true, auxiliary_data) passes boolean `true` as
  * auxiliary_data and throws "expected instance of AuxiliaryData".
  */
-export const assembleSignedTransaction = async (unsignedTx, witnessSet) => {
+export const assembleSignedTransaction = async (
+  unsignedTx: any,
+  witnessSet: any
+) => {
   await Loader.load();
   const signed = Loader.Cardano.Transaction.new(
     unsignedTx.body(),
@@ -64,7 +103,9 @@ export const assembleSignedTransaction = async (unsignedTx, witnessSet) => {
  * slot can never yield an already-expired invalidHereafter. Pass
  * `{ force: true }` to bypass (pull-to-refresh).
  */
-export const initTx = async ({ force = false } = {}) => {
+export const initTx = async ({
+  force = false,
+}: { force?: boolean } = {}): Promise<ProtocolParametersSnapshot> => {
   const network = await getNetwork();
   return withCache(cacheKey('protocol-params', network?.id), fetchProtocolParameters, {
     force,
@@ -78,7 +119,7 @@ const fetchProtocolParameters = async () => {
     if (process.env.NODE_ENV !== 'production') {
       console.log('Protocol parameters response:', p);
     }
-    const row = latestEpochParamsRow(p);
+    const row = latestEpochParamsRow(p as KoiosEpochParamsRow);
     const protocolParams = buildProtocolParametersSnapshot(row, tipSlot);
     if (process.env.NODE_ENV !== 'production') {
       console.log('Processed protocol parameters:', protocolParams);
@@ -91,15 +132,15 @@ const fetchProtocolParameters = async () => {
 };
 
 /**
- * Build unsigned payment transaction (CSL via `src/api/tx/csl-unsigned-tx.js`).
+ * Build unsigned payment transaction (CSL via `src/api/tx/csl-unsigned-tx.ts`).
  * Refreshes chain tip slot so TTL stays valid when UI skips `initTx()`.
  */
 export const buildTx = async (
-  account,
-  utxos,
-  outputs,
-  protocolParameters,
-  auxiliaryData = null
+  account: WalletAccount,
+  utxos: any[],
+  outputs: any,
+  protocolParameters: ProtocolParametersSnapshot,
+  auxiliaryData: any = null
 ) => {
   try {
     await Loader.load();
@@ -113,11 +154,13 @@ export const buildTx = async (
       slot: await fetchKoiosTipSlot(koiosRequestEnhanced),
     };
 
-    const paymentHashes = await paymentKeyHashesForSigning(account);
+    const paymentHashes = (await paymentKeyHashesForSigning(account)).filter(
+      (h: unknown): h is string => typeof h === 'string' && h.length > 0
+    );
     const requiredVkeyHashesHex =
       paymentHashes.length > 0
         ? paymentHashes
-        : [account.paymentKeyHash].filter(Boolean);
+        : [account.paymentKeyHash].filter((h): h is string => Boolean(h));
     if (requiredVkeyHashesHex.length === 0) {
       throw new Error(
         'Account missing payment key hash for fee estimation'
@@ -146,10 +189,10 @@ export const buildTx = async (
  * Refreshes the chain tip slot so TTL stays valid when the UI skips `initTx()`.
  */
 export const sendAllTx = async (
-  utxos,
-  recipientAddress,
-  protocolParameters,
-  auxiliaryData = null
+  utxos: any[],
+  recipientAddress: string,
+  protocolParameters: ProtocolParametersSnapshot,
+  auxiliaryData: any = null
 ) => {
   try {
     await Loader.load();
@@ -181,37 +224,45 @@ export const sendAllTx = async (
  * directly from the built CSL `Transaction`, so the UI never has to re-derive
  * these from persisted balance state.
  */
-export const summarizeSendAll = (finalTx) =>
-  summarizeSendAllTx(Loader.Cardano, finalTx);
+export const summarizeSendAll = (finalTx: any) =>
+  summarizeSendAllTx(Loader.Cardano as Csl, finalTx);
 
 export const signAndSubmit = async (
-  tx,
-  { keyHashes, accountIndex },
-  password
+  tx: any,
+  { keyHashes, accountIndex }: { keyHashes: string[]; accountIndex: number | string },
+  password: string
 ) => {
   await Loader.load();
   const witnessSet = await signTx(
-    Buffer.from(tx.to_bytes(), 'hex').toString('hex'),
+    txToHex(tx),
     keyHashes,
     password,
     accountIndex
   );
   const transaction = await assembleSignedTransaction(tx, witnessSet);
 
-  const txHash = await submitTx(
-    Buffer.from(transaction.to_bytes(), 'hex').toString('hex')
-  );
+  const txHash = await submitTx(txToHex(transaction));
   return txHash;
 };
 
 export const signAndSubmitHW = async (
-  tx,
-  { keyHashes, account, hw, partialSign }
+  tx: any,
+  {
+    keyHashes,
+    account,
+    hw,
+    partialSign,
+  }: {
+    keyHashes: string[];
+    account: WalletAccount;
+    hw: unknown;
+    partialSign?: boolean;
+  }
 ) => {
   await Loader.load();
 
   const witnessSet = await signTxHW(
-    Buffer.from(tx.to_bytes(), 'hex').toString('hex'),
+    txToHex(tx),
     keyHashes,
     account,
     hw,
@@ -221,9 +272,7 @@ export const signAndSubmitHW = async (
   const transaction = await assembleSignedTransaction(tx, witnessSet);
 
   try {
-    const txHash = await submitTx(
-      Buffer.from(transaction.to_bytes(), 'hex').toString('hex')
-    );
+    const txHash = await submitTx(txToHex(transaction));
     return txHash;
   } catch (e) {
     throw wrapSubmitError(e);
@@ -231,12 +280,16 @@ export const signAndSubmitHW = async (
 };
 
 /** Preserve the provider message while keeping `code: ERROR.submit` for UI checks. */
-export const wrapSubmitError = (error) => {
+export const wrapSubmitError = (error: unknown): SubmitError => {
   const message =
-    error && error !== ERROR.submit && error.message
-      ? error.message
+    error &&
+    error !== ERROR.submit &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as { message?: unknown }).message === 'string'
+      ? (error as Error).message
       : 'Transaction submission failed';
-  const wrapped = new Error(message);
+  const wrapped = new Error(message) as SubmitError;
   wrapped.code = ERROR.submit;
   if (error && error !== ERROR.submit) {
     wrapped.cause = error;
@@ -245,10 +298,10 @@ export const wrapSubmitError = (error) => {
 };
 
 export const delegationTx = async (
-  account,
-  delegation,
-  protocolParameters,
-  poolKeyHash
+  account: WalletAccount,
+  delegation: DelegationState,
+  protocolParameters: ProtocolParametersSnapshot,
+  poolKeyHash: string
 ) => {
   await Loader.load();
   assertDelegationBuildInputs(account, protocolParameters, poolKeyHash);
@@ -257,7 +310,7 @@ export const delegationTx = async (
     Cardano: Loader.Cardano,
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
-    getUtxos,
+    getUtxos: utxosOrEmpty,
     emptyUtxosMessage: 'No UTxOs available to pay delegation deposit and fee',
     label: 'Delegation transaction',
     configure: (txBuilder, Cardano) => {
@@ -276,11 +329,11 @@ export const delegationTx = async (
 };
 
 export const voteDelegationTx = async (
-  account,
-  delegation,
-  protocolParameters,
-  drepIdType, // 'always_abstain', 'always_no_confidence', or 'key_hash'
-  drepHashHex // optional, if drepIdType is 'key_hash'
+  account: WalletAccount,
+  delegation: DelegationState,
+  protocolParameters: ProtocolParametersSnapshot,
+  drepIdType: 'always_abstain' | 'always_no_confidence' | 'key_hash' | string,
+  drepHashHex?: string
 ) => {
   await Loader.load();
 
@@ -288,7 +341,7 @@ export const voteDelegationTx = async (
     Cardano: Loader.Cardano,
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
-    getUtxos,
+    getUtxos: utxosOrEmpty,
     emptyUtxosMessage: 'No UTxOs available to pay vote delegation fee',
     label: 'Vote delegation transaction',
     configure: (txBuilder, Cardano) => {
@@ -309,6 +362,7 @@ export const voteDelegationTx = async (
       } else if (drepIdType === 'always_no_confidence') {
         drep = Cardano.DRep.new_always_no_confidence();
       } else {
+        if (!drepHashHex) throw new Error('Missing DRep key hash');
         drep = Cardano.DRep.new_key_hash(
           Cardano.Ed25519KeyHash.from_bytes(Buffer.from(drepHashHex, 'hex'))
         );
@@ -337,7 +391,16 @@ export const voteDelegationTx = async (
  * @param {number} vote.proposalIndex    governance action cert index
  * @param {'yes'|'no'|'abstain'} vote.voteKind
  */
-export const voteTx = async (account, protocolParameters, vote) => {
+export const voteTx = async (
+  account: WalletAccount,
+  protocolParameters: ProtocolParametersSnapshot,
+  vote: {
+    drepKeyHashHex?: string;
+    proposalTxHash?: string;
+    proposalIndex?: number | null;
+    voteKind?: 'yes' | 'no' | 'abstain' | string;
+  }
+) => {
   await Loader.load();
 
   const { drepKeyHashHex, proposalTxHash, proposalIndex, voteKind } = vote || {};
@@ -346,18 +409,19 @@ export const voteTx = async (account, protocolParameters, vote) => {
     throw new Error('This proposal is missing a governance action id and cannot be voted on');
   }
 
-  const voteKindEnum = {
+  const voteKinds: Record<string, unknown> = {
     yes: Loader.Cardano.VoteKind.Yes,
     no: Loader.Cardano.VoteKind.No,
     abstain: Loader.Cardano.VoteKind.Abstain,
-  }[voteKind];
+  };
+  const voteKindEnum = voteKind ? voteKinds[voteKind] : undefined;
   if (voteKindEnum === undefined) throw new Error(`Unknown vote kind: ${voteKind}`);
 
   return assembleCertTx({
     Cardano: Loader.Cardano,
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
-    getUtxos,
+    getUtxos: utxosOrEmpty,
     emptyUtxosMessage: 'No UTxOs available to pay voting fee',
     label: 'Vote transaction',
     configure: (txBuilder, Cardano) => {
@@ -380,7 +444,12 @@ export const voteTx = async (account, protocolParameters, vote) => {
   });
 };
 
-export const withdrawalTx = async (account, delegation, protocolParameters, utxos) => {
+export const withdrawalTx = async (
+  account: WalletAccount,
+  delegation: DelegationState,
+  protocolParameters: ProtocolParametersSnapshot,
+  utxos: any[]
+) => {
   await Loader.load();
 
   return assembleCertTx({
@@ -392,13 +461,13 @@ export const withdrawalTx = async (account, delegation, protocolParameters, utxo
       'No inputs found on wallet. Withdrawal transaction needs to have at least one input.',
     label: 'Withdrawal transaction',
     configure: (txBuilder, Cardano) => {
-      if (delegation.rewards > 0) {
+      if (rewardLovelace(delegation) > 0 && account.rewardAddr) {
         const withdrawalsBuilder = Cardano.WithdrawalsBuilder.new();
         withdrawalsBuilder.add(
           Cardano.RewardAddress.from_address(
             Cardano.Address.from_bech32(account.rewardAddr)
           ),
-          Cardano.BigNum.from_str(delegation.rewards.toString())
+          Cardano.BigNum.from_str(String(delegation.rewards))
         );
         txBuilder.set_withdrawals_builder(withdrawalsBuilder);
       }
@@ -406,18 +475,22 @@ export const withdrawalTx = async (account, delegation, protocolParameters, utxo
   });
 };
 
-export const undelegateTx = async (account, delegation, protocolParameters) => {
+export const undelegateTx = async (
+  account: WalletAccount,
+  delegation: DelegationState,
+  protocolParameters: ProtocolParametersSnapshot
+) => {
   await Loader.load();
 
   return assembleCertTx({
     Cardano: Loader.Cardano,
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
-    getUtxos,
+    getUtxos: utxosOrEmpty,
     emptyUtxosMessage: 'No UTxOs available to pay undelegation fee',
     label: 'Undelegation transaction',
     configure: (txBuilder, Cardano) => {
-      if (delegation.rewards > 0) {
+      if (rewardLovelace(delegation) > 0 && account.rewardAddr) {
         const withdrawalsBuilder = Cardano.WithdrawalsBuilder.new();
         withdrawalsBuilder.add(
           Cardano.RewardAddress.from_address(

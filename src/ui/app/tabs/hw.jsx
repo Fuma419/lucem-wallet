@@ -57,6 +57,8 @@ import {
   generateCardanoKeystoneKeyDerivationUr,
   keystoneAccountStorageSuffix,
   parseKeystoneCardanoConnectUr,
+  preferredKeystoneImportRowKeys,
+  KEYSTONE_DERIVATION,
 } from '../../../api/keystone-cardano';
 import { MdBluetooth } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
@@ -530,7 +532,7 @@ const ConnectHW = ({ onConfirm }) => {
           justifyContent="center"
           gap={2}
           w="160px"
-          h="108px"
+          h="128px"
           px={3}
           py={3}
           rounded="xl"
@@ -574,8 +576,22 @@ const ConnectHW = ({ onConfirm }) => {
             justifyContent="center"
             boxShadow="0 2px 12px rgba(0,0,0,0.35)"
           >
-            <Image draggable={false} src={KeystoneLogo} maxH="32px" objectFit="contain" />
+            <Image
+              draggable={false}
+              src={KeystoneLogo}
+              alt="Keystone"
+              maxH="32px"
+              objectFit="contain"
+            />
           </Box>
+          <Text
+            fontSize="sm"
+            fontWeight="bold"
+            color="white"
+            letterSpacing="0.04em"
+          >
+            Keystone
+          </Text>
         </Box>
         <Box
           as="button"
@@ -587,7 +603,7 @@ const ConnectHW = ({ onConfirm }) => {
           justifyContent="center"
           gap={2}
           w="160px"
-          h="108px"
+          h="128px"
           px={3}
           py={3}
           rounded="xl"
@@ -643,6 +659,14 @@ const ConnectHW = ({ onConfirm }) => {
               objectFit="contain"
             />
           </Box>
+          <Text
+            fontSize="sm"
+            fontWeight="bold"
+            color="white"
+            letterSpacing="0.04em"
+          >
+            Ledger
+          </Text>
         </Box>
       </Box>
       <Box h={10} />
@@ -935,9 +959,10 @@ const SelectAccounts = ({ data, onConfirm }) => {
   React.useEffect(() => {
     if (!isInit || !isKeystone) return;
     const newOnes = data.keystoneAccounts.filter((k) => !existing[k.rowKey]);
+    const preferred = new Set(preferredKeystoneImportRowKeys(newOnes));
     const next = {};
     newOnes.forEach((k) => {
-      next[k.rowKey] = true;
+      next[k.rowKey] = preferred.has(k.rowKey);
     });
     setSelected(next);
   }, [isInit, isKeystone, data.keystoneAccounts, existing]);
@@ -982,14 +1007,32 @@ const SelectAccounts = ({ data, onConfirm }) => {
             ? keystoneNewAccounts.length === 0
               ? 'Every Cardano account in this sync is already in Lucem. Close this tab or run the Keystone flow again to export a different account.'
               : keystoneNewAccounts.length === 1
-                ? 'Confirm adding this account. The label shows CIP-1852 path and derivation type.'
-                : 'Confirm which accounts to add (at least one). Uncheck any you do not want in Lucem.'
+                ? 'Confirm adding this account. Cardano Native matches the receive address Keystone shows first; Ledger is the device’s Ledger-compatible address.'
+                : 'Confirm which accounts to add (at least one). Cardano Native is selected by default so the address matches Keystone’s receive screen.'
             : Object.keys(existing).length > 0 &&
                 Object.keys(selected).filter((s) => selected[s] && !existing[s])
                   .length === 0
               ? 'The selected accounts are already imported in Lucem. Choose a different account index, or close this tab.'
               : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device. Accounts already in Lucem are marked and cannot be selected again.'}
         </Text>
+        {isKeystone &&
+        data.keystoneAccounts.every(
+          (k) => k.profile === KEYSTONE_DERIVATION.ledger
+        ) ? (
+          <Text
+            mt={3}
+            width="90%"
+            maxWidth="340px"
+            fontSize="xs"
+            color="orange.200"
+            textAlign="center"
+          >
+            This QR exported Ledger-compatible keys. That will not match
+            Keystone&apos;s Cardano Native receive address. On the device, open
+            the Cardano account menu and choose Cardano Native, then export
+            again — or continue if you want the Ledger address.
+          </Text>
+        ) : null}
         <Box h={8} />
 
         <Box

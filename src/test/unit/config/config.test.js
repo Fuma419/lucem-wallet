@@ -4,6 +4,8 @@ const {
   NODE,
   METHOD,
   ERROR,
+  isSubmitError,
+  submitErrorMessage,
   TX,
   APIError,
   DataSignError,
@@ -71,6 +73,17 @@ describe('ERROR constants', () => {
     expect(ERROR.txNotPossible).toBeDefined();
     expect(ERROR.fullMempool).toBeDefined();
     expect(ERROR.submit).toBeDefined();
+  });
+  test('isSubmitError accepts the legacy string and tagged Error', () => {
+    expect(isSubmitError(ERROR.submit)).toBe(true);
+    const tagged = new Error('ValueNotConservedUTxO');
+    tagged.code = ERROR.submit;
+    expect(isSubmitError(tagged)).toBe(true);
+    expect(isSubmitError(new Error('other'))).toBe(false);
+    expect(submitErrorMessage(tagged)).toBe('ValueNotConservedUTxO');
+    expect(submitErrorMessage(ERROR.submit)).toBe(
+      'Transaction could not be submitted.'
+    );
   });
   test('duplicate import errors are defined', () => {
     expect(ERROR.accountAlreadyExists).toMatch(/already imported/i);

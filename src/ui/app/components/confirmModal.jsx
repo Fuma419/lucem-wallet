@@ -18,7 +18,7 @@ import {
 import React from 'react';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
 import { indexToHw, initHW, isHW } from '../../../api/extension';
-import { ERROR, HW } from '../../../config/config';
+import { ERROR, HW, isSubmitError } from '../../../config/config';
 
 const ConfirmModal = React.forwardRef(
   (
@@ -248,7 +248,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         return;
       }
     } catch (e) {
-      if (e === ERROR.submit) props.onConfirm(false, e);
+      if (isSubmitError(e)) props.onConfirm(false, e);
       else {
         console.warn(e);
         setError('An error occured');

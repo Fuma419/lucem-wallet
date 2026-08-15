@@ -20,14 +20,17 @@ jest.mock('../../../api/extension', () => ({
   submitTx: jest.fn(),
 }));
 
-import { getUtxos } from '../../../api/extension';
+import { getUtxos, signTxHW, submitTx } from '../../../api/extension';
 import {
   delegationTx,
   withdrawalTx,
   undelegateTx,
   voteDelegationTx,
   voteTx,
+  signAndSubmitHW,
+  wrapSubmitError,
 } from '../../../api/extension/wallet';
+import { ERROR, isSubmitError, submitErrorMessage } from '../../../config/config';
 
 const TEST_ADDR =
   'addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp';
@@ -83,6 +86,8 @@ function makeUtxo(coin, index = 0) {
 beforeEach(() => {
   getUtxos.mockReset();
   getUtxos.mockResolvedValue([makeUtxo(50_000_000)]);
+  signTxHW.mockReset();
+  submitTx.mockReset();
 });
 
 describe('staking page — delegationTx', () => {
@@ -186,5 +191,85 @@ describe('voting page — voteTx (DRep casts a vote)', () => {
         voteKind: 'yes',
       })
     ).rejects.toThrow(/governance action id/i);
+  });
+});
+
+describe('shared assembler — all five builders', () => {
+  test('each builder produces a canonical body hash', async () => {
+    const builders = [
+      () =>
+        delegationTx(
+          ACCOUNT,
+          { registered: true, active: true },
+          PROTOCOL_PARAMS,
+          POOL_KEY_HASH
+        ),
+      () =>
+        withdrawalTx(ACCOUNT, { rewards: '3450000' }, PROTOCOL_PARAMS, [
+          makeUtxo(50_000_000),
+        ]),
+      () =>
+        undelegateTx(
+          ACCOUNT,
+          { registered: true, active: true, rewards: '0' },
+          PROTOCOL_PARAMS
+        ),
+      () =>
+        voteDelegationTx(
+          ACCOUNT,
+          { registered: true },
+          PROTOCOL_PARAMS,
+          'always_abstain'
+        ),
+      () =>
+        voteTx(ACCOUNT, PROTOCOL_PARAMS, {
+          drepKeyHashHex: DREP_KEY_HASH,
+          proposalTxHash: PROPOSAL_TX_HASH,
+          proposalIndex: 0,
+          voteKind: 'yes',
+        }),
+    ];
+
+    for (const build of builders) {
+      const tx = await build();
+      const hash = Buffer.from(
+        CSL.FixedTransactionBody.from_bytes(tx.body().to_bytes())
+          .tx_hash()
+          .to_bytes()
+      ).toString('hex');
+      expect(hash).toMatch(/^[0-9a-f]{64}$/);
+    }
+  });
+});
+
+describe('signAndSubmitHW submit errors', () => {
+  test('wrapSubmitError keeps ERROR.submit as code and the provider message', () => {
+    const wrapped = wrapSubmitError(new Error('ValueNotConservedUTxO'));
+    expect(isSubmitError(wrapped)).toBe(true);
+    expect(wrapped.code).toBe(ERROR.submit);
+    expect(wrapped.message).toBe('ValueNotConservedUTxO');
+    expect(submitErrorMessage(wrapped)).toBe('ValueNotConservedUTxO');
+  });
+
+  test('signAndSubmitHW surfaces the provider submit message', async () => {
+    const tx = await delegationTx(
+      ACCOUNT,
+      { registered: true, active: true },
+      PROTOCOL_PARAMS,
+      POOL_KEY_HASH
+    );
+    signTxHW.mockResolvedValue(CSL.TransactionWitnessSet.new());
+    submitTx.mockRejectedValue(new Error('fee too small'));
+
+    await expect(
+      signAndSubmitHW(tx, {
+        keyHashes: [PAYMENT_KEY_HASH],
+        account: ACCOUNT,
+        hw: { device: 'ledger', account: 0 },
+      })
+    ).rejects.toMatchObject({
+      code: ERROR.submit,
+      message: 'fee too small',
+    });
   });
 });

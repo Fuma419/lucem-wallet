@@ -342,17 +342,14 @@ describe('mobile layout - no hardcoded overflow widths', () => {
 });
 
 describe('mobile layout - iOS PWA top chrome', () => {
-  test('mainPopup.html uses an opaque status bar and a solid top-edge mask', () => {
+  test('mainPopup.html keeps a translucent status bar and reports safe-area insets', () => {
     const html = fs.readFileSync(
       path.join(__dirname, '../../pages/Popup/mainPopup.html'),
       'utf8'
     );
     expect(html).toMatch(/viewport-fit=cover/);
-    expect(html).toMatch(
-      /apple-mobile-web-app-status-bar-style" content="black"/
-    );
-    expect(html).not.toMatch(/black-translucent/);
-    expect(html).toMatch(/class="lucem-ios-top-edge"/);
+    expect(html).toMatch(/black-translucent/);
+    expect(html).not.toMatch(/class="lucem-ios-top-edge"/);
     expect(html).toMatch(/theme-color" content="#080808"/);
     expect(html).not.toMatch(/theme-color" content="#000000"/);
     expect(html).not.toMatch(/background-color: #000000/);
@@ -379,7 +376,7 @@ describe('mobile layout - iOS PWA top chrome', () => {
     expect(settingsSrc).toMatch(/var\(--lucem-safe-top\)/);
     expect(accountsSrc).toMatch(/var\(--lucem-safe-top\)/);
     expect(css).toMatch(
-      /\.lucem-ios-top-edge[\s\S]*position:\s*fixed[\s\S]*background-color:\s*#080808/
+      /--lucem-safe-top:\s*max\(env\(safe-area-inset-top,\s*0px\),\s*59px\)/
     );
   });
 
@@ -391,7 +388,7 @@ describe('mobile layout - iOS PWA top chrome', () => {
     expect(src).toMatch(/SyncPwaThemeColor/);
     expect(src).toMatch(/#080808/);
     expect(src).toMatch(/#f4f6fb/);
-    expect(src).toMatch(/apple-mobile-web-app-status-bar-style/);
+    expect(src).not.toMatch(/apple-mobile-web-app-status-bar-style/);
   });
 });
 

@@ -310,20 +310,9 @@ function SyncPwaThemeColor() {
   const { colorMode } = useColorMode();
   React.useEffect(() => {
     const color = PWA_THEME_COLOR[colorMode] || PWA_THEME_COLOR.dark;
-    const themeMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeMeta) themeMeta.setAttribute('content', color);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', color);
     document.documentElement.style.backgroundColor = color;
-    const statusMeta = document.querySelector(
-      'meta[name="apple-mobile-web-app-status-bar-style"]'
-    );
-    // Opaque bar (not black-translucent) so page content is not drawn under
-    // Liquid Glass. iOS may only apply this on the next standalone launch.
-    if (statusMeta) {
-      statusMeta.setAttribute(
-        'content',
-        colorMode === 'light' ? 'default' : 'black'
-      );
-    }
   }, [colorMode]);
   return null;
 }

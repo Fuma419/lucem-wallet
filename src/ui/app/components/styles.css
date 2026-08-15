@@ -60,30 +60,14 @@ html[data-theme='light'] .message {
 }
 
 /*
- * iOS 26+ standalone: a position:fixed element with background-color at the
- * viewport top is a WebKit "fixed color extension". That hides the Liquid
- * Glass scroll-edge blur. Keep this on the element itself (not a child).
+ * iOS 26+ standalone often reports env(safe-area-inset-top) as 0, and the
+ * Liquid Glass overlay still covers the status-bar band. Keep a Dynamic
+ * Island-sized floor so header chrome stays below that overlay.
  */
-.lucem-ios-top-edge {
-  display: none;
-}
-
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) {
-    .lucem-ios-top-edge {
-      display: block;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: max(var(--lucem-safe-top), 12px);
-      z-index: 20;
-      pointer-events: none;
-      background-color: #080808;
-    }
-
-    html[data-theme='light'] .lucem-ios-top-edge {
-      background-color: #f4f6fb;
+    :root {
+      --lucem-safe-top: max(env(safe-area-inset-top, 0px), 59px);
     }
   }
 }

@@ -17,7 +17,10 @@ QR/camera-based (no Bluetooth or USB) and works inside the WebView. Ledger
 
 - Node 20.x (`.nvmrc` is `20.19.0`). Capacitor is pinned to the v7 line so it
   runs on Node 20; do not bump to Capacitor 8 (needs Node >= 22).
-- Android: Android Studio (any OS) + an emulator or device. Google Play Console
+- Android: Android Studio (any OS) + an emulator or device. The CLI build needs
+  **JDK 17+** (AGP 8.7). sdkman Java 11 will fail. Use
+  `npm run mobile:android:install` (sets `JAVA_HOME` + `adb`) or
+  `source scripts/android-env.sh` before `./gradlew`. Google Play Console
   account ($25 one-time).
 - iOS: a Mac with Xcode. Apple Developer Program ($99/yr) enrolled as an
   ORGANIZATION (see the blocker below).
@@ -51,6 +54,7 @@ npm run mobile:assets
 
 - `npm run mobile:sync` - rebuild web assets and copy them into `android/`/`ios/`.
 - `npm run mobile:android` - sync and open Android Studio.
+- `npm run mobile:android:install` - sync, assemble a debug APK, `adb install`, launch.
 - `npm run mobile:ios` - sync and open Xcode (Mac).
 
 Run on a device/emulator from Android Studio / Xcode (or `npx cap run android`).

@@ -19,6 +19,7 @@
     "mobile:build": "LUCEM_SKIP_SERVE=1 npm run build:webpack",
     "mobile:sync": "npm run mobile:build && npx cap sync",
     "mobile:android": "npm run mobile:sync && npx cap open android",
+    "mobile:android:install": "bash scripts/android-install.sh",
     "mobile:ios": "npm run mobile:sync && npx cap open ios",
     "mobile:android:ci": "bash scripts/ci-mobile-android.sh",
     "mobile:assets": "npx --yes @capacitor/assets generate --iconBackgroundColor '#000000' --splashBackgroundColor '#000000'",

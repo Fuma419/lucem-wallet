@@ -152,19 +152,19 @@ export function inferKeystoneDerivationProfile(note, name) {
  * @returns {KeystoneDerivationProfile}
  */
 export function resolveKeystoneConnectProfile(inferred, forceExportProfile) {
-  if (
-    inferred === KEYSTONE_DERIVATION.ledger ||
-    inferred === KEYSTONE_DERIVATION.standard
-  ) {
-    return inferred;
+  if (inferred === KEYSTONE_DERIVATION.ledger) {
+    return 'ledger';
   }
-  if (
-    forceExportProfile === KEYSTONE_DERIVATION.ledger ||
-    forceExportProfile === KEYSTONE_DERIVATION.standard
-  ) {
-    return forceExportProfile;
+  if (inferred === KEYSTONE_DERIVATION.standard) {
+    return 'standard';
   }
-  return KEYSTONE_DERIVATION.standard;
+  if (forceExportProfile === KEYSTONE_DERIVATION.ledger) {
+    return 'ledger';
+  }
+  if (forceExportProfile === KEYSTONE_DERIVATION.standard) {
+    return 'standard';
+  }
+  return 'standard';
 }
 
 /** Storage suffix so account 0 Ledger vs standard can coexist */

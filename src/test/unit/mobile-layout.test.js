@@ -72,15 +72,16 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(walletSrc).toMatch(/lucem-wallet-main-column/);
   });
 
-  test('wallet.jsx header orbs share shell props and logo uses background contain (full mark)', () => {
+  test('wallet.jsx header orbs share shell props and Lucem logo overscans to match the avatar chip', () => {
     const walletSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/wallet.jsx'),
       'utf8'
     );
     expect(walletSrc).toContain('walletHeaderOrbShellProps');
     expect(walletSrc).toContain('WALLET_HEADER_LOGO_BG_SIZE');
-    expect(walletSrc).toMatch(/WALLET_HEADER_LOGO_BG_SIZE\s*=\s*'100%'/);
+    expect(walletSrc).toMatch(/WALLET_HEADER_LOGO_BG_SIZE\s*=\s*'138%'/);
     expect(walletSrc).toContain('backgroundImage={`url(${Logo})`}');
+    expect(walletSrc).toContain('lucem-wallet-header');
   });
 
   test('createWallet.jsx should use scroll region + viewport-capped modal card', () => {

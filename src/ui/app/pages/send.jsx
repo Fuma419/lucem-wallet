@@ -231,7 +231,7 @@ export const sendStore = {
 const Send = () => {
   const isMounted = useIsMounted();
   const settings = useStoreState((state) => state.settings.settings);
-  const { pageBg, pageFg, mutedFg, subtleFg, inputBg, yellowLink } =
+  const { pageBg, pageFg, mutedFg, subtleFg, inputBg } =
     useSurfaceColors();
   const [address, setAddress] = [
     useStoreState((state) => state.globalModel.sendStore.address),
@@ -682,9 +682,8 @@ const Send = () => {
     tx,
     sendAllRiskAccepted,
   });
-  const networkLabel =
-    NETWORK_LABEL[settings.network?.id] || settings.network?.id || 'Network';
-  const isMainnet = settings.network?.id === NETWORK_ID.mainnet;
+  const networkId = settings.network?.id || NETWORK_ID.mainnet;
+  const networkLabel = NETWORK_LABEL[networkId] || networkId || 'Network';
   const resolvedHandle =
     address.display &&
     String(address.display).startsWith('$') &&
@@ -788,14 +787,9 @@ const Send = () => {
               <Text
                 as="span"
                 data-testid="send-network-badge"
-                fontSize="xs"
-                fontWeight="bold"
-                px={2.5}
-                py={1}
-                rounded="full"
-                bg={isMainnet ? 'red.500' : 'whiteAlpha.200'}
-                color={isMainnet ? 'white' : yellowLink}
-                letterSpacing="0.04em"
+                className={`network-banner network-banner-${networkId}`}
+                role="status"
+                aria-label={`Sending on ${networkLabel}`}
               >
                 {networkLabel}
               </Text>

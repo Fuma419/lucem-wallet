@@ -108,6 +108,7 @@ describe('governance page and wallet network button wiring', () => {
     expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*1rem/);
     // Testnet indicators: blue (preprod) and emerald (preview) — distinct from
     // Send (purple) / Receive (cyan), mainnet lime, and Accounts orange
+    expect(css).toMatch(/\.network-banner-mainnet[\s\S]*rgba\(206,\s*250,\s*0/);
     expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*122,\s*255/);
     expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(0,\s*230,\s*118/);
   });

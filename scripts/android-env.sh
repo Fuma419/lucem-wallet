@@ -59,6 +59,41 @@ export ANDROID_HOME
 export ANDROID_SDK_ROOT="${ANDROID_HOME}"
 export PATH="${JAVA_HOME}/bin:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/emulator:${PATH}"
 
+lucem_adb_has_device() {
+  adb devices 2>/dev/null | awk 'NR > 1 && $2 == "device" { found = 1 } END { exit !found }'
+}
+
+# Boot the first AVD (or $LUCEM_ANDROID_AVD) when no phone/emulator is connected.
+lucem_ensure_android_device() {
+  if lucem_adb_has_device; then
+    return 0
+  fi
+  local avd="${LUCEM_ANDROID_AVD:-}"
+  if [ -z "$avd" ]; then
+    avd=$(emulator -list-avds 2>/dev/null | head -1 || true)
+  fi
+  if [ -z "$avd" ]; then
+    echo "error: no Android device or AVD. Create one in Android Studio Device Manager, or set LUCEM_ANDROID_AVD." >&2
+    return 1
+  fi
+  echo "Starting Android emulator ${avd} ..."
+  emulator -avd "$avd" -netdelay none -netspeed full >/tmp/lucem-emulator.log 2>&1 &
+  adb wait-for-device
+  local i=0
+  local boot=""
+  while [ "$i" -lt 90 ]; do
+    boot=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+    if [ "$boot" = "1" ]; then
+      echo "Emulator ${avd} is ready."
+      return 0
+    fi
+    sleep 2
+    i=$((i + 1))
+  done
+  echo "error: emulator ${avd} started but did not finish booting. See /tmp/lucem-emulator.log" >&2
+  return 1
+}
+
 # Do not wrap follow-on commands in `bash -lc`: sdkman login shells reset JAVA_HOME to 11.
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
   if [ "$#" -eq 0 ]; then

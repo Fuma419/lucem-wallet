@@ -255,7 +255,7 @@ const Settings = () => {
         px={{ base: 4, md: 6 }}
         pb={TRAY_CLEARANCE_PB}
       >
-        <Stack spacing={4} w="full" maxW="sm" mx="auto" pt={1}>
+        <Stack spacing={4} w="full" maxW={{ base: '100%', xl: 'sm' }} mx="auto" pt={1}>
           <SettingsPanel testId="settings-account-panel">
             <Flex align="center" gap={4} w="full">
               <Box

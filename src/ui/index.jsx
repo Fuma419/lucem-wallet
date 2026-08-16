@@ -21,7 +21,7 @@ import {
 
 /** Main wallet popup (`mainPopup.html`) */
 const isMainPopup = window.document.querySelector(`#${POPUP.main}`);
-/** Full-page wallet HTML entries (not the 400px popup) — use full width; no gray scroll panel. */
+/** Full-page wallet HTML entries (not the extension toolbar popup) — use full width; no gray scroll panel. */
 const isFullBleedWalletTab = detectIsFullBleedWalletTab(window.document);
 const isExtensionPopup = detectIsExtensionPopup(
   window.document,

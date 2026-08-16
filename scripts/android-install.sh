@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=android-env.sh
 source "${ROOT}/scripts/android-env.sh"
+lucem_ensure_android_device
 cd "${ROOT}"
 npm run mobile:sync
 cd android

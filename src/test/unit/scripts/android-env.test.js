@@ -23,8 +23,16 @@ describe('android CLI env helper', () => {
 
   test('install script sources the env helper and launches Lucem', () => {
     expect(installSrc).toContain('android-env.sh');
+    expect(installSrc).toContain('lucem_ensure_android_device');
     expect(installSrc).toContain('assembleDebug');
     expect(installSrc).toContain('adb install');
     expect(pkg).toContain('mobile:android:install');
+    expect(pkg).toContain('mobile:android:refresh');
+  });
+
+  test('env helper can boot an AVD when no device is attached', () => {
+    expect(envSrc).toContain('lucem_ensure_android_device');
+    expect(envSrc).toContain('LUCEM_ANDROID_AVD');
+    expect(envSrc).toContain('emulator -avd');
   });
 });

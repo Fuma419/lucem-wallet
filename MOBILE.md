@@ -54,7 +54,7 @@ npm run mobile:assets
 
 - `npm run mobile:sync` - rebuild web assets and copy them into `android/`/`ios/`.
 - `npm run mobile:android` - sync and open Android Studio.
-- `npm run mobile:android:install` - sync, assemble a debug APK, `adb install`, launch.
+- `npm run mobile:android:install` / `mobile:android:refresh` - boot an emulator if needed, sync web assets, assemble a debug APK, `adb install`, launch. Use this after pulling `main` or a full webpack rebuild.
 - `npm run mobile:ios` - sync and open Xcode (Mac).
 
 Run on a device/emulator from Android Studio / Xcode (or `npx cap run android`).

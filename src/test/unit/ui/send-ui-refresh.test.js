@@ -27,6 +27,8 @@ describe('Send UI refresh — structural contracts', () => {
   test('has a real page title, network badge, and safe-area header', () => {
     expect(sendSrc).toContain('data-testid="send-page-title"');
     expect(sendSrc).toContain('data-testid="send-network-badge"');
+    expect(sendSrc).toContain('network-banner-${networkId}');
+    expect(sendSrc).not.toMatch(/isMainnet \? 'red\.500'/);
     expect(sendSrc).toContain('safe-area-inset-top');
     expect(sendSrc).toContain('safe-area-inset-bottom');
   });

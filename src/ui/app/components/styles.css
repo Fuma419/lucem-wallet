@@ -823,6 +823,16 @@ html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   border-radius: 1rem;
 }
 
+/* Mainnet is the usual network — lime, not error red. */
+.network-banner-mainnet {
+  background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(206, 250, 0, 0.42), rgba(0, 0, 0, 0.5));
+  border-top-color: rgba(206, 250, 0, 0.95);
+  border-left-color: rgba(206, 250, 0, 0.95);
+  border-right-color: rgba(206, 250, 0, 0.95);
+  border-bottom-color: rgba(206, 250, 0, 0.95);
+  box-shadow: 0 6px 14px rgba(206, 250, 0, 0.22);
+}
+
 .network-banner-preprod {
   background: radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, 0.5), rgba(0, 0, 0, 0.5));
   border-top-color: rgba(0, 122, 255, 1);
@@ -845,6 +855,15 @@ html[data-theme='light'] .button.fab-account-toggle:focus-visible {
 html[data-theme='light'] .network-banner {
   opacity: 0.9;
   color: #111;
+}
+
+html[data-theme='light'] .network-banner-mainnet {
+  background: rgba(206, 250, 0, 0.38);
+  border-top-color: rgba(140, 170, 0, 0.9);
+  border-left-color: rgba(140, 170, 0, 0.9);
+  border-right-color: rgba(140, 170, 0, 0.9);
+  border-bottom-color: rgba(140, 170, 0, 0.9);
+  box-shadow: 0 4px 12px rgba(206, 250, 0, 0.22);
 }
 
 html[data-theme='light'] .network-banner-preprod {

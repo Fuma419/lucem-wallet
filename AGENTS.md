@@ -250,6 +250,20 @@ Only servers that provide **unique** capabilities beyond native tools are config
 
 **Removed (redundant with native tools):** `@modelcontextprotocol/server-filesystem` (→ Read/Write/Glob/Grep), `server-git` (→ Shell git), `server-github` (→ github-* MCP tools), `server-fetch` (→ WebFetch), `server-puppeteer` (→ puppeteer-* tools).
 
+### Versioning / releases
+
+App semver lives in **`package.json` `version`** (SoT). Cut releases with the
+shared CLI — bump, tag `vX.Y.Z`, and GitHub Release notes:
+
+```bash
+repo-release --dry-run patch
+repo-release patch -y
+```
+
+Canonical process: `~/agent-tooling/AGENTS.md` § Product releases. Android
+`versionName` / `versionCode` in `android/app/build.gradle` are **not**
+auto-bumped (CLI warns).
+
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.
 - Never modify generated WASM files in `src/wasm/`.

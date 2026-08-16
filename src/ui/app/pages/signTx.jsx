@@ -134,8 +134,8 @@ const SignTxKeystoneInline = ({
       {phase === KPhase.show && urData.cbor && (
         <>
           <Text fontSize="sm" mb={3}>
-            Scan with Keystone. The animated QR may take a minute or two; keep the
-            device aligned. Approve, then tap below and scan the signature QR.
+            Scan with Keystone. Frames are sparse and slow so the device camera
+            can lock on. Approve, then tap below and scan the signature QR.
           </Text>
           <Box bg="white" p={2} rounded="md" mx="auto" w="fit-content">
             <AnimatedQRCode

@@ -205,6 +205,12 @@ describe('toUnit', () => {
   test('returns 0 for NaN input', () => {
     expect(toUnit('not_a_number')).toBe('0');
   });
+
+  test('uses 0 decimals for native tokens (not ADA\'s default 6)', () => {
+    expect(toUnit('1', 0)).toBe('1');
+    expect(toUnit('100', 0)).toBe('100');
+    expect(toUnit('1.5', 1)).toBe('15');
+  });
 });
 
 describe('mnemonicToObject / mnemonicFromObject', () => {

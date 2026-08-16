@@ -11,6 +11,8 @@ jest.mock('../../../api/loader', () => ({
 }));
 
 const {
+  KEYSTONE_ANIMATED_QR_OPTIONS,
+  KEYSTONE_SIGN_ANIMATED_QR_OPTIONS,
   KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX,
   KEYSTONE_DERIVATION,
   cip1852AccountPath,
@@ -30,6 +32,12 @@ const {
 } = require('../../../api/keystone-cardano');
 
 describe('keystone-cardano', () => {
+  test('animated QR is sparse and slow enough for a device camera', () => {
+    expect(KEYSTONE_ANIMATED_QR_OPTIONS.capacity).toBeLessThanOrEqual(400);
+    expect(KEYSTONE_ANIMATED_QR_OPTIONS.interval).toBeGreaterThanOrEqual(200);
+    expect(KEYSTONE_SIGN_ANIMATED_QR_OPTIONS).toBe(KEYSTONE_ANIMATED_QR_OPTIONS);
+  });
+
   test('cip1852AccountPath', () => {
     expect(cip1852AccountPath(0)).toBe("m/1852'/1815'/0'");
     expect(cip1852AccountPath(7)).toBe("m/1852'/1815'/7'");

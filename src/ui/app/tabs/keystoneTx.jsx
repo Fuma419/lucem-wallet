@@ -256,9 +256,9 @@ const App = () => {
                   Sign with Keystone
                 </Text>
                 <Text fontSize="sm" textAlign="center" maxW="420px" color="whiteAlpha.800">
-                  Scan this QR with your Keystone. The animation may run for a minute
-                  or two while the full request is transferred; hold the device steady.
-                  Approve on the device, then tap below and scan the signature QR.
+                  Scan this QR with your Keystone. Frames are sparse and slow so the
+                  device camera can lock on; hold the device steady. Approve on the
+                  device, then tap below and scan the signature QR.
                 </Text>
                 <Box
                   bg="white"

@@ -7,6 +7,7 @@ import {
   createCslTransactionBuilderConfig,
   toCanonicalTransactionCip21,
 } from '../../../api/tx/csl-unsigned-tx';
+import { assetsToValue } from '../../../api/util';
 
 const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
 
@@ -163,6 +164,81 @@ describe('buildUnsignedSimpleTx', () => {
         requiredVkeyHashesHex: [],
       })
     ).toThrow('requiredVkeyHashesHex');
+  });
+});
+
+describe('buildUnsignedSimpleTx — native token', () => {
+  const tokenUnit =
+    'ab'.repeat(28) + Buffer.from('LUCEM').toString('hex');
+
+  async function makeTokenUtxo(coin, tokenQty, index = 0) {
+    const value = await assetsToValue([
+      { unit: 'lovelace', quantity: String(coin) },
+      { unit: tokenUnit, quantity: String(tokenQty) },
+    ]);
+    return CSL.TransactionUnspentOutput.new(
+      CSL.TransactionInput.new(
+        CSL.TransactionHash.from_hex('aa'.repeat(32)),
+        index
+      ),
+      CSL.TransactionOutput.new(CSL.Address.from_bech32(TEST_ADDR), value)
+    );
+  }
+
+  async function makeTokenOutputs(coin, tokenQty) {
+    const value = await assetsToValue([
+      { unit: 'lovelace', quantity: String(coin) },
+      { unit: tokenUnit, quantity: String(tokenQty) },
+    ]);
+    const outputs = CSL.TransactionOutputs.new();
+    outputs.add(
+      CSL.TransactionOutput.new(CSL.Address.from_bech32(TEST_ADDR), value)
+    );
+    return outputs;
+  }
+
+  test('sends a token from a normally funded wallet', async () => {
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [await makeTokenUtxo(10_000_000, 1000)],
+      outputs: await makeTokenOutputs(2_000_000, 100),
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(1),
+    });
+    const body = tx.body();
+    expect(body.outputs().len()).toBeGreaterThanOrEqual(1);
+    let sent = 0n;
+    for (let i = 0; i < body.outputs().len(); i += 1) {
+      const ma = body.outputs().get(i).amount().multiasset();
+      if (!ma) continue;
+      const policy = ma.keys().get(0);
+      const assets = ma.get(policy);
+      sent += BigInt(assets.get(assets.keys().get(0)).to_str());
+    }
+    expect(sent).toBeGreaterThanOrEqual(100n);
+  });
+
+  test('keeps leftover tokens on mixed change when ADA leftover is tight', async () => {
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [await makeTokenUtxo(3_000_000, 1000)],
+      outputs: await makeTokenOutputs(1_200_000, 100),
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(1),
+    });
+    const body = tx.body();
+    let changeTokens = 0n;
+    for (let i = 0; i < body.outputs().len(); i += 1) {
+      const ma = body.outputs().get(i).amount().multiasset();
+      if (!ma) continue;
+      const policy = ma.keys().get(0);
+      const assets = ma.get(policy);
+      const qty = BigInt(assets.get(assets.keys().get(0)).to_str());
+      if (qty === 900n) changeTokens = qty;
+    }
+    expect(changeTokens).toBe(900n);
   });
 });
 

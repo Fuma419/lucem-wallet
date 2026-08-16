@@ -100,6 +100,13 @@ const NETWORK_LABEL = {
 
 const stripAdaInput = (raw) => String(raw || '').replace(/[,\s]/g, '');
 
+/** Native tokens default to 0 decimals. Missing metadata must not inherit ADA's 6. */
+const tokenDecimals = (asset) => {
+  if (!asset || asset.decimals == null || asset.decimals === '') return 0;
+  const n = Number(asset.decimals);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const adaInputToLovelace = (raw) => {
   const cleaned = stripAdaInput(raw);
   if (!cleaned || cleaned === '.') return 0n;
@@ -458,15 +465,16 @@ const Send = () => {
         amount: [
           {
             unit: 'lovelace',
-            quantity: toUnit(_value.ada || '10000000'),
+            quantity: toUnit(_value.ada || '0'),
           },
         ],
       };
 
       for (const asset of _value.assets) {
-        const quantity = toUnit(asset.input, asset.decimals);
+        const live = assets.current[asset.unit] || asset;
+        const quantity = toUnit(live.input ?? asset.input, tokenDecimals(live));
 
-        if (!asset.input || BigInt(quantity || '0') < 1) {
+        if (!(live.input ?? asset.input) || BigInt(quantity || '0') < 1) {
           setFee({ error: 'Asset quantity not set' });
           return;
         }
@@ -501,6 +509,7 @@ const Send = () => {
         setValue({
           ..._value,
           ada: minAdaDisplay,
+          personalAda: minAdaDisplay,
         });
       }
 
@@ -637,12 +646,16 @@ const Send = () => {
     };
   }, []);
 
-  const confirmAssets = value.assets.map((asset) => ({
-    ...asset,
-    quantity: value.sendAll
-      ? String(asset.quantity || '0')
-      : toUnit(asset.input, asset.decimals),
-  }));
+  const confirmAssets = value.assets.map((asset) => {
+    const live = assets.current[asset.unit] || asset;
+    return {
+      ...asset,
+      ...live,
+      quantity: value.sendAll
+        ? String(live.quantity || asset.quantity || '0')
+        : toUnit(live.input ?? asset.input, tokenDecimals(live)),
+    };
+  });
   const feeError = fee.error ? String(fee.error) : '';
   const actionLabel = value.sendAll ? 'Review send all' : 'Review transaction';
   const availableLovelace = BigInt(txInfo.balance?.lovelace || '0');
@@ -1037,7 +1050,16 @@ const Send = () => {
                             }}
                             onLoad={(decimals) => {
                               if (!assets.current[asset.unit]) return;
+                              if (assets.current[asset.unit].decimals === decimals) {
+                                return;
+                              }
                               assets.current[asset.unit].decimals = decimals;
+                              triggerTxUpdate(() =>
+                                setValue({
+                                  ...value,
+                                  assets: objectToArray(assets.current),
+                                })
+                              );
                             }}
                             onInput={async (val) => {
                               if (!assets.current[asset.unit]) return;

@@ -256,7 +256,7 @@ const AssetsGrid = React.forwardRef(({ assets }, ref) => {
   return (
     <Box
       width="full"
-      px={{ base: 4, md: 5 }}
+      px="15%"
       pb={6}
       data-testid="wallet-assets-grid"
     >

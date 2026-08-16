@@ -6,7 +6,9 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "${ROOT}/scripts/android-env.sh"
 lucem_ensure_android_device
 cd "${ROOT}"
-npm run mobile:sync
+# Android only — a local ios/ tree must not run CocoaPods during an APK refresh.
+npm run mobile:build
+npx cap sync android
 cd android
 # A prior ./gradlew under sdkman Java 11 leaves a daemon that AGP 8.7 cannot use.
 ./gradlew --stop >/dev/null 2>&1 || true

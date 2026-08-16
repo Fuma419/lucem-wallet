@@ -18,6 +18,7 @@
     "test:functional": "NODE_ENV=test jest src/test/functional",
     "mobile:build": "LUCEM_SKIP_SERVE=1 npm run build:webpack",
     "mobile:sync": "npm run mobile:build && npx cap sync",
+    "mobile:sync:android": "npm run mobile:build && npx cap sync android",
     "mobile:android": "npm run mobile:sync && npx cap open android",
     "mobile:android:install": "bash scripts/android-install.sh",
     "mobile:android:refresh": "bash scripts/android-install.sh",

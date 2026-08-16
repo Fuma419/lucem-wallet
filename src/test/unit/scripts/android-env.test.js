@@ -24,6 +24,7 @@ describe('android CLI env helper', () => {
   test('install script sources the env helper and launches Lucem', () => {
     expect(installSrc).toContain('android-env.sh');
     expect(installSrc).toContain('lucem_ensure_android_device');
+    expect(installSrc).toContain('cap sync android');
     expect(installSrc).toContain('assembleDebug');
     expect(installSrc).toContain('adb install');
     expect(pkg).toContain('mobile:android:install');

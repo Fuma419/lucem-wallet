@@ -178,8 +178,8 @@ function KeystoneDerivationPicker({ value, onChange }) {
         Account type on Keystone
       </Text>
       <Text fontSize="xs" color="whiteAlpha.650" textAlign="center" mt={1} mb={2}>
-        Open the Cardano ⋮ menu and pick the same type here. A Ledger export
-        must stay Ledger — Lucem will not rewrite it as Cardano Native.
+        Lucem uses this when the Keystone QR does not say which type it is.
+        If the device QR is labeled Native or Ledger, Lucem follows the device.
       </Text>
       <Box display="flex" gap={3} justifyContent="center">
         {options.map((opt) => {
@@ -394,8 +394,9 @@ const ConnectHW = ({ onConfirm }) => {
               ? 'Ledger'
               : 'Cardano Native'}
           </b>{' '}
-          — Lucem stores that profile (same CIP-1852 path, different xpub).
-          More accounts take longer on the device.
+          as a hint — if Keystone labels the export, Lucem stores that type
+          (same CIP-1852 path, different xpub). More accounts take longer on
+          the device.
         </Text>
         <Box h={4} />
         <Box
@@ -513,14 +514,14 @@ const ConnectHW = ({ onConfirm }) => {
             fontWeight="semibold"
             textAlign="center"
           >
-            Scanning for{' '}
+            You picked{' '}
             <b>
               {keystoneExportProfile === KEYSTONE_DERIVATION.ledger
                 ? 'Ledger'
                 : 'Cardano Native'}
             </b>
-            . The device ⋮ menu must match — Lucem will not relabel a Ledger
-            export as Cardano Native.
+            . If this QR is labeled, Lucem follows the device and ignores that
+            pick.
           </Text>
         </Box>
         <Box h={4} />
@@ -771,8 +772,8 @@ const ConnectHW = ({ onConfirm }) => {
         >
           <Text width="100%" fontSize="sm" color="whiteAlpha.800" textAlign="center">
             By default Lucem connects <b>account 0</b> (CIP-1852). Choose
-            Cardano Native or Ledger to match the Keystone ⋮ menu, then
-            Continue. Open <b>Advanced options</b> to request more accounts.
+            Cardano Native or Ledger as a hint, then Continue. Open{' '}
+            <b>Advanced options</b> to request more accounts.
           </Text>
           <Box h={4} />
           <KeystoneDerivationPicker
@@ -860,9 +861,9 @@ const ConnectHW = ({ onConfirm }) => {
                 )}
               </Stack>
               <Text fontSize="xs" color="whiteAlpha.650" mt={3} maxW="340px">
-                The account-type choice above (Cardano Native or Ledger) is
-                stored with the import. Both use m/1852&apos;/1815&apos;/N&apos;;
-                only the device xpub differs.
+                The account-type choice above is a fallback when the QR has no
+                label. Both types use m/1852&apos;/1815&apos;/N&apos;; only the
+                device xpub differs.
               </Text>
             </Box>
           </Collapse>
@@ -913,7 +914,7 @@ const ConnectHW = ({ onConfirm }) => {
           if (selected === HW.keystone) {
             if (!keystoneExportProfile) {
               setError(
-                'Choose Cardano Native or Ledger to match the Keystone account type.'
+                'Choose Cardano Native or Ledger. Lucem uses this if the Keystone QR does not label the account type.'
               );
               return;
             }
@@ -1111,8 +1112,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
             ? keystoneNewAccounts.length === 0
               ? 'Every Cardano account in this sync is already in Lucem. Close this tab or run the Keystone flow again to export a different account.'
               : keystoneNewAccounts.length === 1
-                ? 'Confirm adding this account. The label is the Keystone account type you chose (Cardano Native or Ledger).'
-                : 'Confirm which accounts to add (at least one). The checked row matches the Cardano Native or Ledger type you chose on the previous step.'
+                ? 'Confirm adding this account. The label is the type Keystone exported (Cardano Native or Ledger).'
+                : 'Confirm which accounts to add (at least one). The checked row follows the Keystone QR when it is labeled, or your Native/Ledger pick when it is not.'
             : Object.keys(existing).length > 0 &&
                 Object.keys(selected).filter((s) => selected[s] && !existing[s])
                   .length === 0
@@ -1132,10 +1133,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
             color="orange.200"
             textAlign="center"
           >
-            This QR exported Ledger-compatible keys. That will not match
-            Keystone&apos;s Cardano Native receive address. On the device, open
-            the Cardano account menu and choose Cardano Native, then export
-            again — or continue if you want the Ledger address.
+            Keystone exported Ledger keys. Lucem stored them as Ledger — your
+            Cardano Native pick was only a hint.
           </Text>
         ) : null}
         <Box h={8} />

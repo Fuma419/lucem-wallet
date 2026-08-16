@@ -77,6 +77,13 @@ describe('Send UI refresh — structural contracts', () => {
     expect(sendSrc).toContain('Total leaving wallet');
   });
 
+  test('Keystone send opens the review modal instead of jumping to the QR', () => {
+    expect(sendSrc).toMatch(/ref\.current\?\.openModal\(idx\)/);
+    expect(sendSrc).not.toMatch(
+      /indexToHw\(idx\)\.device === HW\.keystone\s*\n\s*\) \{\s*\n\s*void startKeystoneQrSign\(\)/
+    );
+  });
+
   test('loading and success states have human copy', () => {
     expect(sendSrc).toContain('Loading your wallet…');
     expect(sendSrc).toContain('signedTx.slice(0, 8)');

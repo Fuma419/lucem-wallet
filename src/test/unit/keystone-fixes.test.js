@@ -132,6 +132,24 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).not.toMatch(/Keysone/);
   });
 
+  test('Keystone confirm shows the send review before opening the QR tab', () => {
+    const modalSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/confirmModal.jsx'),
+      'utf8'
+    );
+    expect(modalSrc).toMatch(/onOpenHW\(\)/);
+    expect(modalSrc).not.toMatch(
+      /parsed\.device === HW\.keystone[\s\S]{0,120}onHwKeystone\(parsed\)/
+    );
+    expect(modalSrc).toMatch(/change back to\s+you is a separate output/);
+    const keystoneTxSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/tabs/keystoneTx.jsx'),
+      'utf8'
+    );
+    expect(keystoneTxSrc).toMatch(/summarizeUnsignedPaymentTx/);
+    expect(keystoneTxSrc).toMatch(/data-testid="keystone-tx-summary"/);
+  });
+
   test('connect QR uses the shared slow Keystone frames', () => {
     expect(hwSrc).toMatch(/KEYSTONE_ANIMATED_QR_OPTIONS/);
     expect(hwSrc).not.toMatch(/interval:\s*110/);

@@ -557,6 +557,86 @@ function buildKeystoneExtraSigners(tx, account, hw, keyHashes) {
   ];
 }
 
+function formatAdaFromLovelace(lovelace) {
+  const n = BigInt(lovelace || '0');
+  const neg = n < 0n;
+  const abs = neg ? -n : n;
+  const whole = abs / 1000000n;
+  const frac = (abs % 1000000n).toString().padStart(6, '0');
+  return `${neg ? '-' : ''}${whole}.${frac}`;
+}
+
+/**
+ * Human review of an unsigned payment tx: inputs (spent UTxOs) vs outputs
+ * (recipient + change). Keystone's device UI lists both; change back to the
+ * spending address looks like "the same input and output" unless labeled.
+ * @param {*} tx - CSL Transaction
+ * @param {Array} [utxos] - CSL TransactionUnspentOutput[]
+ */
+export function summarizeUnsignedPaymentTx(tx, utxos = []) {
+  const body = tx.body();
+  const inputs = [];
+  const inLen = body.inputs().len();
+  for (let i = 0; i < inLen; i += 1) {
+    const inp = body.inputs().get(i);
+    const txHash = Buffer.from(inp.transaction_id().to_bytes()).toString('hex');
+    const idx = transactionInputIndex(inp);
+    const match = (utxos || []).find((u) => {
+      const h = Buffer.from(u.input().transaction_id().to_bytes()).toString(
+        'hex'
+      );
+      return h === txHash && transactionInputIndex(u.input()) === idx;
+    });
+    const lovelace = match ? match.output().amount().coin().to_str() : null;
+    let address = null;
+    if (match) {
+      try {
+        address = match.output().address().to_bech32();
+      } catch (e) {
+        address = null;
+      }
+    }
+    inputs.push({
+      txHash,
+      index: idx,
+      address,
+      lovelace,
+      ada: lovelace != null ? formatAdaFromLovelace(lovelace) : null,
+    });
+  }
+
+  const inputAddresses = new Set(
+    inputs.map((row) => row.address).filter(Boolean)
+  );
+  const outputs = [];
+  const outLen = body.outputs().len();
+  for (let i = 0; i < outLen; i += 1) {
+    const out = body.outputs().get(i);
+    let address = '';
+    try {
+      address = out.address().to_bech32();
+    } catch (e) {
+      address = '';
+    }
+    const lovelace = out.amount().coin().to_str();
+    const isChange = Boolean(address && inputAddresses.has(address));
+    outputs.push({
+      address,
+      lovelace,
+      ada: formatAdaFromLovelace(lovelace),
+      kind: isChange ? 'change' : 'payment',
+    });
+  }
+
+  const fee = body.fee().to_str();
+  return {
+    fee,
+    feeAda: formatAdaFromLovelace(fee),
+    inputs,
+    outputs,
+  };
+}
+
 /**
  * Build UR for Keystone to scan (unsigned tx).
  * @param {object} opts

@@ -401,19 +401,24 @@ const Wallet = () => {
           overflow="visible"
           pb={{ base: 4, md: 6 }}
         >
-          {/* Icon row — orbs only. The testnet badge sits below so a centered
-              punch-hole camera cannot sit in the middle of the banner. */}
+          {/* One row: orbs in the corners, network between them. Safe-area
+              padding keeps the circles below the iOS status bar / Dynamic
+              Island (same pattern as Send — not a global 59px floor). */}
           <Flex
             className="lucem-wallet-header"
             zIndex={2}
             w="full"
             maxW="100%"
-            pt={{ base: 3, md: 4 }}
+            pt={{
+              base: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
+              md: 'calc(1rem + env(safe-area-inset-top, 0px))',
+            }}
             pb={2}
             px={{ base: 4, md: 5 }}
             align="center"
             justify="space-between"
             flexShrink={0}
+            gap={2}
           >
             <Box flex="1" display="flex" justifyContent="flex-start" minW={0}>
               <Box
@@ -427,6 +432,25 @@ const Wallet = () => {
                 backgroundSize={`${WALLET_HEADER_LOGO_BG_SIZE} ${WALLET_HEADER_LOGO_BG_SIZE}`}
               />
             </Box>
+            <Box
+              flex="0 1 auto"
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              minW={0}
+              px={1}
+            >
+              {testnetBanner ? (
+                <Box
+                  className={`network-banner network-banner-${testnetBanner.id}`}
+                  role="status"
+                  aria-label={`Connected to ${testnetBanner.label}`}
+                  data-testid="wallet-network-banner"
+                >
+                  {testnetBanner.label}
+                </Box>
+              ) : null}
+            </Box>
             <Box flex="1" display="flex" justifyContent="flex-end" minW={0}>
               <Box {...walletHeaderOrbShellProps} bg={avatarBg} position="relative">
                 <Box position="absolute" inset={0}>
@@ -435,26 +459,6 @@ const Wallet = () => {
               </Box>
             </Box>
           </Flex>
-          {testnetBanner ? (
-            <Flex
-              className="lucem-wallet-network-row"
-              justify="center"
-              align="center"
-              w="full"
-              px={{ base: 4, md: 5 }}
-              pb={1}
-              flexShrink={0}
-            >
-              <Box
-                className={`network-banner network-banner-${testnetBanner.id}`}
-                role="status"
-                aria-label={`Connected to ${testnetBanner.label}`}
-                data-testid="wallet-network-banner"
-              >
-                {testnetBanner.label}
-              </Box>
-            </Flex>
-          ) : null}
 
           <Box
             className="lucem-wallet-name"

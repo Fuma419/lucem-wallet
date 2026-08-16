@@ -91,8 +91,10 @@ describe('governance page and wallet network button wiring', () => {
     expect(walletSrc).toContain('wallet-network-banner');
     expect(walletSrc).toMatch(/network-banner-\$\{testnetBanner\.id\}/);
     expect(walletSrc).toContain('lucem-wallet-header');
-    expect(walletSrc).toContain('lucem-wallet-network-row');
-    // In-flow below the orbs — do not pin to the panel top or sit in the camera row.
+    expect(walletSrc).toContain('safe-area-inset-top');
+    expect(walletSrc).not.toContain('lucem-wallet-network-row');
+    // In the orb row, after safe-area padding — not a second band and not
+    // absolutely pinned into the camera / status-bar line.
     expect(css).toMatch(/\.network-banner[\s\S]*position:\s*relative/);
     expect(css).not.toMatch(/\.network-banner[\s\S]*position:\s*absolute/);
     expect(css).not.toMatch(/\.network-banner[\s\S]*top:\s*0\.75rem/);

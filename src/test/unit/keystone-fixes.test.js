@@ -148,6 +148,30 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     );
     expect(keystoneTxSrc).toMatch(/summarizeUnsignedPaymentTx/);
     expect(keystoneTxSrc).toMatch(/data-testid="keystone-tx-summary"/);
+    expect(keystoneTxSrc).toMatch(/data-testid="keystone-tx-error"/);
+    expect(keystoneTxSrc).toMatch(/Copy error/);
+    expect(keystoneTxSrc).toMatch(/openMainRoute\('\/send'\)/);
+  });
+
+  test('Keystone sign payload is readable after remount (not deleted on take)', () => {
+    const indexSrc = fs.readFileSync(
+      path.join(__dirname, '../../api/extension/index.js'),
+      'utf8'
+    );
+    expect(indexSrc).toMatch(/Does not delete/);
+    expect(indexSrc).toMatch(/clearKeystoneSignPayload/);
+    expect(indexSrc).toMatch(
+      /export const takeKeystoneSignPayload = async \(signId\) => \{\s*const prev = \(await getStorage\(STORAGE\.keystoneTxPending\)\) \|\| \{\};\s*return prev\[signId\] \|\| null;/
+    );
+  });
+
+  test('web createTab does not resolve Keystone html under /send', () => {
+    const webSrc = fs.readFileSync(
+      path.join(__dirname, '../../platform/web.js'),
+      'utf8'
+    );
+    expect(webSrc).toMatch(/location\.origin\}\/\$\{tab\}\.html/);
+    expect(webSrc).not.toMatch(/location\.href = tab \+ '\.html'/);
   });
 
   test('connect QR uses the shared slow Keystone frames', () => {

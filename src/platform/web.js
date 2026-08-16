@@ -132,12 +132,16 @@ const webAdapter = {
     },
 
     createTab: (tab, query = '') => {
-      window.location.href = tab + '.html' + query;
+      // Origin-absolute: from /send, "keystoneTx.html" would otherwise resolve
+      // to /send/keystoneTx.html and 404 (error flashes, then the SPA comes back).
+      window.location.assign(
+        `${window.location.origin}/${tab}.html${query || ''}`
+      );
       return Promise.resolve({ id: Date.now() });
     },
 
     closeCurrentTab: () => {
-      window.location.href = 'mainPopup.html';
+      window.location.assign(`${window.location.origin}/mainPopup.html`);
       return Promise.resolve(true);
     },
 

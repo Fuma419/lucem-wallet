@@ -246,12 +246,27 @@ export const createTab = (tab, query = '') =>
 
 export const closeCurrentTab = () => platform.navigation.closeCurrentTab();
 
+const KEYSTONE_SIGN_PAYLOAD_TTL_MS = 2 * 60 * 60 * 1000;
+
+function pruneKeystoneSignPayloads(prev) {
+  const now = Date.now();
+  const next = {};
+  for (const [id, row] of Object.entries(prev || {})) {
+    if (row && now - (row.created || 0) < KEYSTONE_SIGN_PAYLOAD_TTL_MS) {
+      next[id] = row;
+    }
+  }
+  return next;
+}
+
 export const pushKeystoneSignPayload = async (payload) => {
   const signId =
     typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const prev = (await getStorage(STORAGE.keystoneTxPending)) || {};
+  const prev = pruneKeystoneSignPayloads(
+    (await getStorage(STORAGE.keystoneTxPending)) || {}
+  );
   await setStorage({
     [STORAGE.keystoneTxPending]: {
       ...prev,
@@ -261,17 +276,21 @@ export const pushKeystoneSignPayload = async (payload) => {
   return signId;
 };
 
+/** Read the pending sign session. Does not delete — the QR tab can remount. */
 export const takeKeystoneSignPayload = async (signId) => {
   const prev = (await getStorage(STORAGE.keystoneTxPending)) || {};
-  const data = prev[signId];
-  if (!data) return null;
+  return prev[signId] || null;
+};
+
+export const clearKeystoneSignPayload = async (signId) => {
+  const prev = (await getStorage(STORAGE.keystoneTxPending)) || {};
+  if (!prev[signId]) return;
   const next = { ...prev };
   delete next[signId];
   await setStorage({ [STORAGE.keystoneTxPending]: next });
-  return data;
 };
 
-/** Air-gapped Keystone: opens full tab with QR flow; payload is removed when consumed. */
+/** Air-gapped Keystone: opens full tab with QR flow. Payload stays until submit. */
 export const openKeystoneSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
   const signId = await pushKeystoneSignPayload({
     txHex,

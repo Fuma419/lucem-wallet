@@ -784,7 +784,7 @@ const Wallet = () => {
             </Tab>
           </TabList>
           <TabPanels>
-            <TabPanel>
+            <TabPanel px={0}>
               {assetsViewer}
             </TabPanel>
             <TabPanel>

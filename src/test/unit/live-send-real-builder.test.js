@@ -32,7 +32,7 @@ jest.mock('../../api/tx/csl-unsigned-tx', () => {
 const { buildUnsignedSimpleTx } = require('../../api/tx/csl-unsigned-tx');
 const {
   buildSignSubmitAccountTransfer,
-  clampSendToLargestUtxo,
+  clampSendToAvoidDustChange,
   deriveAccountAddress,
   PROVIDER,
 } = require('../integration/koios-self-send');
@@ -56,20 +56,30 @@ const EPOCH_PARAMS = {
   max_collateral_inputs: '3',
 };
 
-describe('clampSendToLargestUtxo', () => {
-  test('keeps a 5 tADA send when the largest UTxO has room for change', () => {
-    expect(clampSendToLargestUtxo([10_000_000n], '5000000')).toBe(5_000_000n);
+describe('clampSendToAvoidDustChange', () => {
+  test('keeps a 5 tADA send when every UTxO has room for change', () => {
+    expect(clampSendToAvoidDustChange([10_000_000n], '5000000')).toBe(
+      5_000_000n
+    );
   });
 
   test('shrinks the send so a 5.83 tADA UTxO is not left as dust change', () => {
     // 5_831_437 - 5_000_000 = 831_437 < min UTxO 969_750 (the Preprod CI fail).
-    const send = clampSendToLargestUtxo([5_831_437n], '5000000');
+    const send = clampSendToAvoidDustChange([5_831_437n], '5000000');
     expect(send).toBe(5_831_437n - 1_500_000n);
     expect(5_831_437n - send).toBeGreaterThanOrEqual(969_750n);
   });
 
+  test('caps against the tightest UTxO, not the largest', () => {
+    const send = clampSendToAvoidDustChange(
+      [4_600_000n, 5_800_000n],
+      '5000000'
+    );
+    expect(send).toBe(4_600_000n - 1_500_000n);
+  });
+
   test('returns 0 when no UTxO can fund fee plus min change', () => {
-    expect(clampSendToLargestUtxo([1_000_000n], '5000000')).toBe(0n);
+    expect(clampSendToAvoidDustChange([1_000_000n], '5000000')).toBe(0n);
   });
 });
 

@@ -571,7 +571,7 @@ async function buildSignSubmitAccountTransfer(opts) {
     // Coin selection often spends one UTxO. Reserve fee + min-ADA change
     // against that largest UTxO (not the wallet total) so leftover change
     // cannot fall under ~0.97 ADA — that dust failed Preprod CI.
-    const effectiveSend = clampSendToLargestUtxo(utxoLovelace, requestedSend);
+    const effectiveSend = clampSendToAvoidDustChange(utxoLovelace, requestedSend);
     if (effectiveSend <= 0n) {
       throw new Error(`Insufficient ADA balance at ${bech32} to build transfer transaction.`);
     }
@@ -706,23 +706,25 @@ async function buildSignSubmitSelfTransfer(opts) {
 }
 
 /**
- * Lovelace to send so a single selected UTxO still covers fee + min-ADA change.
+ * Lovelace to send so whichever UTxO coin selection picks still has fee +
+ * min-ADA change. Caps against the *tightest* UTxO, not the largest — a 4.6
+ * tADA input plus a 5.8 tADA input still dusted Preprod when we only reserved
+ * against the bigger one.
  * @param {bigint[]} utxoLovelaceAmounts
  * @param {string|number|bigint} requestedSend
  * @param {bigint} [headroom]
  * @returns {bigint}
  */
-function clampSendToLargestUtxo(
+function clampSendToAvoidDustChange(
   utxoLovelaceAmounts,
   requestedSend,
   headroom = 1_500_000n
 ) {
-  const largest = (utxoLovelaceAmounts || []).reduce(
-    (max, n) => (n > max ? n : max),
-    0n
-  );
-  const maxSafe = largest > headroom ? largest - headroom : 0n;
-  if (maxSafe <= 0n) return 0n;
+  const caps = (utxoLovelaceAmounts || [])
+    .filter((n) => n > headroom)
+    .map((n) => n - headroom);
+  if (!caps.length) return 0n;
+  const maxSafe = caps.reduce((min, n) => (n < min ? n : min));
   const req = BigInt(String(requestedSend));
   return req > maxSafe ? maxSafe : req;
 }
@@ -816,7 +818,7 @@ async function snapshotMainnetHistoryForMnemonic(mnemonic, apiKey) {
 module.exports = {
   PROVIDER,
   assertTestnetOnly,
-  clampSendToLargestUtxo,
+  clampSendToAvoidDustChange,
   buildSignSubmitAccountTransfer,
   buildSignSubmitSelfTransfer,
   buildSignSubmitRoundtrip,

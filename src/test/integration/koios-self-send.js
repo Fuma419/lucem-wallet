@@ -568,10 +568,13 @@ async function buildSignSubmitAccountTransfer(opts) {
       return BigInt(lovelace?.quantity || '0');
     });
     const requestedSend = BigInt(String(sendLovelace));
-    // Coin selection often spends one UTxO. Reserve fee + min-ADA change
-    // against that largest UTxO (not the wallet total) so leftover change
-    // cannot fall under ~0.97 ADA — that dust failed Preprod CI.
-    const effectiveSend = clampSendToAvoidDustChange(utxoLovelace, requestedSend);
+    // Never emit a payment below min-ADA. Prefer a single UTxO that can fund
+    // send + change; if the wallet is fragmented, fall back to the total.
+    let effectiveSend = clampSendToAvoidDustChange(utxoLovelace, requestedSend);
+    if (effectiveSend <= 0n) {
+      const total = utxoLovelace.reduce((sum, n) => sum + n, 0n);
+      effectiveSend = clampSendToAvoidDustChange([total], requestedSend);
+    }
     if (effectiveSend <= 0n) {
       throw new Error(`Insufficient ADA balance at ${bech32} to build transfer transaction.`);
     }
@@ -718,15 +721,17 @@ async function buildSignSubmitSelfTransfer(opts) {
 function clampSendToAvoidDustChange(
   utxoLovelaceAmounts,
   requestedSend,
-  headroom = 1_500_000n
+  headroom = 1_500_000n,
+  minOutput = 1_000_000n
 ) {
   const caps = (utxoLovelaceAmounts || [])
-    .filter((n) => n > headroom)
+    .filter((n) => n > headroom + minOutput)
     .map((n) => n - headroom);
   if (!caps.length) return 0n;
   const maxSafe = caps.reduce((min, n) => (n < min ? n : min));
   const req = BigInt(String(requestedSend));
-  return req > maxSafe ? maxSafe : req;
+  const send = req > maxSafe ? maxSafe : req;
+  return send >= minOutput ? send : 0n;
 }
 
 /** Total spendable lovelace for a bech32 address from the active provider. */

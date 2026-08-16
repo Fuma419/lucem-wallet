@@ -81,6 +81,20 @@ describe('clampSendToAvoidDustChange', () => {
   test('returns 0 when no UTxO can fund fee plus min change', () => {
     expect(clampSendToAvoidDustChange([1_000_000n], '5000000')).toBe(0n);
   });
+
+  test('does not produce a payment output below min ADA', () => {
+    // 2.25 tADA - 1.5 tADA headroom = 0.75 tADA < 0.97 min UTxO (Preview CI).
+    expect(clampSendToAvoidDustChange([2_252_720n], '5000000')).toBe(0n);
+  });
+
+  test('fragmented UTxOs can still send from the combined total', () => {
+    const parts = [1_200_000n, 1_200_000n, 1_200_000n];
+    expect(clampSendToAvoidDustChange(parts, '5000000')).toBe(0n);
+    const total = parts.reduce((a, b) => a + b, 0n);
+    expect(clampSendToAvoidDustChange([total], '5000000')).toBe(
+      total - 1_500_000n
+    );
+  });
 });
 
 describe('live send integration exercises the production wallet builder', () => {

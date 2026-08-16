@@ -145,27 +145,73 @@ export function inferKeystoneDerivationProfile(note, name) {
 }
 
 /**
- * Stored profile for one connect-UR row. Device metadata always wins. The
- * Lucem Native/Ledger picker is only a fallback when the UR has no hint
- * (same CIP-1852 path; only the xpub differs).
+ * Stored profile for one connect-UR row. Device metadata is the only source
+ * when present. A Lucem fallback is used only for unlabeled rows.
  * @param {KeystoneDerivationProfile | null | undefined} inferred
- * @param {KeystoneDerivationProfile | null | undefined} forceExportProfile
+ * @param {KeystoneDerivationProfile | null | undefined} fallbackProfile
  * @returns {KeystoneDerivationProfile}
  */
-export function resolveKeystoneConnectProfile(inferred, forceExportProfile) {
+export function resolveKeystoneConnectProfile(inferred, fallbackProfile) {
   if (inferred === KEYSTONE_DERIVATION.ledger) {
     return 'ledger';
   }
   if (inferred === KEYSTONE_DERIVATION.standard) {
     return 'standard';
   }
-  if (forceExportProfile === KEYSTONE_DERIVATION.ledger) {
+  if (fallbackProfile === KEYSTONE_DERIVATION.ledger) {
     return 'ledger';
   }
-  if (forceExportProfile === KEYSTONE_DERIVATION.standard) {
+  if (fallbackProfile === KEYSTONE_DERIVATION.standard) {
     return 'standard';
   }
   return 'standard';
+}
+
+/** True when at least one connect row has no Native/Ledger label from the device. */
+export function keystoneConnectNeedsProfileChoice(keys) {
+  return (keys || []).some(
+    (k) =>
+      k.profile !== KEYSTONE_DERIVATION.ledger &&
+      k.profile !== KEYSTONE_DERIVATION.standard
+  );
+}
+
+/**
+ * Label unlabeled rows after the user names what they already exported.
+ * Rows the device labeled are left unchanged.
+ * @param {Array<{ account: number, publicKey: string, profile?: string | null, rowKey?: string, name?: string, cip1852Path?: string }>} keys
+ * @param {KeystoneDerivationProfile} profile
+ */
+export function applyKeystoneFallbackProfile(keys, profile) {
+  const p =
+    profile === KEYSTONE_DERIVATION.ledger
+      ? KEYSTONE_DERIVATION.ledger
+      : KEYSTONE_DERIVATION.standard;
+  const applied = (keys || []).map((k) => {
+    if (
+      k.profile === KEYSTONE_DERIVATION.ledger ||
+      k.profile === KEYSTONE_DERIVATION.standard
+    ) {
+      return k;
+    }
+    return {
+      ...k,
+      profile: p,
+      rowKey: `${k.account}-${p}`,
+      name: formatKeystoneCardanoAccountLabel(k.account, p),
+    };
+  });
+  const byRow = new Map();
+  for (const row of applied) {
+    const prev = byRow.get(row.rowKey);
+    if (prev && prev.publicKey !== row.publicKey) {
+      throw new Error(
+        'Keystone returned two unlabeled keys for the same account. Export Cardano Native or Ledger from the device menu so Lucem can tell them apart.'
+      );
+    }
+    byRow.set(row.rowKey, row);
+  }
+  return [...byRow.values()];
 }
 
 /** Storage suffix so account 0 Ledger vs standard can coexist */
@@ -366,12 +412,11 @@ export function urFromScan({ type, cbor }) {
 
 /**
  * Parse Keystone sync QR (crypto-multi-accounts or crypto-hdkey).
- * @param {{ forceExportProfile?: KeystoneDerivationProfile }} [options]
- *   Fallback when the UR has no Native/Ledger hint. Labeled device rows win.
- * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string, cip1852Path: string, profile: KeystoneDerivationProfile, rowKey: string }> }}
+ * Profile comes only from device metadata. Unlabeled rows have `profile: null`
+ * so the wallet can ask once after the scan.
+ * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string, cip1852Path: string, profile: KeystoneDerivationProfile | null, rowKey: string }> }}
  */
-export function parseKeystoneCardanoConnectUr(scan, options = {}) {
-  const { forceExportProfile } = options;
+export function parseKeystoneCardanoConnectUr(scan) {
   const sdk = new KeystoneSDK();
   const ur = urFromScan(scan);
   let masterFingerprint;
@@ -404,22 +449,7 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
     throw new Error('Invalid Keystone QR: missing master fingerprint.');
   }
 
-  /**
-   * @param {unknown} fp
-   * @returns {KeystoneDerivationProfile | null}
-   */
-  const coerceKeystoneForceExportProfile = (fp) => {
-    if (fp === KEYSTONE_DERIVATION.ledger || fp === 'ledger') {
-      return KEYSTONE_DERIVATION.ledger;
-    }
-    if (fp === KEYSTONE_DERIVATION.standard || fp === 'standard') {
-      return KEYSTONE_DERIVATION.standard;
-    }
-    return null;
-  };
-  const forcedProfile = coerceKeystoneForceExportProfile(forceExportProfile);
-
-  /** Raw ADA rows with profile inferred from UR only (never UI override). */
+  /** Raw ADA rows with profile inferred from UR only. */
   const rawAdaRows = [];
   let skippedNonAccountNode = false;
   for (const k of keys) {
@@ -467,14 +497,18 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
   for (const account of accountOrder) {
     const rows = byAccount.get(account);
     for (const r of rows) {
-      const profile = resolveKeystoneConnectProfile(r.inferred, forcedProfile);
+      const profile = r.inferred;
       adaAccounts.push({
         account,
         publicKey: r.publicKey,
         cip1852Path: cip1852AccountPath(account),
         profile,
-        rowKey: `${account}-${profile}`,
-        name: formatKeystoneCardanoAccountLabel(account, profile),
+        rowKey: profile
+          ? `${account}-${profile}`
+          : `${account}-unlabeled-${r.publicKey.slice(0, 8)}`,
+        name: profile
+          ? formatKeystoneCardanoAccountLabel(account, profile)
+          : `Keystone ${account}`,
       });
     }
   }

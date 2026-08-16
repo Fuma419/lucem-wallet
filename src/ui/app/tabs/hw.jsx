@@ -52,10 +52,12 @@ import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import {
   KEYSTONE_CARDANO_MAX_ACCOUNT_INDEX,
+  applyKeystoneFallbackProfile,
   filterKeystoneKeysForRequestedAccounts,
   formatKeystoneCardanoAccountLabel,
   generateCardanoKeystoneKeyDerivationUr,
   keystoneAccountStorageSuffix,
+  keystoneConnectNeedsProfileChoice,
   parseKeystoneCardanoConnectUr,
   preferredKeystoneImportRowKeys,
   KEYSTONE_DERIVATION,
@@ -153,7 +155,7 @@ function defaultKeystoneAccountChecks() {
   return o;
 }
 
-/** Native vs Ledger — same CIP-1852 path; the device ⋮ menu chooses the xpub. */
+/** Shown only when the Keystone QR has no Native/Ledger label. */
 function KeystoneDerivationPicker({ value, onChange }) {
   const options = [
     {
@@ -175,11 +177,12 @@ function KeystoneDerivationPicker({ value, onChange }) {
         color="whiteAlpha.900"
         textAlign="center"
       >
-        Account type on Keystone
+        What did you export on Keystone?
       </Text>
       <Text fontSize="xs" color="whiteAlpha.650" textAlign="center" mt={1} mb={2}>
-        Lucem uses this when the Keystone QR does not say which type it is.
-        If the device QR is labeled Native or Ledger, Lucem follows the device.
+        This QR has no Native/Ledger label. Choose the type you already
+        selected in the Cardano menu on the device. Lucem will import that
+        type.
       </Text>
       <Box display="flex" gap={3} justifyContent="center">
         {options.map((opt) => {
@@ -324,10 +327,7 @@ const ConnectHW = ({ onConfirm }) => {
     () => defaultKeystoneAccountChecks()
   );
   const [keystoneExportProfile, setKeystoneExportProfile] = React.useState(null);
-  const keystoneExportProfileRef = React.useRef(null);
-  React.useLayoutEffect(() => {
-    keystoneExportProfileRef.current = keystoneExportProfile;
-  }, [keystoneExportProfile]);
+  const [keystonePendingScan, setKeystonePendingScan] = React.useState(null);
 
   const keystoneRequestedIndices = React.useMemo(() => {
     return Object.keys(keystoneAccountChecks)
@@ -388,15 +388,10 @@ const ConnectHW = ({ onConfirm }) => {
               ? `account ${keystoneRequestedIndices[0]}`
               : `${keystoneRequestedIndices.length} accounts (${keystoneRequestedIndices.join(', ')})`}
           </b>
-          . Open the <b>scanner</b>, scan this QR, and approve. You chose{' '}
-          <b>
-            {keystoneExportProfile === KEYSTONE_DERIVATION.ledger
-              ? 'Ledger'
-              : 'Cardano Native'}
-          </b>{' '}
-          as a hint — if Keystone labels the export, Lucem stores that type
-          (same CIP-1852 path, different xpub). More accounts take longer on
-          the device.
+          . Open the <b>scanner</b>, scan this QR, and approve. On Keystone,
+          choose <b>Cardano Native</b> or <b>Ledger</b> in the Cardano menu —
+          Lucem imports exactly that type. More accounts take longer on the
+          device.
         </Text>
         <Box h={4} />
         <Box
@@ -493,37 +488,9 @@ const ConnectHW = ({ onConfirm }) => {
         </Text>
         <Box h={4} />
         <Text fontSize="sm" maxW="320px" color="whiteAlpha.800" textAlign="center" mx="auto">
-          Scan the animated QR on your Keystone screen. Allow the camera when
-          the browser asks.
+          Scan the animated QR on your Keystone screen. Lucem imports the
+          Cardano Native or Ledger type that QR contains.
         </Text>
-        <Box
-          mt={3}
-          w="full"
-          maxW="340px"
-          mx="auto"
-          rounded="md"
-          bg="rgba(206, 250, 0, 0.10)"
-          borderWidth="1px"
-          borderColor={HW_ACCENT.borderMuted}
-          px={3}
-          py={2}
-        >
-          <Text
-            fontSize="xs"
-            color="orange.200"
-            fontWeight="semibold"
-            textAlign="center"
-          >
-            You picked{' '}
-            <b>
-              {keystoneExportProfile === KEYSTONE_DERIVATION.ledger
-                ? 'Ledger'
-                : 'Cardano Native'}
-            </b>
-            . If this QR is labeled, Lucem follows the device and ignores that
-            pick.
-          </Text>
-        </Box>
         <Box h={4} />
         <Box
           w="full"
@@ -541,19 +508,26 @@ const ConnectHW = ({ onConfirm }) => {
                 if (keystoneScanConsumedRef.current) return;
                 const indices = keystoneRequestedIndicesRef.current;
                 const { masterFingerprint, keys } =
-                  parseKeystoneCardanoConnectUr(data, {
-                    forceExportProfile: keystoneExportProfileRef.current,
-                  });
+                  parseKeystoneCardanoConnectUr(data);
                 const filtered = filterKeystoneKeysForRequestedAccounts(
                   keys,
                   indices
                 );
                 keystoneScanConsumedRef.current = true;
+                if (keystoneConnectNeedsProfileChoice(filtered)) {
+                  setKeystonePendingScan({
+                    masterFingerprint,
+                    keys: filtered,
+                  });
+                  setKeystoneExportProfile(null);
+                  setKeystoneStep('labelProfile');
+                  return;
+                }
                 onConfirm({
                   device: HW.keystone,
                   id: masterFingerprint,
                   keystoneAccounts: filtered,
-                  keystoneExportProfile: keystoneExportProfileRef.current,
+                  keystoneExportProfile: filtered[0]?.profile || null,
                 });
               } catch (e) {
                 setScanError(e.message || 'Could not read QR');
@@ -582,6 +556,92 @@ const ConnectHW = ({ onConfirm }) => {
           }}
         >
           Back to Step 1
+        </Button>
+        <SetupCancelButton
+          mt={1}
+          alignSelf="center"
+          onClick={() => leaveSetupFlow()}
+        />
+      </Box>
+    );
+  }
+
+  if (selected === HW.keystone && keystoneStep === 'labelProfile') {
+    return (
+      <Box
+        width="100%"
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+      >
+        <Text
+          className="walletTitle"
+          as="h2"
+          textAlign="center"
+          fontWeight="bold"
+          fontSize="xl"
+          width="100%"
+        >
+          Label this Keystone export
+        </Text>
+        <Box h={4} />
+        <KeystoneDerivationPicker
+          value={keystoneExportProfile}
+          onChange={(profile) => {
+            setKeystoneExportProfile(profile);
+            setScanError('');
+          }}
+        />
+        {scanError && (
+          <Text fontSize="xs" color="red.200" mt={3} textAlign="center">
+            {scanError}
+          </Text>
+        )}
+        <Button
+          type="button"
+          variant="unstyled"
+          className="button hw-wallet"
+          w="100%"
+          maxW="300px"
+          minH="44px"
+          mt={6}
+          alignSelf="center"
+          isDisabled={!keystoneExportProfile || !keystonePendingScan}
+          onClick={() => {
+            try {
+              const applied = applyKeystoneFallbackProfile(
+                keystonePendingScan.keys,
+                keystoneExportProfile
+              );
+              onConfirm({
+                device: HW.keystone,
+                id: keystonePendingScan.masterFingerprint,
+                keystoneAccounts: applied,
+                keystoneExportProfile,
+              });
+            } catch (e) {
+              setScanError(e.message || 'Could not label this export');
+            }
+          }}
+        >
+          Continue
+        </Button>
+        <Button
+          mt={2}
+          variant="ghost"
+          alignSelf="center"
+          color="whiteAlpha.800"
+          _hover={{ bg: 'whiteAlpha.100' }}
+          _active={{ bg: 'whiteAlpha.200' }}
+          onClick={() => {
+            setScanError('');
+            setKeystonePendingScan(null);
+            setKeystoneExportProfile(null);
+            keystoneScanConsumedRef.current = false;
+            setKeystoneStep('scanReply');
+          }}
+        >
+          Back
         </Button>
         <SetupCancelButton
           mt={1}
@@ -772,17 +832,10 @@ const ConnectHW = ({ onConfirm }) => {
         >
           <Text width="100%" fontSize="sm" color="whiteAlpha.800" textAlign="center">
             By default Lucem connects <b>account 0</b> (CIP-1852). Choose
-            Cardano Native or Ledger as a hint, then Continue. Open{' '}
-            <b>Advanced options</b> to request more accounts.
+            Cardano Native or Ledger on the Keystone when you export — Lucem
+            imports that type. Open <b>Advanced options</b> to request more
+            accounts.
           </Text>
-          <Box h={4} />
-          <KeystoneDerivationPicker
-            value={keystoneExportProfile}
-            onChange={(profile) => {
-              setKeystoneExportProfile(profile);
-              setError('');
-            }}
-          />
           <Box h={4} />
           <Button
             type="button"
@@ -861,9 +914,9 @@ const ConnectHW = ({ onConfirm }) => {
                 )}
               </Stack>
               <Text fontSize="xs" color="whiteAlpha.650" mt={3} maxW="340px">
-                The account-type choice above is a fallback when the QR has no
-                label. Both types use m/1852&apos;/1815&apos;/N&apos;; only the
-                device xpub differs.
+                Cardano Native and Ledger both use
+                m/1852&apos;/1815&apos;/N&apos;. Pick the type on Keystone;
+                only the device xpub differs.
               </Text>
             </Box>
           </Collapse>
@@ -897,11 +950,7 @@ const ConnectHW = ({ onConfirm }) => {
         w="100%"
         maxW="300px"
         minH="44px"
-        isDisabled={
-          isLoading ||
-          !selected ||
-          (selected === HW.keystone && !keystoneExportProfile)
-        }
+        isDisabled={isLoading || !selected}
         isLoading={isLoading}
         mt={8}
         alignSelf="center"
@@ -912,12 +961,6 @@ const ConnectHW = ({ onConfirm }) => {
         onClick={async () => {
           setError('');
           if (selected === HW.keystone) {
-            if (!keystoneExportProfile) {
-              setError(
-                'Choose Cardano Native or Ledger. Lucem uses this if the Keystone QR does not label the account type.'
-              );
-              return;
-            }
             if (keystoneRequestedIndices.length < 1) {
               setError('Select at least one Cardano account (Advanced).');
               return;
@@ -1062,9 +1105,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
   React.useEffect(() => {
     if (!isInit || !isKeystone) return;
     const newOnes = data.keystoneAccounts.filter((k) => !existing[k.rowKey]);
-    const preferred = new Set(
-      preferredKeystoneImportRowKeys(newOnes, data.keystoneExportProfile)
-    );
+    const preferred = new Set(preferredKeystoneImportRowKeys(newOnes));
     const next = {};
     newOnes.forEach((k) => {
       next[k.rowKey] = preferred.has(k.rowKey);
@@ -1113,30 +1154,13 @@ const SelectAccounts = ({ data, onConfirm }) => {
               ? 'Every Cardano account in this sync is already in Lucem. Close this tab or run the Keystone flow again to export a different account.'
               : keystoneNewAccounts.length === 1
                 ? 'Confirm adding this account. The label is the type Keystone exported (Cardano Native or Ledger).'
-                : 'Confirm which accounts to add (at least one). The checked row follows the Keystone QR when it is labeled, or your Native/Ledger pick when it is not.'
+                : 'Confirm which accounts to add (at least one). Each row is the type Keystone exported.'
             : Object.keys(existing).length > 0 &&
                 Object.keys(selected).filter((s) => selected[s] && !existing[s])
                   .length === 0
               ? 'The selected accounts are already imported in Lucem. Choose a different account index, or close this tab.'
               : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device. Accounts already in Lucem are marked and cannot be selected again.'}
         </Text>
-        {isKeystone &&
-        data.keystoneExportProfile !== KEYSTONE_DERIVATION.ledger &&
-        data.keystoneAccounts.every(
-          (k) => k.profile === KEYSTONE_DERIVATION.ledger
-        ) ? (
-          <Text
-            mt={3}
-            width="90%"
-            maxWidth="340px"
-            fontSize="xs"
-            color="orange.200"
-            textAlign="center"
-          >
-            Keystone exported Ledger keys. Lucem stored them as Ledger — your
-            Cardano Native pick was only a hint.
-          </Text>
-        ) : null}
         <Box h={8} />
 
         <Box

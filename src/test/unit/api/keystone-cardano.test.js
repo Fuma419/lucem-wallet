@@ -23,6 +23,8 @@ const {
   inferKeystoneDerivationProfile,
   inferKeystoneDerivationProfileOrNull,
   resolveKeystoneConnectProfile,
+  keystoneConnectNeedsProfileChoice,
+  applyKeystoneFallbackProfile,
   parseCip1852AccountIndexFromPath,
   trimKeystoneConnectKeysToOne,
 } = require('../../../api/keystone-cardano');
@@ -77,7 +79,7 @@ describe('keystone-cardano', () => {
     expect(inferKeystoneDerivationProfileOrNull('', 'Cardano')).toBe(null);
   });
 
-  test('resolveKeystoneConnectProfile follows the device and ignores the Lucem picker', () => {
+  test('resolveKeystoneConnectProfile uses device metadata when present', () => {
     expect(
       resolveKeystoneConnectProfile(
         KEYSTONE_DERIVATION.ledger,
@@ -93,26 +95,61 @@ describe('keystone-cardano', () => {
     expect(
       resolveKeystoneConnectProfile(null, KEYSTONE_DERIVATION.ledger)
     ).toBe(KEYSTONE_DERIVATION.ledger);
-    expect(
-      resolveKeystoneConnectProfile(undefined, KEYSTONE_DERIVATION.standard)
-    ).toBe(KEYSTONE_DERIVATION.standard);
     expect(resolveKeystoneConnectProfile(null, null)).toBe(
       KEYSTONE_DERIVATION.standard
     );
   });
 
-  test('parseKeystoneCardanoConnectUr uses the picker only as an unlabeled-QR fallback', () => {
+  test('keystoneConnectNeedsProfileChoice is true only for unlabeled rows', () => {
+    expect(
+      keystoneConnectNeedsProfileChoice([
+        { profile: KEYSTONE_DERIVATION.ledger },
+      ])
+    ).toBe(false);
+    expect(
+      keystoneConnectNeedsProfileChoice([
+        { profile: KEYSTONE_DERIVATION.standard },
+      ])
+    ).toBe(false);
+    expect(keystoneConnectNeedsProfileChoice([{ profile: null }])).toBe(true);
+    expect(keystoneConnectNeedsProfileChoice([])).toBe(false);
+  });
+
+  test('applyKeystoneFallbackProfile labels only unlabeled rows', () => {
+    const keys = [
+      {
+        account: 0,
+        publicKey: 'aa',
+        profile: KEYSTONE_DERIVATION.ledger,
+        rowKey: '0-ledger',
+        name: 'Keystone 0 · Ledger',
+      },
+      {
+        account: 1,
+        publicKey: 'bb',
+        profile: null,
+        rowKey: '1-unlabeled-bb',
+        name: 'Keystone 1',
+      },
+    ];
+    const out = applyKeystoneFallbackProfile(keys, KEYSTONE_DERIVATION.standard);
+    expect(out[0].profile).toBe(KEYSTONE_DERIVATION.ledger);
+    expect(out[1].profile).toBe(KEYSTONE_DERIVATION.standard);
+    expect(out[1].rowKey).toBe('1-standard');
+    expect(out[1].name).toBe('Keystone 1 · Cardano Native');
+  });
+
+  test('parseKeystoneCardanoConnectUr does not take a Lucem profile override', () => {
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(
       path.join(__dirname, '../../../api/keystone-cardano.js'),
       'utf8'
     );
-    expect(src).toContain(
-      'resolveKeystoneConnectProfile(r.inferred, forcedProfile)'
-    );
+    expect(src).toContain('const profile = r.inferred');
+    expect(src).toContain('keystoneConnectNeedsProfileChoice');
+    expect(src).not.toMatch(/forceExportProfile/);
     expect(src).not.toMatch(/You picked .* in Lucem Advanced/);
-    expect(src).not.toMatch(/export the matching address type on Keystone/);
   });
 
   test('formatKeystoneCardanoAccountLabel', () => {

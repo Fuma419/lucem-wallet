@@ -661,35 +661,68 @@ const Send = () => {
       // reported as an empty id list, not an exception.
       console.warn('Could not determine account signability', e);
     }
-    if (txInfo.protocolParameters) {
-      const _utxos = txInfo.utxos.map((utxo) =>
-        Loader.Cardano.TransactionUnspentOutput.from_bytes(
-          Buffer.from(utxo, 'hex')
-        )
-      );
-      utxos.current = _utxos;
-      setIsLoading(false);
-      return;
-    }
+    // Always re-fetch spendable UTxOs. Persisted txInfo can list a token in
+    // `balance.assets` while the stored hex UTxOs no longer contain it (or
+    // never did), which made Review fail with UTxO Balance Insufficient.
     let _utxos = await getUtxos();
-    const protocolParameters = await initTx();
+    if (!Array.isArray(_utxos)) _utxos = [];
+    const protocolParameters = txInfo.protocolParameters
+      ? { ...txInfo.protocolParameters }
+      : await initTx();
 
-    const checkOutput = Loader.Cardano.TransactionOutput.new(
-      Loader.Cardano.Address.from_bech32(currentAccount.paymentAddr),
-      Loader.Cardano.Value.zero()
+    const Cardano = Loader.Cardano;
+    const canUseCsl = Boolean(
+      Cardano?.TransactionOutput?.new &&
+        Cardano?.Address?.from_bech32 &&
+        Cardano?.Value?.zero
     );
-    const minUtxo = await minAdaRequired(
-      checkOutput,
-      BigInt(protocolParameters.coinsPerUtxoWord)
-    );
-    protocolParameters.minUtxo = minUtxo;
 
-    const utxoSum = await sumUtxos(_utxos);
-    let balance = await valueToAssets(utxoSum);
-    balance = {
-      lovelace: balance.find((v) => v.unit === 'lovelace').quantity,
-      assets: balance.filter((v) => v.unit !== 'lovelace'),
-    };
+    if (canUseCsl && currentAccount.paymentAddr) {
+      const checkOutput = Cardano.TransactionOutput.new(
+        Cardano.Address.from_bech32(currentAccount.paymentAddr),
+        Cardano.Value.zero()
+      );
+      protocolParameters.minUtxo = await minAdaRequired(
+        checkOutput,
+        BigInt(protocolParameters.coinsPerUtxoWord)
+      );
+    } else if (protocolParameters.minUtxo == null) {
+      protocolParameters.minUtxo = '0';
+    }
+
+    let balance = txInfo.balance || { lovelace: '0', assets: [] };
+    if (canUseCsl) {
+      const utxoSum = await sumUtxos(_utxos);
+      const listed = await valueToAssets(utxoSum);
+      balance = {
+        lovelace: listed.find((v) => v.unit === 'lovelace').quantity,
+        assets: listed.filter((v) => v.unit !== 'lovelace'),
+      };
+    }
+    const spendableUnits = new Set(
+      (balance.assets || []).map((asset) => asset.unit)
+    );
+    let droppedUnspendable = false;
+    Object.keys(assets.current).forEach((unit) => {
+      if (!spendableUnits.has(unit)) {
+        delete assets.current[unit];
+        droppedUnspendable = true;
+        return;
+      }
+      const live = (balance.assets || []).find((asset) => asset.unit === unit);
+      if (live) {
+        assets.current[unit] = {
+          ...assets.current[unit],
+          ...live,
+          input: assets.current[unit].input,
+        };
+      }
+    });
+    if (droppedUnspendable) {
+      triggerTxUpdate(() =>
+        setValue({ ...value, assets: objectToArray(assets.current) })
+      );
+    }
     utxos.current = _utxos;
     _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'));
     if (!isMounted.current) return;

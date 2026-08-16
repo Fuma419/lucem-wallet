@@ -42,7 +42,7 @@ const useFlowReturnPath = () => {
   );
 };
 
-/** Create Mnemonic / Import Mnemonic / Import HW — start-screen wallet actions. */
+/** Create Wallet / Restore Wallet / Connect Hardware — start-screen actions. */
 export const WalletSetupButtons = ({
   spacing = 6,
   stackProps = {},
@@ -70,21 +70,21 @@ export const WalletSetupButtons = ({
           onClick={() => refWallet.current.openModal()}
           {...buttonProps}
         >
-          Create Mnemonic
+          Create Wallet
         </Button>
         <Button
           className="button import-wallet"
           onClick={() => refImport.current.openModal()}
           {...buttonProps}
         >
-          Import Mnemonic
+          Restore Wallet
         </Button>
         <Button
           className="button hw-wallet"
           onClick={() => refHw.current.openModal()}
           {...buttonProps}
         >
-          Import HW
+          Connect Hardware
         </Button>
         {showBackupImport ? (
           <Button
@@ -93,7 +93,7 @@ export const WalletSetupButtons = ({
             data-testid="welcome-import-backup"
             {...buttonProps}
           >
-            Import Backup
+            Restore Backup
           </Button>
         ) : null}
         {children}
@@ -245,19 +245,19 @@ export const ImportModal = React.forwardRef((props, ref) => {
           }}
         />
         <ModalContent className="modal-glow-cyan" backgroundColor="#1a1a1a">
-          <ModalHeader fontSize="md">Import a wallet</ModalHeader>
+          <ModalHeader fontSize="md">Restore a wallet</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <Text fontSize="sm" fontWeight="bold">
               <WarningTwoIcon mr="1" />
-              Importing Daedalus or Yoroi
+              Restoring from Daedalus or Yoroi
             </Text>
             <Spacer height="1" />
             <Text fontSize="13px">
               Lucem is best experienced when not simultaneously used with
               Multi-Address wallets like Yoroi/Daedalus. Lucem allows the user
               to have multiple accounts but will only track the first wallet
-              from your imported wallet. This might result in partial
+              from your restored wallet. This might result in partial
               reflection of assets. To accurately reflect your balance, please
               transfer all assets into your new Lucem wallet address using a
               Multi-Address wallet.{' '}
@@ -477,8 +477,8 @@ export const ImportBackupModal = React.forwardRef((props, ref) => {
       const backup = JSON.parse(text);
       const { accounts } = await importAppData(backup);
       toast({
-        title: 'Backup imported',
-        description: `${accounts} account(s) restored. Import each seed phrase (or reconnect hardware) to enable signing.`,
+        title: 'Backup restored',
+        description: `${accounts} account(s) restored. Restore each recovery phrase (or reconnect hardware) to enable signing.`,
         status: 'success',
         duration: 6000,
       });
@@ -515,7 +515,7 @@ export const ImportBackupModal = React.forwardRef((props, ref) => {
           }}
         />
         <ModalContent className="modal-glow-backup" backgroundColor="#1a1a1a">
-          <ModalHeader fontSize="md">Import backup</ModalHeader>
+          <ModalHeader fontSize="md">Restore backup</ModalHeader>
           <ModalCloseButton isDisabled={importing} />
           <ModalBody>
             <Text fontSize="sm">
@@ -529,9 +529,9 @@ export const ImportBackupModal = React.forwardRef((props, ref) => {
             </Text>
             <Box h="1" />
             <Text fontSize="13px">
-              Backups never contain seed phrases or private keys. After import,
-              use Import Mnemonic (or reconnect hardware) for each account
-              before you can sign transactions.
+              Backups never contain recovery phrases or private keys. After
+              restore, use Restore Wallet (or reconnect hardware) for each
+              account before you can sign transactions.
             </Text>
             <Box h="5" />
             <Box display="flex" alignItems="center" justifyContent="center">

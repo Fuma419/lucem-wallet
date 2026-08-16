@@ -32,7 +32,7 @@ test.describe('setup Cancel returns to initiator', () => {
       '/createWalletTab.html?type=import&length=24&from=/welcome',
       { waitUntil: 'load' }
     );
-    await page.getByText('Import Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
+    await page.getByText('Restore Wallet').waitFor({ state: 'visible', timeout: 60_000 });
     const cancel = page.getByTestId('setup-cancel-button');
     await cancel.scrollIntoViewIfNeeded();
     await expect(cancel).toBeVisible();
@@ -90,7 +90,7 @@ test.describe('setup Cancel returns to initiator', () => {
     await page.getByText('Verify Seed Phrase').waitFor({ state: 'visible', timeout: 30_000 });
     await page.getByRole('button', { name: /^Skip$/i }).click();
     await page
-      .getByText(/Create Account|Add Wallet/i)
+      .getByText(/Create Wallet|Restore Wallet|Add Wallet/i)
       .waitFor({ state: 'visible', timeout: 30_000 });
     const cancel = page.getByTestId('setup-cancel-button');
     await cancel.scrollIntoViewIfNeeded();

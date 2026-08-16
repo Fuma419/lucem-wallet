@@ -118,7 +118,7 @@ const reviewBlockedReason = ({
   tx,
   sendAllRiskAccepted,
 }) => {
-  if (!accountSignable) return 'Import this account’s seed to sign.';
+  if (!accountSignable) return 'Restore this account’s recovery phrase to sign.';
   if (address?.error) return address.error;
   if (!address?.result) return 'Enter a recipient address.';
   if (!value?.sendAll && !value?.ada && !(value?.assets || []).length) {
@@ -1163,8 +1163,8 @@ const Send = () => {
                         Re-enter your recovery phrase
                       </Text>
                       <AlertDescription fontSize="sm">
-                        This account can see balances but cannot sign. Import
-                        the seed to enable sending.
+                        This account can see balances but cannot sign. Restore
+                        the recovery phrase to enable sending.
                       </AlertDescription>
                     </Box>
                   </Flex>
@@ -1182,7 +1182,7 @@ const Send = () => {
                       })
                     }
                   >
-                    Import seed to enable signing
+                    Restore seed to enable signing
                   </Button>
                 </Alert>
               )}

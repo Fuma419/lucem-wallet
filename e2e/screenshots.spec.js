@@ -324,7 +324,7 @@ test.describe('capture static entry UIs', () => {
     test.setTimeout(90_000);
     await page.goto('/welcome', { waitUntil: 'domcontentloaded' });
     await page.getByText('Wallet Setup').waitFor({ state: 'visible', timeout: 60_000 });
-    await page.getByRole('button', { name: /import hw/i }).click();
+    await page.getByRole('button', { name: /connect hardware/i }).click();
     await page.getByRole('dialog').getByText('Hardware wallet').waitFor({
       state: 'visible',
       timeout: 15_000,
@@ -369,7 +369,7 @@ test.describe('capture static entry UIs', () => {
     await page.getByText('Verify Seed Phrase').waitFor({ state: 'visible', timeout: 30_000 });
     await page.getByRole('button', { name: /^Skip$/i }).click();
     await page
-      .getByText(/Create Account|Add Wallet/i)
+      .getByText(/Create Wallet|Restore Wallet|Add Wallet/i)
       .waitFor({ state: 'visible', timeout: 30_000 });
     await assertSetupCancelVisible(page);
     await waitFonts(page);
@@ -381,7 +381,7 @@ test.describe('capture static entry UIs', () => {
     await page.goto('/createWalletTab.html?type=import&length=24', {
       waitUntil: 'load',
     });
-    await page.getByText('Import Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
+    await page.getByText('Restore Wallet').waitFor({ state: 'visible', timeout: 60_000 });
     await assertSetupCancelVisible(page);
     await waitFonts(page);
     await shot(page, '03-create-wallet-import');
@@ -395,11 +395,11 @@ test.describe('capture static entry UIs', () => {
     await page.goto('/createWalletTab.html?type=import&length=12', {
       waitUntil: 'load',
     });
-    await page.getByText('Import Seed Phrase').waitFor({ state: 'visible', timeout: 60_000 });
+    await page.getByText('Restore Wallet').waitFor({ state: 'visible', timeout: 60_000 });
     await page.locator('#lucem-seed-import-paste').fill(phrase);
     await page.getByRole('button', { name: /^Next$/i }).click();
     await page
-      .getByText(/Create Account|Add Wallet/i)
+      .getByText(/Create Wallet|Restore Wallet|Add Wallet/i)
       .waitFor({ state: 'visible', timeout: 30_000 });
     await assertSetupCancelVisible(page);
     await waitFonts(page);

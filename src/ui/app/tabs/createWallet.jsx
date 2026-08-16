@@ -564,11 +564,11 @@ const ImportSeed = ({ colorTheme }) => {
   return (
     <Box>
       <Text className="walletTitle" textAlign="center" fontWeight="bold" fontSize="xl">
-        Import Seed Phrase
+        Restore Wallet
       </Text>
       <Spacer height="5" />
       <Text className="walletTitle" fontSize="sm" textAlign="center">
-        Enter a {seedLength}-word seed phrase.
+        Enter your {seedLength}-word recovery phrase.
       </Text>
       <Spacer height="5" />
 
@@ -649,7 +649,7 @@ const ImportSeed = ({ colorTheme }) => {
         id="lucem-seed-import-paste"
         name="lucemSeedImportPaste"
         autoComplete="off"
-        placeholder={`Or paste your ${seedLength}-word seed phrase here`}
+        placeholder={`Or paste your ${seedLength}-word recovery phrase here`}
         size="sm"
         focusBorderColor={`${colorTheme}.700`}
         background="gray.900"
@@ -664,7 +664,7 @@ const ImportSeed = ({ colorTheme }) => {
 
       {allValid === false && (
         <Text color="red.300" className="walletTitle" fontSize="sm" textAlign="center">
-          Invalid seed phrase. Please check and try again.
+          Invalid recovery phrase. Please check and try again.
         </Text>
       )}
 
@@ -812,6 +812,13 @@ const MakeAccount = ({ colorTheme }) => {
   };
 
   const placeholderMuted = { color: 'whiteAlpha.700' };
+  const isRestore = flow === 'restore-wallet';
+  const pageTitle =
+    vaultExists || hasAccounts
+      ? 'Add Wallet'
+      : isRestore
+        ? 'Restore Wallet'
+        : 'Create Wallet';
 
   return isDone ? (
     <SuccessAndClose flow={flow} />
@@ -819,7 +826,7 @@ const MakeAccount = ({ colorTheme }) => {
     <Box textAlign="center" display="flex" alignItems="center" justifyContent="center" width="100%">
       <Box className={`lucem-create-account-panel lucem-create-account-panel-${colorTheme}`}>
         <Text className="walletTitle" fontWeight="bold" fontSize="md" letterSpacing="wide">
-          {vaultExists || hasAccounts ? 'Add Wallet' : 'Create Account'}
+          {pageTitle}
         </Text>
         {vaultExists && (
           <>
@@ -1055,14 +1062,14 @@ const MakeAccount = ({ colorTheme }) => {
             className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
             isDisabled={!canSubmit}
             isLoading={loading}
-            loadingText="Creating"
+            loadingText={isRestore ? 'Restoring' : 'Creating'}
             rightIcon={<ChevronRightIcon />}
             w="100%"
             minH="44px"
             mt={1}
             rounded="lg"
           >
-            Create
+            {isRestore ? 'Restore' : 'Create'}
           </Button>
           <SetupCancelButton
             isDisabled={loading}
@@ -1091,7 +1098,9 @@ const SuccessAndClose = ({ flow }) => {
       mx="auto"
     >
       <Text mt={10} fontSize="xl" fontWeight="semibold" maxW="100%" px={2}>
-        Successfully created wallet!
+        {flow === 'restore-wallet'
+          ? 'Successfully restored wallet!'
+          : 'Successfully created wallet!'}
       </Text>
       <Box h={10} />
       <Text px={2}>

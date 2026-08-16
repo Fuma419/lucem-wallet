@@ -420,7 +420,7 @@ const Accounts = () => {
                 }
                 data-testid="accounts-validate-button"
               >
-                Import seed to enable signing
+                Restore seed to enable signing
               </Button>
             </Box>
           ) : null}

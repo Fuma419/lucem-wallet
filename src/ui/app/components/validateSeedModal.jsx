@@ -83,7 +83,7 @@ const ValidateSeedModal = React.forwardRef((props, ref) => {
         rounded="2xl"
       >
         <ModalHeader fontSize="md" fontWeight="bold">
-          Import seed for {target?.name || 'account'}
+          Restore seed for {target?.name || 'account'}
         </ModalHeader>
         <ModalBody>
           <Text fontSize="sm" mb={3}>

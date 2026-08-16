@@ -118,10 +118,13 @@ describe('wallet tray accounts vs settings FABs', () => {
       path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
       'utf8'
     );
-    expect(setupSrc).toContain('Create Mnemonic');
-    expect(setupSrc).toContain('Import Mnemonic');
-    expect(setupSrc).toContain('Import HW');
-    expect(setupSrc).toContain('Import Backup');
+    expect(setupSrc).toContain('Create Wallet');
+    expect(setupSrc).toContain('Restore Wallet');
+    expect(setupSrc).toContain('Connect Hardware');
+    expect(setupSrc).toContain('Restore Backup');
+    expect(setupSrc).not.toContain('Import HW');
+    expect(setupSrc).not.toContain('Create Mnemonic');
+    expect(setupSrc).not.toContain('Import Mnemonic');
     expect(setupSrc).toContain('showBackupImport');
     expect(setupSrc).toContain('importAppData');
     expect(setupSrc).toContain('lucem-wallet-setup-actions');

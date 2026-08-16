@@ -192,8 +192,8 @@ const Settings = () => {
         const backup = JSON.parse(text);
         const { accounts } = await importAppData(backup);
         toast({
-          title: 'Backup imported',
-          description: `${accounts} account(s) restored. Import each seed phrase to enable signing.`,
+          title: 'Backup restored',
+          description: `${accounts} account(s) restored. Restore each recovery phrase to enable signing.`,
           status: 'success',
           duration: 6000,
         });

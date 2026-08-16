@@ -45,14 +45,18 @@ export const KEYSTONE_DERIVATION = {
 };
 
 /**
- * Animated QR for Cardano **sign** requests: larger UR fragments + faster cycling
- * shorten air-gap transfer vs @keystonehq/animated-qr defaults (400 / 100ms).
+ * Sparse, slow frames so a Keystone camera can lock onto the UR.
+ * @keystonehq/animated-qr defaults are 400 / 100ms. Larger fragments + faster
+ * cycling made sign and connect QRs unreadable on-device.
  */
-export const KEYSTONE_SIGN_ANIMATED_QR_OPTIONS = Object.freeze({
+export const KEYSTONE_ANIMATED_QR_OPTIONS = Object.freeze({
   size: 280,
-  capacity: 900,
-  interval: 72,
+  capacity: 200,
+  interval: 250,
 });
+
+/** Sign and connect share the same scannable settings. */
+export const KEYSTONE_SIGN_ANIMATED_QR_OPTIONS = KEYSTONE_ANIMATED_QR_OPTIONS;
 
 /**
  * @keystonehq/keystone-sdk uses full tx CBOR in UR below this byte length; at/above

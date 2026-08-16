@@ -132,6 +132,13 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).not.toMatch(/Keysone/);
   });
 
+  test('connect QR uses the shared slow Keystone frames', () => {
+    expect(hwSrc).toMatch(/KEYSTONE_ANIMATED_QR_OPTIONS/);
+    expect(hwSrc).not.toMatch(/interval:\s*110/);
+    expect(hwSrc).not.toMatch(/Math\.min\(900/);
+    expect(hwSrc).not.toMatch(/keystoneQrCapacity/);
+  });
+
   test('hardware picker shows Keystone and Ledger names next to the marks', () => {
     expect(hwSrc).toMatch(/alt="Keystone"/);
     expect(hwSrc).toMatch(/alt="Ledger"/);

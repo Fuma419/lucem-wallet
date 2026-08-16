@@ -211,10 +211,6 @@ export function buildUnsignedSimpleTx({
     Cardano.BigNum.from_str(String(protocolParameters.linearFee.minFeeA)),
     Cardano.BigNum.from_str(String(protocolParameters.linearFee.minFeeB))
   );
-  const txConfig = createCslTransactionBuilderConfig(
-    Cardano,
-    protocolParameters
-  );
   const changeAddress = Cardano.Address.from_bech32(changeAddressBech32);
   const invalidHereafter = ttlInvalidHereafterBignum(Cardano, protocolParameters);
 
@@ -243,6 +239,15 @@ export function buildUnsignedSimpleTx({
       }
     }
   }
+
+  // Token change must stay on one output. prefer_pure_change splits ADA off and
+  // then fails min-ADA on the token change — the Send page's "insufficient ADA"
+  // when adding a native token.
+  const txConfig = createCslTransactionBuilderConfig(
+    Cardano,
+    protocolParameters,
+    { preferPureChange: !containsMultiasset }
+  );
 
   // Multi-asset transfers keep CSL's coin selection (it balances change min-ADA
   // across token bundles). Pure-ADA transfers instead use our own largest-first
@@ -283,13 +288,25 @@ export function buildUnsignedSimpleTx({
       txBuilder.set_min_fee(minFeeFloor);
     }
     if (containsMultiasset) {
-      // CSL coin selection + change in one step for multi-asset transfers
-      // (RandomImproveMultiAsset is the only strategy that selects token UTxOs).
-      txBuilder.add_inputs_from_and_change(
-        utxoCollection,
-        Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset,
-        Cardano.ChangeConfig.new(changeAddress)
-      );
+      // LargestFirstMultiAsset is deterministic; RandomImproveMultiAsset can
+      // fail a fundable token send. Keep leftover tokens on the same change
+      // output (preferPureChange is off for this config).
+      try {
+        txBuilder.add_inputs_from_and_change(
+          utxoCollection,
+          Cardano.CoinSelectionStrategyCIP2.LargestFirstMultiAsset,
+          Cardano.ChangeConfig.new(changeAddress)
+        );
+      } catch (e) {
+        const err = e as { message?: string };
+        const msg = err?.message ? String(err.message) : String(e);
+        if (/leftover|not enough ADA/i.test(msg)) {
+          throw new Error(
+            'Not enough ADA left to hold the remaining tokens after this send. Send less ADA, or use Send all.'
+          );
+        }
+        throw e;
+      }
     } else {
       // Pure-ADA: add our change-aware, largest-first input selection explicitly,
       // then a single change pass. With `set_min_fee` (floor, not exact) CSL only

@@ -11,6 +11,10 @@ const sendSrc = fs.readFileSync(
   path.join(__dirname, '../../../ui/app/pages/send.jsx'),
   'utf8'
 );
+const assetBadgeSrc = fs.readFileSync(
+  path.join(__dirname, '../../../ui/app/components/assetBadge.jsx'),
+  'utf8'
+);
 
 describe('Send UI refresh — structural contracts', () => {
   test('uses themed page chrome instead of a hardcoded black canvas', () => {
@@ -76,5 +80,17 @@ describe('Send UI refresh — structural contracts', () => {
   test('loading and success states have human copy', () => {
     expect(sendSrc).toContain('Loading your wallet…');
     expect(sendSrc).toContain('signedTx.slice(0, 8)');
+  });
+
+  test('token amounts use 0 decimals when metadata is missing, not ADA\'s 6', () => {
+    expect(sendSrc).toMatch(/Native tokens default to 0 decimals/);
+    expect(sendSrc).toMatch(/tokenDecimals/);
+    expect(sendSrc).toMatch(/toUnit\(live\.input \?\? asset\.input, tokenDecimals\(live\)\)/);
+    expect(sendSrc).not.toMatch(/toUnit\(_value\.ada \|\| '10000000'\)/);
+    expect(sendSrc).toMatch(/toUnit\(_value\.ada \|\| '0'\)/);
+    expect(sendSrc).toMatch(/assets\.current\[asset\.unit\]\.decimals = decimals/);
+    expect(sendSrc).toMatch(/triggerTxUpdate\(\(\) =>/);
+    expect(assetBadgeSrc).toMatch(/onInput\('1'\)/);
+    expect(assetBadgeSrc).not.toMatch(/onInput\(1\)/);
   });
 });

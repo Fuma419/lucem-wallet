@@ -58,6 +58,7 @@ import {
   keystoneConnectNeedsProfileChoice,
   parseKeystoneCardanoConnectUr,
   preferredKeystoneImportRowKeys,
+  KEYSTONE_ANIMATED_QR_OPTIONS,
   KEYSTONE_DERIVATION,
 } from '../../../api/keystone-cardano';
 import { MdBluetooth } from 'react-icons/md';
@@ -346,11 +347,6 @@ const ConnectHW = ({ onConfirm }) => {
     [keystoneRequestedIndices]
   );
 
-  const keystoneQrCapacity = React.useMemo(
-    () => Math.min(900, 280 + keystoneRequestedIndices.length * 55),
-    [keystoneRequestedIndices.length]
-  );
-
   /** animated-qr BaseQRScanner pins decode callback on mount (`useEffect([], …)`); keep latest choices here. */
   const keystoneRequestedIndicesRef = React.useRef(keystoneRequestedIndices);
   React.useLayoutEffect(() => {
@@ -386,8 +382,8 @@ const ConnectHW = ({ onConfirm }) => {
           </b>
           . Open the <b>scanner</b>, scan this QR, and approve. On Keystone,
           choose <b>Cardano Native</b> or <b>Ledger</b> in the Cardano menu —
-          Lucem imports exactly that type. More accounts take longer on the
-          device.
+          Lucem imports exactly that type. The QR cycles slowly so the device
+          camera can lock on. More accounts take longer on the device.
         </Text>
         <Box h={4} />
         <Box
@@ -401,11 +397,7 @@ const ConnectHW = ({ onConfirm }) => {
           <AnimatedQRCode
             type={keyDerivationUr.type}
             cbor={cborHex}
-            options={{
-              size: 220,
-              capacity: keystoneQrCapacity,
-              interval: 110,
-            }}
+            options={KEYSTONE_ANIMATED_QR_OPTIONS}
           />
         </Box>
         <Box h={4} />

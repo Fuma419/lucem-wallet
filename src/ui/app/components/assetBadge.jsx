@@ -51,7 +51,7 @@ const AssetBadge = ({ asset, onRemove, onInput, onLoad }) => {
     setWidth(initialWidth);
     if (BigInt(asset.quantity) == 1) {
       setValue('1');
-      onInput(1);
+      onInput('1');
     } else {
       setValue(asset.input);
       onInput(asset.input);

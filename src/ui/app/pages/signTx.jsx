@@ -43,9 +43,12 @@ import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import KeystoneSDK from '@keystonehq/keystone-sdk';
 import {
+  assertKeystoneWitnessesCover,
   buildKeystoneCardanoSignRequest,
+  formatKeystoneSubmitError,
   KEYSTONE_SIGN_ANIMATED_QR_OPTIONS,
   parseKeystoneCardanoTxSignature,
+  spentPaymentKeyHashes,
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
@@ -114,10 +117,17 @@ const SignTxKeystoneInline = ({
       const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
         Buffer.from(wh, 'hex')
       );
+      const utxos = await getUtxos();
+      assertKeystoneWitnessesCover(
+        Loader.Cardano,
+        rawTx,
+        witnessSet,
+        spentPaymentKeyHashes(Loader.Cardano, rawTx, account, utxos)
+      );
       const merged = await assembleSignedTransaction(rawTx, witnessSet);
       onSuccess(merged);
     } catch (e) {
-      setErr(e.message || 'Invalid signature QR');
+      setErr(formatKeystoneSubmitError(e) || 'Invalid signature QR');
     }
   };
 

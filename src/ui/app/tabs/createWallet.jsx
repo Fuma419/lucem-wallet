@@ -25,6 +25,7 @@ import { createRoot } from 'react-dom/client';
 import Theme from '../../theme';
 import { TAB } from '../../../config/config';
 import platform from '../../../platform';
+import { vaultRequiresExistingPasswordFrom } from '../../../api/extension/vault';
 import PreventHistoryBack from '../components/PreventHistoryBack';
 import {
   leaveSetupFlow,
@@ -47,9 +48,9 @@ const SEED_COL_W = { base: '124px', sm: '132px', md: '140px' };
 const SEED_INPUT_W = { base: '92px', sm: '100px', md: '110px' };
 
 /**
- * Local copies of api/extension helpers — avoids importing the extension module
- * (and Cardano WASM) until the user submits "Create", so MV3 pages and strict CSP
- * environments can render this flow first.
+ * Local copies of mnemonic helpers — avoids importing the extension barrel
+ * (and Cardano WASM) until the user submits "Create". `vault.js` is a leaf
+ * (no WASM) and is safe to import for the password-mode check.
  */
 function mnemonicToObject(mnemonic) {
   const mnemonicMap = {};
@@ -710,15 +711,24 @@ const MakeAccount = ({ colorTheme }) => {
   const [isDone, setIsDone] = React.useState(false);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const [selectedAccounts, setSelectedAccounts] = React.useState([0]);
-  // When a vault already exists, this seed is added alongside it and must reuse
-  // the existing password (no new password is set).
+  // Software vault already has a password the user must reuse. Hardware-only
+  // setups (or a leftover dummy encryptedKey) do not — this seed *sets* one.
   const [vaultExists, setVaultExists] = React.useState(false);
+  const [hasAccounts, setHasAccounts] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
-    Promise.resolve(platform.storage.get('encryptedKey'))
-      .then((key) => {
-        if (!cancelled) setVaultExists(Boolean(key));
+    Promise.all([
+      platform.storage.get('encryptedKey'),
+      platform.storage.get('encryptedKeys'),
+      platform.storage.get('accounts'),
+    ])
+      .then(([key, keys, accounts]) => {
+        if (cancelled) return;
+        setVaultExists(
+          vaultRequiresExistingPasswordFrom(accounts, key, keys)
+        );
+        setHasAccounts(Boolean(accounts && Object.keys(accounts).length));
       })
       .catch(() => {});
     return () => {
@@ -809,7 +819,7 @@ const MakeAccount = ({ colorTheme }) => {
     <Box textAlign="center" display="flex" alignItems="center" justifyContent="center" width="100%">
       <Box className={`lucem-create-account-panel lucem-create-account-panel-${colorTheme}`}>
         <Text className="walletTitle" fontWeight="bold" fontSize="md" letterSpacing="wide">
-          {vaultExists ? 'Add Wallet' : 'Create Account'}
+          {vaultExists || hasAccounts ? 'Add Wallet' : 'Create Account'}
         </Text>
         {vaultExists && (
           <>
@@ -817,6 +827,15 @@ const MakeAccount = ({ colorTheme }) => {
             <Text fontSize="sm" color="whiteAlpha.700">
               This wallet is added alongside your existing ones. Enter your
               current Lucem password to unlock the vault.
+            </Text>
+          </>
+        )}
+        {!vaultExists && hasAccounts && (
+          <>
+            <Spacer height="2" />
+            <Text fontSize="sm" color="whiteAlpha.700">
+              Set a Lucem password for this software wallet. Hardware accounts
+              still sign on the device and do not use this password.
             </Text>
           </>
         )}

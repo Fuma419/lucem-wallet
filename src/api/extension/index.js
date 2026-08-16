@@ -58,6 +58,10 @@ import {
   getNetwork,
 } from './storage';
 import {
+  isHardwareAccountIndex,
+  vaultRequiresExistingPasswordFrom,
+} from './vault';
+import {
   encryptWithPassword,
   decryptWithPassword,
   harden,
@@ -85,6 +89,13 @@ export {
   hasStoredAccounts,
   getAccounts,
 } from './storage';
+
+export {
+  isHardwareAccountIndex,
+  hasSoftwareAccount,
+  vaultRequiresExistingPasswordFrom,
+  vaultRequiresExistingPassword,
+} from './vault';
 
 export {
   encryptWithPassword,
@@ -449,9 +460,10 @@ export const eraseLocalWalletData = async () => {
 };
 
 /**
- * First-time hardware / air-gapped setup: store an encrypted local root key so the
- * wallet has a spending password for reset, change password, and optional new
- * software accounts. The key is generated in-browser and is not the Keystone/Ledger seed.
+ * Optional placeholder root so settings can store a password before any
+ * software seed exists. Hardware import no longer calls this — the first
+ * mnemonic create/import sets the Lucem password. Kept for tests / older data.
+ * The key is generated in-browser and is not a Keystone/Ledger seed.
  */
 export const initLocalWalletSecretIfAbsent = async (password) => {
   await Loader.load();
@@ -749,12 +761,13 @@ export const validateAccountWithSeed = async (
     throw new Error('This recovery phrase does not match the selected account.');
   }
 
-  // If the vault is already unlocked with other seeds, the password must match.
+  // Match an existing software-vault password only. A dummy Keystone
+  // placeholder must not block attaching the first real seed.
   const existingLegacy = await getStorage(STORAGE.encryptedKey);
   const map = (await getStorage(STORAGE.encryptedKeys)) || {};
-  const mapKeys = Object.keys(map);
-  const probe = existingLegacy || (mapKeys.length ? map[mapKeys[0]] : null);
-  if (probe) {
+  if (vaultRequiresExistingPasswordFrom(accounts, existingLegacy, map)) {
+    const mapKeys = Object.keys(map);
+    const probe = existingLegacy || (mapKeys.length ? map[mapKeys[0]] : null);
     try {
       await decryptWithPassword(password, probe);
     } catch (/** @type {any} */ e) {
@@ -1270,15 +1283,7 @@ export const getHwAccounts = (accounts, { device, id }) => {
   return hwAccounts;
 };
 
-export const isHW = (accountIndex) =>
-  accountIndex != null &&
-  accountIndex != undefined &&
-  accountIndex != 0 &&
-  typeof accountIndex !== 'number' &&
-  typeof accountIndex === 'string' &&
-  (accountIndex.startsWith(HW.keystone) ||
-    accountIndex.startsWith(HW.trezor) ||
-    accountIndex.startsWith(HW.ledger));
+export const isHW = (accountIndex) => isHardwareAccountIndex(accountIndex);
 
 const isIosBrowserWithoutWebBluetooth = () => {
   if (typeof navigator === 'undefined') return false;
@@ -1453,29 +1458,39 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
     );
   }
 
-  // A vault can already exist. Adding a mnemonic no longer wipes it — the new
-  // seed becomes an additional wallet (walletId) whose accounts live alongside
-  // the existing ones. Only the very first seed uses the legacy `encryptedKey`.
+  // A software vault can already exist. Adding a mnemonic no longer wipes it —
+  // the new seed becomes an additional wallet (walletId). Hardware-only setups
+  // (and a dummy `encryptedKey` from older Keystone imports) do not count as a
+  // password the user can enter — the first software seed *sets* that password.
   const existingEncryptedKey = await getStorage(STORAGE.encryptedKey);
+  const existingEncryptedKeys = (await getStorage(STORAGE.encryptedKeys)) || {};
   const existingAccounts = await getStorage(STORAGE.accounts);
-  const vaultExists = Boolean(existingEncryptedKey);
+  const vaultExists = vaultRequiresExistingPasswordFrom(
+    existingAccounts,
+    existingEncryptedKey,
+    existingEncryptedKeys
+  );
+
+  if (
+    existingAccounts &&
+    totalAccountCount(existingAccounts) + accountIndices.length >
+      MAX_TOTAL_ACCOUNTS
+  ) {
+    throw new Error(ERROR.maxAccountsReached);
+  }
 
   let walletId = '0';
   if (vaultExists) {
-    // Every seed in a vault is protected by the same password. Require the
-    // existing one instead of silently creating a second, unreachable password.
+    // Every software seed in a vault is protected by the same password.
+    const probe =
+      existingEncryptedKey ||
+      existingEncryptedKeys[Object.keys(existingEncryptedKeys)[0]];
     try {
-      await decryptWithPassword(password, existingEncryptedKey);
+      await decryptWithPassword(password, probe);
     } catch (/** @type {any} */ e) {
       throw new Error(
         `${ERROR.wrongPassword}: enter your existing Lucem password to add another wallet.`
       );
-    }
-    if (
-      totalAccountCount(existingAccounts) + accountIndices.length >
-      MAX_TOTAL_ACCOUNTS
-    ) {
-      throw new Error(ERROR.maxAccountsReached);
     }
     walletId = await nextWalletId();
   }
@@ -1499,18 +1514,35 @@ export const createWallet = async (name, seedPhrase, password, explicitAccounts 
 
   if (vaultExists) {
     // Materialize the multi-seed map lazily, migrating the legacy seed to "0".
-    const map = (await getStorage(STORAGE.encryptedKeys)) || {};
+    const map = { ...existingEncryptedKeys };
     if (!map['0'] && existingEncryptedKey) map['0'] = existingEncryptedKey;
     map[walletId] = encryptedRootKey;
     await setStorage({ [STORAGE.encryptedKeys]: map });
   } else {
+    // First software seed: overwrite any HW-only dummy root so it cannot sit
+    // as an unreachable wallet 0 or demand an unknown password later.
     await setStorage({ [STORAGE.encryptedKey]: encryptedRootKey });
-    await setStorage({
-      [STORAGE.network]: { id: NETWORK_ID.mainnet, node: NODE.mainnet },
-    });
-    await setStorage({
-      [STORAGE.currency]: 'usd',
-    });
+    if (existingEncryptedKeys && existingEncryptedKeys['0']) {
+      const nextMap = { ...existingEncryptedKeys };
+      delete nextMap['0'];
+      await setStorage({ [STORAGE.encryptedKeys]: nextMap });
+    }
+    const [network, currency] = await Promise.all([
+      getStorage(STORAGE.network),
+      getStorage(STORAGE.currency),
+    ]);
+    /** @type {Record<string, unknown>} */
+    const defaults = {};
+    if (!network) {
+      defaults[STORAGE.network] = {
+        id: NETWORK_ID.mainnet,
+        node: NODE.mainnet,
+      };
+    }
+    if (!currency) {
+      defaults[STORAGE.currency] = 'usd';
+    }
+    if (Object.keys(defaults).length) await setStorage(defaults);
   }
 
   const primaryIndex = Number(explicitAccounts[0]);

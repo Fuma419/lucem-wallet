@@ -24,6 +24,7 @@ import { Scrollbars } from '../components/scrollbar';
 import ConfirmModal from '../components/confirmModal';
 import {
   CheckIcon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   CloseIcon,
   InfoOutlineIcon,
@@ -57,6 +58,10 @@ import {
   useColorModeValue,
   useToast,
   Icon,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
 } from '@chakra-ui/react';
 import MiddleEllipsis from 'react-middle-ellipsis';
 import UnitDisplay from '../components/unitDisplay';
@@ -90,6 +95,10 @@ import useSurfaceColors from '../hooks/useSurfaceColors';
 import useConstant from 'use-constant';
 import debouncePromise from 'debounce-promise';
 import latest from 'promise-latest';
+import {
+  isSameAccountIndex,
+  otherLoadedAccounts,
+} from '../utils/accountIndex';
 
 const NETWORK_LABEL = {
   [NETWORK_ID.mainnet]: 'Mainnet',
@@ -148,7 +157,59 @@ const useIsMounted = () => {
   return isMounted;
 };
 
-let timer = null;
+const RecipientAccountPicker = ({ accounts, isDisabled, onSelect }) => {
+  if (!accounts?.length) return null;
+  return (
+    <Menu placement="bottom-end" isLazy>
+      <MenuButton
+        as={Button}
+        size="xs"
+        variant="ghost"
+        colorScheme="yellow"
+        rightIcon={<ChevronDownIcon />}
+        isDisabled={isDisabled}
+        data-testid="send-recipient-accounts"
+      >
+        My accounts
+      </MenuButton>
+      <MenuList
+        maxH="240px"
+        overflowY="auto"
+        minW="240px"
+        zIndex={20}
+        py={1}
+      >
+        {accounts.map((row) => (
+          <MenuItem
+            key={String(row.index)}
+            data-testid={`send-recipient-account-${row.index}`}
+            onClick={() => onSelect(row)}
+            py={2}
+          >
+            <Box display="flex" alignItems="center" w="full" minW={0}>
+              <AvatarLoader width="28px" avatar={row.avatar} />
+              <Box ml={3} minW={0} flex="1">
+                <Text fontWeight="bold" fontSize="sm" noOfLines={1}>
+                  {row.name || 'Account'}
+                </Text>
+                <Box
+                  fontSize="xs"
+                  fontFamily="mono"
+                  opacity={0.75}
+                  whiteSpace="nowrap"
+                >
+                  <MiddleEllipsis>
+                    <span>{row.paymentAddr}</span>
+                  </MiddleEllipsis>
+                </Box>
+              </Box>
+            </Box>
+          </MenuItem>
+        ))}
+      </MenuList>
+    </Menu>
+  );
+};
 
 // Build CIP-0020 transaction message metadata (label 674) for an optional note,
 // returning `null` when there is nothing to attach. Extracted so both the
@@ -345,6 +406,7 @@ const Send = () => {
   // "No stored key for wallet …". Detect that up front so Send prompts to
   // re-enter the recovery phrase instead of a dead-end confirm error.
   const [accountSignable, setAccountSignable] = React.useState(true);
+  const [otherAccounts, setOtherAccounts] = React.useState([]);
   const validateSeedRef = React.useRef();
 
   const network = React.useRef();
@@ -557,6 +619,14 @@ const Send = () => {
     addAssets(value.assets);
     await Loader.load();
     const currentAccount = await getCurrentAccount();
+    try {
+      const allAccounts = await getAccounts();
+      if (isMounted.current) {
+        setOtherAccounts(otherLoadedAccounts(allAccounts, currentAccount.index));
+      }
+    } catch (e) {
+      console.warn('Could not load other accounts for Send', e);
+    }
     const _network = await getNetwork();
     network.current = _network;
     account.current = currentAccount;
@@ -697,6 +767,9 @@ const Send = () => {
     !address.error
       ? address.result
       : '';
+  const sendingToAccount = otherAccounts.find(
+    (row) => row.paymentAddr === address.result
+  );
 
   const applyAdaShare = (numerator, denominator) => {
     if (value.sendAll || isLoading || availableLovelace <= 0n) return;
@@ -812,16 +885,29 @@ const Send = () => {
             >
               <Stack spacing={4} w="full" maxW="sm" mx="auto">
                 <Box className="lucem-inset-surface" rounded="3xl" p={4}>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="bold"
-                    letterSpacing="0.06em"
-                    textTransform="uppercase"
-                    color={subtleFg}
-                    mb={2}
-                  >
-                    To
-                  </Text>
+                  <Flex justify="space-between" align="center" mb={2}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="bold"
+                      letterSpacing="0.06em"
+                      textTransform="uppercase"
+                      color={subtleFg}
+                    >
+                      To
+                    </Text>
+                    <RecipientAccountPicker
+                      accounts={otherAccounts}
+                      isDisabled={isLoading}
+                      onSelect={(row) => {
+                        triggerTxUpdate(() =>
+                          setAddress({
+                            result: row.paymentAddr,
+                            display: row.paymentAddr,
+                          })
+                        );
+                      }}
+                    />
+                  </Flex>
                   <AddressPopup
                     setAddress={setAddress}
                     address={address}
@@ -830,6 +916,16 @@ const Send = () => {
                     txInfo={txInfo}
                     isLoading={isLoading}
                   />
+                  {sendingToAccount ? (
+                    <Text
+                      mt={2}
+                      fontSize="xs"
+                      color={mutedFg}
+                      data-testid="send-recipient-account-name"
+                    >
+                      Sending to {sendingToAccount.name || 'another account'}
+                    </Text>
+                  ) : null}
                   {resolvedHandle ? (
                     <Text
                       mt={2}
@@ -1597,7 +1693,8 @@ const AddressPopup = ({
         state.currentAccount &&
         (state.recentAddress ||
           Object.keys(state.accounts).filter(
-            (index) => index != state.currentAccount.index
+            (index) =>
+              !isSameAccountIndex(index, state.currentAccount.index)
           ).length > 0) &&
         isOpen
       }
@@ -1751,7 +1848,8 @@ const AddressPopup = ({
                 </Button>
               )}
               {Object.keys(state.accounts).filter(
-                (index) => index != state.currentAccount.index
+                (index) =>
+                  !isSameAccountIndex(index, state.currentAccount.index)
               ).length > 0 && (
                 <>
                   {' '}
@@ -1766,7 +1864,10 @@ const AddressPopup = ({
                     Accounts
                   </Text>
                   {Object.keys(state.accounts)
-                    .filter((index) => index != state.currentAccount.index)
+                    .filter(
+                      (index) =>
+                        !isSameAccountIndex(index, state.currentAccount.index)
+                    )
                     .map((index) => {
                       const account = state.accounts[index];
                       return (
@@ -1777,7 +1878,6 @@ const AddressPopup = ({
                           width="full"
                           variant="ghost"
                           onClick={() => {
-                            clearTimeout(timer);
                             const addr = account.paymentAddr;
 
                             triggerTxUpdate(() =>

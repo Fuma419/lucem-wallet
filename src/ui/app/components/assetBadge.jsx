@@ -12,6 +12,7 @@ import {
 } from '@chakra-ui/react';
 import React from 'react';
 import { getAsset, toUnit } from '../../../api/extension';
+import { displayTokenAmount } from '../../../api/token-amount';
 
 import AssetPopover from './assetPopover';
 import { NumericFormat } from 'react-number-format';
@@ -33,6 +34,21 @@ const AssetBadge = ({ asset, onRemove, onInput, onLoad }) => {
   const [token, setToken] = React.useState(null);
   const [value, setValue] = React.useState('');
 
+  const applyDisplayAmount = (decimals) => {
+    const dec = Number(decimals);
+    const safeDec = Number.isFinite(dec) ? dec : 0;
+    if (BigInt(asset.quantity) === 1n) {
+      // 1 base unit, not "1.0" display units (which becomes 10^decimals).
+      const display = displayTokenAmount(asset.quantity, safeDec);
+      setValue(display);
+      onInput(display);
+      setWidth(Math.min(152, Math.max(60, display.length * 9 + 40)));
+      return;
+    }
+    setValue(asset.input);
+    onInput(asset.input);
+  };
+
   const fetchData = async () => {
     const detailedAsset = {
       ...(await getAsset(asset.unit)),
@@ -40,22 +56,17 @@ const AssetBadge = ({ asset, onRemove, onInput, onLoad }) => {
       input: asset.input,
     };
     if (!isMounted.current) return;
+    applyDisplayAmount(detailedAsset.decimals);
     onLoad(detailedAsset.decimals);
     setToken(detailedAsset);
   };
 
   React.useEffect(() => {
     setToken(null);
+    applyDisplayAmount(0);
     fetchData();
     const initialWidth = BigInt(asset.quantity) <= 1 ? 60 : 200;
     setWidth(initialWidth);
-    if (BigInt(asset.quantity) == 1) {
-      setValue('1');
-      onInput('1');
-    } else {
-      setValue(asset.input);
-      onInput(asset.input);
-    }
   }, [asset]);
   return (
     <Box m="0.5">

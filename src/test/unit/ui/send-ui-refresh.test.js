@@ -109,12 +109,14 @@ describe('Send UI refresh — structural contracts', () => {
   test('token amounts use 0 decimals when metadata is missing, not ADA\'s 6', () => {
     expect(sendSrc).toMatch(/Native tokens default to 0 decimals/);
     expect(sendSrc).toMatch(/tokenDecimals/);
-    expect(sendSrc).toMatch(/toUnit\(live\.input \?\? asset\.input, tokenDecimals\(live\)\)/);
+    expect(sendSrc).toMatch(/resolveTokenSendQuantity/);
+    expect(sendSrc).toMatch(/tokenDecimals\(live\)/);
     expect(sendSrc).not.toMatch(/toUnit\(_value\.ada \|\| '10000000'\)/);
     expect(sendSrc).toMatch(/toUnit\(_value\.ada \|\| '0'\)/);
     expect(sendSrc).toMatch(/assets\.current\[asset\.unit\]\.decimals = decimals/);
     expect(sendSrc).toMatch(/triggerTxUpdate\(\(\) =>/);
-    expect(assetBadgeSrc).toMatch(/onInput\('1'\)/);
+    expect(assetBadgeSrc).toMatch(/displayTokenAmount\(asset\.quantity/);
     expect(assetBadgeSrc).not.toMatch(/onInput\(1\)/);
+    expect(assetBadgeSrc).not.toMatch(/onInput\('1'\)/);
   });
 });

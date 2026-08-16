@@ -91,6 +91,8 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
     expect(tabSrc).toMatch(/lucem-create-wallet-scroll/);
     expect(tabSrc).toMatch(/lucem-modal-card/);
+    expect(tabSrc).toMatch(/lucem-setup-flow-actions/);
+    expect(tabSrc).toMatch(/SetupFlowActions/);
   });
 
   test('createWallet.jsx hides top Lucem banner on mobile for generate/verify/import only', () => {
@@ -111,6 +113,9 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
     expect(css).toMatch(/--lucem-safe-top/);
     expect(css).toMatch(/\.lucem-create-wallet-scroll/);
+    expect(css).toMatch(/\.create-wallet-modal\.lucem-modal-card[\s\S]*height:\s*min\(/);
+    expect(css).toMatch(/\.lucem-setup-flow-actions/);
+    expect(css).toMatch(/overflow-y:\s*scroll/);
   });
 
   test('create/import shells pad past Android edge-back gesture insets', () => {

@@ -111,5 +111,7 @@ describe('stake-unified wallet source guards', () => {
     expect(src).toMatch(
       /Spend only from addresses we can witness/
     );
+    expect(src).toMatch(/Token UTxOs often sit on a change/);
+    expect(src).toMatch(/matchInternalIndicesFromAddresses/);
   });
 });

@@ -537,9 +537,11 @@ export const valueToAssets = async (value) => {
       for (let k = 0; k < assetNames.len(); k++) {
         const policyAsset = assetNames.get(k);
         const quantity = policyAssets.get(policyAsset);
+        // Use name() bytes, not to_hex() — some CSL builds prefix CBOR length
+        // in to_hex(), which makes Send request a different asset than the UTxO.
         const asset =
-          Buffer.from(policy.to_bytes(), 'hex').toString('hex') +
-          policyAsset.to_hex();
+          Buffer.from(policy.to_bytes()).toString('hex') +
+          Buffer.from(policyAsset.name()).toString('hex');
         const _policy = asset.slice(0, 56);
         const _name = asset.slice(56);
         const fingerprint = AssetFingerprint.fromParts(

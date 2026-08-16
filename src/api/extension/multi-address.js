@@ -397,5 +397,24 @@ export const findEnabledPaymentByAddress = (
 ) => {
   if (!bech32) return null;
   const rows = listEnabledPaymentAddresses(Cardano, account, networkIdNumber);
-  return rows.find((r) => r.paymentAddr === bech32) || null;
+  const enabled = rows.find((r) => r.paymentAddr === bech32);
+  if (enabled) return enabled;
+  if (!account?.publicKey) return null;
+  for (const role of [ADDRESS_ROLE.external, ADDRESS_ROLE.internal]) {
+    const max =
+      role === ADDRESS_ROLE.internal
+        ? MAX_INTERNAL_ADDRESS_INDEX
+        : MAX_EXTERNAL_ADDRESS_INDEX;
+    for (let index = 0; index <= max; index += 1) {
+      const row = derivePaymentFromAccountPublicKey(
+        Cardano,
+        account.publicKey,
+        networkIdNumber,
+        role,
+        index
+      );
+      if (row.paymentAddr === bech32) return row;
+    }
+  }
+  return null;
 };

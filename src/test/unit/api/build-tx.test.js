@@ -279,6 +279,74 @@ describe('buildUnsignedSimpleTx — native token', () => {
     expect(sent).toBe(1n);
   });
 
+  test('sends 500 ADA plus one token from split UTxOs', async () => {
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [
+        makeUtxo(500_000_000, 0, '11'.repeat(32)),
+        await makeTokenUtxo(2_000_000, 1, 1),
+      ],
+      outputs: await makeTokenOutputs(500_000_000, 1),
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(1),
+    });
+    const body = tx.body();
+    let sentAda = 0n;
+    let sentToken = 0n;
+    for (let i = 0; i < body.outputs().len(); i += 1) {
+      const amount = body.outputs().get(i).amount();
+      sentAda += BigInt(amount.coin().to_str());
+      const ma = amount.multiasset();
+      if (!ma) continue;
+      const policy = ma.keys().get(0);
+      const assets = ma.get(policy);
+      sentToken += BigInt(assets.get(assets.keys().get(0)).to_str());
+    }
+    expect(sentToken).toBe(1n);
+    expect(sentAda).toBeGreaterThanOrEqual(500_000_000n);
+  });
+
+  test('aligns a CBOR-prefixed token name to the wallet asset', async () => {
+    const wrappedUnit =
+      'ab'.repeat(28) + '45' + Buffer.from('LUCEM').toString('hex');
+    const value = await assetsToValue([
+      { unit: 'lovelace', quantity: '500000000' },
+      { unit: wrappedUnit, quantity: '1' },
+    ]);
+    const outputs = CSL.TransactionOutputs.new();
+    outputs.add(
+      CSL.TransactionOutput.new(CSL.Address.from_bech32(TEST_ADDR), value)
+    );
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [
+        makeUtxo(500_000_000, 0, '11'.repeat(32)),
+        await makeTokenUtxo(2_000_000, 1, 1),
+      ],
+      outputs,
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(1),
+    });
+    const body = tx.body();
+    let sent = 0n;
+    for (let i = 0; i < body.outputs().len(); i += 1) {
+      const ma = body.outputs().get(i).amount().multiasset();
+      if (!ma) continue;
+      const policy = ma.keys().get(0);
+      const assets = ma.get(policy);
+      const names = assets.keys();
+      for (let n = 0; n < names.len(); n += 1) {
+        const nameHex = Buffer.from(names.get(n).name()).toString('hex');
+        if (nameHex === Buffer.from('LUCEM').toString('hex')) {
+          sent += BigInt(assets.get(names.get(n)).to_str());
+        }
+      }
+    }
+    expect(sent).toBe(1n);
+  });
+
   test('throws a clear error when the token is not in any spendable UTxO', async () => {
     const outputs = await makeTokenOutputs(10_000_000, 1);
     expect(() =>

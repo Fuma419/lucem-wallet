@@ -72,6 +72,19 @@ test('expect correct value to assets conversion', async () => {
   });
 });
 
+test('valueToAssets keys tokens by AssetName.name bytes, not to_hex', () => {
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../../../api/util.js'),
+    'utf8'
+  );
+  const fn = src.slice(
+    src.indexOf('export const valueToAssets'),
+    src.indexOf('export const', src.indexOf('export const valueToAssets') + 1)
+  );
+  expect(fn).toMatch(/policyAsset\.name\(\)/);
+  expect(fn).not.toMatch(/policyAsset\.to_hex\(\)/);
+});
+
 describe('test linkToSrc', () => {
   test('expect right source from ipfs link', () => {
     const testLink = 'ipfs://QmVSameQt9i37hdrLwMSfoAg1aVKrjtBtuDHeQTgyVhUXC';

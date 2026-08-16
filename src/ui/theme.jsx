@@ -313,6 +313,13 @@ function SyncPwaThemeColor() {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', color);
     document.documentElement.style.backgroundColor = color;
+    // Opaque system bar (`black` / `default`) so time and battery stay visible.
+    const bar = document.querySelector(
+      'meta[name="apple-mobile-web-app-status-bar-style"]'
+    );
+    if (bar) {
+      bar.setAttribute('content', colorMode === 'light' ? 'default' : 'black');
+    }
   }, [colorMode]);
   return null;
 }

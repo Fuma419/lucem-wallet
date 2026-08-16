@@ -401,7 +401,8 @@ const Wallet = () => {
           overflow="visible"
           pb={{ base: 4, md: 6 }}
         >
-          {/* Icon row — orbs + in-flow network badge (not absolutely pinned to the panel top). */}
+          {/* Icon row — orbs only. The testnet badge sits below so a centered
+              punch-hole camera cannot sit in the middle of the banner. */}
           <Flex
             className="lucem-wallet-header"
             zIndex={2}
@@ -426,25 +427,6 @@ const Wallet = () => {
                 backgroundSize={`${WALLET_HEADER_LOGO_BG_SIZE} ${WALLET_HEADER_LOGO_BG_SIZE}`}
               />
             </Box>
-            <Box
-              flex="1"
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              minW={0}
-              px={2}
-            >
-              {testnetBanner ? (
-                <Box
-                  className={`network-banner network-banner-${testnetBanner.id}`}
-                  role="status"
-                  aria-label={`Connected to ${testnetBanner.label}`}
-                  data-testid="wallet-network-banner"
-                >
-                  {testnetBanner.label}
-                </Box>
-              ) : null}
-            </Box>
             <Box flex="1" display="flex" justifyContent="flex-end" minW={0}>
               <Box {...walletHeaderOrbShellProps} bg={avatarBg} position="relative">
                 <Box position="absolute" inset={0}>
@@ -453,6 +435,26 @@ const Wallet = () => {
               </Box>
             </Box>
           </Flex>
+          {testnetBanner ? (
+            <Flex
+              className="lucem-wallet-network-row"
+              justify="center"
+              align="center"
+              w="full"
+              px={{ base: 4, md: 5 }}
+              pb={1}
+              flexShrink={0}
+            >
+              <Box
+                className={`network-banner network-banner-${testnetBanner.id}`}
+                role="status"
+                aria-label={`Connected to ${testnetBanner.label}`}
+                data-testid="wallet-network-banner"
+              >
+                {testnetBanner.label}
+              </Box>
+            </Flex>
+          ) : null}
 
           <Box
             className="lucem-wallet-name"

@@ -100,9 +100,12 @@ export async function initNativeShell() {
   const statusBar = nativePlugin('StatusBar');
   if (statusBar) {
     try {
-      // Dark app surface -> light status-bar content. Do not overlay the WebView;
-      // the UI already pads for `env(safe-area-inset-*)`.
-      await statusBar.setStyle({ style: 'DARK' });
+      // Dark app surface -> light status-bar icons. Keep the WebView below
+      // the system bar so a punch-hole camera stays in chrome, not the header.
+      await statusBar.setStyle({ style: 'LIGHT' });
+      if (typeof statusBar.setBackgroundColor === 'function') {
+        await statusBar.setBackgroundColor({ color: '#080808' });
+      }
       if (typeof statusBar.setOverlaysWebView === 'function') {
         await statusBar.setOverlaysWebView({ overlay: false });
       }

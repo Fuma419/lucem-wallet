@@ -101,8 +101,8 @@ import Send, { sendStore } from '../../../ui/app/pages/send';
 import { getCurrentAccount, getSignableWalletIds } from '../../../api/extension';
 import Loader from '../../../api/loader';
 
-// A protocol-parameters snapshot in the store makes Send take its short init
-// path (no live Koios / CSL), so the page reaches its loaded state deterministically.
+// Seeded protocol parameters + mocked getUtxos/Loader let Send finish init
+// without live Koios / real CSL, so the page reaches its loaded state.
 const seededTxInfo = () => ({
   protocolParameters: {
     coinsPerUtxoWord: '4310',

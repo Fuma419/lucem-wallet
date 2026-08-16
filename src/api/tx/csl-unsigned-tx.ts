@@ -169,6 +169,200 @@ function selectAdaInputsForViableChange({
   return picked;
 }
 
+function hexFromBytes(bytes: Uint8Array) {
+  return Buffer.from(bytes).toString('hex');
+}
+
+/**
+ * Native-asset inventory of a CSL Value, keyed by policy+name hex (same unit
+ * string the Send page uses).
+ */
+function nativeAssetEntries(
+  value: any
+): Map<string, { policyHex: string; nameBytes: Uint8Array; qty: bigint }> {
+  const out = new Map<
+    string,
+    { policyHex: string; nameBytes: Uint8Array; qty: bigint }
+  >();
+  const ma = value.multiasset();
+  if (!ma) return out;
+  const policies = ma.keys();
+  for (let i = 0; i < policies.len(); i += 1) {
+    const policy = policies.get(i);
+    const policyHex = hexFromBytes(policy.to_bytes());
+    const assets = ma.get(policy);
+    if (!assets) continue;
+    const names = assets.keys();
+    for (let j = 0; j < names.len(); j += 1) {
+      const assetName = names.get(j);
+      const nameBytes = assetName.name();
+      const key = policyHex + hexFromBytes(nameBytes);
+      const qty = BigInt(assets.get(assetName).to_str());
+      const prev = out.get(key);
+      out.set(key, {
+        policyHex,
+        nameBytes,
+        qty: (prev?.qty || 0n) + qty,
+      });
+    }
+  }
+  return out;
+}
+
+function addNativeAssets(
+  into: Map<string, { policyHex: string; nameBytes: Uint8Array; qty: bigint }>,
+  value: any
+) {
+  for (const [key, entry] of nativeAssetEntries(value)) {
+    const prev = into.get(key);
+    into.set(key, {
+      ...entry,
+      qty: (prev?.qty || 0n) + entry.qty,
+    });
+  }
+}
+
+function subtractNeeded(
+  have: Map<string, { policyHex: string; nameBytes: Uint8Array; qty: bigint }>,
+  needed: Map<string, bigint>
+) {
+  const leftover = new Map(have);
+  for (const [key, qty] of needed) {
+    const prev = leftover.get(key);
+    if (!prev) continue;
+    const next = prev.qty - qty;
+    if (next <= 0n) leftover.delete(key);
+    else leftover.set(key, { ...prev, qty: next });
+  }
+  return leftover;
+}
+
+function minAdaForAssetChange(
+  Cardano: Csl,
+  changeAddress: any,
+  leftover: Map<string, { policyHex: string; nameBytes: Uint8Array; qty: bigint }>,
+  coinsPerByte: string | number
+) {
+  const multi = Cardano.MultiAsset.new();
+  const byPolicy = new Map<string, { nameBytes: Uint8Array; qty: bigint }[]>();
+  for (const entry of leftover.values()) {
+    if (entry.qty <= 0n) continue;
+    const list = byPolicy.get(entry.policyHex) || [];
+    list.push({ nameBytes: entry.nameBytes, qty: entry.qty });
+    byPolicy.set(entry.policyHex, list);
+  }
+  for (const [policyHex, assets] of byPolicy) {
+    const bucket = Cardano.Assets.new();
+    for (const asset of assets) {
+      bucket.insert(
+        Cardano.AssetName.new(asset.nameBytes),
+        Cardano.BigNum.from_str(asset.qty.toString())
+      );
+    }
+    multi.insert(Cardano.ScriptHash.from_hex(policyHex), bucket);
+  }
+  const probeCoin = Cardano.BigNum.from_str('1000000000000');
+  const probe =
+    multi.len() > 0
+      ? Cardano.Value.new_with_assets(probeCoin, multi)
+      : Cardano.Value.new(probeCoin);
+  const output = Cardano.TransactionOutput.new(changeAddress, probe);
+  const dataCost = Cardano.DataCost.new_coins_per_byte(
+    Cardano.BigNum.from_str(String(coinsPerByte))
+  );
+  return Cardano.min_ada_for_output(output, dataCost);
+}
+
+/**
+ * Input selection for a payment that sends native tokens. CSL's
+ * LargestFirstMultiAsset can report `UTxO Balance Insufficient` even when the
+ * token sits on a small UTxO next to plenty of ADA — it stops once ADA looks
+ * covered and never pins the token input. We pin token-covering UTxOs first,
+ * then pull ADA until change can hold every leftover asset.
+ */
+function selectMultiAssetInputsForViableChange({
+  Cardano,
+  utxos,
+  outputs,
+  changeAddress,
+  protocolParameters,
+}: {
+  Cardano: Csl;
+  utxos: any[];
+  outputs: any;
+  changeAddress: any;
+  protocolParameters: ProtocolParametersSnapshot;
+}) {
+  const needed = new Map<string, bigint>();
+  let targetAda = 0n;
+  for (let i = 0; i < outputs.len(); i += 1) {
+    const amount = outputs.get(i).amount();
+    targetAda += BigInt(amount.coin().to_str());
+    for (const [key, entry] of nativeAssetEntries(amount)) {
+      needed.set(key, (needed.get(key) || 0n) + entry.qty);
+    }
+  }
+
+  const remaining = [...utxos];
+  const picked: any[] = [];
+  const pickedAssets = new Map<
+    string,
+    { policyHex: string; nameBytes: Uint8Array; qty: bigint }
+  >();
+
+  const qtyInPicked = (key: string) => pickedAssets.get(key)?.qty || 0n;
+
+  for (const [key, qty] of needed) {
+    while (qtyInPicked(key) < qty) {
+      const idx = remaining.findIndex((u) => {
+        const have = nativeAssetEntries(u.output().amount()).get(key)?.qty || 0n;
+        return have > 0n;
+      });
+      if (idx < 0) {
+        throw new Error(
+          'Not enough of the selected token in spendable UTxOs. Check the token amount, or send ADA only.'
+        );
+      }
+      const [u] = remaining.splice(idx, 1);
+      picked.push(u);
+      addNativeAssets(pickedAssets, u.output().amount());
+    }
+  }
+
+  const feeHeadroom = 1_000_000n;
+  remaining.sort((a, b) =>
+    b.output().amount().coin().compare(a.output().amount().coin())
+  );
+
+  const pickedAda = () =>
+    picked.reduce(
+      (sum, u) => sum + BigInt(u.output().amount().coin().to_str()),
+      0n
+    );
+
+  const wantAda = () => {
+    const leftover = subtractNeeded(pickedAssets, needed);
+    const minChange = minAdaForAssetChange(
+      Cardano,
+      changeAddress,
+      leftover,
+      protocolParameters.coinsPerUtxoWord
+    );
+    return targetAda + feeHeadroom + BigInt(minChange.to_str());
+  };
+
+  // Pull extra ADA while it exists. If the wallet is tight, still return the
+  // token-covering inputs and let `add_change_if_needed` decide.
+  while (remaining.length > 0 && pickedAda() < wantAda()) {
+    const u = remaining.shift();
+    picked.push(u);
+    addNativeAssets(pickedAssets, u.output().amount());
+  }
+
+  if (picked.length === 0 && utxos.length > 0) picked.push(utxos[0]);
+  return picked;
+}
+
 /**
  * Payment-style unsigned transaction: inputs from UTxO set, explicit outputs, change, TTL.
  * Aligns body fee with `Cardano.min_fee` using ephemeral dummy vkeys (no user keys required).
@@ -223,23 +417,23 @@ export function buildUnsignedSimpleTx({
   // Token transfers may involve multi-asset UTxOs and/or multi-asset change outputs.
   // Using a multi-asset-aware coin selection strategy avoids building transactions
   // that the ledger rejects at submission time.
-  let containsMultiasset = false;
+  let outputHasTokens = false;
   for (let i = 0; i < outputs.len(); i += 1) {
     const multiAsset = outputs.get(i).amount().multiasset();
     if (multiAsset && multiAsset.len() > 0) {
-      containsMultiasset = true;
+      outputHasTokens = true;
       break;
     }
   }
-  if (!containsMultiasset) {
-    for (const u of utxos) {
-      const multiAsset = u.output().amount().multiasset();
-      if (multiAsset && multiAsset.len() > 0) {
-        containsMultiasset = true;
-        break;
-      }
+  let walletHasTokens = false;
+  for (const u of utxos) {
+    const multiAsset = u.output().amount().multiasset();
+    if (multiAsset && multiAsset.len() > 0) {
+      walletHasTokens = true;
+      break;
     }
   }
+  const containsMultiasset = outputHasTokens || walletHasTokens;
 
   // Token change must stay on one output. prefer_pure_change splits ADA off and
   // then fails min-ADA on the token change — the Send page's "insufficient ADA"
@@ -255,15 +449,25 @@ export function buildUnsignedSimpleTx({
   // selection that pulls enough inputs to form a valid change output, avoiding the
   // dead-zone where CSL burns an un-splittable leftover into the fee. See
   // `selectAdaInputsForViableChange`.
-  const preSelectedAdaInputs = containsMultiasset
-    ? null
-    : selectAdaInputsForViableChange({
+  const preSelectedAdaInputs =
+    outputHasTokens || containsMultiasset
+      ? null
+      : selectAdaInputsForViableChange({
+          Cardano,
+          utxos,
+          outputs,
+          changeAddress,
+          protocolParameters,
+        });
+  const preSelectedTokenInputs = outputHasTokens
+    ? selectMultiAssetInputsForViableChange({
         Cardano,
         utxos,
         outputs,
         changeAddress,
         protocolParameters,
-      });
+      })
+    : null;
 
   // Use set_min_fee (floor) — never set_fee (exact upper bound) — before change.
   // set_fee + leftover in (fee, minUTxO) throws:
@@ -285,10 +489,32 @@ export function buildUnsignedSimpleTx({
     if (minFeeFloor != null) {
       txBuilder.set_min_fee(minFeeFloor);
     }
-    if (containsMultiasset) {
-      // LargestFirstMultiAsset is deterministic; RandomImproveMultiAsset can
-      // fail a fundable token send. Keep leftover tokens on the same change
-      // output (preferPureChange is off for this config).
+    if (outputHasTokens) {
+      // Pin token-covering UTxOs, then add_change. Do not use CSL coin
+      // selection here — it can miss a small token UTxO and throw
+      // "UTxO Balance Insufficient" even when the wallet can fund the send.
+      for (const u of preSelectedTokenInputs || []) {
+        txBuilder.add_regular_input(
+          u.output().address(),
+          u.input(),
+          u.output().amount()
+        );
+      }
+      try {
+        txBuilder.add_change_if_needed(changeAddress);
+      } catch (e) {
+        const err = e as { message?: string };
+        const msg = err?.message ? String(err.message) : String(e);
+        if (/leftover|not enough ADA|UTxO Balance Insufficient/i.test(msg)) {
+          throw new Error(
+            'Not enough ADA left to hold the remaining tokens after this send. Send less ADA, or use Send all.'
+          );
+        }
+        throw e;
+      }
+    } else if (containsMultiasset) {
+      // ADA-only payment from a wallet that also holds tokens. Keep CSL's
+      // multi-asset strategy so leftover tokens stay on mixed change.
       try {
         txBuilder.add_inputs_from_and_change(
           utxoCollection,

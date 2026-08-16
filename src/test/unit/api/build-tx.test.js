@@ -253,6 +253,90 @@ describe('buildUnsignedSimpleTx — native token', () => {
     }
     expect(changeTokens).toBe(900n);
   });
+
+  test('sends a token that lives on a small UTxO next to large ADA-only UTxOs', async () => {
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [
+        makeUtxo(20_000_000_000, 0, '11'.repeat(32)),
+        makeUtxo(5_000_000_000, 1, '22'.repeat(32)),
+        await makeTokenUtxo(1_200_000, 1, 2),
+      ],
+      outputs: await makeTokenOutputs(10_000_000, 1),
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(1),
+    });
+    const body = tx.body();
+    let sent = 0n;
+    for (let i = 0; i < body.outputs().len(); i += 1) {
+      const ma = body.outputs().get(i).amount().multiasset();
+      if (!ma) continue;
+      const policy = ma.keys().get(0);
+      const assets = ma.get(policy);
+      sent += BigInt(assets.get(assets.keys().get(0)).to_str());
+    }
+    expect(sent).toBe(1n);
+  });
+
+  test('throws a clear error when the token is not in any spendable UTxO', async () => {
+    const outputs = await makeTokenOutputs(10_000_000, 1);
+    expect(() =>
+      buildUnsignedSimpleTx({
+        Cardano: CSL,
+        protocolParameters: PROTOCOL_PARAMS,
+        utxos: [makeUtxo(20_000_000_000, 0, '11'.repeat(32))],
+        outputs,
+        changeAddressBech32: TEST_ADDR,
+        requiredVkeyHashesHex: dummyKeyHashes(1),
+      })
+    ).toThrow(/selected token/);
+  });
+
+  test('sends a token off a crowded UTxO that also holds other assets', async () => {
+    const extra = [];
+    for (let i = 0; i < 8; i += 1) {
+      extra.push({
+        unit: 'cd'.repeat(28) + Buffer.from(`X${i}`).toString('hex'),
+        quantity: '1',
+      });
+    }
+    const crowdedValue = await assetsToValue([
+      { unit: 'lovelace', quantity: '1400000' },
+      { unit: tokenUnit, quantity: '1' },
+      ...extra,
+    ]);
+    const crowded = CSL.TransactionUnspentOutput.new(
+      CSL.TransactionInput.new(CSL.TransactionHash.from_hex('ee'.repeat(32)), 0),
+      CSL.TransactionOutput.new(CSL.Address.from_bech32(TEST_ADDR), crowdedValue)
+    );
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [makeUtxo(20_000_000_000, 0, '11'.repeat(32)), crowded],
+      outputs: await makeTokenOutputs(10_000_000, 1),
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(8),
+    });
+    const body = tx.body();
+    let sent = 0n;
+    for (let i = 0; i < body.outputs().len(); i += 1) {
+      const ma = body.outputs().get(i).amount().multiasset();
+      if (!ma) continue;
+      const policies = ma.keys();
+      for (let p = 0; p < policies.len(); p += 1) {
+        const assets = ma.get(policies.get(p));
+        const names = assets.keys();
+        for (let n = 0; n < names.len(); n += 1) {
+          const nameHex = Buffer.from(names.get(n).name()).toString('hex');
+          if (nameHex === Buffer.from('LUCEM').toString('hex')) {
+            sent += BigInt(assets.get(names.get(n)).to_str());
+          }
+        }
+      }
+    }
+    expect(sent).toBe(1n);
+  });
 });
 
 describe('createCslTransactionBuilderConfig', () => {

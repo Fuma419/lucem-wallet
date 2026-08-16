@@ -496,6 +496,13 @@ describe('multi-address helpers', () => {
     });
 
     expect(
+      findEnabledPaymentByAddress(Cardano, account, 0, 'addr_0-3')
+    ).toMatchObject({
+      role: ADDRESS_ROLE.external,
+      index: 3,
+    });
+
+    expect(
       findEnabledPaymentByAddress(Cardano, account, 0, 'addr_foreign')
     ).toBeNull();
   });

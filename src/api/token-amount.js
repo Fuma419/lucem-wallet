@@ -73,6 +73,46 @@ export const resolveTokenSendQuantity = (input, decimals, available) => {
   return { quantity: requested.toString() };
 };
 
+/**
+ * If hex looks like CBOR definite-bytes wrapping a name (`45` + 5 bytes),
+ * return the inner name hex so Send and UTxO inventory compare the same unit.
+ */
+export const unwrapAssetNameHex = (nameHex) => {
+  if (!nameHex || nameHex.length % 2 !== 0) return nameHex || '';
+  try {
+    const bytes = Buffer.from(nameHex, 'hex');
+    if (bytes.length === 0) return nameHex;
+    const b0 = bytes[0];
+    if (b0 >= 0x40 && b0 <= 0x57) {
+      const len = b0 - 0x40;
+      if (bytes.length === 1 + len) return bytes.slice(1).toString('hex');
+    }
+  } catch (/** @type {any} */ _) {
+    return nameHex;
+  }
+  return nameHex;
+};
+
+/**
+ * Resolve a picker/store asset to a spendable UTxO inventory row.
+ * Matches exact unit, then same policy + unwrapped asset name.
+ */
+export const matchSpendableToken = (asset, spendableAssets) => {
+  if (!asset?.unit || !Array.isArray(spendableAssets)) return null;
+  const exact = spendableAssets.find((row) => row.unit === asset.unit);
+  if (exact) return exact;
+  const policy = asset.unit.slice(0, 56);
+  if (policy.length !== 56) return null;
+  const requestedName = unwrapAssetNameHex(asset.unit.slice(56));
+  return (
+    spendableAssets.find(
+      (row) =>
+        row.unit.slice(0, 56) === policy &&
+        unwrapAssetNameHex(row.unit.slice(56)) === requestedName
+    ) || null
+  );
+};
+
 export const formatUtxoBalanceInsufficient = (message) => {
   const msg = message ? String(message) : '';
   if (/UTxO Balance Insufficient/i.test(msg)) {

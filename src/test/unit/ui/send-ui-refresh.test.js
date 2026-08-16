@@ -110,6 +110,7 @@ describe('Send UI refresh — structural contracts', () => {
     expect(sendSrc).toMatch(/Native tokens default to 0 decimals/);
     expect(sendSrc).toMatch(/tokenDecimals/);
     expect(sendSrc).toMatch(/resolveTokenSendQuantity/);
+    expect(sendSrc).toMatch(/matchSpendableToken/);
     expect(sendSrc).toMatch(/Always re-fetch spendable UTxOs/);
     expect(sendSrc).toMatch(/tokenDecimals\(live\)/);
     expect(sendSrc).not.toMatch(/toUnit\(_value\.ada \|\| '10000000'\)/);

@@ -5,8 +5,10 @@
 const {
   displayTokenAmount,
   formatUtxoBalanceInsufficient,
+  matchSpendableToken,
   resolveTokenSendQuantity,
   tokenDecimals,
+  unwrapAssetNameHex,
 } = require('../../../api/token-amount');
 
 describe('tokenDecimals', () => {
@@ -57,6 +59,39 @@ describe('displayTokenAmount', () => {
   test('formats 1 base unit at 6 decimals without scientific notation', () => {
     expect(displayTokenAmount('1', 6)).toBe('0.000001');
     expect(displayTokenAmount('1', 0)).toBe('1');
+  });
+});
+
+describe('unwrapAssetNameHex', () => {
+  test('strips a CBOR definite-bytes prefix', () => {
+    expect(unwrapAssetNameHex('454c5543454d')).toBe('4c5543454d');
+    expect(unwrapAssetNameHex('4c5543454d')).toBe('4c5543454d');
+  });
+});
+
+describe('matchSpendableToken', () => {
+  const policy = 'ab'.repeat(28);
+  const lucem = policy + '4c5543454d';
+  const wrapped = policy + '454c5543454d';
+
+  test('matches an exact unit', () => {
+    expect(
+      matchSpendableToken({ unit: lucem }, [{ unit: lucem, quantity: '1' }])
+    ).toEqual({ unit: lucem, quantity: '1' });
+  });
+
+  test('matches a CBOR-wrapped name to the wallet unit', () => {
+    expect(
+      matchSpendableToken({ unit: wrapped }, [{ unit: lucem, quantity: '1' }])
+    ).toEqual({ unit: lucem, quantity: '1' });
+  });
+
+  test('returns null when the token is not spendable', () => {
+    expect(
+      matchSpendableToken({ unit: lucem }, [
+        { unit: 'cd'.repeat(28) + '00', quantity: '1' },
+      ])
+    ).toBeNull();
   });
 });
 

@@ -174,6 +174,71 @@ function hexFromBytes(bytes: Uint8Array) {
 }
 
 /**
+ * Some CSL AssetName encodings put a CBOR definite-bytes prefix in hex
+ * (`45` + 5 name bytes). Send/UTxO units must compare the inner name.
+ */
+function unwrapAssetNameHex(nameHex: string) {
+  if (!nameHex || nameHex.length % 2 !== 0) return nameHex || '';
+  try {
+    const bytes = Buffer.from(nameHex, 'hex');
+    if (bytes.length === 0) return nameHex;
+    const b0 = bytes[0];
+    if (b0 >= 0x40 && b0 <= 0x57) {
+      const len = b0 - 0x40;
+      if (bytes.length === 1 + len) return bytes.slice(1).toString('hex');
+    }
+  } catch {
+    return nameHex;
+  }
+  return nameHex;
+}
+
+function paymentKeyHashFromAddress(Cardano: Csl, address: any): string | null {
+  try {
+    const base = Cardano.BaseAddress.from_address(address);
+    const keyHash = base?.payment_cred()?.to_keyhash();
+    if (keyHash) return keyHash.to_hex();
+  } catch {
+    // not a base address
+  }
+  try {
+    const enterprise = Cardano.EnterpriseAddress.from_address(address);
+    const keyHash = enterprise?.payment_cred()?.to_keyhash();
+    if (keyHash) return keyHash.to_hex();
+  } catch {
+    // not an enterprise address
+  }
+  return null;
+}
+
+function mergeSpentInputKeyHashes(
+  Cardano: Csl,
+  requiredVkeyHashesHex: string[],
+  txBody: any,
+  utxos: any[]
+) {
+  const seen = new Set(requiredVkeyHashesHex.filter(Boolean));
+  const out = [...seen];
+  const inputs = txBody.inputs();
+  for (let i = 0; i < inputs.len(); i += 1) {
+    const input = inputs.get(i);
+    const txHash = input.transaction_id().to_hex();
+    const index = input.index();
+    const utxo = utxos.find((candidate) => {
+      const candidateHash = candidate.input().transaction_id().to_hex();
+      return candidateHash === txHash && candidate.input().index() === index;
+    });
+    if (!utxo) continue;
+    const hash = paymentKeyHashFromAddress(Cardano, utxo.output().address());
+    if (hash && !seen.has(hash)) {
+      seen.add(hash);
+      out.push(hash);
+    }
+  }
+  return out;
+}
+
+/**
  * Native-asset inventory of a CSL Value, keyed by policy+name hex (same unit
  * string the Send page uses).
  */
@@ -196,7 +261,7 @@ function nativeAssetEntries(
     for (let j = 0; j < names.len(); j += 1) {
       const assetName = names.get(j);
       const nameBytes = assetName.name();
-      const key = policyHex + hexFromBytes(nameBytes);
+      const key = policyHex + unwrapAssetNameHex(hexFromBytes(nameBytes));
       const qty = BigInt(assets.get(assetName).to_str());
       const prev = out.get(key);
       out.set(key, {
@@ -280,6 +345,98 @@ function minAdaForAssetChange(
  * covered and never pins the token input. We pin token-covering UTxOs first,
  * then pull ADA until change can hold every leftover asset.
  */
+function walletAssetIndex(utxos: any[]) {
+  const byPolicy = new Map<
+    string,
+    {
+      policy: any;
+      names: Map<string, { assetName: any; qty: bigint }>;
+    }
+  >();
+  for (const utxo of utxos) {
+    const ma = utxo.output().amount().multiasset();
+    if (!ma) continue;
+    const policies = ma.keys();
+    for (let i = 0; i < policies.len(); i += 1) {
+      const policy = policies.get(i);
+      const policyHex = hexFromBytes(policy.to_bytes());
+      if (!byPolicy.has(policyHex)) {
+        byPolicy.set(policyHex, { policy, names: new Map() });
+      }
+      const bucket = byPolicy.get(policyHex);
+      const assets = ma.get(policy);
+      if (!bucket || !assets) continue;
+      const names = assets.keys();
+      for (let j = 0; j < names.len(); j += 1) {
+        const assetName = names.get(j);
+        const nameHex = unwrapAssetNameHex(hexFromBytes(assetName.name()));
+        const qty = BigInt(assets.get(assetName).to_str());
+        const prev = bucket.names.get(nameHex);
+        bucket.names.set(nameHex, {
+          assetName,
+          qty: (prev?.qty || 0n) + qty,
+        });
+      }
+    }
+  }
+  return byPolicy;
+}
+
+/**
+ * Rewrite output native assets to the wallet's on-chain AssetName when Send
+ * requested a differently encoded unit (CSL to_hex vs name bytes).
+ */
+function alignOutputsToWalletAssets(Cardano: Csl, outputs: any, utxos: any[]) {
+  const wallet = walletAssetIndex(utxos);
+  const aligned = Cardano.TransactionOutputs.new();
+  for (let i = 0; i < outputs.len(); i += 1) {
+    const output = outputs.get(i);
+    const value = output.amount();
+    const ma = value.multiasset();
+    if (!ma || ma.len() === 0) {
+      aligned.add(output);
+      continue;
+    }
+    const newMa = Cardano.MultiAsset.new();
+    const policies = ma.keys();
+    for (let p = 0; p < policies.len(); p += 1) {
+      const policy = policies.get(p);
+      const policyHex = hexFromBytes(policy.to_bytes());
+      const assets = ma.get(policy);
+      if (!assets) continue;
+      const bucket = Cardano.Assets.new();
+      const walletPolicy = wallet.get(policyHex);
+      const names = assets.keys();
+      for (let n = 0; n < names.len(); n += 1) {
+        const assetName = names.get(n);
+        const qty = assets.get(assetName);
+        const nameHex = unwrapAssetNameHex(hexFromBytes(assetName.name()));
+        let useName = assetName;
+        const walletName = walletPolicy?.names.get(nameHex);
+        if (walletName) {
+          useName = walletName.assetName;
+        } else if (walletPolicy) {
+          for (const [walletName, walletAsset] of walletPolicy.names) {
+            if (unwrapAssetNameHex(walletName) === nameHex) {
+              useName = walletAsset.assetName;
+              break;
+            }
+          }
+        }
+        bucket.insert(useName, qty);
+      }
+      newMa.insert(walletPolicy?.policy || policy, bucket);
+    }
+    aligned.add(
+      Cardano.TransactionOutput.new(
+        output.address(),
+        Cardano.Value.new_with_assets(value.coin(), newMa)
+      )
+    );
+  }
+  return aligned;
+}
+
 function selectMultiAssetInputsForViableChange({
   Cardano,
   utxos,
@@ -299,7 +456,10 @@ function selectMultiAssetInputsForViableChange({
     const amount = outputs.get(i).amount();
     targetAda += BigInt(amount.coin().to_str());
     for (const [key, entry] of nativeAssetEntries(amount)) {
-      needed.set(key, (needed.get(key) || 0n) + entry.qty);
+      const policyHex = key.slice(0, 56);
+      const nameHex = unwrapAssetNameHex(key.slice(56));
+      const alignedKey = policyHex + nameHex;
+      needed.set(alignedKey, (needed.get(alignedKey) || 0n) + entry.qty);
     }
   }
 
@@ -312,15 +472,32 @@ function selectMultiAssetInputsForViableChange({
 
   const qtyInPicked = (key: string) => pickedAssets.get(key)?.qty || 0n;
 
+  const qtyForKey = (value: any, key: string) => {
+    const entries = nativeAssetEntries(value);
+    const exact = entries.get(key)?.qty || 0n;
+    if (exact > 0n) return exact;
+    const policyHex = key.slice(0, 56);
+    const nameHex = unwrapAssetNameHex(key.slice(56));
+    let sum = 0n;
+    for (const [entryKey, entry] of entries) {
+      if (
+        entryKey.slice(0, 56) === policyHex &&
+        unwrapAssetNameHex(entryKey.slice(56)) === nameHex
+      ) {
+        sum += entry.qty;
+      }
+    }
+    return sum;
+  };
+
   for (const [key, qty] of needed) {
     while (qtyInPicked(key) < qty) {
-      const idx = remaining.findIndex((u) => {
-        const have = nativeAssetEntries(u.output().amount()).get(key)?.qty || 0n;
-        return have > 0n;
-      });
+      const idx = remaining.findIndex(
+        (u) => qtyForKey(u.output().amount(), key) > 0n
+      );
       if (idx < 0) {
         throw new Error(
-          'Not enough of the selected token in spendable UTxOs. Check the token amount, or send ADA only.'
+          `Not enough of the selected token in spendable UTxOs (have ${qtyInPicked(key)}, need ${qty}). Check the token amount, or send ADA only.`
         );
       }
       const [u] = remaining.splice(idx, 1);
@@ -459,11 +636,14 @@ export function buildUnsignedSimpleTx({
           changeAddress,
           protocolParameters,
         });
+  const alignedOutputs = outputHasTokens
+    ? alignOutputsToWalletAssets(Cardano, outputs, utxos)
+    : outputs;
   const preSelectedTokenInputs = outputHasTokens
     ? selectMultiAssetInputsForViableChange({
         Cardano,
         utxos,
-        outputs,
+        outputs: alignedOutputs,
         changeAddress,
         protocolParameters,
       })
@@ -476,8 +656,8 @@ export function buildUnsignedSimpleTx({
 
   for (let attempt = 0; attempt < FEE_ALIGN_MAX_ATTEMPTS; attempt += 1) {
     const txBuilder = Cardano.TransactionBuilder.new(txConfig);
-    for (let i = 0; i < outputs.len(); i += 1) {
-      txBuilder.add_output(outputs.get(i));
+    for (let i = 0; i < alignedOutputs.len(); i += 1) {
+      txBuilder.add_output(alignedOutputs.get(i));
     }
     // Fee-sizing hashes must not become required_signers — the ledger would
     // then demand a witness from every enabled address, not just spent inputs.
@@ -556,7 +736,12 @@ export function buildUnsignedSimpleTx({
     const dummyW = dummyWitnessSetForMinFee(
       Cardano,
       txBody,
-      requiredVkeyHashesHex
+      mergeSpentInputKeyHashes(
+        Cardano,
+        requiredVkeyHashesHex,
+        txBody,
+        utxos
+      )
     );
     const signedForFee = Cardano.Transaction.new(
       txBody,

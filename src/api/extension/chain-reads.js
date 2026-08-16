@@ -32,6 +32,7 @@ import {
 } from './addresses';
 import {
   ADDRESS_ROLE,
+  derivePaymentFromAccountPublicKey,
   filterPaymentAddressesForAccountsDisplay,
   getExternalIndices,
   getInternalIndices,
@@ -943,8 +944,93 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
 
   // Spend only from addresses we can witness (enabled external + change).
   // Balance aggregation still uses the full stake set via getBalance.
+  // Token UTxOs often sit on a change/receive index that discovery has not
+  // enabled yet — keep those if we can derive the payment key.
   const enabledOwners = new Set(addressList.filter(Boolean));
   if (enabledOwners.size > 0) {
+    const tokenAddrs = [
+      ...new Set(
+        utxos
+          .filter(
+            (utxo) =>
+              Array.isArray(utxo.asset_list) && utxo.asset_list.length > 0
+          )
+          .map((utxo) => utxo.address)
+          .filter((addr) => addr && !enabledOwners.has(addr))
+      ),
+    ];
+    if (tokenAddrs.length > 0 && currentAccount.publicKey) {
+      await Loader.load();
+      const network = await getNetwork();
+      const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
+      const extraExternal = matchExternalIndicesFromAddresses(
+        Loader.Cardano,
+        currentAccount.publicKey,
+        networkId,
+        tokenAddrs
+      );
+      const extraInternal = matchInternalIndicesFromAddresses(
+        Loader.Cardano,
+        currentAccount.publicKey,
+        networkId,
+        tokenAddrs
+      );
+      for (const index of extraExternal) {
+        if (index === 0 && currentAccount.paymentAddr) {
+          enabledOwners.add(currentAccount.paymentAddr);
+          continue;
+        }
+        enabledOwners.add(
+          derivePaymentFromAccountPublicKey(
+            Loader.Cardano,
+            currentAccount.publicKey,
+            networkId,
+            ADDRESS_ROLE.external,
+            index
+          ).paymentAddr
+        );
+      }
+      for (const index of extraInternal) {
+        enabledOwners.add(
+          derivePaymentFromAccountPublicKey(
+            Loader.Cardano,
+            currentAccount.publicKey,
+            networkId,
+            ADDRESS_ROLE.internal,
+            index
+          ).paymentAddr
+        );
+      }
+      const prevExt = getExternalIndices(currentAccount);
+      const prevInt = getInternalIndices(currentAccount);
+      const mergedExt = normalizeExternalIndices([
+        ...prevExt,
+        ...extraExternal,
+      ]);
+      const mergedInt = normalizeInternalIndices([
+        ...prevInt,
+        ...extraInternal,
+      ]);
+      const extChanged =
+        mergedExt.length !== prevExt.length ||
+        mergedExt.some((n, i) => n !== prevExt[i]);
+      const intChanged =
+        mergedInt.length !== prevInt.length ||
+        mergedInt.some((n, i) => n !== prevInt[i]);
+      if (extChanged || intChanged) {
+        const currentIndex = await getCurrentAccountIndex();
+        const accounts = await getStorage(STORAGE.accounts);
+        if (accounts?.[currentIndex]) {
+          if (!Array.isArray(accounts[currentIndex].userExternalIndices)) {
+            accounts[currentIndex].userExternalIndices = prevExt;
+          }
+          accounts[currentIndex].externalIndices = mergedExt;
+          accounts[currentIndex].internalIndices = mergedInt;
+          await setStorage({ [STORAGE.accounts]: { ...accounts } });
+          invalidateReadCache();
+        }
+      }
+    }
     utxos = utxos.filter((utxo) =>
       enabledOwners.has(utxo.address || fallbackOwner)
     );

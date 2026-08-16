@@ -76,6 +76,7 @@ import {
 } from '../../../api/util';
 import {
   formatUtxoBalanceInsufficient,
+  matchSpendableToken,
   resolveTokenSendQuantity,
 } from '../../../api/token-amount';
 import { FixedSizeList as List } from 'react-window';
@@ -556,12 +557,27 @@ const Send = () => {
         ],
       };
 
+      const spendableAssets = await valueToAssets(
+        await sumUtxos(utxos.current)
+      ).then((listed) => listed.filter((row) => row.unit !== 'lovelace'));
+
       for (const asset of _value.assets) {
-        const live = assets.current[asset.unit] || asset;
+        const inventory = matchSpendableToken(asset, spendableAssets);
+        if (!inventory) {
+          setFee({
+            error:
+              'Not enough of the selected token in spendable UTxOs. Check the token amount, or send ADA only.',
+          });
+          return;
+        }
+        const live = assets.current[inventory.unit] || assets.current[asset.unit] || {
+          ...asset,
+          ...inventory,
+        };
         const resolved = resolveTokenSendQuantity(
           live.input ?? asset.input,
           tokenDecimals(live),
-          live.quantity ?? asset.quantity
+          inventory.quantity
         );
         if (resolved.error) {
           setFee({ error: resolved.error });
@@ -569,7 +585,7 @@ const Send = () => {
         }
 
         output.amount.push({
-          unit: asset.unit,
+          unit: inventory.unit,
           quantity: resolved.quantity,
         });
       }
@@ -699,24 +715,24 @@ const Send = () => {
         assets: listed.filter((v) => v.unit !== 'lovelace'),
       };
     }
-    const spendableUnits = new Set(
-      (balance.assets || []).map((asset) => asset.unit)
-    );
     let droppedUnspendable = false;
     Object.keys(assets.current).forEach((unit) => {
-      if (!spendableUnits.has(unit)) {
+      const live = matchSpendableToken(
+        assets.current[unit],
+        balance.assets || []
+      );
+      if (!live) {
         delete assets.current[unit];
         droppedUnspendable = true;
         return;
       }
-      const live = (balance.assets || []).find((asset) => asset.unit === unit);
-      if (live) {
-        assets.current[unit] = {
-          ...assets.current[unit],
-          ...live,
-          input: assets.current[unit].input,
-        };
-      }
+      const nextUnit = live.unit;
+      assets.current[nextUnit] = {
+        ...assets.current[unit],
+        ...live,
+        input: assets.current[unit].input,
+      };
+      if (nextUnit !== unit) delete assets.current[unit];
     });
     if (droppedUnspendable) {
       triggerTxUpdate(() =>

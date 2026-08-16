@@ -408,6 +408,8 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     );
     expect(src).toMatch(/columns=\{2\}/);
     expect(src).not.toMatch(/columns=\{3\}/);
+    expect(src).toMatch(/px=\{\{\s*base:\s*4,\s*md:\s*5\s*\}\}/);
+    expect(src).not.toMatch(/width="full" px=\{1\} pb=\{6\}/);
   });
 });
 

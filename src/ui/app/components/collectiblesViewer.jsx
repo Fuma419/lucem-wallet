@@ -254,7 +254,12 @@ export const CollectibleModal = React.forwardRef(({ onUpdateAvatar }, ref) => {
 
 const AssetsGrid = React.forwardRef(({ assets }, ref) => {
   return (
-    <Box width="full" px={1} pb={6}>
+    <Box
+      width="full"
+      px={{ base: 4, md: 5 }}
+      pb={6}
+      data-testid="wallet-assets-grid"
+    >
       <SimpleGrid
         columns={2}
         spacing={2}

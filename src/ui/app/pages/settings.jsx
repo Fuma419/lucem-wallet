@@ -36,6 +36,7 @@ import {
   exportAppData,
   importAppData,
 } from '../../../api/extension';
+import { vaultRequiresExistingPassword } from '../../../api/extension/vault';
 import { useNavigate } from 'react-router-dom';
 import { STORAGE, NETWORK_ID, NODE } from '../../../config/config';
 import { useStoreState, useStoreActions } from 'easy-peasy';
@@ -90,6 +91,7 @@ const Settings = () => {
   const [refreshed, setRefreshed] = React.useState(false);
   const [account, setAccount] = React.useState({ name: '', avatar: '' });
   const changePasswordRef = React.useRef();
+  const [canChangePassword, setCanChangePassword] = React.useState(false);
   const [eraseModalOpen, setEraseModalOpen] = React.useState(false);
   const [eraseAck, setEraseAck] = React.useState(false);
   const [erasePhrase, setErasePhrase] = React.useState('');
@@ -214,6 +216,15 @@ const Settings = () => {
       setAccount(nextAccount);
     });
     loadWhitelist();
+    let cancelled = false;
+    vaultRequiresExistingPassword()
+      .then((ok) => {
+        if (!cancelled) setCanChangePassword(ok);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -451,14 +462,16 @@ const Settings = () => {
               >
                 Refresh Balance
               </Button>
-              <Button
-                {...settingsPrimaryButtonProps}
-                onClick={() => {
-                  changePasswordRef.current.openModal();
-                }}
-              >
-                Change Password
-              </Button>
+              {canChangePassword ? (
+                <Button
+                  {...settingsPrimaryButtonProps}
+                  onClick={() => {
+                    changePasswordRef.current.openModal();
+                  }}
+                >
+                  Change Password
+                </Button>
+              ) : null}
             </Stack>
 
             <Box borderTopWidth="1px" borderColor={rowDivider} mt={5} pt={5}>

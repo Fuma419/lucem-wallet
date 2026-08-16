@@ -146,6 +146,9 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toMatch(/labelProfile/);
     expect(hwSrc).not.toMatch(/forceExportProfile/);
     expect(hwSrc).not.toMatch(/device ⋮ menu must match/);
+    expect(hwSrc).not.toMatch(/initLocalWalletSecretIfAbsent/);
+    expect(hwSrc).not.toMatch(/needsKeystonePassword/);
+    expect(hwSrc).not.toMatch(/Set a wallet password for this browser/);
   });
 
   test('Keystone e2e step-1 shot does not pick Native/Ledger before Continue', () => {

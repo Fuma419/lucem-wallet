@@ -23,7 +23,6 @@ import {
   Icon,
   Collapse,
   Stack,
-  Input,
 } from '@chakra-ui/react';
 import {
   Scrollbars,
@@ -45,7 +44,6 @@ import {
   getStorage,
   indexToHw,
   initHW,
-  initLocalWalletSecretIfAbsent,
   keystoneImportRowKey,
 } from '../../../api/extension';
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
@@ -127,8 +125,6 @@ const HW_ACCENT = {
     '0 0 22px rgba(206, 250, 0, 0.14), inset 0 1px 0 rgba(255,255,255,0.06)',
   panelBg:
     'linear-gradient(165deg, rgba(18, 32, 10, 0.94) 0%, rgba(8, 22, 12, 0.92) 100%)',
-  inputBorder: 'rgba(206, 250, 0, 0.32)',
-  inputFocusRing: '0 0 0 1px rgba(206, 250, 0, 0.55)',
 };
 
 /** Lime-accented controls on dark panels (aligned with welcome HW button). */
@@ -1046,11 +1042,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
   const [existing, setExisting] = React.useState({});
   const [isLoading, setIsLoading] = React.useState(false);
   const [isInit, setIsInit] = React.useState(false);
-  const [needsKeystonePassword, setNeedsKeystonePassword] =
-    React.useState(null);
-  const [localWalletPassword, setLocalWalletPassword] = React.useState('');
-  const [localWalletPasswordConfirm, setLocalWalletPasswordConfirm] =
-    React.useState('');
 
   const isKeystone =
     data.device === HW.keystone &&
@@ -1084,20 +1075,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
   }, []);
 
   React.useEffect(() => {
-    if (!isKeystone) {
-      setNeedsKeystonePassword(false);
-      return;
-    }
-    let cancelled = false;
-    getStorage(STORAGE.encryptedKey).then((enc) => {
-      if (!cancelled) setNeedsKeystonePassword(!enc);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isKeystone]);
-
-  React.useEffect(() => {
     if (!isInit || isKeystone) return;
     setSelected({ 0: true });
   }, [isInit, isKeystone]);
@@ -1117,11 +1094,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
   const keystoneRows = isKeystone
     ? data.keystoneAccounts.map((k) => k.rowKey)
     : [];
-
-  const keystoneLocalPasswordOk =
-    needsKeystonePassword !== true ||
-    (localWalletPassword.length >= 8 &&
-      localWalletPassword === localWalletPasswordConfirm);
 
   return (
     isInit && (
@@ -1241,66 +1213,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
             ))}
           </Scrollbars>
         </Box>
-        {needsKeystonePassword === true && (
-          <Box w="full" maxW="380px" mt={4}>
-            <Text fontSize="sm" fontWeight="semibold" mb={1} color="whiteAlpha.900">
-              Set a wallet password for this browser
-            </Text>
-            <Text fontSize="xs" color="whiteAlpha.600" mb={2}>
-              Used to protect Lucem on this device (reset wallet, change password,
-              and any normal accounts you add later). This is not your Keystone
-              PIN or recovery phrase.
-            </Text>
-            <Stack spacing={2}>
-              <Input
-                type="password"
-                size="sm"
-                rounded="md"
-                variant="filled"
-                bg="rgba(4, 22, 34, 0.95)"
-                color="whiteAlpha.900"
-                borderWidth="1px"
-                borderColor={HW_ACCENT.inputBorder}
-                _placeholder={{ color: 'whiteAlpha.400' }}
-                _hover={{
-                  bg: 'rgba(10, 24, 10, 0.96)',
-                  borderColor: 'rgba(206, 250, 0, 0.55)',
-                }}
-                _focusVisible={{
-                  borderColor: HW_LIME,
-                  boxShadow: HW_ACCENT.inputFocusRing,
-                }}
-                placeholder="Password (min 8 characters)"
-                value={localWalletPassword}
-                onChange={(e) => setLocalWalletPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-              <Input
-                type="password"
-                size="sm"
-                rounded="md"
-                variant="filled"
-                bg="rgba(4, 22, 34, 0.95)"
-                color="whiteAlpha.900"
-                borderWidth="1px"
-                borderColor={HW_ACCENT.inputBorder}
-                _placeholder={{ color: 'whiteAlpha.400' }}
-                _hover={{
-                  bg: 'rgba(10, 24, 10, 0.96)',
-                  borderColor: 'rgba(206, 250, 0, 0.55)',
-                }}
-                _focusVisible={{
-                  borderColor: HW_LIME,
-                  boxShadow: HW_ACCENT.inputFocusRing,
-                }}
-                placeholder="Confirm password"
-                value={localWalletPasswordConfirm}
-                onChange={(e) => setLocalWalletPasswordConfirm(e.target.value)}
-                autoComplete="new-password"
-              />
-            </Stack>
-          </Box>
-        )}
         <Button
           type="button"
           variant="unstyled"
@@ -1316,9 +1228,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
             (isKeystone
               ? keystoneNewAccounts.length === 0 ||
                 Object.keys(selected).filter((s) => selected[s] && !existing[s])
-                  .length < 1 ||
-                needsKeystonePassword === null ||
-                !keystoneLocalPasswordOk
+                  .length < 1
               : Object.keys(selected).filter((s) => selected[s] && !existing[s])
                   .length <= 0)
           }
@@ -1382,9 +1292,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
               }
               if (!accounts || accounts.length === 0) {
                 throw new Error('No accounts selected');
-              }
-              if (device === HW.keystone && needsKeystonePassword) {
-                await initLocalWalletSecretIfAbsent(localWalletPassword);
               }
               await createHWAccounts(accounts);
               onConfirm();

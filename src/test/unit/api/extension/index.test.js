@@ -17,6 +17,7 @@ import {
   getSignableWalletIds,
   isAccountSignable,
   validateAccountWithSeed,
+  setStorage,
 } from '../../../../api/extension';
 import Loader from '../../../../api/loader';
 import { generateMnemonic } from 'bip39';
@@ -213,6 +214,57 @@ test('importing a second seed keeps the first wallet and stores both', async () 
   const second = store.accounts[secondSlot];
   expect(second.walletId).toBe('1');
   expect(store.currentAccount).toEqual(secondSlot);
+});
+
+test('hardware-only dummy encryptedKey does not demand an unknown password', async () => {
+  await eraseLocalWalletData();
+  await initLocalWalletSecretIfAbsent('old-dummy-password');
+  await setStorage({
+    [STORAGE.accounts]: {
+      'keystone-deadbeef-0': {
+        index: 'keystone-deadbeef-0',
+        name: 'Keystone 1',
+        publicKey: 'aa',
+      },
+    },
+  });
+  const seed =
+    'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
+  await createWallet('Software', seed, 'newpassword', [0]);
+  const store = await getStorage();
+  expect(store.accounts['keystone-deadbeef-0'].name).toBe('Keystone 1');
+  expect(store.accounts[0].name).toBe('Software');
+  await expect(
+    decryptWithPassword('newpassword', store.encryptedKey)
+  ).resolves.toBeDefined();
+  await expect(
+    decryptWithPassword('old-dummy-password', store.encryptedKey)
+  ).rejects.toThrow(/password/i);
+});
+
+test('hardware-only vault without encryptedKey can set the first password', async () => {
+  await eraseLocalWalletData();
+  await setStorage({
+    [STORAGE.accounts]: {
+      'keystone-deadbeef-0': {
+        index: 'keystone-deadbeef-0',
+        name: 'Keystone 1',
+        publicKey: 'aa',
+      },
+    },
+    [STORAGE.network]: { id: 'preview', node: NODE.preview },
+    [STORAGE.currency]: 'eur',
+  });
+  const seed =
+    'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';
+  await createWallet('Software', seed, 'newpassword', [0]);
+  const store = await getStorage();
+  expect(store.accounts['keystone-deadbeef-0']).toBeDefined();
+  expect(store.network.id).toBe('preview');
+  expect(store.currency).toBe('eur');
+  await expect(
+    decryptWithPassword('newpassword', store.encryptedKey)
+  ).resolves.toBeDefined();
 });
 
 test('adding a wallet with the wrong vault password is rejected', async () => {

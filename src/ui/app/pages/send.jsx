@@ -74,6 +74,10 @@ import {
   assetsToValue,
   minAdaRequired,
 } from '../../../api/util';
+import {
+  formatUtxoBalanceInsufficient,
+  resolveTokenSendQuantity,
+} from '../../../api/token-amount';
 import { FixedSizeList as List } from 'react-window';
 import AssetBadge from '../components/assetBadge';
 import { ERROR, HW, NETWORK_ID, TAB } from '../../../config/config';
@@ -265,6 +269,8 @@ const initialState = {
 const sendPreparationErrorMessage = (error) => {
   const message = error?.message || String(error || '');
   if (!message) return 'Unable to prepare transaction.';
+  const tokenBalance = formatUtxoBalanceInsufficient(message);
+  if (tokenBalance !== message) return tokenBalance;
   if (/no utxos|insufficient|not enough/i.test(message)) {
     return message;
   }
@@ -552,16 +558,19 @@ const Send = () => {
 
       for (const asset of _value.assets) {
         const live = assets.current[asset.unit] || asset;
-        const quantity = toUnit(live.input ?? asset.input, tokenDecimals(live));
-
-        if (!(live.input ?? asset.input) || BigInt(quantity || '0') < 1) {
-          setFee({ error: 'Asset quantity not set' });
+        const resolved = resolveTokenSendQuantity(
+          live.input ?? asset.input,
+          tokenDecimals(live),
+          live.quantity ?? asset.quantity
+        );
+        if (resolved.error) {
+          setFee({ error: resolved.error });
           return;
         }
 
         output.amount.push({
           unit: asset.unit,
-          quantity,
+          quantity: resolved.quantity,
         });
       }
 
@@ -741,7 +750,11 @@ const Send = () => {
       ...live,
       quantity: value.sendAll
         ? String(live.quantity || asset.quantity || '0')
-        : toUnit(live.input ?? asset.input, tokenDecimals(live)),
+        : resolveTokenSendQuantity(
+            live.input ?? asset.input,
+            tokenDecimals(live),
+            live.quantity ?? asset.quantity
+          ).quantity || '0',
     };
   });
   const feeError = fee.error ? String(fee.error) : '';

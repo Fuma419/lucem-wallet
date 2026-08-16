@@ -32,6 +32,7 @@ jest.mock('../../api/tx/csl-unsigned-tx', () => {
 const { buildUnsignedSimpleTx } = require('../../api/tx/csl-unsigned-tx');
 const {
   buildSignSubmitAccountTransfer,
+  clampSendToAvoidDustChange,
   deriveAccountAddress,
   PROVIDER,
 } = require('../integration/koios-self-send');
@@ -54,6 +55,47 @@ const EPOCH_PARAMS = {
   collateral_percent: '150',
   max_collateral_inputs: '3',
 };
+
+describe('clampSendToAvoidDustChange', () => {
+  test('keeps a 5 tADA send when every UTxO has room for change', () => {
+    expect(clampSendToAvoidDustChange([10_000_000n], '5000000')).toBe(
+      5_000_000n
+    );
+  });
+
+  test('shrinks the send so a 5.83 tADA UTxO is not left as dust change', () => {
+    // 5_831_437 - 5_000_000 = 831_437 < min UTxO 969_750 (the Preprod CI fail).
+    const send = clampSendToAvoidDustChange([5_831_437n], '5000000');
+    expect(send).toBe(5_831_437n - 1_500_000n);
+    expect(5_831_437n - send).toBeGreaterThanOrEqual(969_750n);
+  });
+
+  test('caps against the tightest UTxO, not the largest', () => {
+    const send = clampSendToAvoidDustChange(
+      [4_600_000n, 5_800_000n],
+      '5000000'
+    );
+    expect(send).toBe(4_600_000n - 1_500_000n);
+  });
+
+  test('returns 0 when no UTxO can fund fee plus min change', () => {
+    expect(clampSendToAvoidDustChange([1_000_000n], '5000000')).toBe(0n);
+  });
+
+  test('does not produce a payment output below min ADA', () => {
+    // 2.25 tADA - 1.5 tADA headroom = 0.75 tADA < 0.97 min UTxO (Preview CI).
+    expect(clampSendToAvoidDustChange([2_252_720n], '5000000')).toBe(0n);
+  });
+
+  test('fragmented UTxOs can still send from the combined total', () => {
+    const parts = [1_200_000n, 1_200_000n, 1_200_000n];
+    expect(clampSendToAvoidDustChange(parts, '5000000')).toBe(0n);
+    const total = parts.reduce((a, b) => a + b, 0n);
+    expect(clampSendToAvoidDustChange([total], '5000000')).toBe(
+      total - 1_500_000n
+    );
+  });
+});
 
 describe('live send integration exercises the production wallet builder', () => {
   const realFetch = global.fetch;

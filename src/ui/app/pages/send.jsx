@@ -895,7 +895,12 @@ const Send = () => {
               pt={1}
               pb={4}
             >
-              <Stack spacing={4} w="full" maxW="sm" mx="auto">
+              <Stack
+                spacing={4}
+                w="full"
+                maxW={{ base: '100%', xl: 'sm' }}
+                mx="auto"
+              >
                 <Box className="lucem-inset-surface" rounded="3xl" p={4}>
                   <Text
                     fontSize="xs"
@@ -1230,7 +1235,7 @@ const Send = () => {
                 <Flex
                   data-testid="send-fee-preview"
                   w="full"
-                  maxW="sm"
+                  maxW={{ base: '100%', xl: 'sm' }}
                   mb={3}
                   px={1}
                   justify="space-between"
@@ -1249,7 +1254,7 @@ const Send = () => {
                 <Flex
                   data-testid="send-total-preview"
                   w="full"
-                  maxW="sm"
+                  maxW={{ base: '100%', xl: 'sm' }}
                   mb={3}
                   px={1}
                   justify="space-between"
@@ -1340,7 +1345,7 @@ const Send = () => {
                   color={mutedFg}
                   mb={2}
                   textAlign="center"
-                  maxW="sm"
+                  maxW={{ base: '100%', xl: 'sm' }}
                 >
                   {blockedReason}
                 </Text>
@@ -1350,7 +1355,7 @@ const Send = () => {
                 isLoading={isPreparing}
                 loadingText="Estimating fee…"
                 width="full"
-                maxW="sm"
+                maxW={{ base: '100%', xl: 'sm' }}
                 height="52px"
                 rounded="2xl"
                 isDisabled={

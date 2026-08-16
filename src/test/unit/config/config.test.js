@@ -120,8 +120,8 @@ describe('CIP-30 error types', () => {
 
 describe('POPUP_WINDOW', () => {
   test('has valid dimensions', () => {
-    expect(POPUP_WINDOW.width).toBeGreaterThan(0);
-    expect(POPUP_WINDOW.height).toBeGreaterThan(0);
+    expect(POPUP_WINDOW.width).toBe(800);
+    expect(POPUP_WINDOW.height).toBe(600);
   });
 });
 

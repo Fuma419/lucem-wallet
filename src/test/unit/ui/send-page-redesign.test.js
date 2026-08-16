@@ -188,6 +188,12 @@ describe('Send page — behavioral render', () => {
     expect(
       container.querySelector('[data-testid="send-recipient-accounts"]')
     ).toBeTruthy();
+    const otherAccount = container.querySelector(
+      '[data-testid="send-recipient-account-1"]'
+    );
+    expect(otherAccount).toBeTruthy();
+    expect(otherAccount.textContent).toMatch(/Savings/);
+    expect(otherAccount.textContent).toMatch(/addr_test1abc/);
     expect(
       container.querySelector('[data-testid="send-ada-amount"]')
     ).toBeTruthy();
@@ -206,6 +212,24 @@ describe('Send page — behavioral render', () => {
     expect(
       container.querySelector('[data-testid="send-blocked-reason"]')
     ).toBeTruthy();
+  });
+
+  test('picking a listed account fills the recipient field', async () => {
+    const { container } = await renderSend();
+    const otherAccount = container.querySelector(
+      '[data-testid="send-recipient-account-1"]'
+    );
+    expect(otherAccount).toBeTruthy();
+    await act(async () => {
+      otherAccount.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    const input = container.querySelector('[data-testid="send-recipient-input"]');
+    expect(input.value).toBe('Savings');
+    expect(
+      container.querySelector('[data-testid="send-recipient-account-name"]')
+        ?.textContent
+    ).toMatch(/Sending to Savings/);
   });
 
   test('leaves the loading state and shows the stable primary action label', async () => {

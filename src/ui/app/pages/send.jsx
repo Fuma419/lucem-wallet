@@ -24,7 +24,6 @@ import { Scrollbars } from '../components/scrollbar';
 import ConfirmModal from '../components/confirmModal';
 import {
   CheckIcon,
-  ChevronDownIcon,
   ChevronLeftIcon,
   CloseIcon,
   InfoOutlineIcon,
@@ -58,10 +57,6 @@ import {
   useColorModeValue,
   useToast,
   Icon,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
 } from '@chakra-ui/react';
 import MiddleEllipsis from 'react-middle-ellipsis';
 import UnitDisplay from '../components/unitDisplay';
@@ -164,57 +159,67 @@ const useIsMounted = () => {
   return isMounted;
 };
 
-const RecipientAccountPicker = ({ accounts, isDisabled, onSelect }) => {
+const RecipientAccountPicker = ({
+  accounts,
+  isDisabled,
+  selectedAddress,
+  onSelect,
+}) => {
+  const { cardBg, cardHoverBg, mutedFg, yellowLink } = useSurfaceColors();
+  const selectedBorder = useColorModeValue('yellow.500', 'yellow.400');
+  const idleBorder = useColorModeValue('blackAlpha.200', 'whiteAlpha.200');
   if (!accounts?.length) return null;
   return (
-    <Menu placement="bottom-end" isLazy>
-      <MenuButton
-        as={Button}
-        size="xs"
-        variant="ghost"
-        colorScheme="yellow"
-        rightIcon={<ChevronDownIcon />}
-        isDisabled={isDisabled}
-        data-testid="send-recipient-accounts"
-      >
-        My accounts
-      </MenuButton>
-      <MenuList
-        maxH="240px"
-        overflowY="auto"
-        minW="240px"
-        zIndex={20}
-        py={1}
-      >
-        {accounts.map((row) => (
-          <MenuItem
-            key={String(row.index)}
-            data-testid={`send-recipient-account-${row.index}`}
-            onClick={() => onSelect(row)}
-            py={2}
-          >
-            <Box display="flex" alignItems="center" w="full" minW={0}>
-              <AvatarLoader width="28px" avatar={row.avatar} />
-              <Box ml={3} minW={0} flex="1">
-                <Text fontWeight="bold" fontSize="sm" noOfLines={1}>
-                  {row.name || 'Account'}
-                </Text>
-                <Box
-                  fontSize="xs"
-                  fontFamily="mono"
-                  opacity={0.75}
-                  whiteSpace="nowrap"
-                >
-                  <MiddleEllipsis>
-                    <span>{row.paymentAddr}</span>
-                  </MiddleEllipsis>
+    <Box
+      data-testid="send-recipient-accounts"
+      maxH="220px"
+      overflowY="auto"
+      mb={3}
+    >
+      <Stack spacing={2}>
+        {accounts.map((row) => {
+          const selected = row.paymentAddr === selectedAddress;
+          return (
+            <Button
+              key={String(row.index)}
+              data-testid={`send-recipient-account-${row.index}`}
+              variant="ghost"
+              isDisabled={isDisabled}
+              onClick={() => onSelect(row)}
+              justifyContent="flex-start"
+              h="auto"
+              py={2}
+              px={2}
+              rounded="xl"
+              w="full"
+              bg={selected ? cardHoverBg : cardBg}
+              borderWidth="1px"
+              borderColor={selected ? selectedBorder : idleBorder}
+              _hover={{ bg: cardHoverBg }}
+            >
+              <Flex align="center" w="full" minW={0} gap={3}>
+                <Box flexShrink={0}>
+                  <AvatarLoader width="32px" avatar={row.avatar} />
                 </Box>
-              </Box>
-            </Box>
-          </MenuItem>
-        ))}
-      </MenuList>
-    </Menu>
+                <Box minW={0} flex="1" textAlign="left">
+                  <Text fontWeight="bold" fontSize="sm" noOfLines={1}>
+                    {row.name || 'Account'}
+                  </Text>
+                  <Text
+                    fontSize="xs"
+                    fontFamily="mono"
+                    color={selected ? yellowLink : mutedFg}
+                    whiteSpace="nowrap"
+                  >
+                    {shortenAddress(row.paymentAddr)}
+                  </Text>
+                </Box>
+              </Flex>
+            </Button>
+          );
+        })}
+      </Stack>
+    </Box>
   );
 };
 
@@ -892,29 +897,29 @@ const Send = () => {
             >
               <Stack spacing={4} w="full" maxW="sm" mx="auto">
                 <Box className="lucem-inset-surface" rounded="3xl" p={4}>
-                  <Flex justify="space-between" align="center" mb={2}>
-                    <Text
-                      fontSize="xs"
-                      fontWeight="bold"
-                      letterSpacing="0.06em"
-                      textTransform="uppercase"
-                      color={subtleFg}
-                    >
-                      To
-                    </Text>
-                    <RecipientAccountPicker
-                      accounts={otherAccounts}
-                      isDisabled={isLoading}
-                      onSelect={(row) => {
-                        triggerTxUpdate(() =>
-                          setAddress({
-                            result: row.paymentAddr,
-                            display: row.paymentAddr,
-                          })
-                        );
-                      }}
-                    />
-                  </Flex>
+                  <Text
+                    fontSize="xs"
+                    fontWeight="bold"
+                    letterSpacing="0.06em"
+                    textTransform="uppercase"
+                    color={subtleFg}
+                    mb={2}
+                  >
+                    To
+                  </Text>
+                  <RecipientAccountPicker
+                    accounts={otherAccounts}
+                    isDisabled={isLoading}
+                    selectedAddress={address.result}
+                    onSelect={(row) => {
+                      triggerTxUpdate(() =>
+                        setAddress({
+                          result: row.paymentAddr,
+                          display: row.name || shortenAddress(row.paymentAddr),
+                        })
+                      );
+                    }}
+                  />
                   <AddressPopup
                     setAddress={setAddress}
                     address={address}

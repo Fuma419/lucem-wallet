@@ -29,6 +29,7 @@ import {
   buildKeystoneCardanoSignRequest,
   KEYSTONE_SIGN_ANIMATED_QR_OPTIONS,
   parseKeystoneCardanoTxSignature,
+  summarizeUnsignedPaymentTx,
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
 import KeystoneSDK from '@keystonehq/keystone-sdk';
@@ -53,6 +54,7 @@ const App = () => {
   const [phase, setPhase] = React.useState(Phase.load);
   const [error, setError] = React.useState('');
   const [urData, setUrData] = React.useState({ type: '', cbor: '' });
+  const [txSummary, setTxSummary] = React.useState(null);
   const pendingTxHexRef = React.useRef('');
   const sdkRef = React.useRef(null);
 
@@ -81,6 +83,12 @@ const App = () => {
         const account = await getCurrentAccount();
         const hw = indexToHw(account.index);
         const utxos = await getUtxos();
+        const parsedTx = Loader.Cardano.Transaction.from_bytes(
+          Buffer.from(pending.txHex, 'hex')
+        );
+        if (!cancelled) {
+          setTxSummary(summarizeUnsignedPaymentTx(parsedTx, utxos));
+        }
         const { ur, sdk } = await buildKeystoneCardanoSignRequest({
           txHex: pending.txHex,
           account,
@@ -260,6 +268,42 @@ const App = () => {
                   device camera can lock on; hold the device steady. Approve on the
                   device, then tap below and scan the signature QR.
                 </Text>
+                {txSummary ? (
+                  <Box
+                    data-testid="keystone-tx-summary"
+                    w="full"
+                    maxW="420px"
+                    bg="blackAlpha.500"
+                    rounded="xl"
+                    p={3}
+                    fontSize="xs"
+                    color="whiteAlpha.900"
+                  >
+                    <Text fontWeight="bold" mb={2} letterSpacing="0.04em">
+                      This transaction
+                    </Text>
+                    {txSummary.inputs.map((row, i) => (
+                      <Text key={`in-${row.txHash}-${row.index}`} mb={1}>
+                        Input {i + 1}: {row.ada != null ? `${row.ada} ADA` : 'UTxO'}{' '}
+                        {row.address
+                          ? `${row.address.slice(0, 10)}…${row.address.slice(-8)}`
+                          : ''}
+                      </Text>
+                    ))}
+                    {txSummary.outputs.map((row, i) => (
+                      <Text key={`out-${row.address}-${i}`} mb={1}>
+                        {row.kind === 'change' ? 'Change' : 'Send'} {i + 1}: {row.ada}{' '}
+                        ADA {row.address.slice(0, 10)}…{row.address.slice(-8)}
+                      </Text>
+                    ))}
+                    <Text mt={1}>Fee: {txSummary.feeAda} ADA</Text>
+                    <Text mt={2} color="whiteAlpha.700">
+                      Keystone lists every spent UTxO as Input and every destination
+                      as Output. Change back to you is supposed to look like your
+                      address on both sides.
+                    </Text>
+                  </Box>
+                ) : null}
                 <Box
                   bg="white"
                   p={3}

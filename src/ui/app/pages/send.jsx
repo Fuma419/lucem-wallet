@@ -713,14 +713,6 @@ const Send = () => {
     if (blockedReason && blockedReason !== 'Preparing transaction…') return;
     if (!tx) return;
     const idx = account.current?.index;
-    if (
-      idx != null &&
-      isHW(idx) &&
-      indexToHw(idx).device === HW.keystone
-    ) {
-      void startKeystoneQrSign();
-      return;
-    }
     ref.current?.openModal(idx);
   };
 

@@ -51,6 +51,7 @@ const ConfirmModal = React.forwardRef(
       onCloseBtn,
       title,
       info,
+      onHwKeystone,
       allowEmptyPassword: Boolean(allowEmptyPassword),
     };
     const [hw, setHw] = React.useState('');
@@ -59,14 +60,6 @@ const ConfirmModal = React.forwardRef(
       openModal(accountIndex) {
         if (isHW(accountIndex)) {
           const parsed = indexToHw(accountIndex);
-          if (
-            parsed.device === HW.keystone &&
-            typeof onHwKeystone === 'function'
-          ) {
-            setHw(parsed);
-            void Promise.resolve(onHwKeystone(parsed));
-            return;
-          }
           setHw(parsed);
           onOpenHW();
         } else {
@@ -238,6 +231,14 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
     if (props.ready === false || !waitReady) return;
     try {
       setWaitReady(false);
+      if (
+        hw.device === HW.keystone &&
+        typeof props.onHwKeystone === 'function'
+      ) {
+        await Promise.resolve(props.onHwKeystone(hw));
+        onClose();
+        return;
+      }
       if (hw.device === HW.ledger) {
         const appAda = await initHW({ device: hw.device, id: hw.id });
         const signedMessage = await props.sign(null, { ...hw, appAda });
@@ -326,7 +327,10 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                     ) : (
                       <>
                         Keystone uses <b>QR only</b> (no USB). Tap Confirm to open
-                        the signing tab.
+                        the signing tab. The device lists each spent UTxO as
+                        Input and every destination as Output — change back to
+                        you is a separate output, so those two sides can share
+                        your address.
                       </>
                     )
                   ) : !waitReady ? (

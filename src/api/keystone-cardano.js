@@ -11,8 +11,13 @@ import KeystoneSDK, {
   QRHardwareCallVersion,
 } from '@keystonehq/keystone-sdk';
 import {
+  CryptoKeypath,
+  PathComponent,
+} from '@keystonehq/bc-ur-registry-cardano';
+import {
   cip1852PaymentPath,
   findEnabledPaymentByAddress,
+  listEnabledPaymentAddresses,
 } from './extension/multi-address';
 import Loader from './loader';
 
@@ -59,9 +64,9 @@ export const KEYSTONE_ANIMATED_QR_OPTIONS = Object.freeze({
 export const KEYSTONE_SIGN_ANIMATED_QR_OPTIONS = KEYSTONE_ANIMATED_QR_OPTIONS;
 
 /**
- * @keystonehq/keystone-sdk uses full tx CBOR in UR below this byte length; at/above
- * it switches to CardanoSignTxHashRequest (smaller QR). Default SDK value is 2048,
- * which keeps typical stake/register/delegate txs on the slow full-tx path.
+ * Prefer a compact CardanoSignTxHashRequest at/above this unsigned-tx size.
+ * The SDK hashes the full Transaction CBOR, which is not the Cardano tx id
+ * (blake2b-256 of the body). We build the hash-UR ourselves with the body hash.
  */
 const KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES = 768;
 
@@ -536,25 +541,184 @@ export function parseKeystoneCardanoConnectUr(scan) {
   return { masterFingerprint, keys: deduped };
 }
 
-function buildKeystoneExtraSigners(tx, account, hw, keyHashes) {
-  const xfp = hw.id;
-  const stakePath = `m/1852'/1815'/${hw.account}'/2/0`;
-  const needStake = keyHashes.includes(account.stakeKeyHash);
-  if (!needStake) return [];
+export function normalizeKeystoneXfp(id) {
+  const hex = String(id || '')
+    .toLowerCase()
+    .replace(/^0x/, '');
+  if (!/^[0-9a-f]{8}$/.test(hex)) {
+    throw new Error(
+      'This Keystone account is missing a valid master fingerprint. Reconnect the device and import again.'
+    );
+  }
+  return hex;
+}
 
+function ed25519KeyHashHex(kh) {
+  if (!kh) return '';
+  if (typeof kh.to_hex === 'function') return kh.to_hex();
+  return Buffer.from(kh.to_bytes()).toString('hex');
+}
+
+export function requiredSignerHashesFromTx(tx) {
+  const rs = tx.body().required_signers();
+  if (!rs) return [];
+  const out = [];
+  for (let i = 0; i < rs.len(); i += 1) {
+    const hex = ed25519KeyHashHex(rs.get(i));
+    if (hex) out.push(hex);
+  }
+  return out;
+}
+
+function networkIdFromAccount(Cardano, account) {
+  try {
+    if (account?.paymentAddr) {
+      return Cardano.Address.from_bech32(account.paymentAddr).network_id();
+    }
+  } catch (/** @type {any} */ _) {
+    /* fall through */
+  }
+  return 0;
+}
+
+function txHasStakeDuty(tx) {
   const certs = tx.body().certs();
   const withdrawals = tx.body().withdrawals();
-  const hasCerts = certs && certs.len() > 0;
-  const hasWd = withdrawals && withdrawals.len() > 0;
-  if (!hasCerts && !hasWd) return [];
+  return (certs && certs.len() > 0) || (withdrawals && withdrawals.len() > 0);
+}
 
-  return [
-    {
-      keyHash: account.stakeKeyHash,
-      xfp,
-      keyPath: stakePath,
-    },
-  ];
+function resolveKeystoneHdPath(Cardano, account, hw, keyHash, networkId) {
+  if (!keyHash) return null;
+  const rows = listEnabledPaymentAddresses(Cardano, account, networkId);
+  const row = rows.find((r) => r.paymentKeyHash === keyHash);
+  if (row) {
+    return cip1852PaymentPath(hw.account, row.role ?? 0, row.index ?? 0);
+  }
+  if (keyHash === account.stakeKeyHash) {
+    return `m/1852'/1815'/${hw.account}'/2/0`;
+  }
+  return null;
+}
+
+/**
+ * Extra Keystone signers: body required_signers we can resolve, every payment
+ * key the wallet asked to sign, and the stake key when certs/withdrawals need it.
+ * Firmware skips a signer whose xfp does not match the device.
+ */
+export function buildKeystoneExtraSigners(tx, account, hw, keyHashes, Cardano) {
+  const xfp = normalizeKeystoneXfp(hw.id);
+  const networkId = networkIdFromAccount(Cardano, account);
+  const bodyRequired = new Set(requiredSignerHashesFromTx(tx));
+  const needed = new Set(
+    [...(keyHashes || []), ...bodyRequired].filter(Boolean)
+  );
+  const hasStakeDuty = txHasStakeDuty(tx);
+
+  const extra = [];
+  const seenPath = new Set();
+  for (const keyHash of needed) {
+    const isStake = keyHash === account.stakeKeyHash;
+    if (isStake && !hasStakeDuty && !bodyRequired.has(keyHash)) {
+      continue;
+    }
+    const keyPath = resolveKeystoneHdPath(
+      Cardano,
+      account,
+      hw,
+      keyHash,
+      networkId
+    );
+    if (!keyPath || seenPath.has(keyPath)) continue;
+    seenPath.add(keyPath);
+    extra.push({ keyHash, xfp, keyPath });
+  }
+  return extra;
+}
+
+export function cardanoTxBodyHashHex(Cardano, tx) {
+  const fixed = Cardano.FixedTransactionBody.from_bytes(tx.body().to_bytes());
+  const hex = Buffer.from(fixed.tx_hash().to_bytes()).toString('hex');
+  if (typeof fixed.free === 'function') fixed.free();
+  return hex;
+}
+
+function cryptoKeypathFromHdPath(hdPath, xfp) {
+  const steps = String(hdPath || '')
+    .replace(/^[mM]\//, '')
+    .split('/')
+    .filter(Boolean);
+  return new CryptoKeypath(
+    steps.map((step) => {
+      const hardened = step.endsWith("'");
+      const index = parseInt(step.replace(/'/g, ''), 10);
+      return new PathComponent({ index, hardened });
+    }),
+    Buffer.from(xfp, 'hex')
+  );
+}
+
+export function vkeyHashesFromWitnessSet(Cardano, witnessSet) {
+  const vkeys = witnessSet?.vkeys?.();
+  if (!vkeys || typeof vkeys.len !== 'function' || vkeys.len() === 0) {
+    return [];
+  }
+  const out = [];
+  for (let i = 0; i < vkeys.len(); i += 1) {
+    const pub = vkeys.get(i).vkey().public_key();
+    out.push(ed25519KeyHashHex(pub.hash()));
+  }
+  return out;
+}
+
+export function formatKeystoneSubmitError(err) {
+  const msg = err && err.message ? String(err.message) : String(err || '');
+  if (/MissingVKeyWitnesses/i.test(msg)) {
+    return (
+      'Keystone did not provide a required signature. On the device, use the ' +
+      'same Cardano derivation you imported in Lucem (Native vs Ledger), then try again.'
+    );
+  }
+  if (/InvalidWitnesses|VKeyWitnessesDoesNotVerify/i.test(msg)) {
+    return 'Keystone signed a different transaction hash than Lucem submitted. Close this screen and send again.';
+  }
+  if (/Koios API error:\s*400/i.test(msg)) {
+    return 'The network rejected this transaction. Use Copy error if you need the technical details.';
+  }
+  return msg || 'Keystone signing failed.';
+}
+
+/**
+ * Reject an empty or incomplete Keystone witness set before submit.
+ * @param {*} Cardano
+ * @param {*} tx
+ * @param {*} witnessSet
+ * @param {string[]} [requiredHashes] - extra hashes (spent payment keys)
+ */
+export function assertKeystoneWitnessesCover(
+  Cardano,
+  tx,
+  witnessSet,
+  requiredHashes = []
+) {
+  const have = new Set(
+    vkeyHashesFromWitnessSet(Cardano, witnessSet).map((h) => h.toLowerCase())
+  );
+  if (have.size === 0) {
+    throw new Error(
+      'Keystone returned an empty signature. Scan the signature QR again, and confirm the device is using the same Native/Ledger profile as this Lucem account.'
+    );
+  }
+  const needed = new Set(
+    [...requiredSignerHashesFromTx(tx), ...(requiredHashes || [])]
+      .filter(Boolean)
+      .map((h) => String(h).toLowerCase())
+  );
+  const missing = [...needed].filter((h) => !have.has(h));
+  if (missing.length > 0) {
+    throw new Error(
+      'Keystone signed a different key than this wallet expected. On the device, switch to the same Cardano derivation you imported in Lucem (Native vs Ledger).'
+    );
+  }
 }
 
 function formatAdaFromLovelace(lovelace) {
@@ -656,7 +820,7 @@ export async function buildKeystoneCardanoSignRequest({
   await Loader.load();
   const tx = Loader.Cardano.Transaction.from_bytes(Buffer.from(txHex, 'hex'));
   const inputs = tx.body().inputs();
-  const xfp = hw.id;
+  const xfp = normalizeKeystoneXfp(hw.id);
   const keystoneUtxos = [];
 
   for (let i = 0; i < inputs.len(); i++) {
@@ -708,19 +872,73 @@ export async function buildKeystoneCardanoSignRequest({
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+  // Never let the SDK hash the full Transaction CBOR (that is not the tx id).
   const sdk = new KeystoneSDK({
-    sizeLimit: { ada: KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES },
+    sizeLimit: { ada: Number.MAX_SAFE_INTEGER },
   });
-  const extraSigners = buildKeystoneExtraSigners(tx, account, hw, keyHashes);
-  const ur = sdk.cardano.generateSignRequest({
-    requestId,
-    signData: Buffer.from(txHex, 'hex'),
-    utxos: keystoneUtxos,
-    extraSigners,
-    origin: 'Lucem',
-  });
+  const extraSigners = buildKeystoneExtraSigners(
+    tx,
+    account,
+    hw,
+    keyHashes,
+    Loader.Cardano
+  );
+  const signData = Buffer.from(txHex, 'hex');
+  let ur;
+  if (signData.length >= KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES) {
+    const paths = [
+      ...keystoneUtxos.map((u) => cryptoKeypathFromHdPath(u.hdPath, xfp)),
+      ...extraSigners.map((s) => cryptoKeypathFromHdPath(s.keyPath, xfp)),
+    ];
+    ur = sdk.cardano.generateSignTxHashRequest(
+      cardanoTxBodyHashHex(Loader.Cardano, tx),
+      paths,
+      keystoneUtxos.map((u) => u.address),
+      'Lucem',
+      requestId
+    );
+  } else {
+    ur = sdk.cardano.generateSignRequest({
+      requestId,
+      signData,
+      utxos: keystoneUtxos,
+      extraSigners,
+      origin: 'Lucem',
+    });
+  }
 
   return { ur, requestId, sdk };
+}
+
+export function spentPaymentKeyHashes(Cardano, tx, account, utxos = []) {
+  const hashes = [];
+  const seen = new Set();
+  const inputs = tx.body().inputs();
+  for (let i = 0; i < inputs.len(); i += 1) {
+    const inp = inputs.get(i);
+    const txHash = Buffer.from(inp.transaction_id().to_bytes()).toString('hex');
+    const idx = transactionInputIndex(inp);
+    const match = (utxos || []).find((u) => {
+      const h = Buffer.from(u.input().transaction_id().to_bytes()).toString(
+        'hex'
+      );
+      return h === txHash && transactionInputIndex(u.input()) === idx;
+    });
+    if (!match) continue;
+    const addr = Cardano.Address.from_bytes(match.output().address().to_bytes());
+    const row = findEnabledPaymentByAddress(
+      Cardano,
+      account,
+      addr.network_id(),
+      addr.to_bech32()
+    );
+    const hex = row?.paymentKeyHash;
+    if (hex && !seen.has(hex)) {
+      seen.add(hex);
+      hashes.push(hex);
+    }
+  }
+  return hashes;
 }
 
 export function parseKeystoneCardanoTxSignature(sdk, scan) {

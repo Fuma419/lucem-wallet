@@ -153,6 +153,19 @@ describe('buildUnsignedSimpleTx', () => {
     ).toThrow('No UTxOs');
   });
 
+  test('does not write fee-sizing hashes as required_signers', () => {
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [makeUtxo(10_000_000)],
+      outputs: makeOutputs([2_000_000]),
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(2),
+    });
+    const rs = tx.body().required_signers();
+    expect(!rs || rs.len() === 0).toBe(true);
+  });
+
   test('throws when no key hashes provided', () => {
     expect(() =>
       buildUnsignedSimpleTx({

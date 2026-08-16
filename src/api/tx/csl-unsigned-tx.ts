@@ -179,7 +179,8 @@ function selectAdaInputsForViableChange({
  * @param {Array} opts.utxos - CSL TransactionUnspentOutput[]
  * @param {*} opts.outputs - CSL TransactionOutputs
  * @param {string} opts.changeAddressBech32
- * @param {string[]} opts.requiredVkeyHashesHex - hex key hashes that will sign (fee sizing)
+ * @param {string[]} opts.requiredVkeyHashesHex - hex key hashes used only to
+ *   size dummy vkey witnesses for fee alignment. Not written to the body.
  * @param {*} [opts.auxiliaryData]
  */
 export function buildUnsignedSimpleTx({
@@ -274,11 +275,8 @@ export function buildUnsignedSimpleTx({
     for (let i = 0; i < outputs.len(); i += 1) {
       txBuilder.add_output(outputs.get(i));
     }
-    for (const hex of requiredVkeyHashesHex) {
-      txBuilder.add_required_signer(
-        Cardano.Ed25519KeyHash.from_bytes(Buffer.from(hex, 'hex'))
-      );
-    }
+    // Fee-sizing hashes must not become required_signers — the ledger would
+    // then demand a witness from every enabled address, not just spent inputs.
     // TTL / aux before change so size (and fee) include them.
     txBuilder.set_ttl_bignum(invalidHereafter);
     if (auxiliaryData) {

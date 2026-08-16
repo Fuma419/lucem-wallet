@@ -19,6 +19,9 @@ const {
   filterKeystoneKeysForRequestedAccount,
   filterKeystoneKeysForRequestedAccounts,
   formatKeystoneCardanoAccountLabel,
+  formatKeystoneSubmitError,
+  normalizeKeystoneXfp,
+  buildKeystoneExtraSigners,
   isCip1852AccountNodePath,
   preferredKeystoneImportRowKeys,
   generateCardanoKeystoneKeyDerivationUr,
@@ -283,5 +286,95 @@ describe('keystone-cardano', () => {
       /does not treat as its primary payment address/
     );
     expect(src).not.toMatch(/hdPath: `\$\{paymentBase\}\/0`/);
+    expect(src).toMatch(/generateSignTxHashRequest/);
+    expect(src).toMatch(/cardanoTxBodyHashHex/);
+    expect(src).toMatch(/sizeLimit: \{ ada: Number\.MAX_SAFE_INTEGER \}/);
+    expect(src).not.toMatch(/sizeLimit: \{ ada: KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES \}/);
+  });
+
+  test('normalizeKeystoneXfp accepts 8 hex chars', () => {
+    expect(normalizeKeystoneXfp('DEADBEEF')).toBe('deadbeef');
+    expect(normalizeKeystoneXfp('0x52744703')).toBe('52744703');
+    expect(() => normalizeKeystoneXfp('xyz')).toThrow(/master fingerprint/);
+    expect(() => normalizeKeystoneXfp('deadbeef00')).toThrow(/master fingerprint/);
+  });
+
+  test('formatKeystoneSubmitError humanizes missing witnesses', () => {
+    expect(
+      formatKeystoneSubmitError({
+        message:
+          'Transaction submission failed: Koios API error: 400 — MissingVKeyWitnessesUTXOW',
+      })
+    ).toMatch(/Native vs Ledger/);
+    expect(
+      formatKeystoneSubmitError({
+        message: 'Koios API error: 400 — {"tag":"TxSubmitFail"}',
+      })
+    ).toMatch(/network rejected/);
+    expect(formatKeystoneSubmitError({ message: 'camera denied' })).toBe(
+      'camera denied'
+    );
+  });
+
+  test('buildKeystoneExtraSigners adds payment paths and skips unused stake', () => {
+    const paymentKeyHash = 'aa'.repeat(28);
+    const stakeKeyHash = 'bb'.repeat(28);
+    const account = {
+      paymentAddr: 'addr_test1abc',
+      paymentKeyHash,
+      stakeKeyHash,
+    };
+    const hw = { id: 'deadbeef', account: 3 };
+    const tx = {
+      body: () => ({
+        required_signers: () => null,
+        certs: () => null,
+        withdrawals: () => null,
+      }),
+    };
+    expect(
+      buildKeystoneExtraSigners(
+        tx,
+        account,
+        hw,
+        [paymentKeyHash, stakeKeyHash],
+        {}
+      )
+    ).toEqual([
+      {
+        keyHash: paymentKeyHash,
+        xfp: 'deadbeef',
+        keyPath: "m/1852'/1815'/3'/0/0",
+      },
+    ]);
+  });
+
+  test('buildKeystoneExtraSigners includes stake when the tx has certs', () => {
+    const paymentKeyHash = 'aa'.repeat(28);
+    const stakeKeyHash = 'bb'.repeat(28);
+    const account = {
+      paymentAddr: 'addr_test1abc',
+      paymentKeyHash,
+      stakeKeyHash,
+    };
+    const hw = { id: 'deadbeef', account: 0 };
+    const tx = {
+      body: () => ({
+        required_signers: () => null,
+        certs: () => ({ len: () => 1 }),
+        withdrawals: () => null,
+      }),
+    };
+    const extra = buildKeystoneExtraSigners(
+      tx,
+      account,
+      hw,
+      [paymentKeyHash, stakeKeyHash],
+      {}
+    );
+    expect(extra.map((s) => s.keyPath)).toEqual([
+      "m/1852'/1815'/0'/0/0",
+      "m/1852'/1815'/0'/2/0",
+    ]);
   });
 });

@@ -28,9 +28,12 @@ import Loader from '../../../api/loader';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
 import { useStoreActions } from 'easy-peasy';
 import {
+  assertKeystoneWitnessesCover,
   buildKeystoneCardanoSignRequest,
+  formatKeystoneSubmitError,
   KEYSTONE_SIGN_ANIMATED_QR_OPTIONS,
   parseKeystoneCardanoTxSignature,
+  spentPaymentKeyHashes,
   summarizeUnsignedPaymentTx,
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
@@ -118,41 +121,38 @@ const App = () => {
   }, []);
 
   const finalizeWitness = async (witnessHex) => {
-    try {
-      await Loader.load();
-      const txHex = pendingTxHexRef.current;
-      if (!txHex) {
-        throw new Error('Sign session missing. Restart from the wallet.');
-      }
-      const rawTx = Loader.Cardano.Transaction.from_bytes(
-        Buffer.from(txHex, 'hex')
-      );
-      const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
-        Buffer.from(witnessHex, 'hex')
-      );
-      const signed = await assembleSignedTransaction(rawTx, witnessSet);
-      await submitTx(Buffer.from(signed.to_bytes(), 'hex').toString('hex'));
-      const params = new URLSearchParams(window.location.search);
-      const signId = params.get('signId');
-      if (signId) await clearKeystoneSignPayload(signId);
-      toast({
-        title: 'Transaction submitted',
-        status: 'success',
-        duration: 3000,
-      });
-    } catch (e) {
-      toast({
-        title: 'Transaction failed',
-        description: e.message,
-        status: 'error',
-        duration: 5000,
-      });
-      throw e;
-    } finally {
-      resetSend();
-      setRoute('/wallet');
-      setTimeout(() => closeCurrentTab(), 2500);
+    await Loader.load();
+    const txHex = pendingTxHexRef.current;
+    if (!txHex) {
+      throw new Error('Sign session missing. Restart from the wallet.');
     }
+    const rawTx = Loader.Cardano.Transaction.from_bytes(
+      Buffer.from(txHex, 'hex')
+    );
+    const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
+      Buffer.from(witnessHex, 'hex')
+    );
+    const account = await getCurrentAccount();
+    const utxos = await getUtxos();
+    assertKeystoneWitnessesCover(
+      Loader.Cardano,
+      rawTx,
+      witnessSet,
+      spentPaymentKeyHashes(Loader.Cardano, rawTx, account, utxos)
+    );
+    const signed = await assembleSignedTransaction(rawTx, witnessSet);
+    await submitTx(Buffer.from(signed.to_bytes()).toString('hex'));
+    const params = new URLSearchParams(window.location.search);
+    const signId = params.get('signId');
+    if (signId) await clearKeystoneSignPayload(signId);
+    toast({
+      title: 'Transaction submitted',
+      status: 'success',
+      duration: 3000,
+    });
+    resetSend();
+    setRoute('/wallet');
+    setTimeout(() => closeCurrentTab(), 2500);
   };
 
   const onSignatureScan = async ({ type, cbor }) => {
@@ -164,7 +164,8 @@ const App = () => {
       setPhase(Phase.done);
       await finalizeWitness(wh);
     } catch (e) {
-      setError(e.message || 'Invalid signature QR');
+      setError(formatKeystoneSubmitError(e) || 'Invalid signature QR');
+      setPhase(Phase.done);
     }
   };
 

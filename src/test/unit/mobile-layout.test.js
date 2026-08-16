@@ -82,6 +82,10 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(walletSrc).toMatch(/WALLET_HEADER_LOGO_BG_SIZE\s*=\s*'138%'/);
     expect(walletSrc).toContain('backgroundImage={`url(${Logo})`}');
     expect(walletSrc).toContain('lucem-wallet-header');
+    expect(walletSrc).toMatch(
+      /calc\(0\.75rem \+ env\(safe-area-inset-top, 0px\)\)/
+    );
+    expect(walletSrc).not.toContain('lucem-wallet-network-row');
   });
 
   test('createWallet.jsx should use scroll region + viewport-capped modal card', () => {

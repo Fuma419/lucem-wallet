@@ -1,4 +1,7 @@
-const { isSameAccountIndex } = require('../../../ui/app/utils/accountIndex');
+const {
+  isSameAccountIndex,
+  otherLoadedAccounts,
+} = require('../../../ui/app/utils/accountIndex');
 
 describe('isSameAccountIndex', () => {
   test('matches native indexes when storage holds a string key', () => {
@@ -28,5 +31,31 @@ describe('isSameAccountIndex', () => {
     expect(isSameAccountIndex(null, 0)).toBe(false);
     expect(isSameAccountIndex(0, undefined)).toBe(false);
     expect(isSameAccountIndex(null, null)).toBe(false);
+  });
+});
+
+describe('otherLoadedAccounts', () => {
+  const accounts = {
+    0: { index: 0, name: 'Spender', paymentAddr: 'addr_a' },
+    1: { index: 1, name: 'Friend', paymentAddr: 'addr_b' },
+    'keystone-ab-0-vstandard': {
+      index: 'keystone-ab-0-vstandard',
+      name: 'Keystone 0',
+      paymentAddr: 'addr_k',
+    },
+  };
+
+  test('omits the sending account and empty rows', () => {
+    expect(otherLoadedAccounts(accounts, 0).map((a) => a.name)).toEqual([
+      'Friend',
+      'Keystone 0',
+    ]);
+    expect(otherLoadedAccounts(accounts, '1')).toHaveLength(2);
+    expect(otherLoadedAccounts({ 0: { index: 0 } }, 0)).toEqual([]);
+  });
+
+  test('returns an empty list for missing or array-shaped storage', () => {
+    expect(otherLoadedAccounts(null, 0)).toEqual([]);
+    expect(otherLoadedAccounts([], 0)).toEqual([]);
   });
 });

@@ -55,7 +55,20 @@ jest.mock('../../../api/extension', () => ({
     Math.floor(Number(amount) * 10 ** decimals).toString(),
   createTab: jest.fn(),
   openKeystoneSignTxTab: jest.fn(),
-  getAccounts: jest.fn().mockResolvedValue([]),
+  getAccounts: jest.fn().mockResolvedValue({
+    0: {
+      index: 0,
+      name: 'Account 0',
+      paymentAddr: 'addr_test1xyz',
+      avatar: 'a',
+    },
+    1: {
+      index: 1,
+      name: 'Savings',
+      paymentAddr: 'addr_test1abc',
+      avatar: 'b',
+    },
+  }),
   getAdaHandle: jest.fn().mockResolvedValue(null),
   getAsset: jest.fn().mockResolvedValue(null),
   getCurrentAccount: jest.fn(),
@@ -171,6 +184,9 @@ describe('Send page — behavioral render', () => {
     ).toMatch(/Preprod/i);
     expect(
       container.querySelector('[data-testid="send-recipient-input"]')
+    ).toBeTruthy();
+    expect(
+      container.querySelector('[data-testid="send-recipient-accounts"]')
     ).toBeTruthy();
     expect(
       container.querySelector('[data-testid="send-ada-amount"]')

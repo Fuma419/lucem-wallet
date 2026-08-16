@@ -65,11 +65,14 @@ describe('Send UI refresh — structural contracts', () => {
     expect(sendSrc).toContain('Estimating fee…');
   });
 
-  test('recipient has paste, clear, and $handle resolution', () => {
+  test('recipient has paste, clear, $handle resolution, and other-account picker', () => {
     expect(sendSrc).toContain('data-testid="send-recipient-paste"');
     expect(sendSrc).toContain('data-testid="send-recipient-clear"');
     expect(sendSrc).toContain('data-testid="send-handle-resolved"');
     expect(sendSrc).toContain('clipboard.readText');
+    expect(sendSrc).toContain('data-testid="send-recipient-accounts"');
+    expect(sendSrc).toContain('otherLoadedAccounts');
+    expect(sendSrc).toContain('Sending to {sendingToAccount.name');
   });
 
   test('Enter submits when the tx is ready; confirm is a labeled breakdown', () => {

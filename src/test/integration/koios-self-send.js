@@ -563,19 +563,18 @@ async function buildSignSubmitAccountTransfer(opts) {
 
     const utxos = utxoJson.map((u) => utxoToCsl(u, bech32));
 
-    const totalInputLovelace = utxoJson.reduce((sum, u) => {
+    const utxoLovelace = utxoJson.map((u) => {
       const lovelace = (u.amount || []).find((a) => a.unit === 'lovelace');
-      return sum + BigInt(lovelace?.quantity || '0');
-    }, 0n);
+      return BigInt(lovelace?.quantity || '0');
+    });
     const requestedSend = BigInt(String(sendLovelace));
-    // Leave headroom for the fee plus a valid (min-ADA) change output so a
-    // low-balance test wallet still builds; real balances send the full amount.
-    const maxSafeSend =
-      totalInputLovelace > 2000000n ? totalInputLovelace - 2000000n : 0n;
-    if (maxSafeSend <= 0n) {
+    // Coin selection often spends one UTxO. Reserve fee + min-ADA change
+    // against that largest UTxO (not the wallet total) so leftover change
+    // cannot fall under ~0.97 ADA — that dust failed Preprod CI.
+    const effectiveSend = clampSendToLargestUtxo(utxoLovelace, requestedSend);
+    if (effectiveSend <= 0n) {
       throw new Error(`Insufficient ADA balance at ${bech32} to build transfer transaction.`);
     }
-    const effectiveSend = requestedSend > maxSafeSend ? maxSafeSend : requestedSend;
 
     // Build with the REAL wallet builder (production coin selection / change /
     // fee alignment / CIP-21 canonicalization), then sign as the app does.
@@ -706,6 +705,28 @@ async function buildSignSubmitSelfTransfer(opts) {
   });
 }
 
+/**
+ * Lovelace to send so a single selected UTxO still covers fee + min-ADA change.
+ * @param {bigint[]} utxoLovelaceAmounts
+ * @param {string|number|bigint} requestedSend
+ * @param {bigint} [headroom]
+ * @returns {bigint}
+ */
+function clampSendToLargestUtxo(
+  utxoLovelaceAmounts,
+  requestedSend,
+  headroom = 1_500_000n
+) {
+  const largest = (utxoLovelaceAmounts || []).reduce(
+    (max, n) => (n > max ? n : max),
+    0n
+  );
+  const maxSafe = largest > headroom ? largest - headroom : 0n;
+  if (maxSafe <= 0n) return 0n;
+  const req = BigInt(String(requestedSend));
+  return req > maxSafe ? maxSafe : req;
+}
+
 /** Total spendable lovelace for a bech32 address from the active provider. */
 async function accountLovelace(providerType, baseUrl, bech32, apiKey) {
   const utxoJson =
@@ -795,6 +816,7 @@ async function snapshotMainnetHistoryForMnemonic(mnemonic, apiKey) {
 module.exports = {
   PROVIDER,
   assertTestnetOnly,
+  clampSendToLargestUtxo,
   buildSignSubmitAccountTransfer,
   buildSignSubmitSelfTransfer,
   buildSignSubmitRoundtrip,

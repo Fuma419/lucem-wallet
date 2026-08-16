@@ -32,6 +32,7 @@ jest.mock('../../api/tx/csl-unsigned-tx', () => {
 const { buildUnsignedSimpleTx } = require('../../api/tx/csl-unsigned-tx');
 const {
   buildSignSubmitAccountTransfer,
+  clampSendToLargestUtxo,
   deriveAccountAddress,
   PROVIDER,
 } = require('../integration/koios-self-send');
@@ -54,6 +55,23 @@ const EPOCH_PARAMS = {
   collateral_percent: '150',
   max_collateral_inputs: '3',
 };
+
+describe('clampSendToLargestUtxo', () => {
+  test('keeps a 5 tADA send when the largest UTxO has room for change', () => {
+    expect(clampSendToLargestUtxo([10_000_000n], '5000000')).toBe(5_000_000n);
+  });
+
+  test('shrinks the send so a 5.83 tADA UTxO is not left as dust change', () => {
+    // 5_831_437 - 5_000_000 = 831_437 < min UTxO 969_750 (the Preprod CI fail).
+    const send = clampSendToLargestUtxo([5_831_437n], '5000000');
+    expect(send).toBe(5_831_437n - 1_500_000n);
+    expect(5_831_437n - send).toBeGreaterThanOrEqual(969_750n);
+  });
+
+  test('returns 0 when no UTxO can fund fee plus min change', () => {
+    expect(clampSendToLargestUtxo([1_000_000n], '5000000')).toBe(0n);
+  });
+});
 
 describe('live send integration exercises the production wallet builder', () => {
   const realFetch = global.fetch;

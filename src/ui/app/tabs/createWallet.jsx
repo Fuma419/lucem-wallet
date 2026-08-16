@@ -47,6 +47,20 @@ const SEED_GRID_STACK_PROPS = {
 const SEED_COL_W = { base: '124px', sm: '132px', md: '140px' };
 const SEED_INPUT_W = { base: '92px', sm: '100px', md: '110px' };
 
+/** Pins Next/Cancel to the visible card while the 24-word grid scrolls. */
+const SetupFlowActions = ({ children, ...rest }) => (
+  <Stack
+    className="lucem-setup-flow-actions"
+    alignItems="center"
+    direction="column"
+    spacing={3}
+    w="100%"
+    {...rest}
+  >
+    {children}
+  </Stack>
+);
+
 /**
  * Local copies of mnemonic helpers — avoids importing the extension barrel
  * (and Cardano WASM) until the user submits "Create". `vault.js` is a leaf
@@ -94,10 +108,17 @@ const CreateWalletShell = ({ children }) => (
     minW="100%"
     maxW="100vw"
     minH="100vh"
-    sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
+    h="100vh"
+    maxH="100vh"
+    sx={{
+      '@supports (height: 100dvh)': {
+        minHeight: '100dvh',
+        height: '100dvh',
+        maxHeight: '100dvh',
+      },
+    }}
     mx="auto"
-    overflowX="hidden"
-    overflowY="auto"
+    overflow="hidden"
   >
     <Theme>{children}</Theme>
   </Box>
@@ -174,7 +195,17 @@ const App = () => {
       width="100%"
       minW="100%"
       minH="100vh"
+      h="100vh"
+      maxH="100vh"
+      overflow="hidden"
       position="relative"
+      sx={{
+        '@supports (height: 100dvh)': {
+          minHeight: '100dvh',
+          height: '100dvh',
+          maxHeight: '100dvh',
+        },
+      }}
       opacity={0.9}
       backgroundImage={`url(${backgroundImage})`}
       backgroundSize="cover"
@@ -330,14 +361,13 @@ const GenerateSeed = ({ colorTheme }) => {
         ))}
       </Stack>
       <Box height={3} />
-      <Stack alignItems="center" direction="column">
+      <SetupFlowActions>
         <Stack direction="row" width="64" spacing="6">
           <Checkbox onChange={(e) => setChecked(e.target.checked)} size="lg" colorScheme={colorTheme} />
           <Text className="walletTitle" wordBreak="break-word" fontSize="sm">
             I've stored the seed phrase in a secure place.
           </Text>
         </Stack>
-        <Box height="4" />
         <Button
           type="button"
           className="button new-wallet"
@@ -351,7 +381,7 @@ const GenerateSeed = ({ colorTheme }) => {
           Next
         </Button>
         <SetupCancelButton onClick={() => leaveSetupFlow()} />
-      </Stack>
+      </SetupFlowActions>
     </Box>
   );
 };
@@ -474,7 +504,7 @@ const VerifySeed = ({ colorTheme }) => {
         ))}
       </Stack>
       <Spacer height="6" />
-      <Stack alignItems="center" direction="column" spacing={3} w="100%">
+      <SetupFlowActions>
         <Stack alignItems="center" justifyContent="center" direction="row">
           <Button
             type="button"
@@ -505,7 +535,7 @@ const VerifySeed = ({ colorTheme }) => {
           </Button>
         </Stack>
         <SetupCancelButton onClick={() => leaveSetupFlow()} />
-      </Stack>
+      </SetupFlowActions>
     </Box>
   );
 };
@@ -670,7 +700,7 @@ const ImportSeed = ({ colorTheme }) => {
 
       <Spacer height="2" />
 
-      <Stack alignItems="center" direction="column" spacing={3} w="100%">
+      <SetupFlowActions>
         <Button
           type="button"
           isDisabled={!allValid}
@@ -690,7 +720,7 @@ const ImportSeed = ({ colorTheme }) => {
           Next
         </Button>
         <SetupCancelButton onClick={() => leaveSetupFlow()} />
-      </Stack>
+      </SetupFlowActions>
     </Box>
   );
 };

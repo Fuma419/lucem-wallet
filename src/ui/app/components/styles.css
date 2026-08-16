@@ -96,19 +96,72 @@ html {
   flex: 1 1 auto;
   min-height: 0;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: 5.5rem;
 }
 
-/* Cap modal height to viewport so footers (Next, etc.) stay reachable; inner area scrolls. */
+/* Definite height (not only max-height) so Safari gives the inner scroller a
+   computed box. max-height-only flex items clip 24-word restore/create grids. */
 .create-wallet-modal.lucem-modal-card {
-  max-height: min(58rem, calc(100dvh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom)));
+  height: min(
+    58rem,
+    calc(100dvh - 1.25rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+  );
+  max-height: min(
+    58rem,
+    calc(100dvh - 1.25rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+  );
+}
+
+@media (min-width: 48em) {
+  .create-wallet-modal.lucem-modal-card {
+    height: min(
+      58rem,
+      calc(100dvh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+    );
+    max-height: min(
+      58rem,
+      calc(100dvh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+    );
+  }
 }
 
 @supports not (height: 100dvh) {
   .create-wallet-modal.lucem-modal-card {
-    max-height: min(58rem, calc(100vh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom)));
+    height: min(
+      58rem,
+      calc(100vh - 1.25rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+    );
+    max-height: min(
+      58rem,
+      calc(100vh - 1.25rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+    );
   }
+
+  @media (min-width: 48em) {
+    .create-wallet-modal.lucem-modal-card {
+      height: min(
+        58rem,
+        calc(100vh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+      );
+      max-height: min(
+        58rem,
+        calc(100vh - 4.5rem - var(--lucem-safe-top) - var(--lucem-safe-bottom))
+      );
+    }
+  }
+}
+
+.lucem-setup-flow-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.25rem;
+  background: rgba(0, 0, 0, 0.92);
 }
 
 /* Main wallet + tabs: readable line length on very wide PWA / desktop. */

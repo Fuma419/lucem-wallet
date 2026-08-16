@@ -127,8 +127,8 @@ export const HW = {
 export const POPUP_WINDOW = {
   top: 50,
   left: 100,
-  // 800 is 2× the historic Nami 400px toolbar popup and Chromium's usual max.
-  width: 800,
+  // 533 is 2/3 of the previous 800px toolbar popup (one-third narrower).
+  width: 533,
   height: 600,
 };
 

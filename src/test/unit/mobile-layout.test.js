@@ -396,6 +396,15 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(assetPopoverSrc).toMatch(/maxWidth=\{330\}/);
     expect(assetPopoverSrc).not.toMatch(/\bwidth=\{330\}/);
   });
+
+  test('collectiblesViewer shows assets in two columns', () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/collectiblesViewer.jsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/columns=\{2\}/);
+    expect(src).not.toMatch(/columns=\{3\}/);
+  });
 });
 
 describe('mobile layout - iOS PWA top chrome', () => {

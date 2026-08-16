@@ -256,7 +256,7 @@ const AssetsGrid = React.forwardRef(({ assets }, ref) => {
   return (
     <Box width="full" px={1} pb={6}>
       <SimpleGrid
-        columns={3}
+        columns={2}
         spacing={2}
         width="full"
         // Fluid cells: each tile fills its column and the grid grows

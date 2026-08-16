@@ -142,6 +142,8 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toMatch(/keystone-profile-ledger/);
     expect(hwSrc).toMatch(/keystone-profile-native/);
     expect(hwSrc).toMatch(/KeystoneDerivationPicker/);
+    expect(hwSrc).toMatch(/Lucem follows the device/);
+    expect(hwSrc).not.toMatch(/device ⋮ menu must match/);
   });
 
   test('Keystone e2e step-1 shot picks an account type before Continue', () => {

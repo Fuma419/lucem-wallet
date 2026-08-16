@@ -77,13 +77,19 @@ describe('keystone-cardano', () => {
     expect(inferKeystoneDerivationProfileOrNull('', 'Cardano')).toBe(null);
   });
 
-  test('resolveKeystoneConnectProfile does not rewrite Ledger metadata as Native', () => {
+  test('resolveKeystoneConnectProfile follows the device and ignores the Lucem picker', () => {
     expect(
       resolveKeystoneConnectProfile(
         KEYSTONE_DERIVATION.ledger,
         KEYSTONE_DERIVATION.standard
       )
     ).toBe(KEYSTONE_DERIVATION.ledger);
+    expect(
+      resolveKeystoneConnectProfile(
+        KEYSTONE_DERIVATION.standard,
+        KEYSTONE_DERIVATION.ledger
+      )
+    ).toBe(KEYSTONE_DERIVATION.standard);
     expect(
       resolveKeystoneConnectProfile(null, KEYSTONE_DERIVATION.ledger)
     ).toBe(KEYSTONE_DERIVATION.ledger);
@@ -93,6 +99,20 @@ describe('keystone-cardano', () => {
     expect(resolveKeystoneConnectProfile(null, null)).toBe(
       KEYSTONE_DERIVATION.standard
     );
+  });
+
+  test('parseKeystoneCardanoConnectUr uses the picker only as an unlabeled-QR fallback', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../api/keystone-cardano.js'),
+      'utf8'
+    );
+    expect(src).toContain(
+      'resolveKeystoneConnectProfile(r.inferred, forcedProfile)'
+    );
+    expect(src).not.toMatch(/You picked .* in Lucem Advanced/);
+    expect(src).not.toMatch(/export the matching address type on Keystone/);
   });
 
   test('formatKeystoneCardanoAccountLabel', () => {

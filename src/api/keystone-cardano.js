@@ -38,6 +38,7 @@ const CIP1852_ACCOUNT_STEP_RE =
 
 /** @typedef {'standard' | 'ledger'} KeystoneDerivationProfile */
 
+/** @type {{ readonly standard: 'standard', readonly ledger: 'ledger' }} */
 export const KEYSTONE_DERIVATION = {
   standard: 'standard',
   ledger: 'ledger',
@@ -144,9 +145,9 @@ export function inferKeystoneDerivationProfile(note, name) {
 }
 
 /**
- * Stored profile for one connect-UR row. Device metadata wins. When the UR
- * has no hint, use the Lucem/device choice so a Ledger export is not relabeled
- * Cardano Native (the CIP-1852 path string is the same for both).
+ * Stored profile for one connect-UR row. Device metadata always wins. The
+ * Lucem Native/Ledger picker is only a fallback when the UR has no hint
+ * (same CIP-1852 path; only the xpub differs).
  * @param {KeystoneDerivationProfile | null | undefined} inferred
  * @param {KeystoneDerivationProfile | null | undefined} forceExportProfile
  * @returns {KeystoneDerivationProfile}
@@ -366,7 +367,7 @@ export function urFromScan({ type, cbor }) {
 /**
  * Parse Keystone sync QR (crypto-multi-accounts or crypto-hdkey).
  * @param {{ forceExportProfile?: KeystoneDerivationProfile }} [options]
- *   When set, overrides UR metadata (use when Auto-detect is wrong for your firmware).
+ *   Fallback when the UR has no Native/Ledger hint. Labeled device rows win.
  * @returns {{ masterFingerprint: string, keys: Array<{ account: number, publicKey: string, name: string, cip1852Path: string, profile: KeystoneDerivationProfile, rowKey: string }> }}
  */
 export function parseKeystoneCardanoConnectUr(scan, options = {}) {
@@ -403,6 +404,10 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
     throw new Error('Invalid Keystone QR: missing master fingerprint.');
   }
 
+  /**
+   * @param {unknown} fp
+   * @returns {KeystoneDerivationProfile | null}
+   */
   const coerceKeystoneForceExportProfile = (fp) => {
     if (fp === KEYSTONE_DERIVATION.ledger || fp === 'ledger') {
       return KEYSTONE_DERIVATION.ledger;
@@ -461,65 +466,17 @@ export function parseKeystoneCardanoConnectUr(scan, options = {}) {
   const adaAccounts = [];
   for (const account of accountOrder) {
     const rows = byAccount.get(account);
-    if (!forcedProfile) {
-      for (const r of rows) {
-        const profile = resolveKeystoneConnectProfile(r.inferred, null);
-        adaAccounts.push({
-          account,
-          publicKey: r.publicKey,
-          cip1852Path: cip1852AccountPath(account),
-          profile,
-          rowKey: `${account}-${profile}`,
-          name: formatKeystoneCardanoAccountLabel(account, profile),
-        });
-      }
-      continue;
-    }
-
-    const matches = rows.filter((r) => r.inferred === forcedProfile);
-    if (matches.length >= 1) {
+    for (const r of rows) {
+      const profile = resolveKeystoneConnectProfile(r.inferred, forcedProfile);
       adaAccounts.push({
         account,
-        publicKey: matches[0].publicKey,
+        publicKey: r.publicKey,
         cip1852Path: cip1852AccountPath(account),
-        profile: forcedProfile,
-        rowKey: `${account}-${forcedProfile}`,
-        name: formatKeystoneCardanoAccountLabel(account, forcedProfile),
+        profile,
+        rowKey: `${account}-${profile}`,
+        name: formatKeystoneCardanoAccountLabel(account, profile),
       });
-      continue;
     }
-
-    /**
-     * Keystone often omits note/name on ADA sync URs. If there is exactly one row
-     * and no derivation hint, trust the Advanced option the user already matched on
-     * the device (Ledger vs standard).
-     */
-    const onlyAmbiguousSingleRow =
-      rows.length === 1 && rows[0].inferred == null;
-    if (
-      onlyAmbiguousSingleRow &&
-      (forcedProfile === KEYSTONE_DERIVATION.standard ||
-        forcedProfile === KEYSTONE_DERIVATION.ledger)
-    ) {
-      adaAccounts.push({
-        account,
-        publicKey: rows[0].publicKey,
-        cip1852Path: cip1852AccountPath(account),
-        profile: forcedProfile,
-        rowKey: `${account}-${forcedProfile}`,
-        name: formatKeystoneCardanoAccountLabel(account, forcedProfile),
-      });
-      continue;
-    }
-
-    const wantLedger = forcedProfile === KEYSTONE_DERIVATION.ledger;
-    const got = rows
-      .map((r) => r.inferred ?? 'unspecified')
-      .filter((v, i, a) => a.indexOf(v) === i);
-    throw new Error(
-      `This Keystone QR does not include a ${wantLedger ? 'Ledger-compatible' : 'Cardano standard'} key for account ${account} (metadata says: ${got.join(', ')}). ` +
-        `You picked ${wantLedger ? 'Ledger-compatible' : 'Cardano standard'} in Lucem Advanced — export the matching address type on Keystone, or switch the derivation in Lucem to what the device actually exported.`
-    );
   }
 
   /** Preserve sync QR key order (device / firmware order), not sorted by account index. */

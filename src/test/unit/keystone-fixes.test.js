@@ -141,7 +141,9 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(modalSrc).not.toMatch(
       /parsed\.device === HW\.keystone[\s\S]{0,120}onHwKeystone\(parsed\)/
     );
-    expect(modalSrc).toMatch(/change back to\s+you is a separate output/);
+    expect(modalSrc).toMatch(/Keystone uses <b>QR only<\/b>/);
+    expect(modalSrc).toMatch(/Tap Confirm to open the\s+signing tab/);
+    expect(modalSrc).not.toMatch(/change back to\s+you is a separate output/);
     const keystoneTxSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/tabs/keystoneTx.jsx'),
       'utf8'

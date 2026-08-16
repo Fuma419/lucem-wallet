@@ -80,6 +80,11 @@ describe('Send UI refresh — structural contracts', () => {
     expect(sendSrc).toContain('data-testid="send-confirm-breakdown"');
     expect(sendSrc).toContain('You send');
     expect(sendSrc).toContain('Total leaving wallet');
+    expect(sendSrc).toContain('data-testid="send-confirm-to-address"');
+    expect(sendSrc).toContain('shortenAddress(address.result)');
+    expect(sendSrc).not.toMatch(
+      /send-confirm-breakdown[\s\S]{0,800}<MiddleEllipsis>/
+    );
   });
 
   test('Keystone send opens the review modal instead of jumping to the QR', () => {

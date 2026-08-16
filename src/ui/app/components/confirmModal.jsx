@@ -311,26 +311,25 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                       : 'gray'
                 }
                 rounded="xl"
-                py={2}
-                width="70%"
+                py={3}
+                px={3}
+                width="full"
                 color="white"
               >
                 <Icon
                   as={hw.device === HW.keystone ? MdQrCode2 : MdUsb}
                   boxSize={5}
                   mr={2}
+                  flexShrink={0}
                 />
-                <Box fontSize="sm" textAlign="center" px={1}>
+                <Box fontSize="sm" textAlign="left" px={1}>
                   {hw.device === HW.keystone ? (
                     !waitReady ? (
                       <>Opening Keystone signing (QR)…</>
                     ) : (
                       <>
-                        Keystone uses <b>QR only</b> (no USB). Tap Confirm to open
-                        the signing tab. The device lists each spent UTxO as
-                        Input and every destination as Output — change back to
-                        you is a separate output, so those two sides can share
-                        your address.
+                        Keystone uses <b>QR only</b>. Tap Confirm to open the
+                        signing tab.
                       </>
                     )
                   ) : !waitReady ? (

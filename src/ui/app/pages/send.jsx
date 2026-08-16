@@ -109,6 +109,13 @@ const NETWORK_LABEL = {
 
 const stripAdaInput = (raw) => String(raw || '').replace(/[,\s]/g, '');
 
+/** One-line bech32 for confirm / review — MiddleEllipsis wraps on narrow iOS. */
+const shortenAddress = (addr) => {
+  if (!addr || typeof addr !== 'string') return '';
+  if (addr.length <= 22) return addr;
+  return `${addr.slice(0, 10)}…${addr.slice(-8)}`;
+};
+
 /** Native tokens default to 0 decimals. Missing metadata must not inherit ADA's 6. */
 const tokenDecimals = (asset) => {
   if (!asset || asset.decimals == null || asset.decimals === '') return 0;
@@ -1414,18 +1421,37 @@ const Send = () => {
                 {confirmAssets.length > 1 ? 'tokens' : 'token'}
               </Button>
             )}
-            <Flex justify="space-between" mb={2} fontSize="sm" align="center">
-              <Text color={mutedFg}>To</Text>
+            <Flex
+              justify="space-between"
+              mb={2}
+              fontSize="sm"
+              align="flex-start"
+              gap={3}
+            >
+              <Text color={mutedFg} flexShrink={0}>
+                To
+              </Text>
               <Copy label="Copied address" copy={address.result}>
                 <Box
-                  maxW="180px"
-                  fontFamily="mono"
-                  fontSize="xs"
+                  textAlign="right"
+                  minW={0}
+                  maxW="70%"
                   cursor="pointer"
+                  data-testid="send-confirm-to"
                 >
-                  <MiddleEllipsis>
-                    <span>{address.result}</span>
-                  </MiddleEllipsis>
+                  {sendingToAccount ? (
+                    <Text fontWeight="bold" fontSize="sm" noOfLines={1}>
+                      {sendingToAccount.name || 'Account'}
+                    </Text>
+                  ) : null}
+                  <Text
+                    fontFamily="mono"
+                    fontSize="xs"
+                    whiteSpace="nowrap"
+                    data-testid="send-confirm-to-address"
+                  >
+                    {shortenAddress(address.result)}
+                  </Text>
                 </Box>
               </Copy>
             </Flex>

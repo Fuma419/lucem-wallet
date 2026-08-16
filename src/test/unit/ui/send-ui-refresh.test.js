@@ -73,6 +73,13 @@ describe('Send UI refresh — structural contracts', () => {
     expect(sendSrc).toContain('data-testid="send-recipient-accounts"');
     expect(sendSrc).toContain('otherLoadedAccounts');
     expect(sendSrc).toContain('Sending to {sendingToAccount.name');
+    expect(sendSrc).toContain('shortenAddress(row.paymentAddr)');
+    expect(sendSrc).not.toMatch(
+      /send-recipient-accounts[\s\S]{0,900}<MiddleEllipsis>/
+    );
+    expect(sendSrc).not.toMatch(
+      /data-testid="send-recipient-accounts"[\s\S]{0,200}MenuButton/
+    );
   });
 
   test('Enter submits when the tx is ready; confirm is a labeled breakdown', () => {

@@ -113,6 +113,8 @@ describe('import abandon navigation', () => {
     expect(extSrc).toContain('openMainRoute:');
     expect(webSrc).toContain("'/accounts'");
     expect(extSrc).toContain('?next=');
+    expect(webSrc).toMatch(/location\.origin\}\/\$\{tab\}\.html/);
+    expect(webSrc).not.toMatch(/location\.href = tab \+ '\.html'/);
   });
 
   test('create/import tabs expose Cancel via leaveSetupFlow', () => {

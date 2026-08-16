@@ -284,8 +284,12 @@ const Send = () => {
       return;
     }
     const acc = account.current;
-    if (!acc?.paymentKeyHash) return;
     try {
+      if (!acc?.paymentKeyHash) {
+        throw new Error(
+          'This Keystone account is missing a payment key. Reconnect the device and try again.'
+        );
+      }
       const paymentHashes = await paymentKeyHashesForSigning(acc);
       await openKeystoneSignTxTab({
         txHex: tx,
@@ -304,7 +308,8 @@ const Send = () => {
       const errMsg = e?.message || String(e);
       toast({
         status: 'error',
-        duration: 6000,
+        duration: 20000,
+        isClosable: true,
         render: ({ onClose }) => (
           <Alert
             status="error"
@@ -329,6 +334,7 @@ const Send = () => {
           </Alert>
         ),
       });
+      throw e;
     }
   }, [tx, toast]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -1362,7 +1368,6 @@ const Send = () => {
         ref={ref}
         onHwKeystone={async () => {
           await startKeystoneQrSign();
-          ref.current?.closeModal();
         }}
         sign={async (password, hw) => {
           await Loader.load();

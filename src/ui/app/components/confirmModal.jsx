@@ -252,7 +252,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
       if (isSubmitError(e)) props.onConfirm(false, e);
       else {
         console.warn(e);
-        setError('An error occured');
+        setError(e?.message || String(e) || 'An error occurred');
       }
     }
     setWaitReady(true);

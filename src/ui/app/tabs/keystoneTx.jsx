@@ -15,6 +15,7 @@ import { URType } from '@keystonehq/keystone-sdk';
 import LogoWhite from '../../../assets/img/bannerBlack.png';
 import backgroundGreenWebp from '../../../assets/img/background-green.webp';
 import {
+  clearKeystoneSignPayload,
   closeCurrentTab,
   getCurrentAccount,
   getUtxos,
@@ -22,6 +23,7 @@ import {
   submitTx,
   takeKeystoneSignPayload,
 } from '../../../api/extension';
+import platform from '../../../platform';
 import Loader from '../../../api/loader';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
 import { useStoreActions } from 'easy-peasy';
@@ -130,6 +132,9 @@ const App = () => {
       );
       const signed = await assembleSignedTransaction(rawTx, witnessSet);
       await submitTx(Buffer.from(signed.to_bytes(), 'hex').toString('hex'));
+      const params = new URLSearchParams(window.location.search);
+      const signId = params.get('signId');
+      if (signId) await clearKeystoneSignPayload(signId);
       toast({
         title: 'Transaction submitted',
         status: 'success',
@@ -377,14 +382,48 @@ const App = () => {
               </>
             )}
             {(phase === Phase.done || error) && (
-              <Text
-                fontSize="sm"
-                color={error ? 'red.200' : 'whiteAlpha.800'}
-                textAlign="center"
+              <Box
+                data-testid="keystone-tx-error"
+                w="full"
+                maxW="420px"
                 mt={4}
+                textAlign="center"
               >
-                {error || 'Done. You can close this tab.'}
-              </Text>
+                <Text
+                  fontSize="sm"
+                  color={error ? 'red.200' : 'whiteAlpha.800'}
+                  whiteSpace="pre-wrap"
+                  wordBreak="break-word"
+                >
+                  {error || 'Done. You can close this tab.'}
+                </Text>
+                {error ? (
+                  <Box mt={3} display="flex" justifyContent="center" gap={2}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      color="whiteAlpha.900"
+                      onClick={() => {
+                        navigator.clipboard.writeText(error);
+                        toast({
+                          title: 'Error copied',
+                          status: 'info',
+                          duration: 1500,
+                        });
+                      }}
+                    >
+                      Copy error
+                    </Button>
+                    <Button
+                      size="sm"
+                      colorScheme="yellow"
+                      onClick={() => platform.navigation.openMainRoute('/send')}
+                    >
+                      Back to Send
+                    </Button>
+                  </Box>
+                ) : null}
+              </Box>
             )}
           </Box>
         </Box>

@@ -260,9 +260,16 @@ repo-release --dry-run patch
 repo-release patch -y
 ```
 
-Canonical process: `~/agent-tooling/AGENTS.md` § Product releases. Android
-`versionName` / `versionCode` in `android/app/build.gradle` are **not**
-auto-bumped (CLI warns).
+Canonical process: `~/agent-tooling/AGENTS.md` § Product releases.
+
+Android `versionName` / `versionCode` (and iOS `CFBundle*` when `ios/` exists)
+are stamped from `package.json` by `npm run mobile:sync-version`
+(`scripts/sync-mobile-version.js`). `repo-release` runs that hook after the
+semver bump. Do not hand-edit gradle versions. `versionCode` is
+`major*10000 + minor*100 + patch` (4.0.5 → 40005).
+
+Mobile store upload (Play AAB / TestFlight) is **not** part of `repo-release`.
+See `MOBILE.md` § Cut a mobile release.
 
 ### Edit discipline
 - One logical change per commit. No unrelated refactors.

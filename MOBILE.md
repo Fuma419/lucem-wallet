@@ -97,10 +97,37 @@ transfers over several frames, so hold steady. Ledger (Bluetooth) and Trezor are
 not available on mobile in v1 — the hardware screen shows guidance to that effect
 on phones.
 
-## Android release
+## Cut a mobile release
 
-1. In `android/app/build.gradle` set `applicationId` (`xyz.lucem.wallet`),
-   `versionCode`, `versionName`.
+App semver is **`package.json` `version`**. Native versions are derived, not
+hand-edited:
+
+| Field | Source |
+| --- | --- |
+| Android `versionName` / iOS `CFBundleShortVersionString` | `package.json` (e.g. `4.0.5`) |
+| Android `versionCode` / iOS `CFBundleVersion` | `major*10000 + minor*100 + patch` (`4.0.5` → `40005`) |
+
+```bash
+# After product work is on main — bumps package.json + native versions, tags vX.Y.Z
+repo-release --dry-run patch
+repo-release patch -y
+
+# Or stamp native files only (idempotent)
+npm run mobile:sync-version
+```
+
+`repo-release` calls `scripts/sync-mobile-version.js` via the
+`lucem-android-sync` hook in agent-tooling. Jenkins `mobile:android:ci` still
+builds a **debug APK** only (`assembleDebug`). Signed Play AAB / TestFlight
+upload is a later step (keystore + store consoles).
+
+Until a store track exists: install the debug APK with
+`npm run mobile:android:install` or take the Jenkins Android CI artifact.
+
+## Android release (Play)
+
+1. Confirm `applicationId` is `xyz.lucem.wallet` and versions were stamped by
+   `mobile:sync-version` (do not edit `versionName` / `versionCode` by hand).
 2. Create an upload keystore (Android Studio > Build > Generate Signed
    Bundle/APK) and keep it safe; opt into Play App Signing on first upload.
 3. Build a release Android App Bundle (`.aab`).

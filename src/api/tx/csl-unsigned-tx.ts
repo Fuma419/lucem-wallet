@@ -779,17 +779,17 @@ export function buildUnsignedSimpleTx({
  * we add each input explicitly and let one balancing pass compute the fee.
  *
  * The recipient doubles as the change address, so `add_change_if_needed` places
- * the full swept value in one output. CSL sizes the fee (including vkey witnesses
- * inferred from each input's address) and enforces min-ADA. If the wallet genuinely
- * cannot cover the fee plus the min-ADA its tokens require, CSL throws and we
- * surface a clear "not enough ADA" error — the real insufficiency case, not the
- * spurious one the old fee-reduction heuristic produced.
+ * the full swept value in one output. Fee is then aligned the same way as a
+ * normal send: dummy vkeys for every hash that will sign (spent inputs plus
+ * enabled payment keys the UI attaches). Without that, CSL under-sizes the fee
+ * and the ledger rejects the signed tx with `FeeTooSmallUTxO`.
  *
  * @param {object} opts
  * @param {*} opts.Cardano
  * @param {object} opts.protocolParameters
  * @param {Array} opts.utxos - CSL TransactionUnspentOutput[] (all get spent)
  * @param {string} opts.recipientAddressBech32 - destination for the whole balance
+ * @param {string[]} [opts.requiredVkeyHashesHex] - hashes that will sign (fee sizing)
  * @param {*} [opts.auxiliaryData]
  */
 export function buildUnsignedSendAllTx({
@@ -797,12 +797,14 @@ export function buildUnsignedSendAllTx({
   protocolParameters,
   utxos,
   recipientAddressBech32,
+  requiredVkeyHashesHex = [],
   auxiliaryData = null,
 }: {
   Cardano: Csl;
   protocolParameters: ProtocolParametersSnapshot;
   utxos: any[];
   recipientAddressBech32: string;
+  requiredVkeyHashesHex?: string[];
   auxiliaryData?: any;
 }) {
   if (!utxos?.length) {
@@ -813,54 +815,110 @@ export function buildUnsignedSendAllTx({
     protocolParameters,
     { preferPureChange: false }
   );
-  const txBuilder = Cardano.TransactionBuilder.new(txConfig);
   const recipientAddress = Cardano.Address.from_bech32(recipientAddressBech32);
   const invalidHereafter = ttlInvalidHereafterBignum(
     Cardano,
     protocolParameters
   );
-
-  // Force every UTxO in — coin selection would pick a subset and strand funds,
-  // which is the exact bug that made "send all" leave money behind.
-  for (const u of utxos) {
-    txBuilder.add_regular_input(
-      u.output().address(),
-      u.input(),
-      u.output().amount()
-    );
-  }
-
-  // TTL / aux before change so size (and fee) account for them.
-  txBuilder.set_ttl_bignum(invalidHereafter);
-  if (auxiliaryData) {
-    txBuilder.set_auxiliary_data(auxiliaryData);
-  }
-
-  // One balancing pass: with the recipient as the change address and no explicit
-  // outputs, the whole balance minus fee (every token included) lands in a single
-  // output. CSL enforces min-ADA and throws on genuine dust.
-  let added;
-  try {
-    added = txBuilder.add_change_if_needed(recipientAddress);
-  } catch (e) {
-    throw new Error(
-      'Not enough ADA to cover the network fee and the minimum required for the selected assets'
-    );
-  }
-  if (!added) {
-    throw new Error(
-      'Send all could not produce an output — the wallet balance is empty'
-    );
-  }
-
-  const txBody = txBuilder.build();
-  const emptyW = Cardano.TransactionWitnessSet.new();
-  const finalTx = Cardano.Transaction.new(
-    txBody,
-    emptyW,
-    auxiliaryData || undefined
+  const linearFee = Cardano.LinearFee.new(
+    Cardano.BigNum.from_str(String(protocolParameters.linearFee.minFeeA)),
+    Cardano.BigNum.from_str(String(protocolParameters.linearFee.minFeeB))
   );
-  return toCanonicalTransactionCip21(Cardano, finalTx);
+  const spentHashes: string[] = [];
+  const seenHashes = new Set(
+    (requiredVkeyHashesHex || []).filter(Boolean)
+  );
+  for (const hash of seenHashes) spentHashes.push(hash);
+  for (const u of utxos) {
+    const hash = paymentKeyHashFromAddress(Cardano, u.output().address());
+    if (hash && !seenHashes.has(hash)) {
+      seenHashes.add(hash);
+      spentHashes.push(hash);
+    }
+  }
+  const dummyHashes = spentHashes.length > 0 ? spentHashes : ['00'];
+
+  let minFeeFloor = null;
+
+  for (let attempt = 0; attempt < FEE_ALIGN_MAX_ATTEMPTS; attempt += 1) {
+    const txBuilder = Cardano.TransactionBuilder.new(txConfig);
+    // Force every UTxO in — coin selection would pick a subset and strand funds.
+    for (const u of utxos) {
+      txBuilder.add_regular_input(
+        u.output().address(),
+        u.input(),
+        u.output().amount()
+      );
+    }
+    txBuilder.set_ttl_bignum(invalidHereafter);
+    if (auxiliaryData) {
+      txBuilder.set_auxiliary_data(auxiliaryData);
+    }
+    if (minFeeFloor != null) {
+      txBuilder.set_min_fee(minFeeFloor);
+    }
+
+    let added;
+    try {
+      added = txBuilder.add_change_if_needed(recipientAddress);
+    } catch (e) {
+      throw new Error(
+        'Not enough ADA to cover the network fee and the minimum required for the selected assets'
+      );
+    }
+    if (!added) {
+      throw new Error(
+        'Send all could not produce an output — the wallet balance is empty'
+      );
+    }
+
+    const txBody = txBuilder.build();
+    const emptyW = Cardano.TransactionWitnessSet.new();
+    const unsigned = Cardano.Transaction.new(
+      txBody,
+      emptyW,
+      auxiliaryData || undefined
+    );
+    const dummyW = dummyWitnessSetForMinFee(Cardano, txBody, dummyHashes);
+    const signedForFee = Cardano.Transaction.new(
+      txBody,
+      dummyW,
+      auxiliaryData || undefined
+    );
+    signedForFee.set_is_valid(unsigned.is_valid());
+    const required = Cardano.min_fee(signedForFee, linearFee);
+    if (txBody.fee().compare(required) < 0) {
+      minFeeFloor = required;
+      continue;
+    }
+
+    const finalTx = Cardano.Transaction.new(
+      txBody,
+      emptyW,
+      auxiliaryData || undefined
+    );
+    finalTx.set_is_valid(unsigned.is_valid());
+    const canonical = toCanonicalTransactionCip21(Cardano, finalTx);
+    const canonDummy = dummyWitnessSetForMinFee(
+      Cardano,
+      canonical.body(),
+      dummyHashes
+    );
+    const canonSigned = Cardano.Transaction.new(
+      canonical.body(),
+      canonDummy,
+      canonical.auxiliary_data() || auxiliaryData || undefined
+    );
+    const canonRequired = Cardano.min_fee(canonSigned, linearFee);
+    if (canonical.body().fee().compare(canonRequired) >= 0) {
+      return canonical;
+    }
+    minFeeFloor = canonRequired;
+  }
+
+  throw new Error(
+    `Could not align send-all fee with ledger minimum after ${FEE_ALIGN_MAX_ATTEMPTS} attempts`
+  );
 }
 
 // Derive the fee and the total lovelace leaving the wallet straight from the

@@ -308,6 +308,12 @@ describe('keystone-cardano', () => {
     ).toMatch(/Native vs Ledger/);
     expect(
       formatKeystoneSubmitError({
+        message:
+          'Transaction submission failed: Koios API error: 400 — FeeTooSmallUTxO Mismatch (RelGTEQ)',
+      })
+    ).toMatch(/fee was too small/);
+    expect(
+      formatKeystoneSubmitError({
         message: 'Koios API error: 400 — {"tag":"TxSubmitFail"}',
       })
     ).toMatch(/network rejected/);

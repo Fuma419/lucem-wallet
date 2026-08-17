@@ -681,6 +681,9 @@ export function formatKeystoneSubmitError(err) {
   if (/InvalidWitnesses|VKeyWitnessesDoesNotVerify/i.test(msg)) {
     return 'Keystone signed a different transaction hash than Lucem submitted. Close this screen and send again.';
   }
+  if (/FeeTooSmallUTxO/i.test(msg)) {
+    return 'The network rejected this transaction because the fee was too small. Try sending again.';
+  }
   if (/Koios API error:\s*400/i.test(msg)) {
     return 'The network rejected this transaction. Use Copy error if you need the technical details.';
   }

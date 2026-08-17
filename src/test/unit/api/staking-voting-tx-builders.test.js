@@ -261,6 +261,14 @@ describe('signAndSubmitHW submit errors', () => {
     expect(submitErrorMessage(wrapped)).toBe('ValueNotConservedUTxO');
   });
 
+  test('wrapSubmitError humanizes FeeTooSmallUTxO', () => {
+    const wrapped = wrapSubmitError(
+      new Error('Koios API error: 400 — FeeTooSmallUTxO Mismatch (RelGTEQ)')
+    );
+    expect(isSubmitError(wrapped)).toBe(true);
+    expect(wrapped.message).toMatch(/fee was too small/);
+  });
+
   test('signAndSubmitHW surfaces the provider submit message', async () => {
     const tx = await delegationTx(
       ACCOUNT,

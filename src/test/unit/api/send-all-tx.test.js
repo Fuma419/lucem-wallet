@@ -232,6 +232,47 @@ describe('Send all — fee/amount summary is read from the built tx', () => {
   });
 });
 
+describe('Send all — fee covers every signing vkey', () => {
+  // Regression: send-all used CSL's one-pass fee (one inferred witness) while
+  // signTx attaches a vkey for every enabled payment hash. The ledger then
+  // rejects with FeeTooSmallUTxO.
+  test('body fee meets min_fee when eight extra payment keys will sign', async () => {
+    const extraHashes = [];
+    for (let i = 0; i < 8; i += 1) {
+      const sk = CSL.PrivateKey.generate_ed25519();
+      extraHashes.push(sk.to_public().hash().to_hex());
+      if (typeof sk.free === 'function') sk.free();
+    }
+    const tx = buildUnsignedSendAllTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [await makeUtxo({ coin: 10_000_000 })],
+      recipientAddressBech32: RECIPIENT_ADDR,
+      requiredVkeyHashesHex: extraHashes,
+    });
+    const linearFee = CSL.LinearFee.new(
+      CSL.BigNum.from_str(PROTOCOL_PARAMS.linearFee.minFeeA),
+      CSL.BigNum.from_str(PROTOCOL_PARAMS.linearFee.minFeeB)
+    );
+    const body = tx.body();
+    const fixed = CSL.FixedTransactionBody.from_bytes(body.to_bytes());
+    const txHash = fixed.tx_hash();
+    const vkeys = CSL.Vkeywitnesses.new();
+    for (let i = 0; i < extraHashes.length; i += 1) {
+      const sk = CSL.PrivateKey.generate_ed25519();
+      vkeys.add(CSL.make_vkey_witness(txHash, sk));
+    }
+    const witnesses = CSL.TransactionWitnessSet.new();
+    witnesses.set_vkeys(vkeys);
+    const signed = CSL.Transaction.new(body, witnesses);
+    const minFee = CSL.min_fee(signed, linearFee);
+    expect(body.fee().compare(minFee)).toBeGreaterThanOrEqual(0);
+    expect(outputLovelaceSum(tx) + BigInt(body.fee().to_str())).toBe(
+      10_000_000n
+    );
+  });
+});
+
 describe('Send all — genuine dust (un-sweepable)', () => {
   // A wallet holding a token but too little ADA to satisfy the token bundle's
   // min-ADA plus fee genuinely cannot be swept. The builder must surface a clear

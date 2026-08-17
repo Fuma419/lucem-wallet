@@ -34,6 +34,24 @@ describe('single version source of truth', () => {
     );
   });
 
+  test('android gradle versions match package.json via versionCode encoding', () => {
+    const {
+      versionCodeFromSemver,
+    } = require('../../../scripts/sync-mobile-version');
+    const gradle = fs.readFileSync(
+      path.join(root, 'android/app/build.gradle'),
+      'utf8'
+    );
+    const expectedCode = versionCodeFromSemver(packageJson.version);
+    expect(versionCodeFromSemver('4.0.5')).toBe(40005);
+    expect(versionCodeFromSemver('10.2.3')).toBe(100203);
+    expect(() => versionCodeFromSemver('4.100.0')).toThrow(/0–99/);
+    expect(gradle).toMatch(
+      new RegExp(`versionName\\s+"${packageJson.version.replace(/\./g, '\\.')}"`)
+    );
+    expect(gradle).toMatch(new RegExp(`versionCode\\s+${expectedCode}\\b`));
+  });
+
   test('runtime version consumers import package.json, not the extension manifest', () => {
     const about = fs.readFileSync(
       path.join(root, 'src/ui/app/components/about.jsx'),

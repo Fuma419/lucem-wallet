@@ -24,9 +24,14 @@ describe('send all safety flow', () => {
 
   test('send all delegates to the dedicated all-inputs builder', () => {
     // Send-all no longer guesses the output with a fee-reduction loop; it calls
-    // the dedicated `sendAllTx` builder, which forces every UTxO in and lets one
-    // fee/change pass settle the remainder (no stranded funds).
+    // the dedicated `sendAllTx` builder, which forces every UTxO in and aligns
+    // the fee for the vkeys that will sign (no stranded funds).
     expect(sendSrc).toContain('const finalTx = await sendAllTx(');
+    const walletSrc = fs.readFileSync(
+      path.join(__dirname, '../../../api/extension/wallet.ts'),
+      'utf8'
+    );
+    expect(walletSrc).toMatch(/requiredVkeyHashesHex:\s*paymentHashes/);
   });
 
   test('send all reads fee/amount from the built tx, not balance state', () => {

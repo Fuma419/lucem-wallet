@@ -206,11 +206,16 @@ export const sendAllTx = async (
       slot: await fetchKoiosTipSlot(koiosRequestEnhanced),
     };
 
+    const paymentHashes = (await paymentKeyHashesForSigning()).filter(
+      (h: unknown): h is string => typeof h === 'string' && h.length > 0
+    );
+
     return buildUnsignedSendAllTx({
       Cardano: Loader.Cardano,
       protocolParameters: params,
       utxos,
       recipientAddressBech32: recipientAddress,
+      requiredVkeyHashesHex: paymentHashes,
       auxiliaryData,
     });
   } catch (e) {
@@ -241,8 +246,12 @@ export const signAndSubmit = async (
   );
   const transaction = await assembleSignedTransaction(tx, witnessSet);
 
-  const txHash = await submitTx(txToHex(transaction));
-  return txHash;
+  try {
+    const txHash = await submitTx(txToHex(transaction));
+    return txHash;
+  } catch (e) {
+    throw wrapSubmitError(e);
+  }
 };
 
 export const signAndSubmitHW = async (
@@ -281,7 +290,7 @@ export const signAndSubmitHW = async (
 
 /** Preserve the provider message while keeping `code: ERROR.submit` for UI checks. */
 export const wrapSubmitError = (error: unknown): SubmitError => {
-  const message =
+  const raw =
     error &&
     error !== ERROR.submit &&
     typeof error === 'object' &&
@@ -289,6 +298,9 @@ export const wrapSubmitError = (error: unknown): SubmitError => {
     typeof (error as { message?: unknown }).message === 'string'
       ? (error as Error).message
       : 'Transaction submission failed';
+  const message = /FeeTooSmallUTxO/i.test(raw)
+    ? 'The network rejected this transaction because the fee was too small. Try sending again.'
+    : raw;
   const wrapped = new Error(message) as SubmitError;
   wrapped.code = ERROR.submit;
   if (error && error !== ERROR.submit) {

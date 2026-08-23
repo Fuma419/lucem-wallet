@@ -11,6 +11,10 @@ const sendSrc = fs.readFileSync(
   path.join(__dirname, '../../../ui/app/pages/send.jsx'),
   'utf8'
 );
+const stylesSrc = fs.readFileSync(
+  path.join(__dirname, '../../../ui/app/components/styles.css'),
+  'utf8'
+);
 const assetBadgeSrc = fs.readFileSync(
   path.join(__dirname, '../../../ui/app/components/assetBadge.jsx'),
   'utf8'
@@ -31,6 +35,18 @@ describe('Send UI refresh — structural contracts', () => {
     expect(sendSrc).not.toMatch(/isMainnet \? 'red\.500'/);
     expect(sendSrc).toContain('safe-area-inset-top');
     expect(sendSrc).toContain('safe-area-inset-bottom');
+  });
+
+  test('Send is one scrollport — form scrolls, page does not use 100vh inside #scroll', () => {
+    expect(sendSrc).toContain('data-testid="send-form-scroll"');
+    expect(sendSrc).toContain('lucem-send-page');
+    expect(sendSrc).toContain('overscrollBehavior="contain"');
+    expect(stylesSrc).toMatch(/\.lucem-send-page[\s\S]*?height:\s*100%/);
+    expect(sendSrc).toMatch(/data-testid="send-page"[\s\S]*?h="100%"/);
+    expect(sendSrc).not.toMatch(/data-testid="send-page"[\s\S]{0,200}minH="100vh"/);
+    expect(sendSrc).not.toMatch(
+      /data-testid="send-page"[\s\S]{0,240}minHeight:\s*'100dvh'/
+    );
   });
 
   test('sections the form (To / Amount / Tokens / Note) on inset surfaces', () => {

@@ -183,6 +183,16 @@ html {
   flex-shrink: 0;
 }
 
+/* CIP-30 sign popup sits in the same #scroll shell as Send. */
+.lucem-sign-page {
+  height: 100%;
+  max-height: 100%;
+}
+
+.lucem-sign-footer {
+  flex-shrink: 0;
+}
+
 /* Settings shell — dark by default; follows Chakra `html[data-theme]`. */
 .lucem-settings-shell {
   background-color: #080808;
@@ -242,6 +252,104 @@ html[data-theme='light'] .lucem-inset-surface:hover {
     0 24px 56px rgba(15, 23, 42, 0.11),
     0 4px 14px rgba(15, 23, 42, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.lucem-sign-origin {
+  border-radius: 999px;
+  border: thin solid rgba(0, 245, 255, 0.45);
+  box-shadow: 0 0 16px rgba(0, 245, 255, 0.22);
+  background: rgba(0, 245, 255, 0.06);
+}
+
+.lucem-inset-surface.lucem-sign-hero,
+.lucem-inset-surface.lucem-sign-hero:hover {
+  box-shadow:
+    0 22px 56px rgba(0, 0, 0, 0.55),
+    0 0 32px rgba(206, 250, 0, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.lucem-sign-amount {
+  font-family: 'Barlow', sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.lucem-sign-amount-out {
+  color: #e31cff;
+  text-shadow: 0 0 20px rgba(227, 28, 255, 0.55);
+}
+
+.lucem-sign-amount-in {
+  color: #cefa00;
+  text-shadow: 0 0 20px rgba(206, 250, 0, 0.45);
+}
+
+.lucem-sign-chip {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: thin solid rgba(0, 245, 255, 0.7);
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.28);
+  color: #fff;
+  background: rgba(0, 245, 255, 0.08);
+}
+
+.lucem-sign-asset {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.lucem-sign-asset-out {
+  color: #e31cff !important;
+  border: thin solid rgba(227, 28, 255, 0.7);
+  background: rgba(227, 28, 255, 0.1) !important;
+  box-shadow: 0 0 12px rgba(227, 28, 255, 0.28);
+}
+
+.lucem-sign-asset-in {
+  color: #cefa00 !important;
+  border: thin solid rgba(206, 250, 0, 0.7);
+  background: rgba(206, 250, 0, 0.1) !important;
+  box-shadow: 0 0 12px rgba(206, 250, 0, 0.28);
+}
+
+html[data-theme='light'] .lucem-sign-origin {
+  border-color: rgba(0, 122, 255, 0.35);
+  box-shadow: 0 0 12px rgba(0, 122, 255, 0.12);
+  background: rgba(0, 122, 255, 0.06);
+}
+
+html[data-theme='light'] .lucem-sign-chip {
+  color: #111;
+  border-color: rgba(0, 122, 255, 0.45);
+  box-shadow: 0 0 10px rgba(0, 122, 255, 0.12);
+  background: rgba(0, 122, 255, 0.08);
+}
+
+html[data-theme='light'] .lucem-inset-surface.lucem-sign-hero,
+html[data-theme='light'] .lucem-inset-surface.lucem-sign-hero:hover {
+  box-shadow:
+    0 18px 48px rgba(15, 23, 42, 0.08),
+    0 0 24px rgba(206, 250, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+html[data-glow='off'] .lucem-sign-origin,
+html[data-glow='off'] .lucem-inset-surface.lucem-sign-hero,
+html[data-glow='off'] .lucem-inset-surface.lucem-sign-hero:hover,
+html[data-glow='off'] .lucem-sign-amount-out,
+html[data-glow='off'] .lucem-sign-amount-in,
+html[data-glow='off'] .lucem-sign-chip,
+html[data-glow='off'] .lucem-sign-asset-out,
+html[data-glow='off'] .lucem-sign-asset-in {
+  box-shadow: none;
+  text-shadow: none;
 }
 
 .lucem-inset-row {
@@ -1016,7 +1124,8 @@ html[data-layout='extension'] .lucem-wallet-main-column {
   max-width: 100%;
 }
 
-html[data-layout='extension'] .lucem-send-footer {
+html[data-layout='extension'] .lucem-send-footer,
+html[data-layout='extension'] .lucem-sign-footer {
   padding-bottom: 1.5rem;
 }
 

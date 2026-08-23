@@ -45,6 +45,7 @@ const Account = React.forwardRef(({ leadingSlot, ...props }, ref) => {
           </Box>
         ) : null}
         <Box
+          className="lucem-header-orb"
           boxSize="10"
           rounded="full"
           overflow="hidden"
@@ -75,6 +76,7 @@ const Account = React.forwardRef(({ leadingSlot, ...props }, ref) => {
           {account && account.name}
         </Text>
         <Box
+          className="lucem-header-orb"
           boxSize="10"
           rounded="full"
           overflow="hidden"

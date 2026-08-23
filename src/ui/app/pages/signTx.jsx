@@ -53,6 +53,7 @@ import {
 } from '../../../api/keystone-cardano';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
 import { appendRequiredKeyHashesFromCerts } from '../../../api/tx/cert-required-key-hashes';
+import useSurfaceColors from '../hooks/useSurfaceColors';
 import {
   outputDatumHashHex,
   outputHasDatum,
@@ -201,6 +202,8 @@ const abs = (big) => {
 
 const SignTx = ({ request, controller }) => {
   const settings = useStoreState((state) => state.settings.settings);
+  const { pageBg, pageFg, mutedFg, subtleFg, cyanLink } = useSurfaceColors();
+  const originHost = String(request.origin || '').replace(/^https?:\/\//, '');
   const ref = React.useRef();
   const [keystoneHw, setKeystoneHw] = React.useState(null);
   const [account, setAccount] = React.useState(null);
@@ -656,312 +659,419 @@ const SignTx = ({ request, controller }) => {
       }));
     }
   };
-  const background = useColorModeValue('blue.100', 'gray.900');
+  const txFlags = [
+    property.certificate && 'Certificate',
+    property.withdrawal && 'Withdrawal',
+    property.minting && 'Minting',
+    property.script && 'Script',
+    property.contract && 'Contract',
+    property.datum && 'Datum',
+    property.metadata && 'Metadata',
+  ].filter(Boolean);
+
+  const declineRequest = async () => {
+    await controller.returnData({
+      error: TxSignError.UserDeclined,
+    });
+    window.close();
+  };
 
   React.useEffect(() => {
     getInfo();
   }, []);
+
+  const shellProps = {
+    'data-testid': 'sign-tx-page',
+    h: '100%',
+    maxH: '100%',
+    minH: 0,
+    display: 'flex',
+    alignItems: 'stretch',
+    flexDirection: 'column',
+    position: 'relative',
+    w: 'full',
+    maxW: '100%',
+    bg: pageBg,
+    color: pageFg,
+    overflow: 'hidden',
+    className: 'lucem-wallet-main-column lucem-settings-shell lucem-sign-page',
+  };
+
   return (
     <>
       {isLoading.loading ? (
-        <Box
-          minH="100vh"
-          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
-          width="full"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Spinner color="yellow" speed="0.5s" />
-        </Box>
-      ) : !account ? (
-        <Flex
-          minH="100vh"
-          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
-          direction="column"
-          align="center"
-          justify="center"
-          px={6}
-          gap={4}
-        >
-          <Text color="red.300" textAlign="center">
-            {isLoading.error || 'Could not load this transaction'}
-          </Text>
-          <Button
-            onClick={async () => {
-              await controller.returnData({
-                error: TxSignError.UserDeclined,
-              });
-              window.close();
-            }}
+        <Box {...shellProps}>
+          <Flex
+            flex="1"
+            minH={0}
+            width="full"
+            align="center"
+            justify="center"
+            direction="column"
+            gap={3}
           >
-            Cancel
-          </Button>
-        </Flex>
-      ) : (
-        <Box
-          minH="100vh"
-          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
-          display="flex"
-          flexDirection="column"
-          alignItems="stretch"
-          position="relative"
-          w="full"
-          maxW="100%"
-          className="lucem-wallet-main-column"
-        >
-          <Account />
-          <Box flex="1" minH={0} overflowY="auto" w="full" px={4} pb={4}>
-          <Box h="4" />
-          <Flex align="center" justify="flex-start" w="full">
-            <Box w="6" />
-            <Box
-              width={8}
-              height={8}
-              background={background}
-              rounded={'xl'}
-              display={'flex'}
-              alignItems={'center'}
-              justifyContent={'center'}
-            >
-              <Image
-                draggable={false}
-                width={4}
-                height={4}
-                src={platform.icons.getFaviconUrl(request.origin)}
-              />
-            </Box>
-            <Box w="3" />
-            <Text fontSize={'xs'} fontWeight="bold" isTruncated maxW="60%">
-              {request.origin.split('//')[1]}
+            <Spinner color="yellow.400" speed="0.5s" />
+            <Text fontSize="sm" color={mutedFg}>
+              Reading transaction…
             </Text>
           </Flex>
-          <Box h="8" />
-          <Box>This app requests a signature for:</Box>
-          <Box h="4" />
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            flexDirection="column"
-            background={background}
-            rounded="xl"
-            width={{ base: '92%', md: '80%' }}
-            maxW="480px"
-            mx="auto"
-            padding="5"
-          >
-            {value.ownValue ? (
-              (() => {
-                let lovelace = value.ownValue.find(
-                  (v) => v.unit === 'lovelace'
-                );
-                lovelace = lovelace ? lovelace.quantity : '0';
-                const assets = value.ownValue.filter(
-                  (v) => v.unit !== 'lovelace'
-                );
-                return (
-                  <>
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="center"
-                      fontSize={lovelace.toString().length < 14 ? '3xl' : '2xl'}
-                      fontWeight="bold"
-                      color={lovelace <= 0 ? 'yellow.400' : 'red.400'}
-                    >
-                      <Text>{lovelace <= 0 ? '+' : '-'}</Text>
-                      <UnitDisplay
-                        hide
-                        quantity={abs(lovelace)}
-                        decimals="6"
-                        symbol={settings.adaSymbol}
-                      />
-                    </Stack>
-                    {assets.length > 0 && (
-                      <Box
-                        mt={2}
-                        mb={1}
-                        display={'flex'}
-                        alignItems={'center'}
-                        justifyContent={'center'}
-                      >
-                        {' '}
-                        {(() => {
-                          const positiveAssets = assets.filter(
-                            (v) => v.quantity < 0
-                          );
-                          const negativeAssets = assets.filter(
-                            (v) => v.quantity > 0
-                          );
-                          return (
-                            <Box
-                              display={'flex'}
-                              alignItems={'center'}
-                              justifyContent={'center'}
-                            >
-                              {' '}
-                              {negativeAssets.length > 0 && (
-                                <Button
-                                  colorScheme={'red'}
-                                  size={'xs'}
-                                  onClick={() =>
-                                    assetsModalRef.current.openModal({
-                                      background: 'red.400',
-                                      color: 'white',
-                                      assets: negativeAssets,
-                                      title: (
-                                        <Box>
-                                          Sending{' '}
-                                          <Box as={'span'} color={'red.400'}>
-                                            {negativeAssets.length}
-                                          </Box>{' '}
-                                          {negativeAssets.length == 1
-                                            ? 'asset'
-                                            : 'assets'}
-                                        </Box>
-                                      ),
-                                    })
-                                  }
-                                >
-                                  - {negativeAssets.length}{' '}
-                                  {negativeAssets.length > 1
-                                    ? 'Assets'
-                                    : 'Asset'}
-                                </Button>
-                              )}
-                              {negativeAssets.length > 0 &&
-                                positiveAssets.length > 0 && <Box w={2} />}
-                              {positiveAssets.length > 0 && (
-                                <Button
-                                  colorScheme={'yellow'}
-                                  size={'xs'}
-                                  onClick={() =>
-                                    assetsModalRef.current.openModal({
-                                      background: 'yellow.400',
-                                      color: 'white',
-                                      assets: positiveAssets,
-                                      title: (
-                                        <Box>
-                                          Receiving{' '}
-                                          <Box as={'span'} color={'yellow.400'}>
-                                            {positiveAssets.length}
-                                          </Box>{' '}
-                                          {positiveAssets.length == 1
-                                            ? 'asset'
-                                            : 'assets'}
-                                        </Box>
-                                      ),
-                                    })
-                                  }
-                                >
-                                  + {positiveAssets.length}{' '}
-                                  {positiveAssets.length > 1
-                                    ? 'Assets'
-                                    : 'Asset'}
-                                </Button>
-                              )}
-                            </Box>
-                          );
-                        })()}
-                      </Box>
-                    )}
-                    <Box h={3} />
-                    <Stack
-                      direction="row"
-                      alignItems="center"
-                      justifyContent="center"
-                      fontSize="sm"
-                    >
-                      <UnitDisplay
-                        quantity={fee}
-                        decimals="6"
-                        symbol={settings.adaSymbol}
-                      />
-                      <Text fontWeight="bold">fee</Text>
-                    </Stack>
-                  </>
-                );
-              })()
-            ) : (
-              <Text fontSize="2xl" fontWeight="bold">
-                ...
-              </Text>
-            )}
-          </Box>
-          <Box h={4} />
-          <Button
-            rounded={'xl'}
-            size={'xs'}
-            rightIcon={<ChevronRightIcon />}
-            onClick={() => detailsModalRef.current.openModal()}
-          >
-            Details
-          </Button>
-          </Box>
-
+        </Box>
+      ) : !account ? (
+        <Box {...shellProps}>
           <Flex
+            flex="1"
+            minH={0}
             direction="column"
             align="center"
             justify="center"
+            px={6}
+            gap={4}
+          >
+            <Text color="red.300" textAlign="center">
+              {isLoading.error || 'Could not load this transaction'}
+            </Text>
+            <Button
+              height="52px"
+              px={8}
+              rounded="2xl"
+              variant="outline"
+              color={pageFg}
+              borderColor="whiteAlpha.300"
+              onClick={declineRequest}
+            >
+              Cancel
+            </Button>
+          </Flex>
+        </Box>
+      ) : (
+        <Box {...shellProps}>
+          <Account background={pageBg} shadow="none" />
+          <Box
+            data-testid="sign-tx-form-scroll"
+            flex="1"
+            minH={0}
+            overflowY="auto"
+            overscrollBehavior="contain"
+            w="full"
+            px={{ base: 4, md: 6 }}
+            py={5}
+          >
+            <Stack
+              spacing={5}
+              w="full"
+              maxW={{ base: '100%', xl: 'sm' }}
+              mx="auto"
+              align="center"
+            >
+              <Flex
+                data-testid="sign-tx-origin"
+                className="lucem-sign-origin"
+                align="center"
+                justify="center"
+                gap={2}
+                px={3}
+                py={1.5}
+                maxW="full"
+              >
+                <Image
+                  draggable={false}
+                  boxSize={5}
+                  rounded="md"
+                  alt=""
+                  src={platform.icons.getFaviconUrl(request.origin)}
+                />
+                <Text fontSize="sm" fontWeight="semibold" isTruncated maxW="220px">
+                  {originHost}
+                </Text>
+              </Flex>
+              <Box textAlign="center">
+                <Text
+                  data-testid="sign-tx-page-title"
+                  fontSize="xl"
+                  fontWeight="bold"
+                  letterSpacing="tight"
+                >
+                  Sign transaction
+                </Text>
+                <Text mt={1} fontSize="sm" color={mutedFg}>
+                  Review this request, then sign or cancel.
+                </Text>
+              </Box>
+              <Box
+                data-testid="sign-tx-amount-card"
+                className="lucem-inset-surface lucem-sign-hero"
+                rounded="3xl"
+                w="full"
+                px={6}
+                py={8}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flexDirection="column"
+              >
+                {value.ownValue ? (
+                  (() => {
+                    let lovelace = value.ownValue.find(
+                      (v) => v.unit === 'lovelace'
+                    );
+                    lovelace = lovelace ? lovelace.quantity : '0';
+                    const assets = value.ownValue.filter(
+                      (v) => v.unit !== 'lovelace'
+                    );
+                    const receiving = lovelace <= 0;
+                    return (
+                      <>
+                        <Text
+                          fontSize="xs"
+                          fontWeight="semibold"
+                          letterSpacing="0.16em"
+                          textTransform="uppercase"
+                          color={subtleFg}
+                          mb={3}
+                        >
+                          {receiving ? 'Wallet receives' : 'Wallet spends'}
+                        </Text>
+                        <Stack
+                          className={
+                            receiving
+                              ? 'lucem-sign-amount lucem-sign-amount-in'
+                              : 'lucem-sign-amount lucem-sign-amount-out'
+                          }
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="center"
+                          fontSize={
+                            lovelace.toString().length < 14 ? '4xl' : '3xl'
+                          }
+                          fontWeight="black"
+                          lineHeight="1"
+                        >
+                          <Text>{receiving ? '+' : '−'}</Text>
+                          <UnitDisplay
+                            hide
+                            quantity={abs(lovelace)}
+                            decimals="6"
+                            symbol={settings.adaSymbol}
+                          />
+                        </Stack>
+                        {assets.length > 0 && (
+                          <Box
+                            mt={4}
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                          >
+                            {(() => {
+                              const positiveAssets = assets.filter(
+                                (v) => v.quantity < 0
+                              );
+                              const negativeAssets = assets.filter(
+                                (v) => v.quantity > 0
+                              );
+                              return (
+                                <Flex align="center" justify="center" gap={2}>
+                                  {negativeAssets.length > 0 && (
+                                    <Button
+                                      className="lucem-sign-asset lucem-sign-asset-out"
+                                      size="sm"
+                                      rounded="full"
+                                      onClick={() =>
+                                        assetsModalRef.current.openModal({
+                                          background: 'red.400',
+                                          color: 'white',
+                                          assets: negativeAssets,
+                                          title: (
+                                            <Box>
+                                              Sending{' '}
+                                              <Box as="span" color="red.400">
+                                                {negativeAssets.length}
+                                              </Box>{' '}
+                                              {negativeAssets.length == 1
+                                                ? 'asset'
+                                                : 'assets'}
+                                            </Box>
+                                          ),
+                                        })
+                                      }
+                                    >
+                                      − {negativeAssets.length}{' '}
+                                      {negativeAssets.length > 1
+                                        ? 'assets'
+                                        : 'asset'}
+                                    </Button>
+                                  )}
+                                  {positiveAssets.length > 0 && (
+                                    <Button
+                                      className="lucem-sign-asset lucem-sign-asset-in"
+                                      size="sm"
+                                      rounded="full"
+                                      onClick={() =>
+                                        assetsModalRef.current.openModal({
+                                          background: 'yellow.400',
+                                          color: 'white',
+                                          assets: positiveAssets,
+                                          title: (
+                                            <Box>
+                                              Receiving{' '}
+                                              <Box as="span" color="yellow.400">
+                                                {positiveAssets.length}
+                                              </Box>{' '}
+                                              {positiveAssets.length == 1
+                                                ? 'asset'
+                                                : 'assets'}
+                                            </Box>
+                                          ),
+                                        })
+                                      }
+                                    >
+                                      + {positiveAssets.length}{' '}
+                                      {positiveAssets.length > 1
+                                        ? 'assets'
+                                        : 'asset'}
+                                    </Button>
+                                  )}
+                                </Flex>
+                              );
+                            })()}
+                          </Box>
+                        )}
+                        <Flex
+                          data-testid="sign-tx-fee"
+                          justify="space-between"
+                          w="full"
+                          mt={6}
+                          pt={4}
+                          borderTopWidth="1px"
+                          borderTopColor="whiteAlpha.100"
+                          fontSize="sm"
+                          color={mutedFg}
+                        >
+                          <Text>Network fee</Text>
+                          <UnitDisplay
+                            quantity={fee}
+                            decimals="6"
+                            symbol={settings.adaSymbol}
+                            fontWeight="semibold"
+                            color={pageFg}
+                          />
+                        </Flex>
+                      </>
+                    );
+                  })()
+                ) : (
+                  <Text fontSize="2xl" fontWeight="bold" color={mutedFg}>
+                    …
+                  </Text>
+                )}
+              </Box>
+              {(txFlags.length > 0 || keyHashes.kind.length > 0) && (
+                <Flex
+                  data-testid="sign-tx-flags"
+                  wrap="wrap"
+                  justify="center"
+                  gap={2}
+                >
+                  {keyHashes.kind.map((kind) => (
+                    <Box key={`key-${kind}`} className="lucem-sign-chip">
+                      {kind} key
+                    </Box>
+                  ))}
+                  {txFlags.map((flag) => (
+                    <Box key={flag} className="lucem-sign-chip">
+                      {flag}
+                    </Box>
+                  ))}
+                </Flex>
+              )}
+              <Button
+                data-testid="sign-tx-details"
+                variant="ghost"
+                size="sm"
+                color={cyanLink}
+                rightIcon={<ChevronRightIcon />}
+                onClick={() => detailsModalRef.current.openModal()}
+              >
+                Details
+              </Button>
+            </Stack>
+          </Box>
+
+          <Box
+            className="lucem-sign-footer"
+            data-testid="sign-tx-footer"
             flexShrink={0}
             w="full"
-            px={2}
-            py={3}
-            pb="calc(0.75rem + env(safe-area-inset-bottom, 0px))"
+            px={{ base: 4, md: 6 }}
+            pt={3}
+            pb="calc(1.25rem + env(safe-area-inset-bottom, 0px))"
             borderTopWidth="1px"
             borderTopColor="whiteAlpha.100"
-            gap={3}
+            bg={pageBg}
           >
-            {isLoading.warning && (
-              <Box py={2} px={4} rounded={'full'} background={background}>
-                <Text fontSize="xs" color={'orange.500'}>
-                  Warning! {isLoading.warning}
+            <Stack
+              spacing={3}
+              w="full"
+              maxW={{ base: '100%', xl: 'sm' }}
+              mx="auto"
+              align="center"
+            >
+              {isLoading.warning && (
+                <Text
+                  fontSize="xs"
+                  color="orange.300"
+                  textAlign="center"
+                  px={2}
+                >
+                  Warning — {isLoading.warning}
                 </Text>
-              </Box>
-            )}
-            {isLoading.error && (
-              <Box py={2} px={4} rounded={'full'} background={background}>
-                <Text fontSize="xs" color={'red.300'}>
+              )}
+              {isLoading.error && (
+                <Text fontSize="xs" color="red.300" textAlign="center" px={2}>
                   {isLoading.error}
                 </Text>
-              </Box>
-            )}
-
-            <Flex
-              align={'center'}
-              justify={'center'}
-              w={'full'}
-              flexWrap="wrap"
-              gap={2}
-            >
+              )}
               <Button
-                height={'50px'}
-                width={{ base: '42%', sm: '180px' }}
-                minW="140px"
-                onClick={async () => {
-                  await controller.returnData({
-                    error: TxSignError.UserDeclined,
-                  });
-                  window.close();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                height={'50px'}
-                width={{ base: '42%', sm: '180px' }}
-                minW="140px"
+                data-testid="sign-tx-primary-action"
+                width="full"
+                height="52px"
+                rounded="2xl"
                 isDisabled={isLoading.loading || isLoading.error}
                 colorScheme="yellow"
+                bg="yellow.400"
+                color="gray.900"
+                fontWeight="black"
+                _hover={{
+                  bg: 'yellow.300',
+                  transform: 'translateY(-1px)',
+                }}
+                _active={{ bg: 'yellow.500' }}
+                _disabled={{
+                  bg: 'whiteAlpha.200',
+                  color: 'whiteAlpha.500',
+                  cursor: 'not-allowed',
+                  transform: 'none',
+                  opacity: 1,
+                }}
                 onClick={() => {
                   ref.current.openModal(account.index);
                 }}
               >
                 Sign
               </Button>
-            </Flex>
-          </Flex>
+              <Button
+                data-testid="sign-tx-cancel"
+                variant="ghost"
+                width="full"
+                height="44px"
+                rounded="2xl"
+                color={pageFg}
+                _hover={{ bg: 'whiteAlpha.100' }}
+                onClick={declineRequest}
+              >
+                Cancel
+              </Button>
+            </Stack>
+          </Box>
         </Box>
       )}
       <AssetsModal ref={assetsModalRef} />

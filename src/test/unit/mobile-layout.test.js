@@ -295,7 +295,7 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).toMatch(/WebkitOverflowScrolling/);
   });
 
-  test('index.jsx Main Scrollbars: extension uses 100vw/100vh (release); PWA uses 100%', () => {
+  test('index.jsx Main Scrollbars use 100% (never 100vw — Chrome popup vw is the monitor)', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '../../ui/index.jsx'),
       'utf8'
@@ -303,8 +303,9 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).toMatch(/id="scroll"/);
     expect(src).toMatch(/isExtensionPopup/);
     expect(src).toMatch(/isPhoneColumn/);
-    expect(src).toMatch(/height:\s*['"]100vh['"]/);
+    expect(src).toMatch(/applyExtensionPopupDocument/);
     expect(src).toMatch(/height:\s*['"]100%['"]/);
+    expect(src).not.toMatch(/width:\s*['"]100vw['"]/);
   });
 
   test('store.jsx loading shell shows full logo (contain) with dvh-aware minHeight', () => {

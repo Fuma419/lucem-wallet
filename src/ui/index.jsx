@@ -10,6 +10,7 @@ import StoreProvider from './store';
 import { Box, IconButton } from '@chakra-ui/react';
 import { ChevronUpIcon } from '@chakra-ui/icons';
 import {
+  applyExtensionPopupDocument,
   detectIsExtensionPopup,
   detectIsFullBleedWalletTab,
   LUCEM_LAYOUT,
@@ -27,6 +28,9 @@ const isExtensionPopup = detectIsExtensionPopup(
   window.document,
   typeof chrome !== 'undefined' ? chrome : undefined
 );
+if (isExtensionPopup) {
+  applyExtensionPopupDocument(window.document, POPUP_WINDOW);
+}
 
 const MainFrame = ({ children }) => {
   const surface = useLayoutSurface();
@@ -75,11 +79,7 @@ const MainFrame = ({ children }) => {
           <Scrollbars
             id="scroll"
             renderView={lucemTransparentScrollView}
-            style={
-              isExtensionPopup
-                ? { width: '100vw', height: '100vh' }
-                : { width: '100%', height: '100%' }
-            }
+            style={{ width: '100%', height: '100%' }}
             autoHide
             onScroll={(e) => {
               setScroll({ el: e.target, y: e.target.scrollTop });

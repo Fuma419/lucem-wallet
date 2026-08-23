@@ -1,4 +1,4 @@
-import { POPUP, TAB } from '../../config/config';
+import { POPUP, POPUP_WINDOW, TAB } from '../../config/config';
 import { isNativePlatform } from '../../platform/capacitor';
 
 export const LUCEM_LAYOUT = {
@@ -100,4 +100,29 @@ export function readLucemLayoutInputs(win) {
  */
 export function detectLucemLayoutSurface(win) {
   return resolveLucemLayoutSurface(readLucemLayoutInputs(win));
+}
+
+/**
+ * Chrome toolbar popups do not share a PWA/mobile viewport. `100vw` is often
+ * the monitor width, and `width=device-width` can shrink chrome to specks.
+ * Pin the document to the popup box so corner FABs stay the same CSS size
+ * as the phone / Capacitor shell.
+ * @param {Document | null | undefined} doc
+ * @param {{ width?: number, height?: number }} [size]
+ */
+export function applyExtensionPopupDocument(
+  doc,
+  { width = POPUP_WINDOW.width, height = POPUP_WINDOW.height } = {}
+) {
+  if (!doc || !doc.documentElement) return;
+  const root = doc.documentElement;
+  root.style.setProperty('--lucem-popup-width', `${width}px`);
+  root.style.setProperty('--lucem-popup-height', `${height}px`);
+  const meta = doc.querySelector('meta[name="viewport"]');
+  if (meta) {
+    meta.setAttribute(
+      'content',
+      `width=${width}, initial-scale=1, maximum-scale=1, user-scalable=no`
+    );
+  }
 }

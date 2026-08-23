@@ -72,6 +72,7 @@ import Logo from '../../../assets/img/logo.png';
 const WALLET_HEADER_LOGO_BG_SIZE = '138%';
 
 const walletHeaderOrbShellProps = {
+  className: 'lucem-header-orb',
   boxSize: { base: '12', sm: '13', md: '14' },
   minW: { base: '12', sm: '13', md: '14' },
   minH: { base: '12', sm: '13', md: '14' },
@@ -770,7 +771,7 @@ const Wallet = () => {
           variant="soft-rounded"
           colorScheme="customGray"
         >
-          <TabList>
+          <TabList className="lucem-wallet-asset-tabs">
             <Tab mr={2}>
               <Icon as={RxTokens} boxSize={5} />
             </Tab>

@@ -29,6 +29,7 @@ import {
   TxRequiredSignerType,
 } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import { crc8 } from 'crc';
+import { txBodyCollateral } from './tx/csl-tx-accessors';
 
 function isExtensionRuntime() {
   return (
@@ -896,9 +897,9 @@ export const txToTrezor = async (tx, network, keys, address, index) => {
     : null;
 
   let collateralInputs = null;
-  if (tx.body().collateral_inputs()) {
+  const coll = txBodyCollateral(tx.body());
+  if (coll) {
     collateralInputs = [];
-    const coll = tx.body().collateral_inputs();
     for (let i = 0; i < coll.len(); i++) {
       const input = coll.get(i);
       if (keys.payment.path) {
@@ -1397,9 +1398,9 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     : null;
 
   let collateralInputs = null;
-  if (tx.body().collateral_inputs()) {
+  const coll = txBodyCollateral(tx.body());
+  if (coll) {
     collateralInputs = [];
-    const coll = tx.body().collateral_inputs();
     for (let i = 0; i < coll.len(); i++) {
       const input = coll.get(i);
       if (keys.payment.path) {

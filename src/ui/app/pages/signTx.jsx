@@ -53,6 +53,11 @@ import {
 } from '../../../api/keystone-cardano';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
 import { appendRequiredKeyHashesFromCerts } from '../../../api/tx/cert-required-key-hashes';
+import {
+  outputDatumHashHex,
+  outputHasDatum,
+  txBodyCollateral,
+} from '../../../api/tx/csl-tx-accessors';
 
 const KPhase = { load: 'load', show: 'show', scan: 'scan' };
 
@@ -253,7 +258,7 @@ const SignTx = ({ request, controller }) => {
     const outputs = tx.body().outputs();
     for (let i = 0; i < outputs.len(); i++) {
       const output = outputs.get(i);
-      if (output.datum()) {
+      if (outputHasDatum(output)) {
         datum = true;
         const prefix = bytesAddressToBinary(output.address().to_bytes()).slice(
           0,
@@ -350,15 +355,8 @@ const SignTx = ({ request, controller }) => {
         ) {
           externalOutputs[address].script = true;
         }
-        const datum = output.datum();
-        if (datum)
-          externalOutputs[address].datumHash = Buffer.from(
-            datum.kind() === 0
-              ? datum.as_hash().to_bytes()
-              : Loader.Cardano.hash_plutus_data(
-                  datum.as_datum()
-                ).to_bytes()
-          ).toString('hex');
+        const datumHash = outputDatumHashHex(output, Loader.Cardano);
+        if (datumHash) externalOutputs[address].datumHash = datumHash;
       }
     }
 
@@ -538,7 +536,7 @@ const SignTx = ({ request, controller }) => {
     }
 
     //get keyHashes from collateral
-    const collateral = txBody.collateral_inputs();
+    const collateral = txBodyCollateral(txBody);
     if (collateral) {
       for (let i = 0; i < collateral.len(); i++) {
         const c = collateral.get(i);
@@ -569,7 +567,7 @@ const SignTx = ({ request, controller }) => {
   };
 
   const checkCollateral = (tx, utxos, account) => {
-    const collateralInputs = tx.body().collateral_inputs();
+    const collateralInputs = txBodyCollateral(tx.body());
     if (!collateralInputs) return;
 
     const collateralReturn = tx.body().collateral_return();

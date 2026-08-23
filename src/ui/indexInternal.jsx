@@ -48,7 +48,7 @@ const App = () => {
       <Spinner color="yellow" speed="0.5s" />
     </Box>
   ) : (
-    <div style={{ overflowX: 'hidden' }}>
+    <div style={{ overflowX: 'hidden', height: '100%' }}>
       <PreventHistoryBack />
       <Routes>
         <Route

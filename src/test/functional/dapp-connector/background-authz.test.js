@@ -22,10 +22,12 @@ jest.mock('../../../api/extension', () => ({
   isWhitelisted: jest.fn(),
   createPopup: jest.fn(),
   getAddress: jest.fn(),
+  getCip30Address: jest.fn(),
   getBalance: jest.fn(),
   getCollateral: jest.fn(),
   getNetwork: jest.fn(),
   getRewardAddress: jest.fn(),
+  getCip30RewardAddress: jest.fn(),
   getRegisteredPubStakeKeys: jest.fn(),
   getUnregisteredPubStakeKeys: jest.fn(),
   getPubDRepKey: jest.fn(),
@@ -63,8 +65,8 @@ const msg = (method, extra = {}) => ({
 // Every privileged method the background must gate, with a valid payload shape.
 const PRIVILEGED = [
   ['getBalance', {}, () => extension.getBalance],
-  ['getAddress', {}, () => extension.getAddress],
-  ['getRewardAddress', {}, () => extension.getRewardAddress],
+  ['getAddress', {}, () => extension.getCip30Address],
+  ['getRewardAddress', {}, () => extension.getCip30RewardAddress],
   ['getRegisteredPubStakeKeys', {}, () => extension.getRegisteredPubStakeKeys],
   [
     'getUnregisteredPubStakeKeys',
@@ -84,10 +86,12 @@ beforeEach(() => {
   extension.isWhitelisted.mockReset().mockResolvedValue(false);
   extension.createPopup.mockReset().mockResolvedValue({ id: 42 });
   extension.getAddress.mockReset().mockResolvedValue('addr_change_hex');
+  extension.getCip30Address.mockReset().mockResolvedValue('addr_change_hex');
   extension.getBalance.mockReset().mockResolvedValue(bytes('a1'));
   extension.getCollateral.mockReset().mockResolvedValue([bytes('c0')]);
   extension.getNetwork.mockReset().mockResolvedValue({ id: 'mainnet' });
   extension.getRewardAddress.mockReset().mockResolvedValue('addr_reward_hex');
+  extension.getCip30RewardAddress.mockReset().mockResolvedValue('addr_reward_hex');
   extension.getRegisteredPubStakeKeys.mockReset().mockResolvedValue(['reg']);
   extension.getUnregisteredPubStakeKeys.mockReset().mockResolvedValue(['unreg']);
   extension.getPubDRepKey.mockReset().mockResolvedValue('drep_key_hex');

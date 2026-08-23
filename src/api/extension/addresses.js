@@ -38,6 +38,9 @@ import {
   getStorage,
   setStorage,
 } from './storage';
+import { toCip30AddressHex } from './cip30-address';
+
+export { toCip30AddressHex } from './cip30-address';
 
 
 export const getAddress = async () => {
@@ -45,6 +48,11 @@ export const getAddress = async () => {
   const currentAccount = await getCurrentAccount();
   // Primary receive address remains external index 0 (CIP-30 / QR default).
   return currentAccount.paymentAddr;
+};
+
+export const getCip30Address = async () => {
+  await Loader.load();
+  return toCip30AddressHex(await getAddress());
 };
 
 /**
@@ -405,8 +413,14 @@ export const disableExternalAddressIndex = async (addressIndex) => {
 export const getRewardAddress = async () => {
   await Loader.load();
   const currentAccount = await getCurrentAccount();
-  // Return the full Bech32 stake address instead of converting to key hash
+  // Wallet-internal: full Bech32 stake address (Koios / UI). CIP-30 uses
+  // getCip30RewardAddress() so dApps receive hex CBOR.
   return currentAccount.rewardAddr;
+};
+
+export const getCip30RewardAddress = async () => {
+  await Loader.load();
+  return toCip30AddressHex(await getRewardAddress());
 };
 
 export const getPubDRepKey = async () => {

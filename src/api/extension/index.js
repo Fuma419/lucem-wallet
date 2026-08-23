@@ -120,6 +120,9 @@ export {
 
 export {
   getAddress,
+  getCip30Address,
+  getCip30RewardAddress,
+  toCip30AddressHex,
   getEnabledPaymentAddresses,
   paymentKeyHashesForSigning,
   setAccountExternalIndices,

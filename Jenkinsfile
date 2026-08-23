@@ -87,23 +87,23 @@ pipeline {
 
   environment {
     CI = 'true'
-    NODE20_DIR = "${HOME}/.local/node-v20.20.2-linux-x64"
+    NODE24_DIR = "${HOME}/.local/node-v24.19.0-linux-x64"
   }
 
   stages {
-    stage('Bootstrap Node 20') {
+    stage('Bootstrap Node 24') {
       steps {
         script {
           publishPendingGithubStatuses()
         }
         sh '''
           set -e
-          if [ ! -x "${NODE20_DIR}/bin/node" ]; then
+          if [ ! -x "${NODE24_DIR}/bin/node" ]; then
             mkdir -p "${HOME}/.local"
-            curl -fsSL "https://nodejs.org/dist/v20.20.2/node-v20.20.2-linux-x64.tar.xz" -o /tmp/node-v20.20.2-linux-x64.tar.xz
-            tar -xJf /tmp/node-v20.20.2-linux-x64.tar.xz -C "${HOME}/.local"
+            curl -fsSL "https://nodejs.org/dist/v24.19.0/node-v24.19.0-linux-x64.tar.xz" -o /tmp/node-v24.19.0-linux-x64.tar.xz
+            tar -xJf /tmp/node-v24.19.0-linux-x64.tar.xz -C "${HOME}/.local"
           fi
-          export PATH="${NODE20_DIR}/bin:${PATH}"
+          export PATH="${NODE24_DIR}/bin:${PATH}"
           node -v
           npm -v
         '''
@@ -127,7 +127,7 @@ pipeline {
         checkout scm
         sh '''
           set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
+          export PATH="${NODE24_DIR}/bin:${PATH}"
           node -v
           npm -v
           npm ci
@@ -154,7 +154,7 @@ pipeline {
         }
         sh '''
           set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
+          export PATH="${NODE24_DIR}/bin:${PATH}"
           npm run build:webpack
         '''
       }
@@ -184,7 +184,7 @@ pipeline {
         }
         sh '''
           set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
+          export PATH="${NODE24_DIR}/bin:${PATH}"
           # Serialize Jest: parallel workers + CSL/Keystone natives can SIGSEGV
           # on this agent and mark Unit tests failed (flake, not product bugs).
           export CI=1
@@ -224,7 +224,7 @@ pipeline {
         catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
           sh '''
             set -e
-            export PATH="${NODE20_DIR}/bin:${PATH}"
+            export PATH="${NODE24_DIR}/bin:${PATH}"
             npm run mobile:android:ci
           '''
         }
@@ -265,7 +265,7 @@ pipeline {
         withCredentials([file(credentialsId: 'lucem-wallet-dotenv', variable: 'LUCEM_ENV_FILE')]) {
           sh '''
             set -e
-            export PATH="${NODE20_DIR}/bin:${PATH}"
+            export PATH="${NODE24_DIR}/bin:${PATH}"
             set +x
             set -a
             . "${LUCEM_ENV_FILE}"
@@ -308,7 +308,7 @@ pipeline {
         withCredentials([file(credentialsId: 'lucem-wallet-dotenv', variable: 'LUCEM_ENV_FILE')]) {
           sh '''
             set -e
-            export PATH="${NODE20_DIR}/bin:${PATH}"
+            export PATH="${NODE24_DIR}/bin:${PATH}"
             set +x
             set -a
             . "${LUCEM_ENV_FILE}"
@@ -346,7 +346,7 @@ pipeline {
       steps {
         sh '''
           set -e
-          export PATH="${NODE20_DIR}/bin:${PATH}"
+          export PATH="${NODE24_DIR}/bin:${PATH}"
           # Free the Playwright web server port from any orphaned/aborted build
           if command -v fuser >/dev/null 2>&1; then fuser -k 4179/tcp 2>/dev/null || true; fi
           E2E_PIDS=$(lsof -t -i:4179 2>/dev/null || true); if [ -n "$E2E_PIDS" ]; then kill -9 $E2E_PIDS 2>/dev/null || true; fi

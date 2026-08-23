@@ -16,10 +16,10 @@ USER ubuntu
 ENV NVM_DIR=/home/ubuntu/.nvm
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash \
     && . "$NVM_DIR/nvm.sh" \
-    && nvm install 20.19.0 \
-    && nvm alias default 20.19.0
+    && nvm install 24.19.0 \
+    && nvm alias default 24.19.0
 
-ENV PATH="/home/ubuntu/.nvm/versions/node/v20.19.0/bin:${PATH}"
+ENV PATH="/home/ubuntu/.nvm/versions/node/v24.19.0/bin:${PATH}"
 ENV NODE_ENV=development
 
 WORKDIR /workspace

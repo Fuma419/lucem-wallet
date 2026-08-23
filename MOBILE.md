@@ -15,8 +15,8 @@ QR/camera-based (no Bluetooth or USB) and works inside the WebView. Ledger
 
 ## Prerequisites
 
-- Node 20.x (`.nvmrc` is `20.19.0`). Capacitor is pinned to the v7 line so it
-  runs on Node 20; do not bump to Capacitor 8 (needs Node >= 22).
+- Node 24.x (`.nvmrc` is `24.19.0`). Capacitor stays on the v7 line unless we
+  explicitly upgrade; Capacitor 8 also needs Node >= 22 and is unblocked now.
 - Android: Android Studio (any OS) + an emulator or device. The CLI build needs
   **JDK 17+** (AGP 8.7). sdkman Java 11 will fail. Use
   `npm run mobile:android:install` (sets `JAVA_HOME` + `adb`) or
@@ -36,7 +36,7 @@ on device locally with any account.
 ## One-time: generate the native projects
 
 ```bash
-nvm use            # Node 20
+nvm use            # Node 24
 NODE_ENV=development npm install
 npm run mobile:build      # builds build/ (and copies mainPopup.html -> index.html)
 npx cap add android       # creates android/

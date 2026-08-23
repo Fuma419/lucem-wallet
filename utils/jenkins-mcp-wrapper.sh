@@ -11,9 +11,8 @@ prefer_nvm_node() {
   fi
   local candidates=()
   [[ -n "$ver" ]] && candidates+=("$nvm_dir/versions/node/v${ver}/bin")
-  candidates+=("$nvm_dir/versions/node/v20.19.0/bin")
-  candidates+=("$nvm_dir/versions/node/v20.20.2/bin")
-  extra="$(ls -1d "$nvm_dir/versions/node"/v20.*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
+  candidates+=("$nvm_dir/versions/node/v24.19.0/bin")
+  extra="$(ls -1d "$nvm_dir/versions/node"/v24.*/bin 2>/dev/null | sort -V | tail -n 1 || true)"
   [[ -n "$extra" ]] && candidates+=("$extra")
   for d in "${candidates[@]}"; do
     if [[ -x "$d/node" && -x "$d/npx" ]]; then

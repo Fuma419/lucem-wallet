@@ -13,6 +13,12 @@ export function lucemTransparentScrollView({ style, ...props }) {
         ...style,
         backgroundColor: 'transparent',
         overscrollBehavior: 'none',
+        // The library uses a negative bottom margin to hide the native
+        // scrollbar. That pulls the last ~15px of a height:100% child
+        // (Send's Review footer) under the popup clip. No horizontal
+        // overflow — drop the gutter.
+        overflowX: 'hidden',
+        marginBottom: 0,
       }}
     />
   );

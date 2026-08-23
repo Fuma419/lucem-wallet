@@ -52,6 +52,7 @@ import {
   witnessSetHexFromKeystoneSignature,
 } from '../../../api/keystone-cardano';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
+import { appendRequiredKeyHashesFromCerts } from '../../../api/tx/cert-required-key-hashes';
 
 const KPhase = { load: 'load', show: 'show', scan: 'scan' };
 
@@ -484,66 +485,10 @@ const SignTx = ({ request, controller }) => {
       }
     }
 
-    //get key hashes from certificates
     const txBody = tx.body();
-    const keyHashFromCert = (txBody) => {
-      for (let i = 0; i < txBody.certs().len(); i++) {
-        const cert = txBody.certs().get(i);
-        if (cert.kind() === 0) {
-          const credential = cert.as_stake_registration().stake_credential();
-          if (credential.kind() === 0) {
-            // stake registration doesn't required key hash
-          }
-        } else if (cert.kind() === 1) {
-          const credential = cert.as_stake_deregistration().stake_credential();
-          if (credential.kind() === 0) {
-            const keyHash = Buffer.from(
-              credential.to_keyhash().to_bytes()
-            ).toString('hex');
-            requiredKeyHashes.push(keyHash);
-          }
-        } else if (cert.kind() === 2) {
-          const credential = cert.as_stake_delegation().stake_credential();
-          if (credential.kind() === 0) {
-            const keyHash = Buffer.from(
-              credential.to_keyhash().to_bytes()
-            ).toString('hex');
-            requiredKeyHashes.push(keyHash);
-          }
-        } else if (cert.kind() === 3) {
-          const owners = cert
-            .as_pool_registration()
-            .pool_params()
-            .pool_owners();
-          for (let i = 0; i < owners.len(); i++) {
-            const keyHash = Buffer.from(owners.get(i).to_bytes()).toString(
-              'hex'
-            );
-            requiredKeyHashes.push(keyHash);
-          }
-        } else if (cert.kind() === 4) {
-          const operator = cert.as_pool_retirement().pool().to_hex();
-          requiredKeyHashes.push(operator);
-        } else if (cert.kind() === 6) {
-          const instant_reward = cert
-            .as_move_instantaneous_rewards_cert()
-            .move_instantaneous_reward()
-            .as_to_stake_creds()
-            .keys();
-          for (let i = 0; i < instant_reward.len(); i++) {
-            const credential = instant_reward.get(i);
-
-            if (credential.kind() === 0) {
-              const keyHash = Buffer.from(
-                credential.to_keyhash().to_bytes()
-              ).toString('hex');
-              requiredKeyHashes.push(keyHash);
-            }
-          }
-        }
-      }
-    };
-    if (txBody.certs()) keyHashFromCert(txBody);
+    if (txBody.certs()) {
+      appendRequiredKeyHashesFromCerts(txBody.certs(), requiredKeyHashes);
+    }
 
     // key hashes from withdrawals
     const withdrawals = txBody.withdrawals();
@@ -688,18 +633,30 @@ const SignTx = ({ request, controller }) => {
   };
 
   const getInfo = async () => {
-    await Loader.load();
-    const currentAccount = await getCurrentAccount();
-    setAccount(currentAccount);
-    let utxos = await getUtxos();
-    const tx = Loader.Cardano.Transaction.from_hex(request.data.tx);
-    setTx(request.data.tx);
-    getFee(tx);
-    await getValue(tx, utxos, currentAccount);
-    checkCollateral(tx, utxos, currentAccount);
-    await getKeyHashes(tx, utxos, currentAccount);
-    getProperties(tx);
-    setIsLoading((l) => ({ ...l, loading: false }));
+    try {
+      await Loader.load();
+      const currentAccount = await getCurrentAccount();
+      setAccount(currentAccount);
+      let utxos = await getUtxos();
+      const txHex = String(request.data.tx || '').replace(/^0x/i, '');
+      const tx = Loader.Cardano.Transaction.from_hex(txHex);
+      setTx(txHex);
+      getFee(tx);
+      await getValue(tx, utxos, currentAccount);
+      checkCollateral(tx, utxos, currentAccount);
+      await getKeyHashes(tx, utxos, currentAccount);
+      getProperties(tx);
+      setIsLoading((l) => ({ ...l, loading: false }));
+    } catch (e) {
+      setIsLoading((l) => ({
+        ...l,
+        loading: false,
+        error:
+          e?.info ||
+          e?.message ||
+          'Could not decode this dApp transaction',
+      }));
+    }
   };
   const background = useColorModeValue('blue.100', 'gray.900');
 
@@ -719,6 +676,30 @@ const SignTx = ({ request, controller }) => {
         >
           <Spinner color="yellow" speed="0.5s" />
         </Box>
+      ) : !account ? (
+        <Flex
+          minH="100vh"
+          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
+          direction="column"
+          align="center"
+          justify="center"
+          px={6}
+          gap={4}
+        >
+          <Text color="red.300" textAlign="center">
+            {isLoading.error || 'Could not load this transaction'}
+          </Text>
+          <Button
+            onClick={async () => {
+              await controller.returnData({
+                error: TxSignError.UserDeclined,
+              });
+              window.close();
+            }}
+          >
+            Cancel
+          </Button>
+        </Flex>
       ) : (
         <Box
           minH="100vh"

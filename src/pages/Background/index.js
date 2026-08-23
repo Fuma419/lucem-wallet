@@ -1,11 +1,11 @@
 import {
   createPopup,
   extractKeyHash,
-  getAddress,
+  getCip30Address,
   getBalance,
   getCollateral,
   getNetwork,
-  getRewardAddress,
+  getCip30RewardAddress,
   getRegisteredPubStakeKeys,
   getUnregisteredPubStakeKeys,
   getPubDRepKey,
@@ -156,7 +156,7 @@ app.add(METHOD.isEnabled, (request, sendResponse) => {
 app.add(
   METHOD.getAddress,
   requireWhitelist(async (request, sendResponse) => {
-    const address = await getAddress();
+    const address = await getCip30Address();
     if (address) {
       sendResponse({
         id: request.id,
@@ -178,7 +178,7 @@ app.add(
 app.add(
   METHOD.getRewardAddress,
   requireWhitelist(async (request, sendResponse) => {
-    const address = await getRewardAddress();
+    const address = await getCip30RewardAddress();
     if (address) {
       sendResponse({
         id: request.id,

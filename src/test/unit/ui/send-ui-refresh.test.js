@@ -49,6 +49,27 @@ describe('Send UI refresh — structural contracts', () => {
     );
   });
 
+  test('Review footer stays in the popup — not clipped by the scrollbar gutter', () => {
+    expect(sendSrc).toContain('data-testid="send-footer"');
+    expect(sendSrc).toContain('lucem-send-footer');
+    expect(sendSrc).toContain('data-testid="send-primary-action"');
+    expect(sendSrc).toContain('Review transaction');
+    expect(stylesSrc).toMatch(
+      /html\[data-layout=['"]extension['"]\] \.lucem-send-footer/
+    );
+    const scrollSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/scrollbar.jsx'),
+      'utf8'
+    );
+    expect(scrollSrc).toMatch(/marginBottom:\s*0/);
+    expect(scrollSrc).toMatch(/overflowX:\s*['"]hidden['"]/);
+    const mainSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/indexMain.jsx'),
+      'utf8'
+    );
+    expect(mainSrc).toMatch(/overflowX:\s*['"]hidden['"][\s\S]*height:\s*['"]100%['"]/);
+  });
+
   test('sections the form (To / Amount / Tokens / Note) on inset surfaces', () => {
     expect(sendSrc).toMatch(/To[\s\S]*Amount[\s\S]*Tokens[\s\S]*Note/);
     expect((sendSrc.match(/lucem-inset-surface/g) || []).length).toBeGreaterThanOrEqual(4);

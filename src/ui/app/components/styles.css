@@ -179,6 +179,10 @@ html {
   max-height: 100%;
 }
 
+.lucem-send-footer {
+  flex-shrink: 0;
+}
+
 /* Settings shell — dark by default; follows Chakra `html[data-theme]`. */
 .lucem-settings-shell {
   background-color: #080808;
@@ -1010,6 +1014,10 @@ html[data-layout='extension'] body {
 
 html[data-layout='extension'] .lucem-wallet-main-column {
   max-width: 100%;
+}
+
+html[data-layout='extension'] .lucem-send-footer {
+  padding-bottom: 1.5rem;
 }
 
 html[data-layout='extension'] .button.fab-vote,

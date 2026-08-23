@@ -1284,11 +1284,13 @@ const Send = () => {
             </Box>
 
             <Box
+              className="lucem-send-footer"
+              data-testid="send-footer"
               flexShrink={0}
               w="full"
               px={{ base: 4, md: 6 }}
               pt={3}
-              pb="calc(0.85rem + env(safe-area-inset-bottom, 0px))"
+              pb="calc(1.25rem + env(safe-area-inset-bottom, 0px))"
               borderTopWidth="1px"
               borderTopColor="whiteAlpha.100"
               display="flex"

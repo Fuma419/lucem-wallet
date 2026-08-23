@@ -104,7 +104,6 @@ export const extractKeyHash = async (address) => {
 };
 
 export const extractKeyOrScriptHash = async (address) => {
-  console.log('extractKeyOrScriptHash', address);
   await Loader.load();
   if (!(await isValidAddressBytes(Buffer.from(address, 'hex'))))
     throw DataSignError.InvalidFormat;

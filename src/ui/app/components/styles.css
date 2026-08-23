@@ -624,6 +624,28 @@ html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
   fill: currentColor;
 }
 
+/*
+ * Circular corner FABs must ignore `.button { padding: 10px 30px }`. That
+ * padding + border-box + a 3rem box crushes the glyph to a few pixels —
+ * especially in the Chrome toolbar popup, where Emotion and this sheet
+ * can lose the specificity fight that the PWA usually wins.
+ */
+.button.fab-vote,
+.button.fab-stake,
+.button.fab-accounts,
+.button.fab-settings,
+.button.fab-toggle,
+.button.fab-account,
+.button.fab-account-toggle,
+.lucem-header-orb {
+  box-sizing: border-box;
+  width: 3rem;
+  height: 3rem;
+  min-width: 3rem;
+  min-height: 3rem;
+  padding: 0;
+}
+
 .lucem-tray-action-label {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
@@ -963,6 +985,54 @@ html[data-layout='desktop'] .lucem-wallet-actions > div {
 
 html[data-layout='desktop'] .lucem-tray-clearance {
   padding-bottom: 2.5rem !important;
+}
+
+/*
+ * Chrome toolbar popup (`html[data-layout="extension"]`).
+ * Pin to POPUP_WINDOW (533×600) so 100vw cannot become the monitor width
+ * and shrink corner chrome. Keep FABs at a phone-like fraction of 533px.
+ */
+html[data-layout='extension'],
+html[data-layout='extension'] body {
+  width: var(--lucem-popup-width, 533px);
+  height: var(--lucem-popup-height, 600px);
+  max-width: var(--lucem-popup-width, 533px);
+  max-height: var(--lucem-popup-height, 600px);
+  overflow: hidden;
+}
+
+html[data-layout='extension'] .lucem-wallet-main-column {
+  max-width: 100%;
+}
+
+html[data-layout='extension'] .button.fab-vote,
+html[data-layout='extension'] .button.fab-stake,
+html[data-layout='extension'] .button.fab-accounts,
+html[data-layout='extension'] .button.fab-settings,
+html[data-layout='extension'] .button.fab-toggle,
+html[data-layout='extension'] .button.fab-account,
+html[data-layout='extension'] .button.fab-account-toggle,
+html[data-layout='extension'] .lucem-header-orb {
+  width: 3.75rem;
+  height: 3.75rem;
+  min-width: 3.75rem;
+  min-height: 3.75rem;
+}
+
+html[data-layout='extension'] .button.fab-vote svg,
+html[data-layout='extension'] .button.fab-stake svg,
+html[data-layout='extension'] .button.fab-accounts svg,
+html[data-layout='extension'] .button.fab-settings svg,
+html[data-layout='extension'] .button.fab-toggle svg,
+html[data-layout='extension'] .button.fab-account-toggle svg {
+  width: 2rem;
+  height: 2rem;
+}
+
+html[data-layout='extension'] .lucem-wallet-asset-tabs .chakra-tabs__tab svg,
+html[data-layout='extension'] .lucem-wallet-asset-tabs svg {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 html[data-layout='desktop'] [data-testid='settings-swap-trays'] {

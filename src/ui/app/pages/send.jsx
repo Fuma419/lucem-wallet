@@ -872,8 +872,9 @@ const Send = () => {
     <>
       <Box
         data-testid="send-page"
-        minH="100vh"
-        sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
+        h="100%"
+        maxH="100%"
+        minH={0}
         display="flex"
         alignItems="stretch"
         flexDirection="column"
@@ -883,7 +884,7 @@ const Send = () => {
         bg={pageBg}
         color={pageFg}
         overflow="hidden"
-        className="lucem-wallet-main-column lucem-settings-shell"
+        className="lucem-wallet-main-column lucem-settings-shell lucem-send-page"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             const tag = (e.target && e.target.tagName) || '';
@@ -949,9 +950,12 @@ const Send = () => {
             </Flex>
 
             <Box
+              data-testid="send-form-scroll"
               flex="1"
               minH={0}
               overflowY="auto"
+              overflowX="hidden"
+              overscrollBehavior="contain"
               w="full"
               px={{ base: 4, md: 6 }}
               pt={1}

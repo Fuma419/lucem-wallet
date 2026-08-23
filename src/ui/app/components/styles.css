@@ -172,6 +172,13 @@ html {
   margin-right: auto;
 }
 
+/* Send sits inside Main `#scroll`. 100vh here is a second scrollport
+   (and in the Chrome popup 100vh can be the monitor). Fill the parent. */
+.lucem-send-page {
+  height: 100%;
+  max-height: 100%;
+}
+
 /* Settings shell — dark by default; follows Chakra `html[data-theme]`. */
 .lucem-settings-shell {
   background-color: #080808;

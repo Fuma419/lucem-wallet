@@ -352,7 +352,9 @@ pipeline {
           E2E_PIDS=$(lsof -t -i:4179 2>/dev/null || true); if [ -n "$E2E_PIDS" ]; then kill -9 $E2E_PIDS 2>/dev/null || true; fi
           npm run test:e2e:install --if-present
           export LUCEM_SCREENSHOT_DIR="${WORKSPACE}/e2e-screenshots"
-          npx playwright test e2e/screenshots.spec.js || true
+          # Fail the stage on assertion errors. PNG dumps still archive below
+          # even when this command fails (post { always }).
+          npx playwright test e2e/screenshots.spec.js
         '''
       }
       post {

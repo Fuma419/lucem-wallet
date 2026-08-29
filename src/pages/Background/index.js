@@ -2,6 +2,7 @@ import {
   createPopup,
   extractKeyHash,
   getCip30Address,
+  getCip30UsedAddresses,
   getBalance,
   getCollateral,
   getNetwork,
@@ -168,6 +169,28 @@ app.add(
       sendResponse({
         id: request.id,
         error: APIError.InternalError,
+        target: TARGET,
+        sender: SENDER.extension,
+      });
+    }
+  })
+);
+
+app.add(
+  METHOD.getUsedAddresses,
+  requireWhitelist(async (request, sendResponse) => {
+    try {
+      const addresses = await getCip30UsedAddresses();
+      sendResponse({
+        id: request.id,
+        data: addresses,
+        target: TARGET,
+        sender: SENDER.extension,
+      });
+    } catch (e) {
+      sendResponse({
+        id: request.id,
+        error: e,
         target: TARGET,
         sender: SENDER.extension,
       });

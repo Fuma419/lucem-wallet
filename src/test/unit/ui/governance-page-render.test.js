@@ -60,13 +60,16 @@ const govTxStub = (fee) => ({
   to_bytes: () => new Uint8Array([1, 2, 3]),
 });
 
-jest.mock('../../../api/governance', () => ({
-  __esModule: true,
-  fetchDRepRegistration: jest.fn(),
-  fetchDRepVotes: jest.fn(),
-  fetchGovernanceOverview: jest.fn(),
-  normalizeDrepKeyHash: jest.fn((v) => v),
-}));
+jest.mock('../../../api/governance', () => {
+  const actual = jest.requireActual('../../../api/governance');
+  return {
+    __esModule: true,
+    ...actual,
+    fetchDRepRegistration: jest.fn(),
+    fetchDRepVotes: jest.fn(),
+    fetchGovernanceOverview: jest.fn(),
+  };
+});
 
 import Governance from '../../../ui/app/pages/governance';
 import {
@@ -80,6 +83,7 @@ import {
   fetchDRepVotes,
   fetchGovernanceOverview,
 } from '../../../api/governance';
+import Loader from '../../../api/loader';
 
 const votableProposal = {
   id: `${PROPOSAL_TX_HASH}#0`,
@@ -238,6 +242,51 @@ describe('Voting page — behavioral render', () => {
       expect.any(Object),
       'always_abstain',
       ''
+    );
+  });
+
+  test('pasting a gov.tools drep1… ID builds a key-hash vote-delegation tx', async () => {
+    const targetKeyHash = '11'.repeat(28);
+    const drep1 = Loader.Cardano.DRep.new_key_hash(
+      Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(targetKeyHash, 'hex'))
+    ).to_bech32(true);
+    expect(drep1.startsWith('drep1')).toBe(true);
+
+    const { container } = await renderGovernance();
+    const pasteIdx = container.textContent.indexOf('Delegate to a specific DRep');
+    const abstainIdx = container.textContent.indexOf('Always Abstain');
+    expect(pasteIdx).toBeGreaterThan(-1);
+    expect(pasteIdx).toBeLessThan(abstainIdx);
+
+    const input = container.querySelector('[data-testid="governance-drep-id-input"]');
+    expect(input).toBeTruthy();
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      ).set;
+      setter.call(input, drep1);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const delegateBtn = container.querySelector(
+      '[data-testid="governance-custom-drep-delegate"]'
+    );
+    expect(delegateBtn).toBeTruthy();
+    expect(delegateBtn.disabled).toBe(false);
+    await act(async () => {
+      delegateBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(voteDelegationTx).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.any(Object),
+      expect.any(Object),
+      'key_hash',
+      targetKeyHash
     );
   });
 });

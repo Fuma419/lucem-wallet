@@ -1,5 +1,6 @@
 import provider from '../config/provider';
 import { koiosRequestEnhanced } from './util';
+import Loader from './loader';
 
 const BLOCKFROST_BASE_URLS = {
   mainnet: 'https://cardano-mainnet.blockfrost.io/api/v0',
@@ -181,11 +182,47 @@ const resolveProposalId = (proposal, index) => {
   return `proposal-${index + 1}`;
 };
 
-export const normalizeDrepKeyHash = (value) => {
-  if (typeof value !== 'string') return '';
-  const match = value.trim().toLowerCase().match(/[0-9a-f]{56}/);
-  return match ? match[0] : '';
+/**
+ * Resolve a pasted DRep identifier to a 28-byte key-hash hex.
+ * Accepts a raw 56-char hex hash (legacy) or CIP-129/CIP-105 bech32
+ * (`drep1…` / `drep_vkh1…`) as shown on gov.tools.
+ * Script-hash DReps are recognized but not a key hash — voteDelegationTx
+ * only builds key_hash certificates.
+ *
+ * @returns {{ keyHashHex: string, reason: 'ok' | 'invalid' | 'script_hash' }}
+ */
+export const parseDrepKeyHash = (value) => {
+  if (typeof value !== 'string') return { keyHashHex: '', reason: 'invalid' };
+  const trimmed = value.trim();
+  if (!trimmed) return { keyHashHex: '', reason: 'invalid' };
+
+  const lower = trimmed.toLowerCase();
+  if (/^[0-9a-f]{56}$/.test(lower)) {
+    return { keyHashHex: lower, reason: 'ok' };
+  }
+
+  try {
+    const Cardano = Loader.Cardano;
+    const drep = Cardano.DRep.from_bech32(trimmed);
+    if (drep.kind() === Cardano.DRepKind.ScriptHash) {
+      return { keyHashHex: '', reason: 'script_hash' };
+    }
+    const keyHash = drep.to_key_hash();
+    if (keyHash) {
+      return {
+        keyHashHex: Buffer.from(keyHash.to_bytes()).toString('hex'),
+        reason: 'ok',
+      };
+    }
+  } catch {
+    // Not a DRep bech32 id — fall through to embedded-hex extraction.
+  }
+
+  const match = lower.match(/[0-9a-f]{56}/);
+  return match ? { keyHashHex: match[0], reason: 'ok' } : { keyHashHex: '', reason: 'invalid' };
 };
+
+export const normalizeDrepKeyHash = (value) => parseDrepKeyHash(value).keyHashHex;
 
 const normalizeProposal = (proposal, index) => {
   const id = resolveProposalId(proposal, index);

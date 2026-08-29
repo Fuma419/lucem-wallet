@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { openSeededWallet } = require('./helpers');
 
 /** @param {{ x: number; y: number; width: number; height: number }} a */
 /** @param {{ x: number; y: number; width: number; height: number }} b */
@@ -22,20 +23,12 @@ test.describe('Wallet header action row', () => {
     test(`Receive / Delegate / Send do not overlap at ${vp.width}×${vp.height}`, async ({
       page,
     }) => {
+      test.setTimeout(90_000);
       await page.setViewportSize(vp);
-      await page.goto('/wallet', { waitUntil: 'domcontentloaded' });
+      await openSeededWallet(page, '/wallet');
 
       const receive = page.getByTestId('wallet-receive');
-      const visible = await receive
-        .isVisible({ timeout: 8000 })
-        .catch(() => false);
-      if (!visible) {
-        test.skip(
-          true,
-          'Wallet home not shown (no stored wallet or still on welcome). Build the app, serve build/, open an unlocked wallet, then re-run.'
-        );
-        return;
-      }
+      await receive.waitFor({ state: 'visible', timeout: 60_000 });
 
       const send = page.getByTestId('wallet-send');
       const delegation = page.getByTestId('wallet-delegation');

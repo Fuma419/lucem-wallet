@@ -22,6 +22,7 @@ jest.mock('../../../api/extension', () => ({
   createPopup: jest.fn(),
   getAddress: jest.fn(),
   getCip30Address: jest.fn(),
+  getCip30UsedAddresses: jest.fn(),
   getBalance: jest.fn(),
   getCollateral: jest.fn(),
   getNetwork: jest.fn(),
@@ -63,6 +64,10 @@ beforeEach(() => {
   extension.createPopup.mockReset().mockResolvedValue({ id: 42 });
   extension.getAddress.mockReset().mockResolvedValue('addr_change_hex');
   extension.getCip30Address.mockReset().mockResolvedValue('addr_change_hex');
+  extension.getCip30UsedAddresses.mockReset().mockResolvedValue([
+    'addr_change_hex',
+    'addr_ext_1_hex',
+  ]);
   extension.getBalance.mockReset().mockResolvedValue(bytes('a1'));
   extension.getCollateral.mockReset().mockResolvedValue([bytes('c0'), bytes('c1')]);
   extension.getNetwork.mockReset().mockResolvedValue({ id: 'mainnet' });
@@ -168,6 +173,14 @@ describe('dApp connector — read methods (whitelisted session)', () => {
 
   test('getRewardAddress is proxied from the wallet', async () => {
     await expect(dapp.getRewardAddress()).resolves.toBe('addr_reward_hex');
+  });
+
+  test('getUsedAddresses returns every spendable payment address', async () => {
+    await expect(dapp.getUsedAddresses()).resolves.toEqual([
+      'addr_change_hex',
+      'addr_ext_1_hex',
+    ]);
+    expect(extension.getCip30UsedAddresses).toHaveBeenCalledTimes(1);
   });
 
   test('CIP-95 getPubDRepKey is proxied from the wallet', async () => {

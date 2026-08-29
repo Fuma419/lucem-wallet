@@ -121,6 +121,7 @@ export {
 export {
   getAddress,
   getCip30Address,
+  getCip30UsedAddresses,
   getCip30RewardAddress,
   toCip30AddressHex,
   getEnabledPaymentAddresses,

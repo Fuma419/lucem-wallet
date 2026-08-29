@@ -21,6 +21,7 @@ const mockWebpage = {
   getUtxos: jest.fn(),
   getCollateral: jest.fn(),
   getAddress: jest.fn(),
+  getUsedAddresses: jest.fn(),
   getRewardAddress: jest.fn(),
   getNetworkId: jest.fn(),
   getPubDRepKey: jest.fn(),
@@ -70,6 +71,11 @@ describe('dApp connector — CIP-30 injected API surface', () => {
     mockWebpage.getUtxos.mockResolvedValue([]);
     mockWebpage.getCollateral.mockResolvedValue([]);
     mockWebpage.getAddress.mockResolvedValue('addr_used_hex');
+    mockWebpage.getUsedAddresses.mockResolvedValue([
+      'addr_used_hex',
+      'addr_ext_1_hex',
+      'addr_int_0_hex',
+    ]);
     mockWebpage.getRewardAddress.mockResolvedValue('addr_reward_hex');
     mockWebpage.getNetworkId.mockResolvedValue(1);
     mockWebpage.signTx.mockResolvedValue('signed_witness_hex');
@@ -185,9 +191,14 @@ describe('dApp connector — CIP-30 injected API surface', () => {
       expect(mockWebpage.getBalance).toHaveBeenCalledTimes(1);
     });
 
-    test('getUsedAddresses wraps the change address in an array', async () => {
-      await expect(api.getUsedAddresses()).resolves.toEqual(['addr_used_hex']);
-      expect(mockWebpage.getAddress).toHaveBeenCalledTimes(1);
+    test('getUsedAddresses returns every spendable payment address', async () => {
+      await expect(api.getUsedAddresses()).resolves.toEqual([
+        'addr_used_hex',
+        'addr_ext_1_hex',
+        'addr_int_0_hex',
+      ]);
+      expect(mockWebpage.getUsedAddresses).toHaveBeenCalledTimes(1);
+      expect(mockWebpage.getAddress).not.toHaveBeenCalled();
     });
 
     test('getUnusedAddresses returns an empty array (CIP-30 allows this)', async () => {

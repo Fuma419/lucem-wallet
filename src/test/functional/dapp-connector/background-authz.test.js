@@ -23,6 +23,7 @@ jest.mock('../../../api/extension', () => ({
   createPopup: jest.fn(),
   getAddress: jest.fn(),
   getCip30Address: jest.fn(),
+  getCip30UsedAddresses: jest.fn(),
   getBalance: jest.fn(),
   getCollateral: jest.fn(),
   getNetwork: jest.fn(),
@@ -66,6 +67,7 @@ const msg = (method, extra = {}) => ({
 const PRIVILEGED = [
   ['getBalance', {}, () => extension.getBalance],
   ['getAddress', {}, () => extension.getCip30Address],
+  ['getUsedAddresses', {}, () => extension.getCip30UsedAddresses],
   ['getRewardAddress', {}, () => extension.getCip30RewardAddress],
   ['getRegisteredPubStakeKeys', {}, () => extension.getRegisteredPubStakeKeys],
   [
@@ -87,6 +89,10 @@ beforeEach(() => {
   extension.createPopup.mockReset().mockResolvedValue({ id: 42 });
   extension.getAddress.mockReset().mockResolvedValue('addr_change_hex');
   extension.getCip30Address.mockReset().mockResolvedValue('addr_change_hex');
+  extension.getCip30UsedAddresses.mockReset().mockResolvedValue([
+    'addr_change_hex',
+    'addr_ext_1_hex',
+  ]);
   extension.getBalance.mockReset().mockResolvedValue(bytes('a1'));
   extension.getCollateral.mockReset().mockResolvedValue([bytes('c0')]);
   extension.getNetwork.mockReset().mockResolvedValue({ id: 'mainnet' });

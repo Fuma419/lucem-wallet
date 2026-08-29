@@ -51,6 +51,13 @@ export const getAddress = async () => {
   return result.data;
 };
 
+export const getUsedAddresses = async () => {
+  const result = await Messaging.sendToContent({
+    method: METHOD.getUsedAddresses,
+  });
+  return result.data;
+};
+
 export const getRewardAddress = async () => {
   const result = await Messaging.sendToContent({
     method: METHOD.getRewardAddress,

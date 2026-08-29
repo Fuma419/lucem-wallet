@@ -72,6 +72,24 @@ export const getEnabledPaymentAddresses = async () => {
 };
 
 /**
+ * CIP-30 getUsedAddresses: hex-encoded payment addresses this wallet can
+ * spend from (enabled external + internal). Unique; external index 0 first.
+ * getChangeAddress stays primary receive (external index 0) via getAddress.
+ */
+export const getCip30UsedAddresses = async () => {
+  const rows = await getEnabledPaymentAddresses();
+  const seen = new Set();
+  const out = [];
+  for (const row of rows) {
+    const hex = toCip30AddressHex(row.paymentAddr);
+    if (!hex || seen.has(hex)) continue;
+    seen.add(hex);
+    out.push(hex);
+  }
+  return out;
+};
+
+/**
  * Payment key hashes for every enabled external + internal address on an
  * account. Used so fee sizing and witnesses cover change/multi-address UTxOs.
  *

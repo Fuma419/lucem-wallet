@@ -1,10 +1,12 @@
 import provider from '../../../config/provider';
 import { koiosRequestEnhanced } from '../../../api/util';
+import Loader from '../../../api/loader';
 import {
   extractGovernanceNarrativeFromMetadataRoot,
   fetchGovernanceOverview,
   isUsableBlockfrostProjectId,
   normalizeDrepKeyHash,
+  parseDrepKeyHash,
 } from '../../../api/governance';
 
 jest.mock('../../../config/provider', () => ({
@@ -295,10 +297,28 @@ describe('governance API service', () => {
   });
 
   test('utility helpers sanitize key hash and detect placeholder keys', () => {
+    const keyHashHex = 'aa'.repeat(28);
+    const drep = Loader.Cardano.DRep.new_key_hash(
+      Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(keyHashHex, 'hex'))
+    );
+    const cip129 = drep.to_bech32(true);
+    expect(cip129.startsWith('drep1')).toBe(true);
+    expect(normalizeDrepKeyHash(cip129)).toBe(keyHashHex);
+    expect(normalizeDrepKeyHash(`  ${cip129}  `)).toBe(keyHashHex);
+    expect(normalizeDrepKeyHash(drep.to_bech32(false))).toBe(keyHashHex);
+    expect(normalizeDrepKeyHash(keyHashHex)).toBe(keyHashHex);
     expect(normalizeDrepKeyHash(`prefix-${'A'.repeat(56)}-suffix`)).toBe(
       'a'.repeat(56)
     );
     expect(normalizeDrepKeyHash('drep1example')).toBe('');
+
+    const scriptDrep = Loader.Cardano.DRep.new_script_hash(
+      Loader.Cardano.ScriptHash.from_bytes(Buffer.from('bb'.repeat(28), 'hex'))
+    );
+    expect(parseDrepKeyHash(scriptDrep.to_bech32(true))).toEqual({
+      keyHashHex: '',
+      reason: 'script_hash',
+    });
 
     expect(isUsableBlockfrostProjectId('bf_key_123')).toBe(true);
     expect(isUsableBlockfrostProjectId('dummy')).toBe(false);

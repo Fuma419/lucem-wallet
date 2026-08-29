@@ -54,7 +54,7 @@ import {
   fetchDRepRegistration,
   fetchDRepVotes,
   fetchGovernanceOverview,
-  normalizeDrepKeyHash,
+  parseDrepKeyHash,
 } from '../../../api/governance';
 import { ERROR, HW, TAB } from '../../../config/config';
 import useSurfaceColors from '../hooks/useSurfaceColors';
@@ -571,11 +571,14 @@ const Governance = () => {
   };
 
   const handleCustomDrepDelegation = async () => {
-    const keyHashHex = normalizeDrepKeyHash(drepIdInput);
+    const { keyHashHex, reason } = parseDrepKeyHash(drepIdInput);
     if (!keyHashHex) {
       toast({
-        title: 'Invalid DRep key hash',
-        description: 'Expected a 56-character hex key hash',
+        title: 'Invalid DRep ID',
+        description:
+          reason === 'script_hash'
+            ? 'This DRep ID is a script hash. Lucem can only delegate to key-hash DReps.'
+            : 'Paste a gov.tools drep1… ID or a 56-character hex key hash.',
         status: 'warning',
         duration: 3500,
         isClosable: true,
@@ -671,7 +674,7 @@ const Governance = () => {
               <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="black" lineHeight="1.05">
                 Delegate your voting power, keep your keys.
               </Text>
-              <Text color={softFg} mt={2} fontSize="xs" noOfLines={2}>
+              <Text color={softFg} mt={2} fontSize="xs">
                 Build and sign on-chain governance transactions with the same secure password
                 or hardware wallet flow used everywhere else in Lucem.
               </Text>
@@ -752,65 +755,68 @@ const Governance = () => {
             </Button>
           </Flex>
 
-          <Stack
-            spacing={4}
-            className="lucem-equal-width-actions"
-            data-testid="governance-delegate-actions"
-          >
-            <DelegateActionCard
-              icon={MdOutlineGavel}
-              title="Always Abstain"
-              text="Delegate voting power so your stake always abstains from governance actions."
-              buttonLabel="Delegate to Always Abstain"
-              onClick={() => void prepareVoteDelegation('always_abstain')}
-              isLoading={isBuildingTx}
-            />
-            <DelegateActionCard
-              icon={MdBlock}
-              title="Always No Confidence"
-              text="Delegate voting power to a permanent no-confidence position on-chain."
-              buttonLabel="Delegate to Always No Confidence"
-              colorScheme="red"
-              onClick={() => void prepareVoteDelegation('always_no_confidence')}
-              isLoading={isBuildingTx}
-            />
-          </Stack>
+          <Stack spacing={4}>
+            <Box
+              borderWidth="1px"
+              borderColor={panelBorder}
+              bg={cardBg}
+              rounded="2xl"
+              p={4}
+            >
+              <Text fontWeight="bold" mb={1}>
+                Delegate to a specific DRep
+              </Text>
+              <Text fontSize="xs" color={mutedFg} mb={3}>
+                Paste a gov.tools DRep ID (drep1…) or a 56-character hex key hash.
+              </Text>
+              <Flex gap={2} direction={{ base: 'column', sm: 'row' }}>
+                <Input
+                  data-testid="governance-drep-id-input"
+                  placeholder="drep1… or 56-character hex key hash"
+                  value={drepIdInput}
+                  onChange={(event) => setDrepIdInput(event.target.value)}
+                  bg={inputBg}
+                  borderColor={inputBorder}
+                  focusBorderColor="cyan.400"
+                  _placeholder={{ color: placeholder }}
+                />
+                <Button
+                  data-testid="governance-custom-drep-delegate"
+                  colorScheme="cyan"
+                  px={8}
+                  onClick={() => void handleCustomDrepDelegation()}
+                  isDisabled={!drepIdInput.trim()}
+                  isLoading={isBuildingTx}
+                >
+                  Delegate
+                </Button>
+              </Flex>
+            </Box>
 
-          <Box
-            mt={4}
-            borderWidth="1px"
-            borderColor={panelBorder}
-            bg={cardBg}
-            rounded="2xl"
-            p={4}
-          >
-            <Text fontWeight="bold" mb={1}>
-              Delegate to a specific DRep
-            </Text>
-            <Text fontSize="xs" color={mutedFg} mb={3}>
-              Paste a 56-character hex DRep key hash to delegate your vote.
-            </Text>
-            <Flex gap={2} direction={{ base: 'column', sm: 'row' }}>
-              <Input
-                placeholder="DRep key hash (56 hex chars)"
-                value={drepIdInput}
-                onChange={(event) => setDrepIdInput(event.target.value)}
-                bg={inputBg}
-                borderColor={inputBorder}
-                focusBorderColor="cyan.400"
-                _placeholder={{ color: placeholder }}
-              />
-              <Button
-                colorScheme="cyan"
-                px={8}
-                onClick={() => void handleCustomDrepDelegation()}
-                isDisabled={!drepIdInput.trim()}
+            <Stack
+              spacing={4}
+              className="lucem-equal-width-actions"
+              data-testid="governance-delegate-actions"
+            >
+              <DelegateActionCard
+                icon={MdOutlineGavel}
+                title="Always Abstain"
+                text="Delegate voting power so your stake always abstains from governance actions."
+                buttonLabel="Delegate to Always Abstain"
+                onClick={() => void prepareVoteDelegation('always_abstain')}
                 isLoading={isBuildingTx}
-              >
-                Delegate
-              </Button>
-            </Flex>
-          </Box>
+              />
+              <DelegateActionCard
+                icon={MdBlock}
+                title="Always No Confidence"
+                text="Delegate voting power to a permanent no-confidence position on-chain."
+                buttonLabel="Delegate to Always No Confidence"
+                colorScheme="red"
+                onClick={() => void prepareVoteDelegation('always_no_confidence')}
+                isLoading={isBuildingTx}
+              />
+            </Stack>
+          </Stack>
 
           {governanceState.dreps.length > 0 && (
             <Box mt={5}>

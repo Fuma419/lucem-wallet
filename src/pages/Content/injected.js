@@ -52,11 +52,19 @@ window.cardano = {
   _events: {},
 };
 
-// // CIP-30
+// CIP-30 Full API (plus CIP-95 when requested at enable time)
 const CIP_95_EXTENSION = { cip: 95 };
 const hasRequestedExtension = (options, cipNumber) => {
   const requested = Array.isArray(options?.extensions) ? options.extensions : [];
   return requested.some((extension) => Number(extension?.cip) === Number(cipNumber));
+};
+
+const extensionsEnabledFor = (options) => {
+  const enabled = [];
+  if (hasRequestedExtension(options, 95)) {
+    enabled.push(CIP_95_EXTENSION);
+  }
+  return enabled;
 };
 
 window.cardano = {
@@ -64,6 +72,7 @@ window.cardano = {
   lucem: {
     enable: async (options = {}) => {
       if (await enable()) {
+        const grantedExtensions = extensionsEnabledFor(options);
         const api = {
           getBalance: () => getBalance(),
           signData: (address, payload) => signDataCIP30(address, payload),
@@ -78,6 +87,8 @@ window.cardano = {
           on: (eventName, callback) => on(eventName, callback),
           off: (eventName, callback) => off(eventName, callback),
           getCollateral: (params) => getCollateral(params),
+          // CIP-30 Full API — gov.tools / Mesh call this immediately after enable().
+          getExtensions: async () => grantedExtensions.slice(),
         };
         if (hasRequestedExtension(options, 95)) {
           api.cip95 = {

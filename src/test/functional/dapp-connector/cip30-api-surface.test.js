@@ -44,6 +44,7 @@ const CIP30_API_METHODS = [
   'signTx',
   'signData',
   'submitTx',
+  'getExtensions',
   'on',
   'off',
 ];
@@ -144,12 +145,22 @@ describe('dApp connector — CIP-30 injected API surface', () => {
     expect(api.cip95).toBeUndefined();
   });
 
+  test('getExtensions() returns no extensions when none were requested', async () => {
+    const api = await window.cardano.lucem.enable();
+    await expect(api.getExtensions()).resolves.toEqual([]);
+  });
+
   test('attaches CIP-95 governance methods when {cip:95} is requested', async () => {
     const api = await window.cardano.lucem.enable({ extensions: [{ cip: 95 }] });
     expect(api.cip95).toBeDefined();
     CIP95_API_METHODS.forEach((method) => {
       expect(typeof api.cip95[method]).toBe('function');
     });
+  });
+
+  test('getExtensions() reports CIP-95 after it is requested (gov.tools handshake)', async () => {
+    const api = await window.cardano.lucem.enable({ extensions: [{ cip: 95 }] });
+    await expect(api.getExtensions()).resolves.toEqual([{ cip: 95 }]);
   });
 
   describe('granted API delegates to the transport with CIP-30 semantics', () => {

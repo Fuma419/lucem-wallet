@@ -8,10 +8,11 @@ test.describe('Send all warning UX', () => {
     await openSeededWallet(page, '/send');
 
     await page.getByTestId('send-page').waitFor({ state: 'visible', timeout: 60_000 });
-    const sendAllToggle = page.getByTestId('send-all-toggle');
-    await sendAllToggle.scrollIntoViewIfNeeded();
-    await expect(sendAllToggle).toBeEnabled({ timeout: 30_000 });
-    await sendAllToggle.click();
+    // Wait until init has a spendable balance so the toggle is not mid-remount.
+    await expect(page.getByTestId('send-percent-max')).toBeEnabled({
+      timeout: 30_000,
+    });
+    await page.getByTestId('send-all-toggle').click();
 
     await expect(page.getByTestId('send-all-warning')).toBeVisible();
     await expect(

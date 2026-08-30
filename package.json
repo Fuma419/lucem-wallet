@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/input-output-hk/nami"
+    "url": "https://github.com/Fuma419/lucem-wallet"
   },
   "scripts": {
     "build": "NODE_OPTIONS=\"--max-old-space-size=4096\" NODE_ENV=test jest && NODE_OPTIONS=\"--max-old-space-size=4096\" node utils/build.js",

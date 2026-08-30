@@ -1,141 +1,125 @@
-<p align="center"><img width="200px" src="./src/assets/img/bannerBlack.svg"></img></p>
+<p align="center"><img width="200px" src="./src/assets/img/bannerBlack.svg" alt="Lucem"></p>
 
 # Lucem
 
-Lucem is a browser based wallet extension to interact with the Cardano blockchain. It's an open-source project forked from Nami, which is maintained by [**IOG**](https://iohk.io/en/blog/posts/2023/11/01/nami-has-a-new-home/).
+Lucem is an open-source Cardano wallet: a Chrome/Firefox/Edge **extension**, a **web app**, and a Capacitor **mobile** shell. It is forked from [Nami](https://iohk.io/en/blog/posts/2023/11/01/nami-has-a-new-home/). Settings expose **Mainnet**, **Preprod**, and **Preview**. dApps connect through CIP-30 under `window.cardano.lucem` (Mesh and gov.tools already do); CIP-95 is opt-in at `enable()` time.
+
+<p align="center">
+  <img src="./docs/screenshots/01-welcome.png" alt="Wallet setup: create, restore, or connect hardware" width="180" />
+  <img src="./docs/screenshots/04-hw-connect.png" alt="Connect hardware wallet: Keystone or Ledger" width="180" />
+  <img src="./docs/screenshots/12-send-page.png" alt="Send ADA and native tokens" width="180" />
+  <img src="./docs/screenshots/16-governance.png" alt="Governance voting center" width="180" />
+</p>
 
 ## Features
 
-- **Direct Koios Integration**: Uses Koios API directly without Blaze SDK
-- **Hardware Wallet Support**: Ledger and Trezor integration
-- **CIP-30 Compliant**: Full dApp connector support
-- **Multi-Account Support**: Manage multiple accounts
-- **Token Management**: Native token support
-- **Staking**: Delegate to stake pools
-- **Cross-Platform**: Chrome, Firefox, Edge support
-- **Lightweight**: No heavy SDK dependencies
+- **CIP-30 dApp connector** — namespace `lucem`; addresses are hex-encoded Address CBOR
+- **CIP-95** — DRep / stake-key methods when you `enable({ extensions: [{ cip: 95 }] })`
+- **Hardware wallets** — Keystone (QR), Ledger (USB / Bluetooth), Trezor (signing)
+- **Networks** — Mainnet, Preprod, Preview (same three choices as Settings)
+- **Send, receive, native tokens, staking, governance**
+- **Runs as** a browser extension, `localhost:3000/mainPopup.html`, or [mobile](MOBILE.md)
 
-## Testnet
+## Install
 
-Download and extract the zip attached to the latest [Release](https://github.com/Fuma419/lucem-wallet/releases). Then go to `chrome://extensions`, click Load unpacked at the top left and select the build folder.
+### Browser extension
 
-## API Integration
+1. Download the zip from the latest [Release](https://github.com/Fuma419/lucem-wallet/releases) and extract it.
+2. Open `chrome://extensions` (or the equivalent on Firefox / Edge).
+3. Enable Developer mode → **Load unpacked** → select the `build/` folder.
 
-### Koios API
+### Web app
 
-Lucem uses Koios API for blockchain data. Koios provides:
-- Real-time Cardano blockchain data
-- Comprehensive API coverage
-- High performance and reliability
-- No API key required for basic usage
-
-### Supported Networks
-
-- **Mainnet**: `https://api.koios.rest/api/v1`
-- **Testnet**: `https://testnet.koios.rest/api/v1`
-- **Preview**: `https://preview.koios.rest/api/v1`
-- **Preprod**: `https://preprod.koios.rest/api/v1`
-
-## Injected API
-
-Since Lucem is a browser extension, it can inject content inside the web context, which means you can connect the wallet to any website.
-The exposed API follows [CIP-0030](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0030). The returned types are in `cbor`/`bytes` format. A helpful library for serializing and de-serializing these low-level data structures is the [serialization-lib](https://github.com/Emurgo/cardano-serialization-lib). To verify a signature returned from `cardano.dataSign(address, payload)` the [message-signing](https://github.com/Emurgo/message-signing) library helps.
-
-#### Basic Usage
-
-- Detect the Cardano provider (`window.cardano`) and detect Lucem (`window.cardano.lucem`)
-- Request the `api` from `window.cardano.lucem.enable()`
-- Detect which Cardano network the user is connected to (ID 1 = Mainnet, ID 0 = Testnet)
-- Get the user's Cardano account
-
-#### Methods
-
-The full list of methods can be found in [CIP-0030](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0030).
-For the wallet namespace Lucem uses `lucem`.
-
-**Note:** Lucem follows the ongoing [PR](https://github.com/cardano-foundation/CIPs/pull/148) for the `dataSign` endpoint. (Very similar to the previous `dataSign` endpoint from Nami).
-
-Lucem also uses a few custom endpoints, which are available under `api.experimental`:
-
-##### api.experimental.getCollateral()
-
-```
-cardano.getCollateral() : [TransactionUnspentOutput]
+```bash
+npm start
 ```
 
-##### api.experimental.on(eventName, callback)
+Open [http://localhost:3000/mainPopup.html](http://localhost:3000/mainPopup.html). Webpack also writes `build/` on disk, so you can load that folder as an unpacked extension while developing.
 
-Register events coming from Lucem. Available events are:
+### Mobile (iOS / Android)
 
+See **[MOBILE.md](MOBILE.md)** for Capacitor setup, Keystone QR on device, and store notes.
+
+## Networks
+
+Settings offers only these three. CIP-30 `getNetworkId()` returns `1` on Mainnet and `0` on Preprod and Preview.
+
+| Network | Koios |
+| ------- | ----- |
+| **Mainnet** | `https://api.koios.rest/api/v1` |
+| **Preprod** | `https://preprod.koios.rest/api/v1` |
+| **Preview** | `https://preview.koios.rest/api/v1` |
+
+Optional Koios API keys raise rate limits. Governance proposal text is richer with a matching Blockfrost project id (`BLOCKFROST_*` in `.env.example`); without it the Voting Center shows **Limited data**.
+
+## CIP-30 for dApp authors
+
+Provider: `window.cardano.lucem`. Spec: [CIP-30](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0030), [CIP-95](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0095).
+
+**Addresses are hex**, not bech32. `getChangeAddress()`, `getUsedAddresses()`, and `getRewardAddresses()` return hex-encoded Address CBOR (`cip30-address.js`). Mesh, Eternl, and Lace speak hex; treating those strings as `addr1…` / `addr_test1…` will break change-address and stake-certificate builders.
+
+`getCollateral()` is on the **standard** CIP-30 API returned from `enable()` (not `api.experimental`). CIP-95 is **not** attached unless you request it.
+
+```javascript
+const lucem = window.cardano?.lucem;
+if (!lucem) {
+  throw new Error('Lucem is not available. Install the extension or open the Lucem web app.');
+}
+
+const api = await lucem.enable({
+  extensions: [{ cip: 95 }],
+});
+
+const networkId = await api.getNetworkId(); // 1 = Mainnet, 0 = Preprod or Preview
+const changeHex = await api.getChangeAddress(); // hex Address CBOR, not bech32
+const usedHex = await api.getUsedAddresses();
+const collateral = await api.getCollateral(); // standard CIP-30
+
+console.log(await api.getExtensions()); // [{ cip: 95 }]
+const dRepKey = await api.cip95.getPubDRepKey();
+const registered = await api.cip95.getRegisteredPubStakeKeys();
+
+api.on('accountChange', (addresses) => {
+  /* hex addresses */
+});
+api.on('networkChange', (id) => {
+  /* 0 or 1 */
+});
 ```
-accountChange: ((addresses : [BaseAddress]) => void)
-networkChange: ((network : number) => void)
-```
 
-##### api.experimental.off(eventName, callback)
+`enable()` without `{ extensions: [{ cip: 95 }] }` still returns the full CIP-30 surface (`getCollateral`, `getExtensions` → `[]`, …) but **no** `api.cip95`. `getUnusedAddresses()` returns `[]`. `signData(address, payload)` is CIP-30 (hex address + hex payload → `{ signature, key }`).
 
-Deregister the events (works also with anonymous functions).
+A deprecated top-level `window.cardano.enable()` still exists for old sites; new integrations should use `window.cardano.lucem` only.
 
----
+## Hardware wallets
+
+The Connect Hardware Wallet screen offers **Keystone** and **Ledger**.
+
+- **Keystone** — air-gapped QR (also the hardware path on mobile).
+- **Ledger** — USB or Bluetooth (Chrome / Edge on desktop; iOS browsers do not expose Web Bluetooth).
+- **Trezor** — signing flow for Trezor accounts (`trezorTx`).
 
 ## Development
 
-### Prerequisites
-
-- Node.js 18+
-- npm or yarn
-
-### Setup
-
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. **Set up environment variables:**
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env
-   
-   # Edit .env and add your Koios API keys (optional)
-   # KOIOS_API_KEY_MAINNET=your-actual-api-key
-   # KOIOS_API_KEY_TESTNET=your-actual-api-key
-   # KOIOS_API_KEY_PREVIEW=your-actual-api-key
-   # KOIOS_API_KEY_PREPROD=your-actual-api-key
-   ```
-4. Build the extension: `npm run build`
-
-### Environment Variables
-
-The wallet uses environment variables for configuration. Create a `.env` file in the root directory:
+**Node 24.x** (`.nvmrc` is `24.19.0`; `package.json` `engines.node` is `24.x`).
 
 ```bash
-# Koios API Keys (optional - wallet works without them)
-KOIOS_API_KEY_MAINNET=your-koios-api-key-here
-KOIOS_API_KEY_TESTNET=your-koios-api-key-here
-KOIOS_API_KEY_PREVIEW=your-koios-api-key-here
-KOIOS_API_KEY_PREPROD=your-koios-api-key-here
-
-# Other environment variables
-NAMI_HEADER=dummy
+nvm use
+NODE_ENV=development npm install
+cp secrets.testing.js secrets.development.js
+cp secrets.testing.js secrets.production.js
+npm start
 ```
 
-**Note:** Koios API keys are optional. The wallet will work perfectly without them, but you'll get enhanced rate limits and features if you provide them.
+`secrets.*.js` (except `secrets.testing.js`) are gitignored; webpack resolves `import secrets from 'secrets'` to `secrets.{NODE_ENV}.js`. Copy the testing template so local builds have dummy keys.
 
-### Koios Migration
-
-Lucem has been migrated from Blockfrost to Koios API. Key changes:
-
-- **API Endpoints**: Updated to use Koios endpoints
-- **Response Format**: Added compatibility layer for response formats
-- **No API Keys Required**: Koios doesn't require API keys for basic usage
-- **Enhanced Performance**: Better caching and response handling
-- **Environment Variables**: Support for .env file configuration
-
-### Build
+Optional env (see `.env.example`): `KOIOS_API_KEY_MAINNET` / `_PREPROD` / `_PREVIEW`, and `BLOCKFROST_*` for governance metadata.
 
 ```bash
-npm run build
+NODE_ENV=test npx jest    # unit tests
 ```
 
-The built extension will be in the `build/` directory.
+Do not paste recovery phrases, private keys, or passwords into issues or this repo. See **[SECURITY.md](SECURITY.md)**.
 
 ## License
 

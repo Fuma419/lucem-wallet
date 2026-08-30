@@ -446,7 +446,7 @@ test.describe('capture seeded wallet pages', () => {
       .poll(async () => page.getByTestId('send-available-balance').innerText(), {
         timeout: 15_000,
       })
-      .not.toMatch(/Available 0(\.0+)?\s/);
+      .toMatch(/Available 100(\.0+)?\s/);
     await expect(page.getByTestId('send-percent-max')).toBeEnabled({
       timeout: 15_000,
     });

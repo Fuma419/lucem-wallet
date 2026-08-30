@@ -60,11 +60,52 @@ export function toCanonicalTransactionCip21(Cardano: Csl, tx: any) {
   return Cardano.Transaction.from_bytes(canonicalCbor);
 }
 
+/** Full reward-account withdrawal (protocol requires the entire balance). */
+export type RewardWithdrawal = {
+  rewardAddressBech32: string;
+  amountLovelace: string;
+};
+
 /**
- * @param {*} Cardano
- * @param {*} body - TransactionBody
- * @param {string[]} requiredVkeyHashesHex
+ * Attach a reward withdrawal to a payment/send-all builder. Must run before
+ * change so the withdrawn lovelace is available to cover the output + fee.
  */
+export function applyRewardWithdrawal(
+  Cardano: Csl,
+  txBuilder: any,
+  withdrawal?: RewardWithdrawal | null
+) {
+  if (!withdrawal?.rewardAddressBech32) return;
+  let amount: bigint;
+  try {
+    amount = BigInt(String(withdrawal.amountLovelace || '0'));
+  } catch {
+    return;
+  }
+  if (amount <= 0n) return;
+  const rewardAddress = Cardano.RewardAddress.from_address(
+    Cardano.Address.from_bech32(withdrawal.rewardAddressBech32)
+  );
+  if (!rewardAddress) {
+    throw new Error('Invalid reward address for withdrawal');
+  }
+  const withdrawalsBuilder = Cardano.WithdrawalsBuilder.new();
+  withdrawalsBuilder.add(
+    rewardAddress,
+    Cardano.BigNum.from_str(amount.toString())
+  );
+  txBuilder.set_withdrawals_builder(withdrawalsBuilder);
+}
+
+function feeWitnessHashes(hashes: string[], hasWithdrawal: boolean) {
+  const out = [...(hashes || []).filter(Boolean)];
+  if (hasWithdrawal && out.length < 2) {
+    // Stake key must also sign a withdrawal; size the fee for that extra vkey.
+    out.push('ff'.repeat(28));
+  }
+  return out;
+}
+
 function dummyWitnessSetForMinFee(
   Cardano: Csl,
   body: any,
@@ -553,6 +594,8 @@ function selectMultiAssetInputsForViableChange({
  * @param {string[]} opts.requiredVkeyHashesHex - hex key hashes used only to
  *   size dummy vkey witnesses for fee alignment. Not written to the body.
  * @param {*} [opts.auxiliaryData]
+ * @param {RewardWithdrawal} [opts.withdrawal] - full reward withdrawal when
+ *   UTxOs alone cannot cover amount + fee. Protocol requires the entire balance.
  */
 export function buildUnsignedSimpleTx({
   Cardano,
@@ -562,6 +605,7 @@ export function buildUnsignedSimpleTx({
   changeAddressBech32,
   requiredVkeyHashesHex,
   auxiliaryData = null,
+  withdrawal = null,
 }: {
   Cardano: Csl;
   protocolParameters: ProtocolParametersSnapshot;
@@ -570,6 +614,7 @@ export function buildUnsignedSimpleTx({
   changeAddressBech32: string;
   requiredVkeyHashesHex: string[];
   auxiliaryData?: any;
+  withdrawal?: RewardWithdrawal | null;
 }) {
   if (!requiredVkeyHashesHex?.length) {
     throw new Error(
@@ -669,6 +714,7 @@ export function buildUnsignedSimpleTx({
     if (minFeeFloor != null) {
       txBuilder.set_min_fee(minFeeFloor);
     }
+    applyRewardWithdrawal(Cardano, txBuilder, withdrawal);
     if (outputHasTokens) {
       // Pin token-covering UTxOs, then add_change. Do not use CSL coin
       // selection here — it can miss a small token UTxO and throw
@@ -736,11 +782,14 @@ export function buildUnsignedSimpleTx({
     const dummyW = dummyWitnessSetForMinFee(
       Cardano,
       txBody,
-      mergeSpentInputKeyHashes(
-        Cardano,
-        requiredVkeyHashesHex,
-        txBody,
-        utxos
+      feeWitnessHashes(
+        mergeSpentInputKeyHashes(
+          Cardano,
+          requiredVkeyHashesHex,
+          txBody,
+          utxos
+        ),
+        Boolean(withdrawal)
       )
     );
     const signedForFee = Cardano.Transaction.new(
@@ -791,6 +840,8 @@ export function buildUnsignedSimpleTx({
  * @param {string} opts.recipientAddressBech32 - destination for the whole balance
  * @param {string[]} [opts.requiredVkeyHashesHex] - hashes that will sign (fee sizing)
  * @param {*} [opts.auxiliaryData]
+ * @param {RewardWithdrawal} [opts.withdrawal] - full reward withdrawal so send-all
+ *   sweeps unclaimed staking rewards as well as UTxOs
  */
 export function buildUnsignedSendAllTx({
   Cardano,
@@ -799,6 +850,7 @@ export function buildUnsignedSendAllTx({
   recipientAddressBech32,
   requiredVkeyHashesHex = [],
   auxiliaryData = null,
+  withdrawal = null,
 }: {
   Cardano: Csl;
   protocolParameters: ProtocolParametersSnapshot;
@@ -806,6 +858,7 @@ export function buildUnsignedSendAllTx({
   recipientAddressBech32: string;
   requiredVkeyHashesHex?: string[];
   auxiliaryData?: any;
+  withdrawal?: RewardWithdrawal | null;
 }) {
   if (!utxos?.length) {
     throw new Error('No UTxOs provided for send all');
@@ -836,7 +889,10 @@ export function buildUnsignedSendAllTx({
       spentHashes.push(hash);
     }
   }
-  const dummyHashes = spentHashes.length > 0 ? spentHashes : ['00'];
+  const dummyHashes = feeWitnessHashes(
+    spentHashes.length > 0 ? spentHashes : ['00'],
+    Boolean(withdrawal)
+  );
 
   let minFeeFloor = null;
 
@@ -857,6 +913,7 @@ export function buildUnsignedSendAllTx({
     if (minFeeFloor != null) {
       txBuilder.set_min_fee(minFeeFloor);
     }
+    applyRewardWithdrawal(Cardano, txBuilder, withdrawal);
 
     let added;
     try {

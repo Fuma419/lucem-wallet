@@ -273,6 +273,36 @@ describe('Send all — fee covers every signing vkey', () => {
   });
 });
 
+describe('Send all — unclaimed rewards', () => {
+  const stakeHash = 'aa'.repeat(28);
+  const rewardAddr = CSL.RewardAddress.new(
+    CSL.NetworkInfo.testnet_preprod().network_id(),
+    CSL.Credential.from_keyhash(
+      CSL.Ed25519KeyHash.from_bytes(Buffer.from(stakeHash, 'hex'))
+    )
+  )
+    .to_address()
+    .to_bech32();
+
+  test('sweeps UTxO ADA plus a full reward withdrawal', async () => {
+    const utxos = [await makeUtxo({ coin: 95_000_000 })];
+    const tx = buildUnsignedSendAllTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos,
+      recipientAddressBech32: RECIPIENT_ADDR,
+      withdrawal: {
+        rewardAddressBech32: rewardAddr,
+        amountLovelace: '5000000',
+      },
+    });
+    expect(tx.body().withdrawals().len()).toBe(1);
+    expect(outputLovelaceSum(tx) + BigInt(tx.body().fee().to_str())).toBe(
+      100_000_000n
+    );
+  });
+});
+
 describe('Send all — genuine dust (un-sweepable)', () => {
   // A wallet holding a token but too little ADA to satisfy the token bundle's
   // min-ADA plus fee genuinely cannot be swept. The builder must surface a clear

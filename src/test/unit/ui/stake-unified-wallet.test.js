@@ -27,6 +27,7 @@ describe('stake-unified wallet source guards', () => {
 
   test('send and staking sign with paymentKeyHashesForSigning', () => {
     expect(read('ui/app/pages/send.jsx')).toMatch(/paymentKeyHashesForSigning/);
+    expect(read('ui/app/pages/send.jsx')).toMatch(/keyHashesForTx/);
     expect(read('ui/app/pages/staking.jsx')).toMatch(
       /paymentKeyHashesForSigning/
     );
@@ -36,6 +37,7 @@ describe('stake-unified wallet source guards', () => {
     expect(read('ui/app/tabs/trezorTx.jsx')).toMatch(
       /paymentKeyHashesForSigning/
     );
+    expect(read('ui/app/tabs/trezorTx.jsx')).toMatch(/keyHashesForTx/);
   });
 
   test('history prefers same-stake credential matches', () => {

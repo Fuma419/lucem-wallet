@@ -65,6 +65,19 @@ describe('e2e Koios mock includes spendable /account_utxos', () => {
     expect(helpersSrc).toMatch(/signable !== false/);
   });
 
+  test('seed is 95 ADA UTxO + 5 ADA withdrawable (100 controlled)', () => {
+    expect(E2E_ACCOUNT_UTXO.value).toBe('95000000');
+    const info = koiosMockBody(
+      'https://preview.koios.rest/api/v1/account_info'
+    );
+    expect(info[0].withdrawable_amount).toBe('5000000');
+    expect(info[0].controlled_amount).toBe('100000000');
+  });
+
+  test('screenshots expect Send Available to include rewards (100 tADA)', () => {
+    expect(screenshotsSrc).toMatch(/Available 100/);
+  });
+
   test('screenshots keep a sterilized Send shot for restore-seed UX', () => {
     expect(screenshotsSrc).toMatch(/signable:\s*false/);
     expect(screenshotsSrc).toMatch(/12b-send-page-needs-seed/);

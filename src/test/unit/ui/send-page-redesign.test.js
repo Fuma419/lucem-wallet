@@ -72,6 +72,7 @@ jest.mock('../../../api/extension', () => ({
   getAdaHandle: jest.fn().mockResolvedValue(null),
   getAsset: jest.fn().mockResolvedValue(null),
   getCurrentAccount: jest.fn(),
+  getDelegation: jest.fn().mockResolvedValue({ rewards: '0' }),
   getNetwork: jest.fn().mockResolvedValue({ id: 'preprod' }),
   getSignableWalletIds: jest.fn().mockResolvedValue(['0']),
   getUtxos: jest.fn().mockResolvedValue([]),
@@ -95,6 +96,9 @@ jest.mock('../../../api/extension/wallet', () => ({
   sendAllTx: jest.fn(),
   signAndSubmit: jest.fn(),
   signAndSubmitHW: jest.fn(),
+  summarizeSendAll: jest.fn(),
+  keyHashesForTx: jest.fn((_tx, hashes) => hashes || []),
+  rewardWithdrawalLovelaceFromTx: jest.fn().mockReturnValue('0'),
 }));
 
 import Send, { sendStore } from '../../../ui/app/pages/send';

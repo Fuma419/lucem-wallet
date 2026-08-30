@@ -16,7 +16,7 @@ import {
   initHW,
   paymentKeyHashesForSigning,
 } from '../../../api/extension';
-import { signAndSubmitHW } from '../../../api/extension/wallet';
+import { keyHashesForTx, signAndSubmitHW } from '../../../api/extension/wallet';
 import Loader from '../../../api/loader';
 import { useStoreActions } from 'easy-peasy';
 
@@ -43,9 +43,13 @@ const App = () => {
     try {
       const paymentHashes = await paymentKeyHashesForSigning(account);
       await signAndSubmitHW(txDes, {
-        keyHashes: paymentHashes.length
-          ? paymentHashes
-          : [account.paymentKeyHash].filter(Boolean),
+        keyHashes: keyHashesForTx(
+          txDes,
+          paymentHashes.length
+            ? paymentHashes
+            : [account.paymentKeyHash].filter(Boolean),
+          account.stakeKeyHash
+        ),
         account,
         hw,
       });

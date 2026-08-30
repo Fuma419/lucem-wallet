@@ -15,6 +15,7 @@ import {
   buildUnsignedSendAllTx,
   buildUnsignedSimpleTx,
   summarizeSendAllTx,
+  type RewardWithdrawal,
 } from '../tx/csl-unsigned-tx';
 import {
   createStakeDelegationCertificate,
@@ -51,6 +52,67 @@ const txToHex = (tx: { to_bytes: () => Uint8Array }) =>
 
 const rewardLovelace = (delegation: DelegationState) =>
   Number(delegation.rewards ?? 0);
+
+const rewardLovelaceString = (delegation?: DelegationState | null) => {
+  try {
+    const n = BigInt(String(delegation?.rewards ?? '0'));
+    return n > 0n ? n.toString() : '0';
+  } catch {
+    return '0';
+  }
+};
+
+const uniqueKeyHashes = (hashes: Array<string | undefined | null>) => {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const h of hashes) {
+    if (!h || seen.has(h)) continue;
+    seen.add(h);
+    out.push(h);
+  }
+  return out;
+};
+
+/** True when CSL/coin-selection failed because ADA (not tokens) could not cover the send. */
+export const isInsufficientAdaError = (error: unknown) => {
+  const msg = error instanceof Error ? error.message : String(error || '');
+  if (/Not enough of the selected token/i.test(msg)) return false;
+  return /UTxO Balance Insufficient|Not enough ADA|leftover|Insufficient input/i.test(
+    msg
+  );
+};
+
+export const rewardWithdrawalLovelaceFromTx = (tx: any): string => {
+  try {
+    const withdrawals = tx?.body?.()?.withdrawals?.();
+    if (!withdrawals || withdrawals.len() === 0) return '0';
+    let sum = 0n;
+    const keys = withdrawals.keys();
+    for (let i = 0; i < keys.len(); i += 1) {
+      sum += BigInt(withdrawals.get(keys.get(i)).to_str());
+    }
+    return sum.toString();
+  } catch {
+    return '0';
+  }
+};
+
+/** Payment hashes, plus the stake key when the body withdraws rewards. */
+export const keyHashesForTx = (
+  tx: any,
+  paymentHashes: string[],
+  stakeKeyHash?: string | null
+) => {
+  const hashes = uniqueKeyHashes(paymentHashes || []);
+  if (
+    rewardWithdrawalLovelaceFromTx(tx) !== '0' &&
+    stakeKeyHash &&
+    !hashes.includes(stakeKeyHash)
+  ) {
+    hashes.push(stakeKeyHash);
+  }
+  return hashes;
+};
 
 type SubmitError = Error & { code: string; cause?: unknown };
 
@@ -134,13 +196,18 @@ const fetchProtocolParameters = async () => {
 /**
  * Build unsigned payment transaction (CSL via `src/api/tx/csl-unsigned-tx.ts`).
  * Refreshes chain tip slot so TTL stays valid when UI skips `initTx()`.
+ *
+ * When amount + fee exceeds spendable UTxOs but unclaimed staking rewards cover
+ * the gap, attaches a **full** reward withdrawal (ledger rule) so the home
+ * headline of UTxO + rewards is actually spendable. Change absorbs the remainder.
  */
 export const buildTx = async (
   account: WalletAccount,
   utxos: any[],
   outputs: any,
   protocolParameters: ProtocolParametersSnapshot,
-  auxiliaryData: any = null
+  auxiliaryData: any = null,
+  options?: { delegation?: DelegationState | null }
 ) => {
   try {
     await Loader.load();
@@ -167,15 +234,48 @@ export const buildTx = async (
       );
     }
 
-    return buildUnsignedSimpleTx({
-      Cardano: Loader.Cardano,
-      protocolParameters: params,
-      utxos,
-      outputs,
-      changeAddressBech32: account.paymentAddr,
-      requiredVkeyHashesHex,
-      auxiliaryData,
-    });
+    const assemble = (withdrawal?: RewardWithdrawal | null) => {
+      const hashes = uniqueKeyHashes([
+        ...requiredVkeyHashesHex,
+        ...(withdrawal && account.stakeKeyHash ? [account.stakeKeyHash] : []),
+      ]);
+      return buildUnsignedSimpleTx({
+        Cardano: Loader.Cardano,
+        protocolParameters: params,
+        utxos,
+        outputs,
+        changeAddressBech32: account.paymentAddr,
+        requiredVkeyHashesHex: hashes,
+        auxiliaryData,
+        withdrawal: withdrawal || undefined,
+      });
+    };
+
+    try {
+      return assemble();
+    } catch (first) {
+      const rewards = rewardLovelaceString(options?.delegation);
+      if (
+        rewards !== '0' &&
+        account.rewardAddr &&
+        isInsufficientAdaError(first)
+      ) {
+        try {
+          return assemble({
+            rewardAddressBech32: account.rewardAddr,
+            amountLovelace: rewards,
+          });
+        } catch (second) {
+          if (isInsufficientAdaError(second)) {
+            throw new Error(
+              'Not enough ADA (including staking rewards) to cover this send and the network fee.'
+            );
+          }
+          throw second;
+        }
+      }
+      throw first;
+    }
   } catch (e) {
     console.error('Error building transaction:', e);
     throw e;
@@ -192,7 +292,8 @@ export const sendAllTx = async (
   utxos: any[],
   recipientAddress: string,
   protocolParameters: ProtocolParametersSnapshot,
-  auxiliaryData: any = null
+  auxiliaryData: any = null,
+  options?: { account?: WalletAccount; delegation?: DelegationState | null }
 ) => {
   try {
     await Loader.load();
@@ -209,14 +310,29 @@ export const sendAllTx = async (
     const paymentHashes = (await paymentKeyHashesForSigning()).filter(
       (h: unknown): h is string => typeof h === 'string' && h.length > 0
     );
+    const rewards = rewardLovelaceString(options?.delegation);
+    const withdrawal: RewardWithdrawal | undefined =
+      rewards !== '0' && options?.account?.rewardAddr
+        ? {
+            rewardAddressBech32: options.account.rewardAddr,
+            amountLovelace: rewards,
+          }
+        : undefined;
+    const requiredVkeyHashesHex = uniqueKeyHashes([
+      ...paymentHashes,
+      ...(withdrawal && options?.account?.stakeKeyHash
+        ? [options.account.stakeKeyHash]
+        : []),
+    ]);
 
     return buildUnsignedSendAllTx({
       Cardano: Loader.Cardano,
       protocolParameters: params,
       utxos,
       recipientAddressBech32: recipientAddress,
-      requiredVkeyHashesHex: paymentHashes,
+      requiredVkeyHashesHex,
       auxiliaryData,
+      withdrawal,
     });
   } catch (e) {
     console.error('Error building send all transaction:', e);

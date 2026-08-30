@@ -407,6 +407,43 @@ describe('buildUnsignedSimpleTx — native token', () => {
   });
 });
 
+describe('buildUnsignedSimpleTx — reward withdrawal', () => {
+  const stakeHash = 'aa'.repeat(28);
+  const rewardAddr = CSL.RewardAddress.new(
+    CSL.NetworkInfo.testnet_preprod().network_id(),
+    CSL.Credential.from_keyhash(
+      CSL.Ed25519KeyHash.from_bytes(Buffer.from(stakeHash, 'hex'))
+    )
+  )
+    .to_address()
+    .to_bech32();
+
+  test('conserves UTxO + withdrawn rewards', () => {
+    const inputCoins = 95_000_000n;
+    const withdrawn = 5_000_000n;
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [makeUtxo(Number(inputCoins))],
+      outputs: makeOutputs([97_000_000]),
+      changeAddressBech32: TEST_ADDR,
+      requiredVkeyHashesHex: dummyKeyHashes(2),
+      withdrawal: {
+        rewardAddressBech32: rewardAddr,
+        amountLovelace: withdrawn.toString(),
+      },
+    });
+    const body = tx.body();
+    let outputSum = 0n;
+    for (let i = 0; i < body.outputs().len(); i++) {
+      outputSum += BigInt(body.outputs().get(i).amount().coin().to_str());
+    }
+    expect(outputSum + BigInt(body.fee().to_str())).toBe(inputCoins + withdrawn);
+    expect(body.withdrawals()).toBeDefined();
+    expect(body.withdrawals().len()).toBe(1);
+  });
+});
+
 describe('createCslTransactionBuilderConfig', () => {
   test('builds config from valid protocol parameters', () => {
     const config = createCslTransactionBuilderConfig(CSL, PROTOCOL_PARAMS);

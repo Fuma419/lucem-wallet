@@ -75,6 +75,22 @@ describe('Send UI refresh — structural contracts', () => {
     expect((sendSrc.match(/lucem-inset-surface/g) || []).length).toBeGreaterThanOrEqual(4);
   });
 
+  test('Available ADA includes unclaimed staking rewards', () => {
+    expect(sendSrc).toContain('const utxoLovelace = bigIntLovelace(txInfo.balance?.lovelace)');
+    expect(sendSrc).toContain('const rewardsLovelace = bigIntLovelace(txInfo.rewardsLovelace)');
+    expect(sendSrc).toContain(
+      'const availableLovelace = utxoLovelace + rewardsLovelace'
+    );
+    expect(sendSrc).toContain('getDelegation');
+    expect(sendSrc).toContain('{ delegation: delegation.current }');
+  });
+
+  test('confirm discloses a full reward withdrawal', () => {
+    expect(sendSrc).toContain('data-testid="send-confirm-reward-withdrawal"');
+    expect(sendSrc).toMatch(/Includes withdrawal of/);
+    expect(sendSrc).toMatch(/reward balance will drop to/);
+  });
+
   test('shows available balance and 25/50/75/Max chips', () => {
     expect(sendSrc).toContain('data-testid="send-available-balance"');
     expect(sendSrc).toContain("id: 'send-percent-25'");

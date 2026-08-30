@@ -8,6 +8,7 @@ import {
   getAdaHandle,
   getAsset,
   getCurrentAccount,
+  getDelegation,
   getNetwork,
   getSignableWalletIds,
   getUtxos,
@@ -63,6 +64,8 @@ import UnitDisplay from '../components/unitDisplay';
 import {
   buildTx,
   initTx,
+  keyHashesForTx,
+  rewardWithdrawalLovelaceFromTx,
   sendAllTx,
   signAndSubmit,
   signAndSubmitHW,
@@ -95,6 +98,7 @@ import useSurfaceColors from '../hooks/useSurfaceColors';
 import useConstant from 'use-constant';
 import debouncePromise from 'debounce-promise';
 import latest from 'promise-latest';
+import { bigIntLovelace } from '../../../api/lovelace-scalar';
 import {
   isSameAccountIndex,
   otherLoadedAccounts,
@@ -264,6 +268,7 @@ const initialState = {
     protocolParameters: null,
     utxos: [],
     balance: { lovelace: '0', assets: null },
+    rewardsLovelace: '0',
   },
 };
 
@@ -347,6 +352,9 @@ const Send = () => {
   const utxos = React.useRef(null);
   const assets = React.useRef({});
   const account = React.useRef(null);
+  const delegation = React.useRef({ rewards: '0' });
+  const [rewardWithdrawalLovelace, setRewardWithdrawalLovelace] =
+    React.useState('0');
   const resetState = useStoreActions(
     (actions) => actions.globalModel.sendStore.reset
   );
@@ -371,9 +379,13 @@ const Send = () => {
         );
       }
       const paymentHashes = await paymentKeyHashesForSigning(acc);
+      await Loader.load();
+      const txDes = Loader.Cardano.Transaction.from_bytes(
+        Buffer.from(tx, 'hex')
+      );
       await openKeystoneSignTxTab({
         txHex: tx,
-        keyHashes: [...paymentHashes, acc.stakeKeyHash],
+        keyHashes: keyHashesForTx(txDes, paymentHashes, acc.stakeKeyHash),
         partialSign: false,
       });
       toast({
@@ -442,7 +454,12 @@ const Send = () => {
         assets.current[asset.unit] = { ...asset };
       });
 
-      const maxAdaDisplay = displayUnit(txInfo.balance.lovelace || '0').toString();
+      const maxAdaDisplay = displayUnit(
+        (
+          bigIntLovelace(txInfo.balance?.lovelace) +
+          bigIntLovelace(txInfo.rewardsLovelace)
+        ).toString()
+      ).toString();
       triggerTxUpdate(() =>
         setValue({
           ...value,
@@ -491,6 +508,7 @@ const Send = () => {
     if (!sendAllMode && !hasAmount) {
       setFee({ fee: '0' });
       setTx(null);
+      setRewardWithdrawalLovelace('0');
       return;
     }
 
@@ -506,11 +524,13 @@ const Send = () => {
     ) {
       setFee({ fee: '0' });
       setTx(null);
+      setRewardWithdrawalLovelace('0');
       return;
     }
 
     setFee({ fee: '' });
     setTx(null);
+    setRewardWithdrawalLovelace('0');
     await new Promise((res, rej) => setTimeout(() => res()));
     try {
       // Optional CIP-0020 message metadata is shared by both send paths.
@@ -532,7 +552,11 @@ const Send = () => {
           utxos.current,
           _address.result,
           protocolParameters,
-          optionalAuxiliaryData
+          optionalAuxiliaryData,
+          {
+            account: account.current,
+            delegation: delegation.current,
+          }
         );
 
         const { fee, sent } = summarizeSendAll(finalTx);
@@ -543,6 +567,7 @@ const Send = () => {
           personalAda: sendAllDisplay,
         });
         setFee({ fee });
+        setRewardWithdrawalLovelace(rewardWithdrawalLovelaceFromTx(finalTx));
         setTx(Buffer.from(finalTx.to_bytes()).toString('hex'));
         return;
       }
@@ -634,15 +659,18 @@ const Send = () => {
           utxos.current,
           outputs,
           protocolParameters,
-          optionalAuxiliaryData
+          optionalAuxiliaryData,
+          { delegation: delegation.current }
         );
       };
 
       const tx = await buildTxForOutput(output.amount);
       setFee({ fee: tx.body().fee().toString() });
+      setRewardWithdrawalLovelace(rewardWithdrawalLovelaceFromTx(tx));
       setTx(Buffer.from(tx.to_bytes()).toString('hex'));
     } catch (e) {
       console.warn(e);
+      setRewardWithdrawalLovelace('0');
       setFee({ error: sendPreparationErrorMessage(e) });
     }
   };
@@ -667,6 +695,13 @@ const Send = () => {
     const _network = await getNetwork();
     network.current = _network;
     account.current = currentAccount;
+    try {
+      const nextDelegation = await getDelegation();
+      delegation.current = nextDelegation || { rewards: '0' };
+    } catch (e) {
+      console.warn('Could not load staking rewards for Send', e);
+      delegation.current = { rewards: '0' };
+    }
     try {
       const ids = await getSignableWalletIds();
       if (isMounted.current) {
@@ -743,7 +778,12 @@ const Send = () => {
     _utxos = _utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'));
     if (!isMounted.current) return;
     setIsLoading(false);
-    setTxInfo({ protocolParameters, utxos: _utxos, balance });
+    setTxInfo({
+      protocolParameters,
+      utxos: _utxos,
+      balance,
+      rewardsLovelace: String(delegation.current?.rewards ?? '0'),
+    });
   };
 
   const objectToArray = (obj) => Object.keys(obj).map((key) => obj[key]);
@@ -808,7 +848,9 @@ const Send = () => {
   });
   const feeError = fee.error ? String(fee.error) : '';
   const actionLabel = value.sendAll ? 'Review send all' : 'Review transaction';
-  const availableLovelace = BigInt(txInfo.balance?.lovelace || '0');
+  const utxoLovelace = bigIntLovelace(txInfo.balance?.lovelace);
+  const rewardsLovelace = bigIntLovelace(txInfo.rewardsLovelace);
+  const availableLovelace = utxoLovelace + rewardsLovelace;
   const availableAda = displayUnit(availableLovelace.toString()).toString();
   const amountLovelace = adaInputToLovelace(value.ada);
   const minUtxo = BigInt(txInfo.protocolParameters?.minUtxo || '0');
@@ -1543,6 +1585,24 @@ const Send = () => {
                 />
               </Flex>
             ) : null}
+            {bigIntLovelace(rewardWithdrawalLovelace) > 0n ? (
+              <Box
+                mt={2}
+                rounded="xl"
+                borderWidth="1px"
+                borderColor="yellow.400"
+                bg="blackAlpha.400"
+                px={3}
+                py={2}
+                data-testid="send-confirm-reward-withdrawal"
+              >
+                <Text fontSize="xs" color="yellow.200">
+                  Includes withdrawal of {displayUnit(rewardWithdrawalLovelace)}{' '}
+                  {settings.adaSymbol} rewards. Your reward balance will drop to
+                  zero.
+                </Text>
+              </Box>
+            ) : null}
             {value.sendAll && (
               <Box
                 mt={2}
@@ -1577,6 +1637,11 @@ const Send = () => {
           const paymentHashes = await paymentKeyHashesForSigning(
             account.current
           );
+          const keyHashes = keyHashesForTx(
+            txDes,
+            paymentHashes,
+            account.current.stakeKeyHash
+          );
           if (hw) {
             if (hw.device === HW.trezor) {
               return createTab(TAB.trezorTx, `?tx=${tx}`);
@@ -1584,15 +1649,12 @@ const Send = () => {
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
                 txHex: tx,
-                keyHashes: [
-                  ...paymentHashes,
-                  account.current.stakeKeyHash,
-                ],
+                keyHashes,
                 partialSign: false,
               });
             }
             return await signAndSubmitHW(txDes, {
-              keyHashes: paymentHashes,
+              keyHashes,
               account: account.current,
               hw,
             });
@@ -1601,7 +1663,7 @@ const Send = () => {
               txDes,
               {
                 accountIndex: account.current.index,
-                keyHashes: paymentHashes,
+                keyHashes,
               },
               password
             );

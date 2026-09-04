@@ -150,6 +150,9 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     );
     expect(keystoneTxSrc).toMatch(/summarizeUnsignedPaymentTx/);
     expect(keystoneTxSrc).toMatch(/data-testid="keystone-tx-summary"/);
+    expect(keystoneTxSrc).toMatch(
+      /data-testid="keystone-tx-reward-withdrawal"/
+    );
     expect(keystoneTxSrc).toMatch(/data-testid="keystone-tx-error"/);
     expect(keystoneTxSrc).toMatch(/Copy error/);
     expect(keystoneTxSrc).toMatch(/openMainRoute\('\/send'\)/);

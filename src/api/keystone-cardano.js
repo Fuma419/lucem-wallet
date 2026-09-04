@@ -772,6 +772,22 @@ function formatAdaFromLovelace(lovelace) {
   return `${neg ? '-' : ''}${whole}.${frac}`;
 }
 
+/** Lovelace claimed from reward accounts, or '0' when the tx withdraws none. */
+function totalWithdrawalLovelace(body) {
+  try {
+    const withdrawals = body.withdrawals?.();
+    if (!withdrawals || withdrawals.len() === 0) return '0';
+    const keys = withdrawals.keys();
+    let sum = 0n;
+    for (let i = 0; i < keys.len(); i += 1) {
+      sum += BigInt(withdrawals.get(keys.get(i)).to_str());
+    }
+    return sum.toString();
+  } catch (e) {
+    return '0';
+  }
+}
+
 /**
  * Human review of an unsigned payment tx: inputs (spent UTxOs) vs outputs
  * (recipient + change). Keystone's device UI lists both; change back to the
@@ -835,11 +851,17 @@ export function summarizeUnsignedPaymentTx(tx, utxos = []) {
   }
 
   const fee = body.fee().to_str();
+  const withdrawalLovelace = totalWithdrawalLovelace(body);
   return {
     fee,
     feeAda: formatAdaFromLovelace(fee),
     inputs,
     outputs,
+    withdrawalLovelace,
+    withdrawalAda:
+      withdrawalLovelace === '0'
+        ? null
+        : formatAdaFromLovelace(withdrawalLovelace),
   };
 }
 

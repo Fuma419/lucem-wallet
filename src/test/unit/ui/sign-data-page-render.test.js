@@ -62,6 +62,7 @@ jest.mock('../../../api/loader', () => ({
 }));
 
 const SignData = require('../../../ui/app/pages/signData').default;
+const { ERROR } = require('../../../config/config');
 
 const MESSAGE = 'Delegate to LUCEM pool';
 const ORIGIN = 'https://magic-delegation.test';
@@ -101,6 +102,17 @@ const byTestId = (container, id) =>
 const click = async (node) => {
   await act(async () => {
     node.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+};
+
+const type = async (input, value) => {
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value'
+  ).set;
+  await act(async () => {
+    setter.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 };
 
@@ -171,38 +183,79 @@ describe('dApp sign message screen', () => {
     await act(async () => root.unmount());
   });
 
-  // Regression: signData called an undefined `capture(Events…)` after signing.
-  // confirmModal caught the ReferenceError and reported failure, so the dApp got
-  // an error instead of the signature the user had just approved.
+  test('the password is on the page, so signing takes no second dialog', async () => {
+    const { container, root } = await mount();
+
+    expect(byTestId(container, 'sign-data-password')).toBeTruthy();
+    // Nothing to confirm in a dialog: the page itself is the confirmation.
+    expect(
+      [...document.querySelectorAll('button')].some(
+        (b) => b.textContent.trim() === 'Confirm'
+      )
+    ).toBe(false);
+    // No password typed yet, so there is nothing to submit.
+    expect(
+      byTestId(container, 'sign-data-primary-action').hasAttribute('disabled')
+    ).toBe(true);
+    await act(async () => root.unmount());
+  });
+
+  // Regression: signData called an undefined `capture(Events…)` after signing,
+  // and the caller reported that ReferenceError as failure — so the dApp got an
+  // error instead of the signature the user had just approved.
   test('a successful signature is returned to the dApp, not an error', async () => {
     const { container, root, controller } = await mount();
 
+    await type(byTestId(container, 'sign-data-password'), 'pa$$word');
     await click(byTestId(container, 'sign-data-primary-action'));
 
-    const input = document.querySelector('input[type="password"]');
-    expect(input).toBeTruthy();
-    await act(async () => {
-      const setter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value'
-      ).set;
-      setter.call(input, 'pa$$word');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-
-    const confirm = [...document.querySelectorAll('button')].find(
-      (b) => b.textContent.trim() === 'Confirm'
+    expect(mockSignDataCIP30).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      'pa$$word',
+      0
     );
-    expect(confirm).toBeTruthy();
-    await click(confirm);
-
-    expect(mockSignDataCIP30).toHaveBeenCalled();
     expect(controller.returnData).toHaveBeenCalledWith({
       data: 'signed_cip30',
     });
     expect(controller.returnData).not.toHaveBeenCalledWith(
       expect.objectContaining({ error: expect.anything() })
     );
+    expect(closeSpy).toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+
+  test('a wrong password is reported in place, without ending the request', async () => {
+    mockSignDataCIP30.mockRejectedValueOnce(ERROR.wrongPassword);
+    const { container, root, controller } = await mount();
+
+    await type(byTestId(container, 'sign-data-password'), 'nope');
+    await click(byTestId(container, 'sign-data-primary-action'));
+
+    expect(byTestId(container, 'sign-data-wrong-password')).toBeTruthy();
+    // The dApp is still waiting, and the popup stays open for another try.
+    expect(controller.returnData).not.toHaveBeenCalled();
+    expect(closeSpy).not.toHaveBeenCalled();
+
+    mockSignDataCIP30.mockResolvedValueOnce('signed_cip30');
+    await type(byTestId(container, 'sign-data-password'), 'pa$$word');
+    await click(byTestId(container, 'sign-data-primary-action'));
+    expect(controller.returnData).toHaveBeenCalledWith({
+      data: 'signed_cip30',
+    });
+    await act(async () => root.unmount());
+  });
+
+  test('a failure other than a wrong password is handed back to the dApp', async () => {
+    const boom = new Error('signing blew up');
+    mockSignDataCIP30.mockRejectedValueOnce(boom);
+    const { container, root, controller } = await mount();
+
+    await type(byTestId(container, 'sign-data-password'), 'pa$$word');
+    await click(byTestId(container, 'sign-data-primary-action'));
+
+    expect(controller.returnData).toHaveBeenCalledWith({ error: boom });
+    expect(closeSpy).toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
@@ -216,6 +269,7 @@ describe('dApp sign message screen', () => {
     expect(
       byTestId(container, 'sign-data-primary-action').hasAttribute('disabled')
     ).toBe(true);
+    expect(byTestId(container, 'sign-data-password')).toBeNull();
     await act(async () => root.unmount());
   });
 });

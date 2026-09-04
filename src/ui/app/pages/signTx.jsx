@@ -6,6 +6,7 @@ import {
   getCurrentAccount,
   getSpecificUtxo,
   getUtxos,
+  isHW,
   signTx,
   signTxHW,
 } from '../../../api/extension';
@@ -39,6 +40,7 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import AssetsModal from '../components/assetsModal';
+import InlineSignAction from '../components/inlineSignAction';
 import { AnimatedQRCode, AnimatedQRScanner } from '@keystonehq/animated-qr';
 import { URType } from '@keystonehq/keystone-sdk';
 import KeystoneSDK from '@keystonehq/keystone-sdk';
@@ -676,6 +678,18 @@ const SignTx = ({ request, controller }) => {
     window.close();
   };
 
+  const returnSignedTx = async (signedTx) => {
+    await controller.returnData({
+      data: Buffer.from(signedTx.to_bytes()).toString('hex'),
+    });
+    window.close();
+  };
+
+  const returnSignError = async (error) => {
+    await controller.returnData({ error });
+    window.close();
+  };
+
   React.useEffect(() => {
     getInfo();
   }, []);
@@ -1030,46 +1044,25 @@ const SignTx = ({ request, controller }) => {
                   {isLoading.error}
                 </Text>
               )}
-              <Button
-                data-testid="sign-tx-primary-action"
-                width="full"
-                height="52px"
-                rounded="2xl"
-                isDisabled={isLoading.loading || isLoading.error}
-                colorScheme="yellow"
-                bg="yellow.400"
-                color="gray.900"
-                fontWeight="black"
-                _hover={{
-                  bg: 'yellow.300',
-                  transform: 'translateY(-1px)',
-                }}
-                _active={{ bg: 'yellow.500' }}
-                _disabled={{
-                  bg: 'whiteAlpha.200',
-                  color: 'whiteAlpha.500',
-                  cursor: 'not-allowed',
-                  transform: 'none',
-                  opacity: 1,
-                }}
-                onClick={() => {
-                  ref.current.openModal(account.index);
-                }}
-              >
-                Sign
-              </Button>
-              <Button
-                data-testid="sign-tx-cancel"
-                variant="ghost"
-                width="full"
-                height="44px"
-                rounded="2xl"
-                color={pageFg}
-                _hover={{ bg: 'whiteAlpha.100' }}
-                onClick={declineRequest}
-              >
-                Cancel
-              </Button>
+              <InlineSignAction
+                testId="sign-tx"
+                label="Sign"
+                isHw={isHW(account.index)}
+                isDisabled={isLoading.loading || Boolean(isLoading.error)}
+                sign={(password) =>
+                  signTx(
+                    request.data.tx,
+                    keyHashes.key,
+                    password,
+                    account.index,
+                    request.data.partialSign
+                  )
+                }
+                onSigned={returnSignedTx}
+                onFailed={returnSignError}
+                onHwRequest={() => ref.current.openModal(account.index)}
+                onCancel={declineRequest}
+              />
             </Stack>
           </Box>
         </Box>
@@ -1107,16 +1100,11 @@ const SignTx = ({ request, controller }) => {
             request.data.partialSign
           );
         }}
-        onConfirm={async (status, signedTx) => {
-          if (status === true) {
-            await controller.returnData({
-              data: Buffer.from(signedTx.to_bytes()).toString('hex'),
-            });
-          } else {
-            await controller.returnData({ error: signedTx });
-          }
-          window.close();
-        }}
+        onConfirm={async (status, signedTx) =>
+          status === true
+            ? returnSignedTx(signedTx)
+            : returnSignError(signedTx)
+        }
       />
       <Modal
         isOpen={!!keystoneHw}

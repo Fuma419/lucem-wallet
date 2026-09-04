@@ -30,6 +30,7 @@ import { useStoreActions } from 'easy-peasy';
 import {
   assertKeystoneWitnessesCover,
   buildKeystoneCardanoSignRequest,
+  emptyWitnessSetMessage,
   formatKeystoneSubmitError,
   KEYSTONE_SIGN_ANIMATED_QR_OPTIONS,
   parseKeystoneCardanoTxSignature,
@@ -62,6 +63,9 @@ const App = () => {
   const [txSummary, setTxSummary] = React.useState(null);
   const pendingTxHexRef = React.useRef('');
   const sdkRef = React.useRef(null);
+  // How the request was sent (full tx vs hash-only), for a precise error if
+  // the device replies without a witness set.
+  const signModeRef = React.useRef({ usedTxHash: false, inputCount: 0 });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -94,15 +98,17 @@ const App = () => {
         if (!cancelled) {
           setTxSummary(summarizeUnsignedPaymentTx(parsedTx, utxos));
         }
-        const { ur, sdk } = await buildKeystoneCardanoSignRequest({
-          txHex: pending.txHex,
-          account,
-          hw,
-          utxos,
-          keyHashes: pending.keyHashes,
-        });
+        const { ur, sdk, usedTxHash, inputCount } =
+          await buildKeystoneCardanoSignRequest({
+            txHex: pending.txHex,
+            account,
+            hw,
+            utxos,
+            keyHashes: pending.keyHashes,
+          });
         if (cancelled) return;
         sdkRef.current = sdk;
+        signModeRef.current = { usedTxHash, inputCount };
         setUrData({
           type: ur.type,
           cbor: Buffer.from(ur.cbor).toString('hex'),
@@ -160,7 +166,7 @@ const App = () => {
       const sdk = sdkRef.current || new KeystoneSDK();
       const sig = parseKeystoneCardanoTxSignature(sdk, { type, cbor });
       const wh = witnessSetHexFromKeystoneSignature(sig);
-      if (!wh) throw new Error('Keystone did not return a witness set.');
+      if (!wh) throw new Error(emptyWitnessSetMessage(signModeRef.current));
       setPhase(Phase.done);
       await finalizeWitness(wh);
     } catch (e) {

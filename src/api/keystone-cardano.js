@@ -64,11 +64,25 @@ export const KEYSTONE_ANIMATED_QR_OPTIONS = Object.freeze({
 export const KEYSTONE_SIGN_ANIMATED_QR_OPTIONS = KEYSTONE_ANIMATED_QR_OPTIONS;
 
 /**
- * Prefer a compact CardanoSignTxHashRequest at/above this unsigned-tx size.
- * The SDK hashes the full Transaction CBOR, which is not the Cardano tx id
- * (blake2b-256 of the body). We build the hash-UR ourselves with the body hash.
+ * Fall back to a compact CardanoSignTxHashRequest at/above this unsigned-tx
+ * size. Matches the Keystone SDK's own `sizeLimit.ada` default, i.e. the
+ * vendor's view of the largest payload the device will take as a full
+ * transaction.
+ *
+ * Keep this as high as the vendor allows. A hash request carries no
+ * transaction body, so the device cannot show what it is signing (firmware
+ * warns that the data is not readable) and the returned signature does not
+ * always come back as a witness set we can attach. A 20-input send is only
+ * ~870 bytes, so a lower bound silently pushed everyday sends onto that blind
+ * path. We still build the hash UR ourselves: the SDK would hash the full
+ * Transaction CBOR, which is not the Cardano tx id (blake2b-256 of the body).
  */
-const KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES = 768;
+const KEYSTONE_ADA_MAX_FULL_TX_BYTES = 2048;
+
+/** True when the unsigned tx is too large to send as a readable full tx. */
+export function keystoneNeedsTxHashRequest(signDataLength) {
+  return Number(signDataLength) >= KEYSTONE_ADA_MAX_FULL_TX_BYTES;
+}
 
 const LEDGER_DERIVATION_HINT =
   /ledger|bit\s*box|bitbox|lbx2|\blbx\b|ledger_live|ledger_legacy/i;
@@ -670,6 +684,31 @@ export function vkeyHashesFromWitnessSet(Cardano, witnessSet) {
   return out;
 }
 
+/**
+ * Message for a Keystone reply that carried no witness set.
+ *
+ * @param {{ usedTxHash?: boolean, inputCount?: number }} [signMode] - how the
+ *   request was sent; a hash request means the device only saw a hash.
+ */
+export function emptyWitnessSetMessage(signMode) {
+  if (signMode?.usedTxHash) {
+    const inputs = signMode.inputCount
+      ? `${signMode.inputCount} inputs`
+      : 'many inputs';
+    return (
+      'Keystone returned no signature. This transaction is too large for the ' +
+      `device to display (${inputs}), so it was sent as a hash-only request ` +
+      'and Keystone warns that the data is not readable. Send a smaller ' +
+      'amount so fewer UTxOs are needed, or consolidate your UTxOs first.'
+    );
+  }
+  return (
+    'Keystone returned no signature. Approve the transaction on the device ' +
+    'before scanning the QR, and make sure the account you imported into ' +
+    'Lucem is the one shown on the device.'
+  );
+}
+
 export function formatKeystoneSubmitError(err) {
   const msg = err && err.message ? String(err.message) : String(err || '');
   if (/MissingVKeyWitnesses/i.test(msg)) {
@@ -887,8 +926,9 @@ export async function buildKeystoneCardanoSignRequest({
     Loader.Cardano
   );
   const signData = Buffer.from(txHex, 'hex');
+  const usedTxHash = keystoneNeedsTxHashRequest(signData.length);
   let ur;
-  if (signData.length >= KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES) {
+  if (usedTxHash) {
     const paths = [
       ...keystoneUtxos.map((u) => cryptoKeypathFromHdPath(u.hdPath, xfp)),
       ...extraSigners.map((s) => cryptoKeypathFromHdPath(s.keyPath, xfp)),
@@ -910,7 +950,7 @@ export async function buildKeystoneCardanoSignRequest({
     });
   }
 
-  return { ur, requestId, sdk };
+  return { ur, requestId, sdk, usedTxHash, inputCount: inputs.len() };
 }
 
 export function spentPaymentKeyHashes(Cardano, tx, account, utxos = []) {

@@ -106,6 +106,26 @@ function feeWitnessHashes(hashes: string[], hasWithdrawal: boolean) {
   return out;
 }
 
+/**
+ * Deterministic throwaway signing key for fee sizing.
+ *
+ * Never generate a random key here (no `PrivateKey.generate_ed25519`): the
+ * browser-WASM keygen reaches for entropy through a `new Function("return
+ * this")` shim, which the extension CSP (`script-src 'self'
+ * 'wasm-unsafe-eval'`) rejects — surfacing on Send as "Unable to prepare
+ * transaction: Evaluating a string as JavaScript…".
+ *
+ * Ed25519 signing is deterministic, so fixed seeds yield identically sized
+ * witnesses. Seeds vary per index so each required signer contributes its own
+ * vkey; identical witnesses would be deduplicated and undersize the fee.
+ */
+function dummyFeeSigningKey(Cardano: Csl, index: number) {
+  const seed = new Uint8Array(32).fill(0x5c);
+  seed[31] = index & 0xff;
+  seed[30] = (index >> 8) & 0xff;
+  return Cardano.PrivateKey.from_normal_bytes(seed);
+}
+
 function dummyWitnessSetForMinFee(
   Cardano: Csl,
   body: any,
@@ -119,7 +139,7 @@ function dummyWitnessSetForMinFee(
   const vkeys = Cardano.Vkeywitnesses.new();
   const n = requiredVkeyHashesHex.length;
   for (let i = 0; i < n; i += 1) {
-    const sk = Cardano.PrivateKey.generate_ed25519();
+    const sk = dummyFeeSigningKey(Cardano, i);
     vkeys.add(Cardano.make_vkey_witness(txHash, sk));
     if (typeof sk.free === 'function') sk.free();
   }

@@ -22,6 +22,10 @@ const internalSrc = fs.readFileSync(
   path.join(__dirname, '../../../ui/indexInternal.jsx'),
   'utf8'
 );
+const inlineActionSrc = fs.readFileSync(
+  path.join(__dirname, '../../../ui/app/components/inlineSignAction.jsx'),
+  'utf8'
+);
 
 describe('CIP-30 sign UI refresh — structural contracts', () => {
   test('uses themed page chrome instead of a leftover gray card', () => {
@@ -63,14 +67,29 @@ describe('CIP-30 sign UI refresh — structural contracts', () => {
   test('Sign footer stays in the popup — same pattern as Send', () => {
     expect(signSrc).toContain('data-testid="sign-tx-footer"');
     expect(signSrc).toContain('lucem-sign-footer');
-    expect(signSrc).toContain('data-testid="sign-tx-primary-action"');
-    expect(signSrc).toContain("bg=\"yellow.400\"");
-    expect(signSrc).toContain('fontWeight="black"');
-    expect(signSrc).toContain('data-testid="sign-tx-cancel"');
     expect(signSrc).toContain('safe-area-inset-bottom');
     expect(stylesSrc).toMatch(
       /html\[data-layout=['"]extension['"]\] \.lucem-sign-footer/
     );
+    // The footer actions live in InlineSignAction, which derives the testids
+    // sign-tx-primary-action / sign-tx-cancel from this prefix.
+    expect(signSrc).toContain('<InlineSignAction');
+    expect(signSrc).toContain('testId="sign-tx"');
+    expect(inlineActionSrc).toContain('${testId}-primary-action');
+    expect(inlineActionSrc).toContain('${testId}-cancel');
+    expect(inlineActionSrc).toContain('bg="yellow.400"');
+    expect(inlineActionSrc).toContain('fontWeight="black"');
+  });
+
+  test('a software account signs on the page, without a password dialog', () => {
+    // Password entry is inline, so approving is one screen. Only hardware
+    // accounts, which have device prompts to run, open the dialog.
+    expect(signSrc).toMatch(
+      /isHw=\{isHW\(account\.index\)\}[\s\S]{0,800}onHwRequest=\{\(\) =>\s*ref\.current\.openModal\(account\.index\)\}/
+    );
+    expect(inlineActionSrc).toContain('${testId}-password');
+    expect(inlineActionSrc).toContain('ERROR.wrongPassword');
+    expect(inlineActionSrc).toContain('autoComplete="current-password"');
   });
 
   test('keeps origin, Details, and dApp decline/sign wiring', () => {

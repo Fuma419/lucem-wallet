@@ -7,16 +7,9 @@ import {
 } from '../../../api/extension';
 import platform from '../../../platform';
 import Account from '../components/account';
-import {
-  Box,
-  Button,
-  Flex,
-  Image,
-  Spinner,
-  Stack,
-  Text,
-} from '@chakra-ui/react';
+import { Box, Flex, Image, Spinner, Stack, Text } from '@chakra-ui/react';
 import ConfirmModal from '../components/confirmModal';
+import InlineSignAction from '../components/inlineSignAction';
 import Loader from '../../../api/loader';
 import { DataSignError } from '../../../config/config';
 import useSurfaceColors from '../hooks/useSurfaceColors';
@@ -103,6 +96,37 @@ const SignData = ({ request, controller }) => {
     await getPayload();
     await getAddress();
     setIsLoading(false);
+  };
+
+  const signPayload = (password) =>
+    request.data.CIP30
+      ? signDataCIP30(
+          request.data.address,
+          request.data.payload,
+          password,
+          account.index
+        )
+      : // deprecated soon
+        signData(
+          request.data.address,
+          request.data.payload,
+          password,
+          account.index
+        );
+
+  const returnSignature = async (signedMessage) => {
+    await controller.returnData({ data: signedMessage });
+    window.close();
+  };
+
+  const returnSignError = async (signError) => {
+    await controller.returnData({ error: signError });
+    window.close();
+  };
+
+  const decline = async () => {
+    await controller.returnData({ error: DataSignError.UserDeclined });
+    window.close();
   };
 
   React.useEffect(() => {
@@ -280,76 +304,29 @@ const SignData = ({ request, controller }) => {
                 {error}
               </Text>
             ) : null}
-            <Button
-              data-testid="sign-data-primary-action"
-              width="full"
-              height="52px"
-              rounded="2xl"
-              colorScheme="yellow"
-              bg="yellow.400"
-              color="gray.900"
-              fontWeight="black"
+            <InlineSignAction
+              testId="sign-data"
+              label="Sign message"
+              isHw={Boolean(account && isHW(account.index))}
               isDisabled={Boolean(error)}
-              _hover={{ bg: 'yellow.300', transform: 'translateY(-1px)' }}
-              _active={{ bg: 'yellow.500' }}
-              _disabled={{
-                bg: 'whiteAlpha.200',
-                color: 'whiteAlpha.500',
-                cursor: 'not-allowed',
-                transform: 'none',
-                opacity: 1,
-              }}
-              onClick={() => ref.current.openModal(account.index)}
-            >
-              Sign message
-            </Button>
-            <Button
-              data-testid="sign-data-cancel"
-              variant="ghost"
-              width="full"
-              height="44px"
-              rounded="2xl"
-              color={pageFg}
-              _hover={{ bg: 'whiteAlpha.100' }}
-              onClick={async () => {
-                await controller.returnData({
-                  error: DataSignError.UserDeclined,
-                });
-                window.close();
-              }}
-            >
-              Cancel
-            </Button>
+              sign={signPayload}
+              onSigned={returnSignature}
+              onFailed={returnSignError}
+              onHwRequest={() => ref.current.openModal(account.index)}
+              onCancel={decline}
+            />
           </Stack>
         </Box>
       </Box>
       <ConfirmModal
         ref={ref}
-        sign={(password) =>
-          request.data.CIP30
-            ? signDataCIP30(
-                request.data.address,
-                request.data.payload,
-                password,
-                account.index
-              )
-            : // deprecated soon
-              signData(
-                request.data.address,
-                request.data.payload,
-                password,
-                account.index
-              )
-        }
+        sign={signPayload}
         onCloseBtn={() => {}}
-        onConfirm={async (status, signedMessage) => {
-          if (status === true) {
-            await controller.returnData({ data: signedMessage });
-          } else {
-            await controller.returnData({ error: signedMessage });
-          }
-          window.close();
-        }}
+        onConfirm={async (status, signedMessage) =>
+          status === true
+            ? returnSignature(signedMessage)
+            : returnSignError(signedMessage)
+        }
       />
     </>
   );

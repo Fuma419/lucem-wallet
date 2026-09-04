@@ -5,7 +5,7 @@
 Lucem is an open-source Cardano wallet: a Chrome/Firefox/Edge **extension**, a **web app**, and a Capacitor **mobile** shell. It is forked from [Nami](https://iohk.io/en/blog/posts/2023/11/01/nami-has-a-new-home/). Settings expose **Mainnet**, **Preprod**, and **Preview**. dApps connect through CIP-30 under `window.cardano.lucem` (Mesh and gov.tools already do); CIP-95 is opt-in at `enable()` time.
 
 <p align="center">
-  <img src="./docs/screenshots/01-welcome.png" alt="Wallet setup: create, restore, or connect hardware" width="180" />
+  <img src="./docs/screenshots/01-welcome.png" alt="Wallet setup: Create, Restore Wallet, Connect Hardware, or Restore Backup" width="180" />
   <img src="./docs/screenshots/04-hw-connect.png" alt="Connect hardware wallet: Keystone or Ledger" width="180" />
   <img src="./docs/screenshots/12-send-page.png" alt="Send ADA and native tokens" width="180" />
   <img src="./docs/screenshots/16-governance.png" alt="Governance voting center" width="180" />
@@ -39,6 +39,23 @@ Open [http://localhost:3000/mainPopup.html](http://localhost:3000/mainPopup.html
 ### Mobile (iOS / Android)
 
 See **[MOBILE.md](MOBILE.md)** for Capacitor setup, Keystone QR on device, and store notes.
+
+## Using Lucem
+
+Welcome is four buttons. They are not interchangeable:
+
+- **Create Wallet** — generates a new BIP-39 seed. Write the phrase down; Lucem cannot show it again later.
+- **Restore Wallet** — enter an existing BIP-39 phrase (12, 15, or 24 words). This is how you import a seed.
+- **Connect Hardware** — Keystone (QR) or Ledger (USB / Bluetooth). The seed stays on the device.
+- **Restore Backup** — import a sterilized metadata JSON (account names and settings). Backups never contain keys. After import, restore each recovery phrase or reconnect hardware before you can sign.
+
+To fund **Preview** (or Preprod), open **Receive** and copy the QR or the `addr_test1…` payment address into a faucet. Switch **Preview / Preprod / Mainnet** in **Settings**.
+
+<p align="center">
+  <img src="./docs/screenshots/10-wallet-home.png" alt="Wallet home after setup" width="180" />
+  <img src="./docs/screenshots/13-receive-qr.png" alt="Receive: QR and payment address for funding Preview or Preprod" width="180" />
+  <img src="./docs/screenshots/14-settings.png" alt="Settings: switch Preview, Preprod, or Mainnet" width="180" />
+</p>
 
 ## Networks
 

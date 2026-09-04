@@ -11,6 +11,7 @@ import {
   HW,
   NETWORK_ID,
   STORAGE,
+  TREZOR_UNSUPPORTED,
   TxSignError,
 } from '../../config/config';
 import { nativeSafeBinaryBody } from '../../platform/capacitor';
@@ -21,7 +22,6 @@ import {
   koiosSubmitTransaction,
   networkNameToId,
   txToLedger,
-  txToTrezor,
 } from '../util';
 import { ADDRESS_ROLE, getExternalIndices, getInternalIndices, listEnabledPaymentAddresses } from './multi-address';
 import { deriveAccountDRepPrivateKey, requestAccountKey } from './keys';
@@ -536,64 +536,7 @@ export const signTxHW = async (
     throw new Error('Keystone signing runs in the Keystone signing tab.');
   }
   if (hw.device === HW.trezor) {
-    const paymentIndexByHash = {};
-    if (account?.publicKey) {
-      for (const row of listEnabledPaymentAddresses(
-        Loader.Cardano,
-        account,
-        network
-      )) {
-        paymentIndexByHash[row.paymentKeyHash] = {
-          index: row.index,
-          role: row.role ?? ADDRESS_ROLE.external,
-        };
-      }
-    } else {
-      paymentIndexByHash[account.paymentKeyHash] = {
-        index: 0,
-        role: ADDRESS_ROLE.external,
-      };
-    }
-    keyHashes.forEach((keyHash) => {
-      if (paymentIndexByHash[keyHash] != null) {
-        const { index: addrIdx, role } = paymentIndexByHash[keyHash];
-        keys.payment = {
-          hash: keyHash,
-          path: `m/1852'/1815'/${hw.account}'/${role}/${addrIdx}`,
-        };
-      } else if (keyHash === account.stakeKeyHash)
-        keys.stake = {
-          hash: keyHash,
-          path: `m/1852'/1815'/${hw.account}'/2/0`,
-        };
-      else if (!partialSign) throw TxSignError.ProofGeneration;
-      else return;
-    });
-    const trezorTx = await txToTrezor(
-      rawTx,
-      network,
-      keys,
-      Buffer.from(address.to_bytes()).toString('hex'),
-      hw.account
-    );
-    const result = await TrezorConnect.cardanoSignTransaction({
-      ...trezorTx,
-      tagCborSets: hasTaggedSets(tx),
-    });
-    if (!result.success) throw new Error('Trezor could not sign tx');
-    const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
-    const vkeys = Loader.Cardano.Vkeywitnesses.new();
-    result.payload.witnesses.forEach((witness) => {
-      const vkey = Loader.Cardano.PublicKey.from_bytes(
-        Buffer.from(witness.pubKey, 'hex')
-      );
-      const signature = Loader.Cardano.Ed25519Signature.from_hex(
-        witness.signature
-      );
-      vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
-    });
-    witnessSet.set_vkeys(vkeys);
-    return witnessSet;
+    throw new Error(TREZOR_UNSUPPORTED);
   }
   throw new Error('Unsupported hardware wallet device');
 };

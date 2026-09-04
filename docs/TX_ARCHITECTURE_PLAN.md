@@ -13,7 +13,7 @@
 | **Chain context** | Tip slot, epoch params, UTxO fetch | `src/api/util.js` (Koios), `src/api/tx/protocol-params.js` |
 | **Unsigned tx assembly** | Input selection, outputs, change, TTL, fee | `src/api/tx/csl-unsigned-tx.js` |
 | **Canonical CBOR (CIP-21)** | HW-friendly encoding | `cardano-hw-interop-lib` inside tx builder |
-| **Signing** | Vkey / Ledger / Trezor / Keystone | `src/api/extension/index.js` (unchanged contract) |
+| **Signing** | Vkey / Ledger / Keystone | `src/api/extension/index.js` (unchanged contract) |
 | **Submit** | CBOR POST | `submitTx` |
 
 ## Phased work
@@ -38,7 +38,7 @@
 
 ### Phase 4 — Hardening
 
-10. Regression matrix: software send, Ledger, Trezor, Keystone UR, dApp `signTx` partial sign.
+10. Regression matrix: software send, Ledger, Keystone UR, dApp `signTx` partial sign.
 11. Extend integration test patterns to preview if needed.
 
 ## Non-goals (short term)

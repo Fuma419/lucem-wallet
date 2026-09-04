@@ -105,7 +105,7 @@ const extensionAdapter = {
       ),
 
     /**
-     * Leave full-page flows (hw, create wallet, Trezor/Keystone tabs) and return
+     * Leave full-page flows (hw, create wallet, Keystone tab) and return
      * to the main UI. `window.close()` is blocked for tabs opened via
      * `chrome.tabs.create`; `tabs.getCurrent` / `tabs.remove` are brittle without the `tabs` permission.
      * In-document navigation always works for extension pages.

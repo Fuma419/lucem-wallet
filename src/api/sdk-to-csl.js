@@ -2,7 +2,7 @@ import Loader from './loader';
 
 /**
  * Boundary for Cardano SDK (or any non-CSL builder): unsigned tx must become an Emurgo CSL
- * `Transaction` before software signing, Ledger/Trezor encoding, or Keystone UR flows.
+ * `Transaction` before software signing, Ledger encoding, or Keystone UR flows.
  *
  * @param {Uint8Array | Buffer} txBytes — canonical unsigned transaction CBOR
  * @returns {Promise<import('@emurgo/cardano-serialization-lib-browser').Transaction>}

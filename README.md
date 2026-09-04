@@ -15,7 +15,7 @@ Lucem is an open-source Cardano wallet: a Chrome/Firefox/Edge **extension**, a *
 
 - **CIP-30 dApp connector** — namespace `lucem`; addresses are hex-encoded Address CBOR
 - **CIP-95** — DRep / stake-key methods when you `enable({ extensions: [{ cip: 95 }] })`
-- **Hardware wallets** — Keystone (QR), Ledger (USB / Bluetooth), Trezor (signing)
+- **Hardware wallets** — Keystone (QR), Ledger (USB / Bluetooth). Trezor is not supported yet.
 - **Networks** — Mainnet, Preprod, Preview (same three choices as Settings)
 - **Send, receive, native tokens, staking, governance**
 - **Runs as** a browser extension, `localhost:3000/mainPopup.html`, or [mobile](MOBILE.md)
@@ -97,7 +97,6 @@ The Connect Hardware Wallet screen offers **Keystone** and **Ledger**.
 
 - **Keystone** — air-gapped QR (also the hardware path on mobile).
 - **Ledger** — USB or Bluetooth (Chrome / Edge on desktop; iOS browsers do not expose Web Bluetooth).
-- **Trezor** — signing flow for Trezor accounts (`trezorTx`).
 
 ## Development
 

@@ -95,12 +95,10 @@ const options = {
     internalPopup: path.join(__dirname, 'src', 'ui', 'indexInternal.jsx'),
     hwTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'hw.jsx'),
     createWalletTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'createWallet.jsx'),
-    trezorTx: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'trezorTx.jsx'),
     keystoneTx: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'keystoneTx.jsx'),
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
     contentScript: path.join(__dirname, 'src', 'pages', 'Content', 'index.js'),
     injected: path.join(__dirname, 'src', 'pages', 'Content', 'injected.js'),
-    trezorContentScript: path.join(__dirname, 'src', 'pages', 'Content', 'trezorContentScript.js'),
   },
   chromeExtensionBoilerplate: {
     notHotReload: ['contentScript', 'devtools', 'injected'],
@@ -290,16 +288,6 @@ const options = {
       template: path.join(__dirname, 'src', 'pages', 'Tab', 'createWalletTab.html'),
       filename: 'createWalletTab.html',
       chunks: ['createWalletTab'],
-      cache: false,
-      inject: 'head',
-      templateParameters: {
-        preloadImages,
-      },
-    }),
-    new HtmlWebpackPlugin({
-      template: path.join(__dirname, 'src', 'pages', 'Tab', 'trezorTx.html'),
-      filename: 'trezorTx.html',
-      chunks: ['trezorTx'],
       cache: false,
       inject: 'head',
       templateParameters: {

@@ -93,7 +93,7 @@ allowed. The generated native projects must declare the camera permission —
   ```
 
 Tip: point the camera at the Keystone screen in a well-lit spot; the animated QR
-transfers over several frames, so hold steady. Ledger (Bluetooth) and Trezor are
+transfers over several frames, so hold steady. Ledger (Bluetooth) is
 not available on mobile in v1 — the hardware screen shows guidance to that effect
 on phones.
 

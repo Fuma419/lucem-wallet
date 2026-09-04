@@ -115,15 +115,21 @@ export const POPUP = {
 export const TAB = {
   hw: 'hwTab',
   createWallet: 'createWalletTab',
-  trezorTx: 'trezorTx',
   keystoneTx: 'keystoneTx',
 };
 
 export const HW = {
   keystone: 'keystone',
   ledger: 'ledger',
+  // Kept so an account stored as `trezor-*` is still recognised as hardware
+  // and keeps its logo. This build cannot sign with Trezor; see
+  // TREZOR_UNSUPPORTED.
   trezor: 'trezor',
 };
+
+/** Shown wherever a stored Trezor account tries to sign. */
+export const TREZOR_UNSUPPORTED =
+  'Trezor is not supported yet. Use Keystone or Ledger, or a software account.';
 
 export const POPUP_WINDOW = {
   top: 50,

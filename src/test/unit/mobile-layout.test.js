@@ -348,24 +348,6 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).not.toMatch(/height:\s*['"]400px['"]/);
   });
 
-  test('trezorTx.jsx should use safe-area-aware column shell', () => {
-    const src = fs.readFileSync(
-      path.join(__dirname, '../../ui/app/tabs/trezorTx.jsx'),
-      'utf8'
-    );
-    expect(src).toMatch(/safe-area-inset-bottom/);
-    expect(src).toMatch(/lucem-wallet-main-column/);
-  });
-
-  test('trezorWidget.jsx iframe should be viewport-capped and titled for a11y', () => {
-    const src = fs.readFileSync(
-      path.join(__dirname, '../../ui/app/components/trezorWidget.jsx'),
-      'utf8'
-    );
-    expect(src).toMatch(/title=["']Trezor["']/);
-    expect(src).toMatch(/min\(560px/);
-  });
-
   test('send.jsx primary Send button should not use fixed width="366px"', () => {
     const sendSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/send.jsx'),

@@ -27,14 +27,13 @@ export function detectIsExtensionPopup(doc, chromeLike) {
   );
 }
 
-/** Full-page extension tabs (HW, create wallet, Keystone/Trezor sign). */
+/** Full-page extension tabs (HW, create wallet, Keystone sign). */
 export function detectIsFullBleedWalletTab(doc) {
   if (!doc || typeof doc.querySelector !== 'function') return false;
   return (
     !!doc.querySelector(`#${TAB.hw}`) ||
     !!doc.querySelector(`#${TAB.keystoneTx}`) ||
-    !!doc.querySelector(`#${TAB.createWallet}`) ||
-    !!doc.querySelector(`#${TAB.trezorTx}`)
+    !!doc.querySelector(`#${TAB.createWallet}`)
   );
 }
 

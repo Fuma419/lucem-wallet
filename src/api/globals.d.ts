@@ -7,11 +7,6 @@ export {};
 
 declare global {
   const chrome: any;
-  const TrezorConnect: any;
-  const CardanoAddressType: any;
-  const CardanoTxSigningMode: any;
-  const CardanoCertificateType: any;
-  const CardanoPoolRelayType: any;
 
   interface Window {
     Capacitor?: any;

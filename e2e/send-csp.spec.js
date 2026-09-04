@@ -20,7 +20,7 @@ const {
 
 // Mirrors src/manifest.json content_security_policy.extension_pages.
 const EXTENSION_CSP =
-  "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; frame-src https://connect.trezor.io/;";
+  "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';";
 
 test.describe('Send under the extension CSP', () => {
   test('prepares a payment without an eval/CSP error', async ({ page }) => {

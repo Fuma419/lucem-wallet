@@ -27,11 +27,15 @@ import {
   ListItem,
 } from '@chakra-ui/react';
 import { GoStop } from 'react-icons/go';
-import { ERROR, HW, TAB, submitErrorMessage } from '../../../config/config';
+import {
+  ERROR,
+  HW,
+  TREZOR_UNSUPPORTED,
+  submitErrorMessage,
+} from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';
 import {
-  createTab,
   openKeystoneSignTxTab,
   paymentKeyHashesForSigning,
   getUtxos,
@@ -186,10 +190,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           });
           if (hw) {
             if (hw.device === HW.trezor) {
-              return createTab(
-                TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
-              );
+              throw new Error(TREZOR_UNSUPPORTED);
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
@@ -294,10 +295,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           });
           if (hw) {
             if (hw.device === HW.trezor) {
-              return createTab(
-                TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
-              );
+              throw new Error(TREZOR_UNSUPPORTED);
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({
@@ -413,10 +411,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
           });
           if (hw) {
             if (hw.device === HW.trezor) {
-              return createTab(
-                TAB.trezorTx,
-                `?tx=${Buffer.from(data.tx.to_bytes()).toString('hex')}`
-              );
+              throw new Error(TREZOR_UNSUPPORTED);
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({

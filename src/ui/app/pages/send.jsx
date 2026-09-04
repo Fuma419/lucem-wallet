@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  createTab,
   openKeystoneSignTxTab,
   displayUnit,
   getAccounts,
@@ -84,7 +83,12 @@ import {
 } from '../../../api/token-amount';
 import { FixedSizeList as List } from 'react-window';
 import AssetBadge from '../components/assetBadge';
-import { ERROR, HW, NETWORK_ID, TAB } from '../../../config/config';
+import {
+  ERROR,
+  HW,
+  NETWORK_ID,
+  TREZOR_UNSUPPORTED,
+} from '../../../config/config';
 import { Planet } from 'react-kawaii';
 import Loader from '../../../api/loader';
 import { action, useStoreActions, useStoreState } from 'easy-peasy';
@@ -1644,7 +1648,7 @@ const Send = () => {
           );
           if (hw) {
             if (hw.device === HW.trezor) {
-              return createTab(TAB.trezorTx, `?tx=${tx}`);
+              throw new Error(TREZOR_UNSUPPORTED);
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({

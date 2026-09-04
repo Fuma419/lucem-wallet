@@ -13,6 +13,7 @@
     "start": "NODE_OPTIONS=\"--max-old-space-size=4096\" node utils/webserver.js",
     "prettier": "prettier --write '**/*.{js,jsx,css,html}'",
     "test": "NODE_ENV=test jest",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc -p tsconfig.api.json --pretty false",
     "test:integration": "LUCEM_RUN_INTEGRATION=1 NODE_ENV=test jest src/test/integration --runInBand --testTimeout=180000",
     "test:functional": "NODE_ENV=test jest src/test/functional",

@@ -1034,9 +1034,32 @@ function retryCertTx(
   return nextRetries;
 }
 
+function txBodyHasWithdrawal(txBody: any) {
+  try {
+    const withdrawals = txBody.withdrawals();
+    return Boolean(withdrawals && withdrawals.len() > 0);
+  } catch {
+    return false;
+  }
+}
+
+function certDummyHashesForFee(
+  Cardano: Csl,
+  requiredVkeyHashesHex: string[],
+  txBody: any,
+  utxos: any[]
+) {
+  return feeWitnessHashes(
+    mergeSpentInputKeyHashes(Cardano, requiredVkeyHashesHex, txBody, utxos),
+    txBodyHasWithdrawal(txBody)
+  );
+}
+
 /**
  * Shared skeleton for certificate / withdrawal / voting transactions.
  * Callers install certs, withdrawals, or votes via `configure(txBuilder, Cardano)`.
+ * Fee is aligned the same way as Send: dummy vkeys for every hash that will sign
+ * (payment + stake, and DRep on votes). Hashes are not written to required_signers.
  *
  * @param {object} opts
  * @param {*} opts.Cardano
@@ -1044,6 +1067,7 @@ function retryCertTx(
  * @param {string} opts.changeAddressBech32
  * @param {() => Promise<Array>|Array} opts.getUtxos
  * @param {(txBuilder: *, Cardano: *) => void} opts.configure
+ * @param {string[]} opts.requiredVkeyHashesHex - hashes that will sign (fee sizing)
  * @param {number} [opts.retries=5]
  * @param {string} [opts.emptyUtxosMessage]
  * @param {string} [opts.label]
@@ -1054,6 +1078,7 @@ export async function assembleCertTx({
   changeAddressBech32,
   getUtxos,
   configure,
+  requiredVkeyHashesHex,
   retries = DEFAULT_CERT_TX_RETRIES,
   emptyUtxosMessage = 'No UTxOs available to pay the transaction fee',
   label = 'Certificate transaction',
@@ -1063,6 +1088,7 @@ export async function assembleCertTx({
   changeAddressBech32: string;
   getUtxos: () => Promise<any[]> | any[];
   configure: (txBuilder: any, Cardano: Csl) => void;
+  requiredVkeyHashesHex: string[];
   retries?: number;
   emptyUtxosMessage?: string;
   label?: string;
@@ -1076,20 +1102,24 @@ export async function assembleCertTx({
   if (typeof getUtxos !== 'function') {
     throw new Error('assembleCertTx requires getUtxos()');
   }
+  const feeHashes = (requiredVkeyHashesHex || []).filter(Boolean);
+  if (!feeHashes.length) {
+    throw new Error(
+      'requiredVkeyHashesHex must list key hashes that will sign (fee sizing)'
+    );
+  }
+
+  const linearFee = Cardano.LinearFee.new(
+    Cardano.BigNum.from_str(String(protocolParameters.linearFee.minFeeA)),
+    Cardano.BigNum.from_str(String(protocolParameters.linearFee.minFeeB))
+  );
+  const txConfig = createCslTransactionBuilderConfig(Cardano, protocolParameters);
 
   const totalAttempts = retries;
   let selectionRetries = retries;
 
   while (selectionRetries > 0) {
     try {
-      const txBuilder = Cardano.TransactionBuilder.new(
-        createCslTransactionBuilderConfig(Cardano, protocolParameters)
-      );
-      configure(txBuilder, Cardano);
-      txBuilder.set_ttl_bignum(
-        ttlInvalidHereafterBignum(Cardano, protocolParameters)
-      );
-
       const utxos = await getUtxos();
       if (!utxos || utxos.length === 0) {
         throw new Error(emptyUtxosMessage);
@@ -1098,18 +1128,67 @@ export async function assembleCertTx({
       const changeAddress = Cardano.Address.from_bech32(changeAddressBech32);
       const utxoCollection = Cardano.TransactionUnspentOutputs.new();
       utxos.forEach((utxo) => utxoCollection.add(utxo));
-      txBuilder.add_inputs_from(
-        utxoCollection,
-        Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset
-      );
-      txBuilder.add_change_if_needed(changeAddress);
 
-      const txBody = txBuilder.build();
-      const tx = Cardano.Transaction.new(
-        txBody,
-        Cardano.TransactionWitnessSet.new()
+      // Use set_min_fee (floor) — never set_fee — before change, matching Send.
+      // Fee-sizing hashes must not become required_signers.
+      let minFeeFloor = null;
+
+      for (let attempt = 0; attempt < FEE_ALIGN_MAX_ATTEMPTS; attempt += 1) {
+        const txBuilder = Cardano.TransactionBuilder.new(txConfig);
+        configure(txBuilder, Cardano);
+        txBuilder.set_ttl_bignum(
+          ttlInvalidHereafterBignum(Cardano, protocolParameters)
+        );
+        if (minFeeFloor != null) {
+          txBuilder.set_min_fee(minFeeFloor);
+        }
+        txBuilder.add_inputs_from(
+          utxoCollection,
+          Cardano.CoinSelectionStrategyCIP2.RandomImproveMultiAsset
+        );
+        txBuilder.add_change_if_needed(changeAddress);
+
+        const txBody = txBuilder.build();
+        const emptyW = Cardano.TransactionWitnessSet.new();
+        const unsigned = Cardano.Transaction.new(txBody, emptyW);
+        const dummyHashes = certDummyHashesForFee(
+          Cardano,
+          feeHashes,
+          txBody,
+          utxos
+        );
+        const dummyW = dummyWitnessSetForMinFee(Cardano, txBody, dummyHashes);
+        const signedForFee = Cardano.Transaction.new(txBody, dummyW);
+        signedForFee.set_is_valid(unsigned.is_valid());
+        const required = Cardano.min_fee(signedForFee, linearFee);
+        if (txBody.fee().compare(required) < 0) {
+          minFeeFloor = required;
+          continue;
+        }
+
+        const finalTx = Cardano.Transaction.new(txBody, emptyW);
+        finalTx.set_is_valid(unsigned.is_valid());
+        const canonical = toCanonicalTransactionCip21(Cardano, finalTx);
+        const canonDummy = dummyWitnessSetForMinFee(
+          Cardano,
+          canonical.body(),
+          certDummyHashesForFee(Cardano, feeHashes, canonical.body(), utxos)
+        );
+        const canonSigned = Cardano.Transaction.new(
+          canonical.body(),
+          canonDummy,
+          canonical.auxiliary_data() || undefined
+        );
+        const canonRequired = Cardano.min_fee(canonSigned, linearFee);
+        if (canonical.body().fee().compare(canonRequired) >= 0) {
+          return canonical;
+        }
+        minFeeFloor = canonRequired;
+      }
+
+      throw new Error(
+        `Could not align transaction fee with ledger minimum after ${FEE_ALIGN_MAX_ATTEMPTS} attempts`
       );
-      return toCanonicalTransactionCip21(Cardano, tx);
     } catch (error) {
       selectionRetries = retryCertTx(error, selectionRetries, label, totalAttempts);
     }

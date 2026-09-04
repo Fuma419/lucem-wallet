@@ -11,6 +11,7 @@ import {
   latestEpochParamsRow,
 } from '../tx/protocol-params';
 import {
+  applyRewardWithdrawal,
   assembleCertTx,
   buildUnsignedSendAllTx,
   buildUnsignedSimpleTx,
@@ -71,6 +72,21 @@ const uniqueKeyHashes = (hashes: Array<string | undefined | null>) => {
     out.push(h);
   }
   return out;
+};
+
+/** Payment (+ enabled extras) and stake; DRep when voting. Used only to size dummy vkeys. */
+const certRequiredVkeyHashes = async (
+  account: WalletAccount,
+  extra: Array<string | undefined | null> = []
+) => {
+  const paymentHashes = (await paymentKeyHashesForSigning(account)).filter(
+    (h: unknown): h is string => typeof h === 'string' && h.length > 0
+  );
+  const payment =
+    paymentHashes.length > 0
+      ? paymentHashes
+      : [account.paymentKeyHash].filter((h): h is string => Boolean(h));
+  return uniqueKeyHashes([...payment, account.stakeKeyHash, ...extra]);
 };
 
 /** True when CSL/coin-selection failed because ADA (not tokens) could not cover the send. */
@@ -439,6 +455,7 @@ export const delegationTx = async (
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
     getUtxos: utxosOrEmpty,
+    requiredVkeyHashesHex: await certRequiredVkeyHashes(account),
     emptyUtxosMessage: 'No UTxOs available to pay delegation deposit and fee',
     label: 'Delegation transaction',
     configure: (txBuilder, Cardano) => {
@@ -470,6 +487,7 @@ export const voteDelegationTx = async (
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
     getUtxos: utxosOrEmpty,
+    requiredVkeyHashesHex: await certRequiredVkeyHashes(account),
     emptyUtxosMessage: 'No UTxOs available to pay vote delegation fee',
     label: 'Vote delegation transaction',
     configure: (txBuilder, Cardano) => {
@@ -550,6 +568,9 @@ export const voteTx = async (
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
     getUtxos: utxosOrEmpty,
+    requiredVkeyHashesHex: await certRequiredVkeyHashes(account, [
+      drepKeyHashHex,
+    ]),
     emptyUtxosMessage: 'No UTxOs available to pay voting fee',
     label: 'Vote transaction',
     configure: (txBuilder, Cardano) => {
@@ -585,20 +606,21 @@ export const withdrawalTx = async (
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
     getUtxos: async () => utxos,
+    requiredVkeyHashesHex: await certRequiredVkeyHashes(account),
     emptyUtxosMessage:
       'No inputs found on wallet. Withdrawal transaction needs to have at least one input.',
     label: 'Withdrawal transaction',
     configure: (txBuilder, Cardano) => {
-      if (rewardLovelace(delegation) > 0 && account.rewardAddr) {
-        const withdrawalsBuilder = Cardano.WithdrawalsBuilder.new();
-        withdrawalsBuilder.add(
-          Cardano.RewardAddress.from_address(
-            Cardano.Address.from_bech32(account.rewardAddr)
-          ),
-          Cardano.BigNum.from_str(String(delegation.rewards))
-        );
-        txBuilder.set_withdrawals_builder(withdrawalsBuilder);
-      }
+      applyRewardWithdrawal(
+        Cardano,
+        txBuilder,
+        account.rewardAddr
+          ? {
+              rewardAddressBech32: account.rewardAddr,
+              amountLovelace: rewardLovelaceString(delegation),
+            }
+          : null
+      );
     },
   });
 };
@@ -615,6 +637,7 @@ export const undelegateTx = async (
     protocolParameters,
     changeAddressBech32: account.paymentAddr,
     getUtxos: utxosOrEmpty,
+    requiredVkeyHashesHex: await certRequiredVkeyHashes(account),
     emptyUtxosMessage: 'No UTxOs available to pay undelegation fee',
     label: 'Undelegation transaction',
     configure: (txBuilder, Cardano) => {

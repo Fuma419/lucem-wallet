@@ -13,6 +13,12 @@ import {
 } from './provider-http';
 import { blockfrostKoiosCompatibleRequest } from './providers/blockfrost';
 import {
+  getProviderHealth,
+  recordProviderFailure,
+  recordProviderSuccess,
+  recordProviderUnconfigured,
+} from './provider-health';
+import {
   AddressType,
   CertificateType,
   DatumType,
@@ -127,6 +133,7 @@ export async function koiosRequest(endpoint, headers, body, signal, networkOverr
   let blockfrostError = null;
 
   if (blockfrostProjectId) {
+    const startedAt = Date.now();
     try {
       const blockfrostResult = await blockfrostKoiosCompatibleRequest(
         networkKey,
@@ -134,17 +141,43 @@ export async function koiosRequest(endpoint, headers, body, signal, networkOverr
         body,
         signal
       );
+      // `undefined` means this endpoint has no Blockfrost mapping, which says
+      // nothing about the provider's health — leave the last verdict alone.
       if (blockfrostResult !== undefined) {
+        recordProviderSuccess('blockfrost', Date.now() - startedAt, endpoint);
         return blockfrostResult;
       }
     } catch (/** @type {any} */ error) {
+      recordProviderFailure(
+        'blockfrost',
+        error,
+        endpoint,
+        Date.now() - startedAt
+      );
       blockfrostError = error;
     }
+  } else {
+    recordProviderUnconfigured('blockfrost');
   }
 
+  const koiosStartedAt = Date.now();
   try {
-    return await koiosRequestDirect(networkKey, endpoint, headers, body, signal);
+    const koiosResult = await koiosRequestDirect(
+      networkKey,
+      endpoint,
+      headers,
+      body,
+      signal
+    );
+    recordProviderSuccess('koios', Date.now() - koiosStartedAt, endpoint);
+    return koiosResult;
   } catch (/** @type {any} */ koiosError) {
+    recordProviderFailure(
+      'koios',
+      koiosError,
+      endpoint,
+      Date.now() - koiosStartedAt
+    );
     if (blockfrostError) {
       throw new Error(
         `Blockfrost failed then Koios failed: ${/** @type {any} */ (blockfrostError).message} | ${/** @type {any} */ (koiosError).message}`
@@ -166,6 +199,7 @@ export async function koiosSubmitTransaction(txHex, signal) {
   const blockfrostProjectId = resolveBlockfrostProjectId(networkKey);
 
   if (blockfrostProjectId) {
+    const startedAt = Date.now();
     try {
       const blockfrostUrl = `${BLOCKFROST_BASE[networkKey] || BLOCKFROST_BASE.mainnet}/tx/submit`;
       const blockfrostResult = await fetch(blockfrostUrl, {
@@ -176,25 +210,43 @@ export async function koiosSubmitTransaction(txHex, signal) {
       });
       const text = await blockfrostResult.text();
       if (blockfrostResult.ok) {
+        recordProviderSuccess('blockfrost', Date.now() - startedAt, '/tx/submit');
         return text.trim().replace(/^"+|"+$/g, '');
       }
       throw new Error(
         `Blockfrost API error: ${blockfrostResult.status} ${blockfrostResult.statusText} ${text.slice(0, 500)}`
       );
     } catch (/** @type {any} */ error) {
+      recordProviderFailure(
+        'blockfrost',
+        error,
+        '/tx/submit',
+        Date.now() - startedAt
+      );
       console.warn('Blockfrost submit failed, falling back to Koios:', /** @type {any} */ (error).message || error);
     }
+  } else {
+    recordProviderUnconfigured('blockfrost');
   }
 
   const baseUrl = getKoiosBaseUrl(networkKey);
   const fullUrl = `${baseUrl}/submittx`;
   const requestHeaders = koiosHeaders(networkKey, {}, true);
+  const koiosStartedAt = Date.now();
 
   const rawResult = await fetch(fullUrl, {
     method: 'POST',
     headers: requestHeaders,
     body: nativeSafeBinaryBody(Buffer.from(txHex, 'hex'), 'application/cbor'),
     signal,
+  }).catch((error) => {
+    recordProviderFailure(
+      'koios',
+      error,
+      '/submittx',
+      Date.now() - koiosStartedAt
+    );
+    throw error;
   });
 
   const text = await rawResult.text();
@@ -210,18 +262,66 @@ export async function koiosSubmitTransaction(txHex, signal) {
     } catch {
       /* keep text */
     }
-    throw new Error(
+    const koiosError = new Error(
       `Koios API error: ${rawResult.status} ${rawResult.statusText}${
         detail ? ` — ${String(detail).slice(0, 500)}` : ''
       }`
     );
+    // A node rejecting a bad transaction is not an unhealthy provider; only
+    // transport and server faults are.
+    if (rawResult.status >= 500 || rawResult.status === 429) {
+      recordProviderFailure(
+        'koios',
+        koiosError,
+        '/submittx',
+        Date.now() - koiosStartedAt
+      );
+    } else {
+      recordProviderSuccess('koios', Date.now() - koiosStartedAt, '/submittx');
+    }
+    throw koiosError;
   }
+
+  recordProviderSuccess('koios', Date.now() - koiosStartedAt, '/submittx');
 
   try {
     return JSON.parse(text);
   } catch {
     return text;
   }
+}
+
+/**
+ * Actively check both providers so the UI can answer "is anything broken?"
+ * without waiting for wallet traffic. Hits the cheapest tip endpoint on each
+ * configured provider and records the verdict.
+ */
+export async function probeChainProviders(networkOverride) {
+  const network = networkOverride ? { id: networkOverride } : await getNetwork();
+  const networkKey = normalizeNetworkKey(network);
+  const blockfrostProjectId = resolveBlockfrostProjectId(networkKey);
+
+  if (blockfrostProjectId) {
+    const startedAt = Date.now();
+    try {
+      await blockfrostKoiosCompatibleRequest(networkKey, '/tip');
+      recordProviderSuccess('blockfrost', Date.now() - startedAt, '/tip');
+    } catch (/** @type {any} */ error) {
+      recordProviderFailure('blockfrost', error, '/tip', Date.now() - startedAt);
+    }
+  } else {
+    recordProviderUnconfigured('blockfrost');
+  }
+
+  const koiosStartedAt = Date.now();
+  try {
+    await koiosRequestDirect(networkKey, '/tip', {}, undefined, undefined);
+    recordProviderSuccess('koios', Date.now() - koiosStartedAt, '/tip');
+  } catch (/** @type {any} */ error) {
+    recordProviderFailure('koios', error, '/tip', Date.now() - koiosStartedAt);
+  }
+
+  return getProviderHealth();
 }
 
 // Backward compatibility helper for callers that still use blockfrostRequest.

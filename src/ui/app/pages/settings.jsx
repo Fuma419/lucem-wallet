@@ -53,6 +53,7 @@ import {
   SegmentedChoice,
   useSettingsChrome,
 } from '../components/settingsChrome';
+import ProviderStatus from '../components/providerStatus';
 
 /** Typed confirmation phrase (spacing / case normalized on compare). */
 const ERASE_WALLET_CONFIRM_PHRASE = 'Erase all data';
@@ -311,6 +312,7 @@ const Settings = () => {
                 ]}
               />
             </SettingsChoiceField>
+            <ProviderStatus networkId={networkId} />
           </SettingsPanel>
 
           <SettingsPanel

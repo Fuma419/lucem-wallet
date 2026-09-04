@@ -93,6 +93,34 @@ function makeUtxo(coin, index = 0) {
   );
 }
 
+function dummyMinFee(tx, vkeyCount) {
+  const linearFee = CSL.LinearFee.new(
+    CSL.BigNum.from_str(PROTOCOL_PARAMS.linearFee.minFeeA),
+    CSL.BigNum.from_str(PROTOCOL_PARAMS.linearFee.minFeeB)
+  );
+  const body = tx.body();
+  const dummyW = CSL.TransactionWitnessSet.new();
+  const vkeys = CSL.Vkeywitnesses.new();
+  const fixedBody = CSL.FixedTransactionBody.from_bytes(body.to_bytes());
+  const txHash = fixedBody.tx_hash();
+  for (let i = 0; i < vkeyCount; i += 1) {
+    const seed = new Uint8Array(32).fill(0x5c);
+    seed[31] = i & 0xff;
+    const sk = CSL.PrivateKey.from_normal_bytes(seed);
+    vkeys.add(CSL.make_vkey_witness(txHash, sk));
+  }
+  dummyW.set_vkeys(vkeys);
+  return CSL.min_fee(CSL.Transaction.new(body, dummyW), linearFee);
+}
+
+function expectFeeCoversDummyVkeys(tx, vkeyCount) {
+  expect(tx.body().fee().compare(dummyMinFee(tx, vkeyCount))).toBeGreaterThanOrEqual(
+    0
+  );
+  const rs = tx.body().required_signers();
+  expect(!rs || rs.len() === 0).toBe(true);
+}
+
 beforeEach(() => {
   getUtxos.mockReset();
   getUtxos.mockResolvedValue([makeUtxo(50_000_000)]);
@@ -111,6 +139,7 @@ describe('staking page — delegationTx', () => {
     const certs = tx.body().certs();
     expect(certs).toBeDefined();
     expect(certs.len()).toBe(2);
+    expectFeeCoversDummyVkeys(tx, 2);
   });
 
   test('already-registered stake key includes only the delegation cert', async () => {
@@ -121,6 +150,7 @@ describe('staking page — delegationTx', () => {
       POOL_KEY_HASH
     );
     expect(tx.body().certs().len()).toBe(1);
+    expectFeeCoversDummyVkeys(tx, 2);
   });
 });
 
@@ -135,6 +165,7 @@ describe('staking page — withdrawalTx', () => {
     const withdrawals = tx.body().withdrawals();
     expect(withdrawals).toBeDefined();
     expect(withdrawals.len()).toBe(1);
+    expectFeeCoversDummyVkeys(tx, 2);
   });
 });
 
@@ -148,6 +179,7 @@ describe('staking page — undelegateTx (unstake)', () => {
     const certs = tx.body().certs();
     expect(certs).toBeDefined();
     expect(certs.len()).toBe(1);
+    expectFeeCoversDummyVkeys(tx, 2);
   });
 });
 
@@ -162,6 +194,7 @@ describe('voting page — voteDelegationTx', () => {
     const certs = tx.body().certs();
     expect(certs).toBeDefined();
     expect(certs.len()).toBe(1);
+    expectFeeCoversDummyVkeys(tx, 2);
   });
 
   test('delegates voting power to a specific DRep key hash', async () => {
@@ -173,6 +206,7 @@ describe('voting page — voteDelegationTx', () => {
       DREP_KEY_HASH
     );
     expect(tx.body().certs().len()).toBe(1);
+    expectFeeCoversDummyVkeys(tx, 2);
   });
 });
 
@@ -190,6 +224,7 @@ describe('voting page — voteTx (DRep casts a vote)', () => {
     });
     const votingProcedures = tx.body().voting_procedures();
     expect(votingProcedures).toBeDefined();
+    expectFeeCoversDummyVkeys(tx, 3);
   });
 
   test('rejects a proposal missing its governance action id', async () => {

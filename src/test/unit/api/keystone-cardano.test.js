@@ -289,7 +289,7 @@ describe('keystone-cardano', () => {
     expect(src).toMatch(/generateSignTxHashRequest/);
     expect(src).toMatch(/cardanoTxBodyHashHex/);
     expect(src).toMatch(/sizeLimit: \{ ada: Number\.MAX_SAFE_INTEGER \}/);
-    expect(src).not.toMatch(/sizeLimit: \{ ada: KEYSTONE_ADA_PREFER_TX_HASH_UNDER_BYTES \}/);
+    expect(src).not.toMatch(/sizeLimit: \{ ada: KEYSTONE_ADA_MAX_FULL_TX_BYTES \}/);
   });
 
   test('normalizeKeystoneXfp accepts 8 hex chars', () => {

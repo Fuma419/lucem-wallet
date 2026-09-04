@@ -12,6 +12,7 @@ describe('README user and CIP-30 integrator contract', () => {
     expect(readme).toMatch(/hex/);
     expect(readme).toMatch(/Preview/);
     expect(readme).toMatch(/Preprod/);
+    expect(readme).toMatch(/Restore Backup/);
   });
 
   test('does not document obsolete Nami-era facts', () => {
@@ -20,11 +21,14 @@ describe('README user and CIP-30 integrator contract', () => {
     expect(readme).not.toMatch(/CIPs\/pull\/148/);
   });
 
-  test('embeds the four CI product screenshots', () => {
+  test('embeds CI product screenshots including Receive and Settings', () => {
     const shots = [
       '01-welcome',
       '04-hw-connect',
+      '10-wallet-home',
       '12-send-page',
+      '13-receive-qr',
+      '14-settings',
       '16-governance',
     ];
     shots.forEach((name) => {

@@ -35,7 +35,6 @@ import { useStoreState } from 'easy-peasy';
 import ConfirmModal from '../components/confirmModal';
 import UnitDisplay from '../components/unitDisplay';
 import {
-  createTab,
   getAccountDRepId,
   getCurrentAccount,
   getDelegation,
@@ -56,7 +55,11 @@ import {
   fetchGovernanceOverview,
   parseDrepKeyHash,
 } from '../../../api/governance';
-import { ERROR, HW, TAB } from '../../../config/config';
+import {
+  ERROR,
+  HW,
+  TREZOR_UNSUPPORTED,
+} from '../../../config/config';
 import useSurfaceColors from '../hooks/useSurfaceColors';
 import PullToRefresh from '../components/pullToRefresh';
 
@@ -1328,7 +1331,7 @@ const Governance = () => {
               );
             }
             if (hw.device === HW.trezor) {
-              return createTab(TAB.trezorTx, `?tx=${txHex}`);
+              throw new Error(TREZOR_UNSUPPORTED);
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({

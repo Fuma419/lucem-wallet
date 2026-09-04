@@ -11,6 +11,7 @@ import {
   STORAGE,
   TAB,
   TARGET,
+  TREZOR_UNSUPPORTED,
 } from '../../config/config';
 import platform from '../../platform';
 import { mnemonicToEntropy } from 'bip39';
@@ -1341,14 +1342,7 @@ export const initHW = async ({ device, id, bleDevice }) => {
     await appAda.getVersion(); // check if Ledger has Cardano app opened
     return appAda;
   } else if (device == HW.trezor) {
-    try {
-      await TrezorConnect.init({
-        manifest: {
-          email: 'hodlerstaking@gmail.com',
-          appUrl: 'https://www.hodlerstaking.com/',
-        },
-      });
-    } catch (/** @type {any} */ e) {}
+    throw new Error(TREZOR_UNSUPPORTED);
   } else if (device == HW.keystone) {
     throw new Error('Keystone hardware wallet uses QR-based signing, not USB initialization');
   }

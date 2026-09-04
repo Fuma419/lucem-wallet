@@ -34,9 +34,12 @@ import {
 } from 'react-icons/md';
 import { FaRegCopy } from 'react-icons/fa';
 import PullToRefresh from '../components/pullToRefresh';
-import { HW, TAB, ERROR } from '../../../config/config';
 import {
-  createTab,
+  HW,
+  ERROR,
+  TREZOR_UNSUPPORTED,
+} from '../../../config/config';
+import {
   getCurrentAccount,
   getDelegation,
   getPoolMetadata,
@@ -822,10 +825,7 @@ const Staking = () => {
           ].filter(Boolean);
           if (hw) {
             if (hw.device === HW.trezor) {
-              return createTab(
-                TAB.trezorTx,
-                `?tx=${Buffer.from(txPreview.tx.to_bytes()).toString('hex')}`
-              );
+              throw new Error(TREZOR_UNSUPPORTED);
             }
             if (hw.device === HW.keystone) {
               return openKeystoneSignTxTab({

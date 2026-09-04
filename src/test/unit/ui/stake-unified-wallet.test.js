@@ -34,10 +34,6 @@ describe('stake-unified wallet source guards', () => {
     expect(read('ui/app/pages/governance.jsx')).toMatch(
       /paymentKeyHashesForSigning/
     );
-    expect(read('ui/app/tabs/trezorTx.jsx')).toMatch(
-      /paymentKeyHashesForSigning/
-    );
-    expect(read('ui/app/tabs/trezorTx.jsx')).toMatch(/keyHashesForTx/);
   });
 
   test('history prefers same-stake credential matches', () => {

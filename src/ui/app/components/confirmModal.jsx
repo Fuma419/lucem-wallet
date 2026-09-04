@@ -18,7 +18,18 @@ import {
 import React from 'react';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
 import { indexToHw, initHW, isHW } from '../../../api/extension';
-import { ERROR, HW, isSubmitError } from '../../../config/config';
+import {
+  ERROR,
+  HW,
+  TREZOR_UNSUPPORTED,
+  isSubmitError,
+} from '../../../config/config';
+
+/** Device name for prompts; a stored Trezor account still shows its own name. */
+const deviceLabel = (device) =>
+  ({ [HW.ledger]: 'Ledger', [HW.keystone]: 'Keystone', [HW.trezor]: 'Trezor' })[
+    device
+  ] || 'device';
 
 const ConfirmModal = React.forwardRef(
   (
@@ -239,6 +250,9 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         onClose();
         return;
       }
+      if (hw.device === HW.trezor) {
+        throw new Error(TREZOR_UNSUPPORTED);
+      }
       if (hw.device === HW.ledger) {
         const appAda = await initHW({ device: hw.device, id: hw.id });
         const signedMessage = await props.sign(null, { ...hw, appAda });
@@ -333,11 +347,9 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                       </>
                     )
                   ) : !waitReady ? (
-                    `Waiting for ${
-                      hw.device === HW.ledger ? 'Ledger' : 'Trezor'
-                    }`
+                    `Waiting for ${deviceLabel(hw.device)}`
                   ) : (
-                    `Connect ${hw.device === HW.ledger ? 'Ledger' : 'Trezor'}`
+                    `Connect ${deviceLabel(hw.device)}`
                   )}
                 </Box>
               </Box>

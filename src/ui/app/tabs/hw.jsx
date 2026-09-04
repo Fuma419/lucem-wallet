@@ -36,7 +36,6 @@ import backgroundGreenWebp from '../../../assets/img/background-green.webp';
 import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
-import TrezorWidget from '../components/trezorWidget';
 import {
   closeCurrentTab,
   createHWAccounts,
@@ -1030,7 +1029,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
   /** Ledger defaults to account slot 0; Keystone must start empty (no ghost `0` rowKey). */
   const [selected, setSelected] = React.useState({});
   const [error, setError] = React.useState('');
-  const trezorRef = React.useRef();
   const [existing, setExisting] = React.useState({});
   const [isLoading, setIsLoading] = React.useState(false);
   const [isInit, setIsInit] = React.useState(false);
@@ -1310,7 +1308,6 @@ const SelectAccounts = ({ data, onConfirm }) => {
             {error}
           </Text>
         )}
-        <TrezorWidget ref={trezorRef} />
       </Box>
     )
   );

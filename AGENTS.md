@@ -13,7 +13,6 @@ Lucem is a Cardano blockchain browser extension wallet (Chrome/Firefox/Edge) **a
 | `createWalletTab` | `src/ui/app/tabs/createWallet.jsx` | Full-page wallet creation flow |
 | `hwTab` | `src/ui/app/tabs/hw.jsx` | Hardware wallet connection (Ledger USB, Keystone QR) |
 | `keystoneTx` | `src/ui/app/tabs/keystoneTx.jsx` | Full-tab Keystone air-gapped transaction signing |
-| `trezorTx` | `src/ui/app/tabs/trezorTx.jsx` | Trezor transaction signing |
 | `background` | `src/pages/Background/index.js` | Extension service worker (extension-only) |
 | `contentScript` | `src/pages/Content/index.js` | dApp connector bridge (extension-only) |
 | `injected` | `src/pages/Content/injected.js` | CIP-30 API injection (extension-only) |
@@ -41,7 +40,7 @@ Lucem is a Cardano blockchain browser extension wallet (Chrome/Firefox/Edge) **a
 
 - **dApp connector / CIP-30:** `src/pages/Content/injected.js`, `src/api/extension/index.js` (enable, `signTx`, `submitTx`).
 - **Build + sign + submit (software):** `src/api/extension/wallet.js` (`initTx`, `buildTx`, `signAndSubmit`), `signTx` / `submitTx` in `src/api/extension/index.js`.
-- **Cardano SDK → CSL:** Any `@cardano-sdk/*` (or other) transaction assembly must end as an Emurgo CSL `Transaction` (or equivalent CBOR via `Transaction.from_bytes`) before `signTx`, hardware encoders (`txToLedger`, `txToTrezor`), or Keystone. Use `src/api/sdk-to-csl.js` at that boundary.
+- **Cardano SDK → CSL:** Any `@cardano-sdk/*` (or other) transaction assembly must end as an Emurgo CSL `Transaction` (or equivalent CBOR via `Transaction.from_bytes`) before `signTx`, hardware encoders (`txToLedger`), or Keystone. Use `src/api/sdk-to-csl.js` at that boundary.
 - **Koios HTTP:** `src/api/util.js` (`koiosRequest`, `koiosRequestEnhanced`), `src/config/provider.js` (API keys: `KOIOS_API_KEY_PREVIEW`, `KOIOS_API_KEY_PREPROD`, …).
 - **Networks:** `src/config/config.js` — `NETWORK_ID`, `NODE` (preview / preprod Koios base URLs).
 - **Do not edit:** `src/wasm/` (generated).

@@ -306,6 +306,8 @@ const Governance = () => {
     inputBorder,
     placeholder,
     cyanLink,
+    disabledBg,
+    disabledFg,
   } = useSurfaceColors();
 
   const sortedProposals = React.useMemo(() => {
@@ -785,8 +787,19 @@ const Governance = () => {
                 />
                 <Button
                   data-testid="governance-custom-drep-delegate"
-                  colorScheme="cyan"
+                  colorScheme="yellow"
+                  bg="yellow.400"
+                  color="gray.900"
+                  fontWeight="bold"
                   px={8}
+                  _hover={{ bg: 'yellow.300' }}
+                  _active={{ bg: 'yellow.500' }}
+                  _disabled={{
+                    bg: disabledBg,
+                    color: disabledFg,
+                    cursor: 'not-allowed',
+                    opacity: 1,
+                  }}
                   onClick={() => void handleCustomDrepDelegation()}
                   isDisabled={!drepIdInput.trim()}
                   isLoading={isBuildingTx}

@@ -30,8 +30,15 @@ const InlineSignAction = ({
   onHwRequest,
   onCancel,
 }) => {
-  const { pageFg, mutedFg, inputBg, inputBorder, placeholder } =
-    useSurfaceColors();
+  const {
+    pageFg,
+    mutedFg,
+    inputBg,
+    inputBorder,
+    placeholder,
+    disabledBg,
+    disabledFg,
+  } = useSurfaceColors();
   const [password, setPassword] = React.useState('');
   const [show, setShow] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
@@ -126,8 +133,8 @@ const InlineSignAction = ({
         _hover={{ bg: 'yellow.300', transform: 'translateY(-1px)' }}
         _active={{ bg: 'yellow.500' }}
         _disabled={{
-          bg: 'whiteAlpha.200',
-          color: 'whiteAlpha.500',
+          bg: disabledBg,
+          color: disabledFg,
           cursor: 'not-allowed',
           transform: 'none',
           opacity: 1,

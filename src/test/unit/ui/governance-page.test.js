@@ -158,7 +158,10 @@ describe('staking and governance theme surfaces', () => {
     );
     expect(hookSrc).toContain("useColorModeValue('#f4f6fb', '#080808')");
     expect(hookSrc).toContain('panelShadow');
-    expect(hookSrc).toContain("useColorModeValue('transparent', 'transparent')");
+    // panelBorder used to be transparent in both modes, which left cards with no
+    // edge at all against a near-black page. See dark-surface-contrast.test.js.
+    expect(hookSrc).toContain('panelBorder');
+    expect(hookSrc).not.toContain("useColorModeValue('transparent', 'transparent')");
     expect(hookSrc).toContain('cyanLink');
     expect(hookSrc).toContain("useColorModeValue('cyan.600', 'cyan.300')");
   });

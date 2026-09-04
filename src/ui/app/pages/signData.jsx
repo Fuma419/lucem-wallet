@@ -7,19 +7,26 @@ import {
 } from '../../../api/extension';
 import platform from '../../../platform';
 import Account from '../components/account';
-import { Scrollbars } from '../components/scrollbar';
 import {
   Box,
-  Flex,
-  Text,
   Button,
+  Flex,
   Image,
   Spinner,
-  useColorModeValue,
+  Stack,
+  Text,
 } from '@chakra-ui/react';
 import ConfirmModal from '../components/confirmModal';
 import Loader from '../../../api/loader';
 import { DataSignError } from '../../../config/config';
+import useSurfaceColors from '../hooks/useSurfaceColors';
+
+/** Which key the dApp asked to sign with, as a human label. */
+const KEY_LABELS = {
+  payment: 'payment key',
+  stake: 'stake key',
+  unknown: 'an unrecognized key',
+};
 
 const SignData = ({ request, controller }) => {
   const ref = React.useRef();
@@ -28,10 +35,20 @@ const SignData = ({ request, controller }) => {
   const [address, setAddress] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
-  const background = useColorModeValue('blue.100', 'gray.900');
+  const [faviconFailed, setFaviconFailed] = React.useState(false);
+  const { pageBg, pageFg, mutedFg, subtleFg } = useSurfaceColors();
+
+  const host = React.useMemo(() => {
+    const raw = request?.origin || '';
+    return raw.split('//')[1] || raw;
+  }, [request]);
+  const initial = (host || '?').charAt(0).toUpperCase();
+
   const getAccount = async () => {
     const currentAccount = await getCurrentAccount();
-    if (isHW(currentAccount.index)) setError('HW not supported');
+    if (isHW(currentAccount.index)) {
+      setError('Hardware wallets cannot sign data yet.');
+    }
     setAccount(currentAccount);
   };
   const getPayload = async () => {
@@ -40,17 +57,21 @@ const SignData = ({ request, controller }) => {
     setPayload(payload);
   };
 
-  const signDataMsg = useMemo(() => {
-    const result = [];
-    payload.split(/\r?\n/).forEach((line) => {
-      result.push(
-        <p style={{ wordBreak: 'break-word', paddingBlockEnd: '8px' }}>
+  const signDataMsg = useMemo(
+    () =>
+      payload.split(/\r?\n/).map((line, index) => (
+        <Text
+          key={`${index}-${line}`}
+          fontSize="sm"
+          lineHeight="1.6"
+          wordBreak="break-word"
+          whiteSpace="pre-wrap"
+        >
           {line}
-        </p>
-      );
-    });
-    return result;
-  }, [payload]);
+        </Text>
+      )),
+    [payload]
+  );
 
   const getAddress = async () => {
     await Loader.load();
@@ -87,147 +108,221 @@ const SignData = ({ request, controller }) => {
   React.useEffect(() => {
     loadData();
   }, []);
+
+  const shellProps = {
+    h: '100%',
+    maxH: '100%',
+    minH: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    position: 'relative',
+    w: 'full',
+    maxW: '100%',
+    bg: pageBg,
+    color: pageFg,
+    overflow: 'hidden',
+    className: 'lucem-wallet-main-column lucem-settings-shell lucem-sign-page',
+  };
+
+  if (isLoading) {
+    return (
+      <Box {...shellProps} alignItems="center" justifyContent="center">
+        <Flex flex="1" align="center" justify="center" direction="column" gap={3}>
+          <Spinner color="yellow.400" speed="0.5s" />
+          <Text fontSize="sm" color={mutedFg}>
+            Reading the request…
+          </Text>
+        </Flex>
+      </Box>
+    );
+  }
+
   return (
     <>
-      {isLoading ? (
+      <Box {...shellProps} data-testid="sign-data-page">
+        <Account background={pageBg} shadow="none" />
         <Box
-          minH="100vh"
-          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
-          width="full"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Spinner color="yellow" speed="0.5s" />
-        </Box>
-      ) : (
-        <Box
-          minH="100vh"
-          sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
-          display="flex"
-          flexDirection="column"
-          alignItems="stretch"
-          position="relative"
+          flex="1"
+          minH={0}
+          overflowY="auto"
+          overscrollBehavior="contain"
           w="full"
-          maxW="100%"
-          className="lucem-wallet-main-column"
+          px={{ base: 4, md: 6 }}
+          py={5}
         >
-          <Account />
-          <Box flex="1" minH={0} overflowY="auto" w="full" px={4} pb={4}>
-            <Box h="4" />
-            <Flex align="center" justify="flex-start" w="full">
-              <Box w="6" />
-              <Box
-                width={8}
-                height={8}
-                background={background}
-                rounded={'xl'}
-                display={'flex'}
-                alignItems={'center'}
-                justifyContent={'center'}
-              >
-                <Image
-                  draggable={false}
-                  width={4}
-                  height={4}
-                  src={platform.icons.getFaviconUrl(request.origin)}
-                />
-              </Box>
-              <Box w="3" />
-              <Text fontSize={'xs'} fontWeight="bold" isTruncated maxW="60%">
-                {request.origin.split('//')[1]}
-              </Text>
-            </Flex>
-            <Box h="8" />
-            <Box>This app requests a signature for:</Box>
-            <Box h="4" />
-            <Box
-              className="lucem-sign-payload-scroll"
-              rounded="xl"
-              background={background}
-              padding="2.5"
-              wordBreak="break-all"
-              mx="auto"
-            >
-              <Scrollbars autoHide style={{ width: '100%', height: '100%' }}>
-                {signDataMsg}
-              </Scrollbars>
-            </Box>
-          </Box>
-
-          <Flex
-            direction="column"
-            align="center"
-            justify="center"
-            flexShrink={0}
+          <Stack
+            spacing={5}
             w="full"
-            px={2}
-            py={3}
-            pb="calc(0.75rem + env(safe-area-inset-bottom, 0px))"
-            borderTopWidth="1px"
-            borderTopColor="whiteAlpha.100"
+            maxW={{ base: '100%', xl: 'sm' }}
+            mx="auto"
+            align="center"
           >
-            <Box py={2} px={4} rounded={'full'} background={background}>
-              {error ? (
-                <Text wordBreak="break-all" fontSize="xs" color="red.300">
-                  {error}
-                </Text>
-              ) : (
-                <Text fontSize="xs">
-                  Signing with{' '}
-                  <Box
-                    as={'b'}
-                    color={
-                      address == 'payment'
-                        ? 'yellow.400'
-                        : address == 'stake'
-                          ? 'orange'
-                          : 'inherit'
-                    }
-                  >
-                    {address}
-                  </Box>{' '}
-                  key
-                </Text>
-              )}
-            </Box>
-            <Box h={4} />
             <Flex
+              data-testid="sign-data-origin"
+              className="lucem-sign-origin"
               align="center"
               justify="center"
-              w="full"
-              flexWrap="wrap"
               gap={2}
+              px={3}
+              py={1.5}
+              maxW="full"
             >
-              <Button
-                height={'50px'}
-                width={{ base: '42%', sm: '180px' }}
-                minW="140px"
-                onClick={async () => {
-                  await controller.returnData({
-                    error: DataSignError.UserDeclined,
-                  });
-                  window.close();
-                }}
+              {faviconFailed ? (
+                <Flex
+                  boxSize={5}
+                  rounded="md"
+                  align="center"
+                  justify="center"
+                  bg="whiteAlpha.200"
+                  fontSize="xs"
+                  fontWeight="bold"
+                >
+                  {initial}
+                </Flex>
+              ) : (
+                <Image
+                  draggable={false}
+                  boxSize={5}
+                  rounded="md"
+                  alt=""
+                  src={platform.icons.getFaviconUrl(request.origin)}
+                  onError={() => setFaviconFailed(true)}
+                />
+              )}
+              <Text
+                fontSize="sm"
+                fontWeight="semibold"
+                isTruncated
+                maxW={{ base: '180px', sm: '220px' }}
               >
-                Cancel
-              </Button>
-              <Button
-                height={'50px'}
-                width={{ base: '42%', sm: '180px' }}
-                minW="140px"
-                isDisabled={error}
-                colorScheme="yellow"
-                onClick={() => {
-                  ref.current.openModal(account.index);
-                }}
-              >
-                Sign
-              </Button>
+                {host}
+              </Text>
             </Flex>
-          </Flex>
+
+            <Box textAlign="center">
+              <Text
+                data-testid="sign-data-page-title"
+                fontSize="xl"
+                fontWeight="bold"
+                letterSpacing="tight"
+              >
+                Sign message
+              </Text>
+              <Text mt={1} fontSize="sm" color={mutedFg}>
+                {host} asked you to sign this message with your{' '}
+                {KEY_LABELS[address] || KEY_LABELS.unknown}. Signing proves you
+                own the address — it cannot move funds.
+              </Text>
+            </Box>
+
+            <Box
+              data-testid="sign-data-payload"
+              className="lucem-inset-surface lucem-sign-payload-scroll"
+              rounded="3xl"
+              w="full"
+              px={5}
+              py={4}
+            >
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                letterSpacing="0.16em"
+                textTransform="uppercase"
+                color={subtleFg}
+                mb={3}
+              >
+                Message
+              </Text>
+              <Box
+                className="lucem-sign-payload-body"
+                sx={{ WebkitOverflowScrolling: 'touch' }}
+              >
+                {payload.trim() ? (
+                  signDataMsg
+                ) : (
+                  <Text fontSize="sm" color={mutedFg}>
+                    This request has an empty message.
+                  </Text>
+                )}
+              </Box>
+            </Box>
+          </Stack>
         </Box>
-      )}
+
+        <Box
+          className="lucem-sign-footer"
+          data-testid="sign-data-footer"
+          flexShrink={0}
+          w="full"
+          px={{ base: 4, md: 6 }}
+          pt={3}
+          pb="calc(1.25rem + env(safe-area-inset-bottom, 0px))"
+          borderTopWidth="1px"
+          borderTopColor="whiteAlpha.100"
+          bg={pageBg}
+        >
+          <Stack
+            spacing={3}
+            w="full"
+            maxW={{ base: '100%', xl: 'sm' }}
+            mx="auto"
+            align="center"
+          >
+            {error ? (
+              <Text
+                data-testid="sign-data-error"
+                fontSize="xs"
+                color="red.300"
+                textAlign="center"
+                wordBreak="break-word"
+              >
+                {error}
+              </Text>
+            ) : null}
+            <Button
+              data-testid="sign-data-primary-action"
+              width="full"
+              height="52px"
+              rounded="2xl"
+              colorScheme="yellow"
+              bg="yellow.400"
+              color="gray.900"
+              fontWeight="black"
+              isDisabled={Boolean(error)}
+              _hover={{ bg: 'yellow.300', transform: 'translateY(-1px)' }}
+              _active={{ bg: 'yellow.500' }}
+              _disabled={{
+                bg: 'whiteAlpha.200',
+                color: 'whiteAlpha.500',
+                cursor: 'not-allowed',
+                transform: 'none',
+                opacity: 1,
+              }}
+              onClick={() => ref.current.openModal(account.index)}
+            >
+              Sign message
+            </Button>
+            <Button
+              data-testid="sign-data-cancel"
+              variant="ghost"
+              width="full"
+              height="44px"
+              rounded="2xl"
+              color={pageFg}
+              _hover={{ bg: 'whiteAlpha.100' }}
+              onClick={async () => {
+                await controller.returnData({
+                  error: DataSignError.UserDeclined,
+                });
+                window.close();
+              }}
+            >
+              Cancel
+            </Button>
+          </Stack>
+        </Box>
+      </Box>
       <ConfirmModal
         ref={ref}
         sign={(password) =>
@@ -246,11 +341,9 @@ const SignData = ({ request, controller }) => {
                 account.index
               )
         }
-        onCloseBtn={() => {
-        }}
+        onCloseBtn={() => {}}
         onConfirm={async (status, signedMessage) => {
           if (status === true) {
-            capture(Events.DappConnectorDappDataConfirmClick);
             await controller.returnData({ data: signedMessage });
           } else {
             await controller.returnData({ error: signedMessage });

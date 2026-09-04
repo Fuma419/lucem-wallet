@@ -6,11 +6,11 @@ import {
   Modal,
   ModalBody,
   ModalContent,
-  useColorModeValue,
   useDisclosure,
 } from '@chakra-ui/react';
 import { LazyLoadComponent } from 'react-lazy-load-image-component';
 import Asset from './asset';
+import useSurfaceColors from '../hooks/useSurfaceColors';
 
 const AssetsModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -20,7 +20,8 @@ const AssetsModal = React.forwardRef((props, ref) => {
     background: '',
     color: 'inherit',
   });
-  const background = useColorModeValue('blue.100', 'gray.900');
+  const { pageBg } = useSurfaceColors();
+  const background = pageBg;
 
   const abs = (big) => {
     return big < 0 ? BigInt(big) * BigInt(-1) : big;
@@ -40,26 +41,7 @@ const AssetsModal = React.forwardRef((props, ref) => {
       size="full"
       blockScrollOnMount={false}
     >
-      <ModalContent
-        m={0}
-        rounded="none"
-        overflow="hidden"
-        background={background}
-        display="flex"
-        flexDirection="column"
-        sx={{
-          width: '100vw',
-          maxW: '100vw',
-          maxHeight: '100dvh',
-          height: '100vh',
-          '@supports (height: 100dvh)': {
-            height: '100dvh',
-          },
-          '@supports not (height: 100dvh)': {
-            maxHeight: '100vh',
-          },
-        }}
-      >
+      <ModalContent className="lucem-sign-sheet" background={background}>
         <ModalBody
           p={0}
           flex="1"

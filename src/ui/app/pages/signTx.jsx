@@ -1124,10 +1124,10 @@ const SignTx = ({ request, controller }) => {
         size="full"
       >
         <ModalOverlay />
-        <ModalContent bg="gray.900" m={0} maxW="100vw" minH="100vh">
+        <ModalContent className="lucem-sign-sheet" bg="gray.900">
           <ModalHeader color="white">Sign with Keystone</ModalHeader>
           <ModalCloseButton color="white" />
-          <ModalBody pb={8}>
+          <ModalBody pb={8} flex="1" minH={0} overflowY="auto">
             {keystoneHw && account && (
               <SignTxKeystoneInline
                 hw={keystoneHw}
@@ -1156,8 +1156,9 @@ const DetailsModal = React.forwardRef(
     ref
   ) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const background = useColorModeValue('blue.100', 'gray.900');
-    const innerBackground = useColorModeValue('blue.100', 'gray.900');
+    const { pageBg, insetBg } = useSurfaceColors();
+    const background = pageBg;
+    const innerBackground = insetBg;
 
     React.useImperativeHandle(ref, () => ({
       openModal() {
@@ -1166,26 +1167,7 @@ const DetailsModal = React.forwardRef(
     }));
     return (
       <Modal isOpen={isOpen} onClose={onClose} size="full">
-        <ModalContent
-          m={0}
-          rounded="none"
-          overflow="hidden"
-          background={background}
-          display="flex"
-          flexDirection="column"
-          sx={{
-            width: '100vw',
-            maxW: '100vw',
-            maxHeight: '100dvh',
-            height: '100vh',
-            '@supports (height: 100dvh)': {
-              height: '100dvh',
-            },
-            '@supports not (height: 100dvh)': {
-              maxHeight: '100vh',
-            },
-          }}
-        >
+        <ModalContent className="lucem-sign-sheet" background={background}>
           <ModalBody
             p={0}
             flex="1"
@@ -1212,7 +1194,6 @@ const DetailsModal = React.forwardRef(
                 <Box
                   fontSize={'xl'}
                   fontWeight={'bold'}
-                  maxWidth={'240px'}
                   textAlign={'center'}
                 >
                   Details
@@ -1251,7 +1232,7 @@ const DetailsModal = React.forwardRef(
                               >
                                 <Copy label="Copied address" copy={address}>
                                   <Box
-                                    width="160px"
+                                    width={{ base: '160px', md: '220px' }}
                                     whiteSpace="nowrap"
                                     fontWeight="normal"
                                     textAlign={'center'}
@@ -1295,7 +1276,7 @@ const DetailsModal = React.forwardRef(
                               </Box>
                               <Box
                                 textAlign="center"
-                                width={'160px'}
+                                width={{ base: '160px', md: '220px' }}
                                 display={'flex'}
                                 alignItems={'center'}
                                 justifyContent={'center'}
@@ -1352,7 +1333,7 @@ const DetailsModal = React.forwardRef(
                         padding="2.5"
                         rounded={'xl'}
                         width={'full'}
-                        height={'200px'}
+                        height={{ base: '200px', md: '260px' }}
                         background={innerBackground}
                       >
                         <Scrollbars autoHide>
@@ -1433,7 +1414,7 @@ const DetailsModal = React.forwardRef(
                     padding="2.5"
                     rounded={'xl'}
                     width={'full'}
-                    height={'200px'}
+                    height={{ base: '200px', md: '260px' }}
                     background={innerBackground}
                   >
                     <Scrollbars autoHide>{tx}</Scrollbars>

@@ -320,8 +320,17 @@ export const sendStore = {
 const Send = () => {
   const isMounted = useIsMounted();
   const settings = useStoreState((state) => state.settings.settings);
-  const { pageBg, pageFg, mutedFg, subtleFg, inputBg } =
-    useSurfaceColors();
+  const {
+    pageBg,
+    pageFg,
+    mutedFg,
+    subtleFg,
+    inputBg,
+    inputBorder,
+    cardHoverBg,
+    disabledBg,
+    disabledFg,
+  } = useSurfaceColors();
   const [address, setAddress] = [
     useStoreState((state) => state.globalModel.sendStore.address),
     useStoreActions((actions) => actions.globalModel.sendStore.setAddress),
@@ -1133,6 +1142,8 @@ const Send = () => {
                       }}
                       variant="filled"
                       bg={inputBg}
+                      borderWidth="1px"
+                      borderColor={inputBorder}
                       isDisabled={isLoading || value.sendAll}
                       isInvalid={amountTooSmall || amountTooLarge}
                       onFocus={() => (focus.current = true)}
@@ -1167,6 +1178,9 @@ const Send = () => {
                           size="xs"
                           variant="outline"
                           rounded="full"
+                          borderColor={inputBorder}
+                          color={pageFg}
+                          _hover={{ bg: cardHoverBg }}
                           isDisabled={isLoading || availableLovelace <= 0n}
                           onClick={() => applyAdaShare(chip.n, chip.d)}
                         >
@@ -1319,6 +1333,8 @@ const Send = () => {
                       }}
                       variant="filled"
                       bg={inputBg}
+                      borderWidth="1px"
+                      borderColor={inputBorder}
                       rounded="xl"
                       placeholder="Optional message (on-chain metadata)"
                       fontSize="sm"
@@ -1489,8 +1505,8 @@ const Send = () => {
                 }}
                 _active={{ bg: 'yellow.500' }}
                 _disabled={{
-                  bg: 'whiteAlpha.200',
-                  color: 'whiteAlpha.500',
+                  bg: disabledBg,
+                  color: disabledFg,
                   cursor: 'not-allowed',
                   transform: 'none',
                   opacity: 1,
@@ -1790,6 +1806,7 @@ const AddressPopup = ({
   isLoading,
 }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { inputBg, inputBorder } = useSurfaceColors();
   const checkColor = useColorModeValue('yellow.500', 'yellow.200');
   const ref = React.useRef(false);
   const [state, setState] = React.useState({
@@ -1891,6 +1908,9 @@ const AddressPopup = ({
             spellCheck={false}
             rounded="xl"
             h="48px"
+            bg={inputBg}
+            borderWidth="1px"
+            borderColor={inputBorder}
             onBlur={async (e) => {
               await new Promise((res, rej) => setTimeout(() => res()));
               if (ref.current) {

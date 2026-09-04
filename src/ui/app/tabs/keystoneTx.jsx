@@ -309,6 +309,16 @@ const App = () => {
                       </Text>
                     ))}
                     <Text mt={1}>Fee: {txSummary.feeAda} ADA</Text>
+                    {txSummary.withdrawalAda ? (
+                      <Text
+                        mt={2}
+                        color="yellow.200"
+                        data-testid="keystone-tx-reward-withdrawal"
+                      >
+                        Includes withdrawal of {txSummary.withdrawalAda} ADA
+                        rewards. Your reward balance will drop to zero.
+                      </Text>
+                    ) : null}
                     <Text mt={2} color="whiteAlpha.700">
                       Keystone lists every spent UTxO as Input and every destination
                       as Output. Change back to you is supposed to look like your

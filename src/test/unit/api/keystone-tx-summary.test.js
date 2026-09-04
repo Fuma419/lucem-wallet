@@ -79,5 +79,43 @@ describe('summarizeUnsignedPaymentTx', () => {
     expect(change[0].address).toBe(CHANGE_ADDR);
     expect(payment[0].address).not.toBe(summary.inputs[0].address);
     expect(BigInt(summary.fee)).toBeGreaterThan(0n);
+    expect(summary.withdrawalLovelace).toBe('0');
+    expect(summary.withdrawalAda).toBeNull();
+  });
+
+  // The popup confirm screen warns that rewards drop to zero, but a Keystone
+  // user approves on this tab before scanning, so it has to say so too.
+  test('reports rewards claimed when the send covers its gap with a withdrawal', () => {
+    const utxo = CSL.TransactionUnspentOutput.new(
+      CSL.TransactionInput.new(CSL.TransactionHash.from_hex('bb'.repeat(32)), 0),
+      CSL.TransactionOutput.new(
+        CSL.Address.from_bech32(CHANGE_ADDR),
+        CSL.Value.new(CSL.BigNum.from_str('8000000'))
+      )
+    );
+    const outputs = CSL.TransactionOutputs.new();
+    outputs.add(
+      CSL.TransactionOutput.new(
+        CSL.Address.from_bech32(recipientAddress()),
+        CSL.Value.new(CSL.BigNum.from_str('9000000'))
+      )
+    );
+    const tx = buildUnsignedSimpleTx({
+      Cardano: CSL,
+      protocolParameters: PROTOCOL_PARAMS,
+      utxos: [utxo],
+      outputs,
+      changeAddressBech32: CHANGE_ADDR,
+      requiredVkeyHashesHex: [dummyKeyHash(), dummyKeyHash()],
+      withdrawal: {
+        rewardAddressBech32:
+          'stake_test1uraeephypk4yn4nfj50r3t6y7959jf6u9evmfx7zhxsmtrssx6ehu',
+        amountLovelace: '3000000',
+      },
+    });
+
+    const summary = summarizeUnsignedPaymentTx(tx, [utxo]);
+    expect(summary.withdrawalLovelace).toBe('3000000');
+    expect(summary.withdrawalAda).toBe('3.000000');
   });
 });

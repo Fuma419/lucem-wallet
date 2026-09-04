@@ -147,6 +147,39 @@ pipeline {
       }
     }
 
+    stage('Lint') {
+      steps {
+        script {
+          publishGithubStatus('Lint', 'pending', 'Lint is running in Jenkins')
+        }
+        sh '''
+          set -e
+          export PATH="${NODE24_DIR}/bin:${PATH}"
+          # Fails on ESLint errors (e.g. no-undef); warnings stay visible in the
+          # log without blocking. An undefined identifier has reached main and
+          # broken dApp signing before, so this gate exists to catch that class.
+          npm run lint
+        '''
+      }
+      post {
+        success {
+          script {
+            publishGithubStatus('Lint', 'success', 'Lint passed in Jenkins')
+          }
+        }
+        failure {
+          script {
+            publishGithubStatus('Lint', 'failure', 'Lint found errors in Jenkins')
+          }
+        }
+        aborted {
+          script {
+            publishGithubStatus('Lint', 'error', 'Lint was aborted in Jenkins')
+          }
+        }
+      }
+    }
+
     stage('Build') {
       steps {
         script {

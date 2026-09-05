@@ -183,6 +183,9 @@ const App = () => {
       width="100%"
       minW="100%"
       minH="100vh"
+      h="100vh"
+      maxH="100vh"
+      overflow="hidden"
       position="relative"
       opacity={0.9}
       className="lucem-wallet-main-column"
@@ -192,7 +195,13 @@ const App = () => {
       backgroundPosition="center, center"
       backgroundRepeat="no-repeat, no-repeat"
       boxSizing="border-box"
-      sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
+      sx={{
+        '@supports (height: 100dvh)': {
+          minHeight: '100dvh',
+          height: '100dvh',
+          maxHeight: '100dvh',
+        },
+      }}
     >
       <Box
         as="header"

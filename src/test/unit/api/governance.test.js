@@ -2,7 +2,11 @@ import provider from '../../../config/provider';
 import { koiosRequestEnhanced } from '../../../api/util';
 import Loader from '../../../api/loader';
 import {
+  DREP_NOT_REGISTERED,
+  bech32IdsForDrepKeyHash,
+  ensureDrepRegisteredForDelegation,
   extractGovernanceNarrativeFromMetadataRoot,
+  fetchDRepRegistration,
   fetchGovernanceOverview,
   isUsableBlockfrostProjectId,
   normalizeDrepKeyHash,
@@ -319,11 +323,125 @@ describe('governance API service', () => {
       keyHashHex: '',
       reason: 'script_hash',
     });
+    expect(
+      parseDrepKeyHash(`23${'bb'.repeat(28)}`)
+    ).toEqual({ keyHashHex: '', reason: 'script_hash' });
+
+    const cip129Hex = `22${keyHashHex}`;
+    expect(cip129Hex).toHaveLength(58);
+    expect(parseDrepKeyHash(cip129Hex)).toEqual({
+      keyHashHex: keyHashHex,
+      reason: 'ok',
+    });
+    expect(parseDrepKeyHash(`0x${cip129Hex}`)).toEqual({
+      keyHashHex: keyHashHex,
+      reason: 'ok',
+    });
+    // Truncating CIP-129 hex to 56 chars keeps the 0x22 header — the bug
+    // that produced DelegateeDRepNotRegisteredDELEG for hash 22288b58….
+    const truncated = cip129Hex.slice(0, 56);
+    expect(truncated.startsWith('22')).toBe(true);
+    expect(parseDrepKeyHash(cip129Hex).keyHashHex).not.toBe(truncated);
+    expect(parseDrepKeyHash(cip129Hex + 'ff')).toEqual({
+      keyHashHex: '',
+      reason: 'invalid',
+    });
+
+    const droppedByteCredential = `288b58867387e6e809fa5400074d1d825ac557d618bdf26f68177eab`;
+    const explorerCip129Hex = `22${droppedByteCredential}`;
+    expect(parseDrepKeyHash(explorerCip129Hex).keyHashHex).toBe(
+      droppedByteCredential
+    );
+    expect(explorerCip129Hex.slice(0, 56)).toBe(
+      '22288b58867387e6e809fa5400074d1d825ac557d618bdf26f68177e'
+    );
 
     expect(isUsableBlockfrostProjectId('bf_key_123')).toBe(true);
     expect(isUsableBlockfrostProjectId('dummy')).toBe(false);
     expect(isUsableBlockfrostProjectId('DUMMY_PREVIEW')).toBe(false);
     expect(isUsableBlockfrostProjectId('your-koios-api-key-here')).toBe(false);
+  });
+
+  test('drops retired DReps from the overview list', async () => {
+    koiosRequestEnhanced
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        { drep_id: 'aa'.repeat(28), active_stake: '10', registered: true },
+        { drep_id: 'bb'.repeat(28), active_stake: '99', registered: false },
+      ]);
+
+    const result = await fetchGovernanceOverview('preview');
+    expect(result.dreps).toHaveLength(1);
+    expect(result.dreps[0].keyHashHex).toBe('aa'.repeat(28));
+  });
+
+  test('fetchDRepRegistration treats Koios unregistered rows as not registered', async () => {
+    koiosRequestEnhanced.mockResolvedValue([
+      { registered: false, drep_id: 'drep1x' },
+    ]);
+    const result = await fetchDRepRegistration('preview', {
+      drepIdCip129: 'drep1x',
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        registered: false,
+        lookupFailed: false,
+        source: 'koios',
+      })
+    );
+  });
+
+  test('fetchDRepRegistration reports lookupFailed when indexers are down', async () => {
+    koiosRequestEnhanced.mockRejectedValue(new Error('koios down'));
+    const result = await fetchDRepRegistration('preview', {
+      drepIdCip129: 'drep1x',
+    });
+    expect(result.lookupFailed).toBe(true);
+    expect(result.registered).toBe(false);
+  });
+
+  test('fetchDRepRegistration treats Blockfrost 404 as not registered', async () => {
+    provider.api.key.mockReturnValue({
+      project_id: 'koios',
+      blockfrost_project_id: 'bf_live_key',
+    });
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ status_code: 404 }),
+    });
+    koiosRequestEnhanced.mockResolvedValue([]);
+    const result = await fetchDRepRegistration('preview', {
+      drepIdCip129: 'drep1x',
+      drepIdLegacy: 'drep1y',
+    });
+    expect(result.registered).toBe(false);
+    expect(result.lookupFailed).toBe(false);
+  });
+
+  test('bech32IdsForDrepKeyHash emits CIP-129 and legacy ids', async () => {
+    const keyHashHex = 'aa'.repeat(28);
+    const ids = await bech32IdsForDrepKeyHash(keyHashHex);
+    expect(ids.drepIdCip129.startsWith('drep1')).toBe(true);
+    expect(ids.drepIdLegacy.startsWith('drep_vkh1') || ids.drepIdLegacy.startsWith('drep1')).toBe(
+      true
+    );
+    expect(ids.drepIdCip129).not.toBe(ids.drepIdLegacy);
+    expect(parseDrepKeyHash(ids.drepIdCip129).keyHashHex).toBe(keyHashHex);
+  });
+
+  test('ensureDrepRegisteredForDelegation throws when the DRep is not registered', async () => {
+    koiosRequestEnhanced.mockResolvedValue([]);
+    await expect(
+      ensureDrepRegisteredForDelegation('preview', 'aa'.repeat(28))
+    ).rejects.toThrow(DREP_NOT_REGISTERED);
+  });
+
+  test('ensureDrepRegisteredForDelegation allows build when lookup fails', async () => {
+    koiosRequestEnhanced.mockRejectedValue(new Error('koios down'));
+    await expect(
+      ensureDrepRegisteredForDelegation('preview', 'aa'.repeat(28))
+    ).resolves.toBeUndefined();
   });
 });
 

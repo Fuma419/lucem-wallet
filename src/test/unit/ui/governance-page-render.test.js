@@ -68,6 +68,7 @@ jest.mock('../../../api/governance', () => {
     fetchDRepRegistration: jest.fn(),
     fetchDRepVotes: jest.fn(),
     fetchGovernanceOverview: jest.fn(),
+    ensureDrepRegisteredForDelegation: jest.fn(),
   };
 });
 
@@ -80,6 +81,8 @@ import {
 } from '../../../api/extension';
 import { initTx, voteDelegationTx, voteTx } from '../../../api/extension/wallet';
 import {
+  DREP_NOT_REGISTERED,
+  ensureDrepRegisteredForDelegation,
   fetchDRepRegistration,
   fetchDRepVotes,
   fetchGovernanceOverview,
@@ -163,6 +166,7 @@ beforeEach(() => {
     registered: true,
     drepId: 'drep1cip129example',
   });
+  ensureDrepRegisteredForDelegation.mockResolvedValue(undefined);
   fetchDRepVotes.mockResolvedValue({ votes: [], source: 'blockfrost' });
   fetchGovernanceOverview.mockResolvedValue({
     source: 'blockfrost',
@@ -311,5 +315,40 @@ describe('Voting page — behavioral render', () => {
       'key_hash',
       targetKeyHash
     );
+  });
+
+  test('refuses to build a vote-delegation tx for an unregistered DRep', async () => {
+    ensureDrepRegisteredForDelegation.mockRejectedValue(
+      new Error(DREP_NOT_REGISTERED)
+    );
+    const targetKeyHash = '11'.repeat(28);
+    const drep1 = Loader.Cardano.DRep.new_key_hash(
+      Loader.Cardano.Ed25519KeyHash.from_bytes(Buffer.from(targetKeyHash, 'hex'))
+    ).to_bech32(true);
+
+    const { container } = await renderGovernance();
+    const input = container.querySelector('[data-testid="governance-drep-id-input"]');
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      ).set;
+      setter.call(input, drep1);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const delegateBtn = container.querySelector(
+      '[data-testid="governance-custom-drep-delegate"]'
+    );
+    await act(async () => {
+      delegateBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(voteDelegationTx).not.toHaveBeenCalled();
+    expect(ensureDrepRegisteredForDelegation).toHaveBeenCalled();
   });
 });

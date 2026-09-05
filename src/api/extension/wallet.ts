@@ -33,6 +33,7 @@ import {
   canWithdrawRewards,
   REWARD_WITHDRAWAL_NEEDS_DREP,
 } from '../staking';
+import { DREP_NOT_REGISTERED } from '../governance';
 
 const koiosRequestEnhanced = koiosRequestEnhancedUntyped as KoiosRequestEnhanced;
 
@@ -454,7 +455,9 @@ export const wrapSubmitError = (error: unknown): SubmitError => {
     ? 'The network rejected this transaction because the fee was too small. Try sending again.'
     : /ConwayWdrlNotDelegatedToDRep/i.test(raw)
       ? REWARD_WITHDRAWAL_NEEDS_DREP
-      : raw;
+      : /DelegateeDRepNotRegisteredDELEG/i.test(raw)
+        ? DREP_NOT_REGISTERED
+        : raw;
   const wrapped = new Error(message) as SubmitError;
   wrapped.code = ERROR.submit;
   if (error && error !== ERROR.submit) {

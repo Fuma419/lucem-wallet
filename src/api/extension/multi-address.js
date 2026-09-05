@@ -26,6 +26,8 @@ export const MAX_INTERNAL_ADDRESS_INDEX = 50;
 export const ADDRESS_ROLE = {
   external: 0,
   internal: 1,
+  stake: 2,
+  drep: 3,
 };
 
 /**

@@ -611,6 +611,23 @@ function resolveKeystoneHdPath(Cardano, account, hw, keyHash, networkId) {
   if (keyHash === account.stakeKeyHash) {
     return `m/1852'/1815'/${hw.account}'/2/0`;
   }
+  if (account?.publicKey && Cardano?.Bip32PublicKey) {
+    try {
+      const drepHash = Buffer.from(
+        Cardano.Bip32PublicKey.from_hex(account.publicKey)
+          .derive(3)
+          .derive(0)
+          .to_raw_key()
+          .hash()
+          .to_bytes()
+      ).toString('hex');
+      if (keyHash === drepHash) {
+        return `m/1852'/1815'/${hw.account}'/3/0`;
+      }
+    } catch (/** @type {any} */ _) {
+      /* publicKey may be absent or Cardano mock may not derive */
+    }
+  }
   return null;
 }
 

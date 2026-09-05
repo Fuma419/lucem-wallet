@@ -76,6 +76,7 @@ import {
   getAccountDRepId,
   getCurrentAccount,
   getDelegation,
+  isHW,
 } from '../../../api/extension';
 import { initTx, voteDelegationTx, voteTx } from '../../../api/extension/wallet';
 import {
@@ -225,6 +226,28 @@ describe('Voting page — behavioral render', () => {
         voteKind: 'yes',
       })
     );
+  });
+
+  test('hardware wallets can still prepare a DRep vote', async () => {
+    isHW.mockReturnValue(true);
+    getCurrentAccount.mockResolvedValue({
+      index: 'ledger-usb-0',
+      paymentKeyHash: 'ab'.repeat(28),
+      stakeKeyHash: 'aa'.repeat(28),
+      paymentAddr: 'addr_test1xyz',
+    });
+    const { container } = await renderGovernance();
+    const header = buttonByText(container, 'Increase Treasury Cap');
+    await act(async () => {
+      header.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const yesBtn = buttonByText(container, 'Yes');
+    await act(async () => {
+      yesBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(voteTx).toHaveBeenCalled();
   });
 
   test('Delegate to Always Abstain builds a vote-delegation transaction', async () => {

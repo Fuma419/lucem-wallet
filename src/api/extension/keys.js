@@ -63,6 +63,16 @@ export const deriveAccountDRepPublicKeyHex = (accountPublicKeyHex) => {
   return Buffer.from(drepKey.as_bytes()).toString('hex');
 };
 
+/** CIP-105 DRep payment credential hash (role 3 / index 0). */
+export const deriveAccountDRepKeyHashHex = (accountPublicKeyHex) => {
+  const hash = Loader.Cardano.Bip32PublicKey.from_hex(accountPublicKeyHex)
+    .derive(3)
+    .derive(0)
+    .to_raw_key()
+    .hash();
+  return Buffer.from(hash.to_bytes()).toString('hex');
+};
+
 const resolveEncryptedRootKey = async (walletId) => {
   const id = walletId == null || walletId === '' ? '0' : String(walletId);
   const map = await getStorage(STORAGE.encryptedKeys);

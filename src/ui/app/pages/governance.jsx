@@ -38,7 +38,6 @@ import {
   getAccountDRepId,
   getCurrentAccount,
   getDelegation,
-  isHW,
   openKeystoneSignTxTab,
   paymentKeyHashesForSigning,
 } from '../../../api/extension';
@@ -534,11 +533,6 @@ const Governance = () => {
       const currentAccount = await getCurrentAccount();
       if (!currentAccount?.paymentKeyHash) {
         throw new Error('Current account is missing signing key hashes');
-      }
-      if (isHW(currentAccount.index)) {
-        throw new Error(
-          'Hardware wallet DRep voting is not supported yet. Use a software (password) wallet to cast votes.'
-        );
       }
 
       const protocolParameters = await initTx();
@@ -1338,11 +1332,6 @@ const Governance = () => {
           const keyHashes = voteTxState.keyHashes;
 
           if (hw) {
-            if (voteTxState.kind === 'vote') {
-              throw new Error(
-                'Hardware wallet DRep voting is not supported yet. Use a software (password) wallet to cast votes.'
-              );
-            }
             if (hw.device === HW.trezor) {
               throw new Error(TREZOR_UNSUPPORTED);
             }

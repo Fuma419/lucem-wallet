@@ -944,22 +944,19 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
 
   // Spend only from addresses we can witness (enabled external + change).
   // Balance aggregation still uses the full stake set via getBalance.
-  // Token UTxOs often sit on a change/receive index that discovery has not
-  // enabled yet — keep those if we can derive the payment key.
+  // Any UTxO here already sits under this account's stake key, but discovery
+  // may not have enabled its receive/change index yet — keep it whenever the
+  // payment key is derivable, so ADA the balance counts stays spendable.
   const enabledOwners = new Set(addressList.filter(Boolean));
   if (enabledOwners.size > 0) {
-    const tokenAddrs = [
+    const unknownAddrs = [
       ...new Set(
         utxos
-          .filter(
-            (utxo) =>
-              Array.isArray(utxo.asset_list) && utxo.asset_list.length > 0
-          )
           .map((utxo) => utxo.address)
           .filter((addr) => addr && !enabledOwners.has(addr))
       ),
     ];
-    if (tokenAddrs.length > 0 && currentAccount.publicKey) {
+    if (unknownAddrs.length > 0 && currentAccount.publicKey) {
       await Loader.load();
       const network = await getNetwork();
       const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
@@ -967,13 +964,13 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
         Loader.Cardano,
         currentAccount.publicKey,
         networkId,
-        tokenAddrs
+        unknownAddrs
       );
       const extraInternal = matchInternalIndicesFromAddresses(
         Loader.Cardano,
         currentAccount.publicKey,
         networkId,
-        tokenAddrs
+        unknownAddrs
       );
       for (const index of extraExternal) {
         if (index === 0 && currentAccount.paymentAddr) {

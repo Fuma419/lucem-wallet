@@ -129,11 +129,27 @@ describe('assembleCertTx', () => {
     await expect(
       assembleCertTx({
         ...certOpts,
-        getUtxos: async () => [],
+        getUtxos: async () => {
+          throw new Error('chain read failed');
+        },
         retries: 2,
-        emptyUtxosMessage: 'No UTxOs available to pay the transaction fee',
         label: 'Delegation transaction',
       })
     ).rejects.toThrow(/Delegation transaction failed after 2 attempts/);
+  });
+
+  test('reports an empty UTxO set verbatim, without retrying', async () => {
+    const getUtxos = jest.fn().mockResolvedValue([]);
+
+    await expect(
+      assembleCertTx({
+        ...certOpts,
+        getUtxos,
+        retries: 5,
+        emptyUtxosMessage: 'No spendable ADA in this account.',
+        label: 'Delegation transaction',
+      })
+    ).rejects.toThrow('No spendable ADA in this account.');
+    expect(getUtxos).toHaveBeenCalledTimes(1);
   });
 });

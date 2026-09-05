@@ -277,6 +277,26 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(src).not.toMatch(/left=["']70px["']/);
   });
 
+  // The modal card is sized to nearly a whole viewport
+  // (.create-wallet-modal.lucem-modal-card), so a shell that only sets minHeight
+  // grows to header + card + padding and runs off the bottom of the window.
+  // Pin the shell instead and let .lucem-create-wallet-scroll do the scrolling.
+  test.each([
+    ['createWallet.jsx', 'createWallet.jsx'],
+    ['hw.jsx', 'hw.jsx'],
+    ['keystoneTx.jsx', 'keystoneTx.jsx'],
+  ])('%s setup shell is pinned to the viewport, not just minHeight', (_, file) => {
+    const src = fs.readFileSync(
+      path.join(__dirname, `../../ui/app/tabs/${file}`),
+      'utf8'
+    );
+    expect(src).toMatch(/h="100vh"/);
+    expect(src).toMatch(/maxH="100vh"/);
+    expect(src).toMatch(/height:\s*'100dvh'/);
+    expect(src).toMatch(/maxHeight:\s*'100dvh'/);
+    expect(src).toMatch(/lucem-create-wallet-scroll/);
+  });
+
   test('signTx.jsx DetailsModal should not use 88vh Scrollbars wrapper', () => {
     const src = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/signTx.jsx'),

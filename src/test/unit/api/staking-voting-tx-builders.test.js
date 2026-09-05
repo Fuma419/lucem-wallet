@@ -328,6 +328,16 @@ describe('signAndSubmitHW submit errors', () => {
     expect(wrapped.message).toMatch(/vote delegation/i);
   });
 
+  test('wrapSubmitError humanizes DelegateeDRepNotRegisteredDELEG', () => {
+    const wrapped = wrapSubmitError(
+      new Error(
+        'Transaction submission failed: Koios API error: 400  — {"contents":{"contents":{"contents":{"era":"ShelleyBasedEraConway","error":["ConwayCertsFailure (CertFailure (DelegFailure (DelegateeDRepNotRegisteredDELEG (KeyHashObj (KeyHash {unKeyHash = \\"22288b58867387e6e809fa5400074d1d825ac557d618bdf26f68177e\\"})))))"]}}}}'
+      )
+    );
+    expect(isSubmitError(wrapped)).toBe(true);
+    expect(wrapped.message).toMatch(/not registered on this network/i);
+  });
+
   test('signAndSubmitHW surfaces the provider submit message', async () => {
     const tx = await delegationTx(
       ACCOUNT,

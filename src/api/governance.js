@@ -182,10 +182,18 @@ const resolveProposalId = (proposal, index) => {
   return `proposal-${index + 1}`;
 };
 
+/** CIP-129 DRep key-hash header (high nibble = DRep, low nibble = key). */
+const CIP129_DREP_KEY_HEADER = '22';
+/** CIP-129 DRep script-hash header. */
+const CIP129_DREP_SCRIPT_HEADER = '23';
+
+export const DREP_NOT_REGISTERED =
+  'That DRep is not registered on this network. Paste a live gov.tools drep1… ID (or choose Always Abstain), and make sure you are on the same network.';
+
 /**
  * Resolve a pasted DRep identifier to a 28-byte key-hash hex.
- * Accepts a raw 56-char hex hash (legacy) or CIP-129/CIP-105 bech32
- * (`drep1…` / `drep_vkh1…`) as shown on gov.tools.
+ * Accepts a raw 56-char hex hash, CIP-129 hex (0x22 + 28-byte hash), or
+ * CIP-129/CIP-105 bech32 (`drep1…` / `drep_vkh1…`) as shown on gov.tools.
  * Script-hash DReps are recognized but not a key hash — voteDelegationTx
  * only builds key_hash certificates.
  *
@@ -195,10 +203,28 @@ export const parseDrepKeyHash = (value) => {
   if (typeof value !== 'string') return { keyHashHex: '', reason: 'invalid' };
   const trimmed = value.trim();
   if (!trimmed) return { keyHashHex: '', reason: 'invalid' };
+  if (/^0x[0-9a-f]+$/i.test(trimmed)) {
+    return parseDrepKeyHash(trimmed.slice(2));
+  }
 
   const lower = trimmed.toLowerCase();
   if (/^[0-9a-f]{56}$/.test(lower)) {
     return { keyHashHex: lower, reason: 'ok' };
+  }
+
+  // CIP-129 hex: 1-byte header + 28-byte credential (58 hex chars).
+  // Taking the first 56 chars would keep the 0x22 header and drop the last
+  // byte — the ledger then rejects DelegateeDRepNotRegisteredDELEG.
+  if (/^[0-9a-f]{58}$/.test(lower)) {
+    const header = lower.slice(0, 2);
+    const credential = lower.slice(2);
+    if (header === CIP129_DREP_SCRIPT_HEADER) {
+      return { keyHashHex: '', reason: 'script_hash' };
+    }
+    if (header === CIP129_DREP_KEY_HEADER) {
+      return { keyHashHex: credential, reason: 'ok' };
+    }
+    return { keyHashHex: '', reason: 'invalid' };
   }
 
   try {
@@ -218,11 +244,32 @@ export const parseDrepKeyHash = (value) => {
     // Not a DRep bech32 id — fall through to embedded-hex extraction.
   }
 
-  const match = lower.match(/[0-9a-f]{56}/);
-  return match ? { keyHashHex: match[0], reason: 'ok' } : { keyHashHex: '', reason: 'invalid' };
+  // Explorer URLs / labelled text may embed a 56-char hash. Do not apply this
+  // to a longer pure-hex string (that would truncate CIP-129 hex).
+  if (!/^[0-9a-f]+$/.test(lower)) {
+    const match = lower.match(/[0-9a-f]{56}/);
+    return match
+      ? { keyHashHex: match[0], reason: 'ok' }
+      : { keyHashHex: '', reason: 'invalid' };
+  }
+
+  return { keyHashHex: '', reason: 'invalid' };
 };
 
 export const normalizeDrepKeyHash = (value) => parseDrepKeyHash(value).keyHashHex;
+
+/** CIP-129 and legacy CIP-105 bech32 ids for a 28-byte DRep key hash. */
+export const bech32IdsForDrepKeyHash = async (keyHashHex) => {
+  await Loader.load();
+  const Cardano = Loader.Cardano;
+  const drep = Cardano.DRep.new_key_hash(
+    Cardano.Ed25519KeyHash.from_bytes(Buffer.from(keyHashHex, 'hex'))
+  );
+  return {
+    drepIdCip129: drep.to_bech32(true),
+    drepIdLegacy: drep.to_bech32(false),
+  };
+};
 
 const normalizeProposal = (proposal, index) => {
   const id = resolveProposalId(proposal, index);
@@ -317,14 +364,15 @@ const normalizeProposal = (proposal, index) => {
 
 const normalizeDrep = (drep, index) => {
   const id = firstString(drep.drep_id, drep.id, drep.view, drep.drep);
+  // Prefer bech32 so CSL strips the CIP-129 header; hex is a fallback.
   const keyHashHex = normalizeDrepKeyHash(
     firstString(
+      drep.drep_id,
+      drep.id,
       drep.drep_id_hex,
       drep.drep_hash,
       drep.key_hash,
-      drep.hex,
-      drep.drep_id,
-      drep.id
+      drep.hex
     )
   );
   const votingPower = firstString(
@@ -338,13 +386,18 @@ const normalizeDrep = (drep, index) => {
     drep.name
   );
   const url = firstString(drep.url, drep.metadata?.url);
+  const retired =
+    drep.retired === true ||
+    drep.registered === false ||
+    drep.registered === 'f' ||
+    drep.registered === 'false';
 
   return {
     id: id || `drep-${index + 1}`,
     keyHashHex,
     name,
     url,
-    status: toStatus(drep),
+    status: retired ? 'retired' : toStatus(drep),
     votingPower: votingPower || '0',
   };
 };
@@ -355,6 +408,7 @@ const normalizeProposals = (list) =>
 const normalizeDreps = (list) =>
   asArray(list)
     .map((drep, index) => normalizeDrep(drep, index))
+    .filter((drep) => drep.keyHashHex && drep.status !== 'retired')
     .sort((a, b) =>
       toSortableStake(a.votingPower) < toSortableStake(b.votingPower) ? 1 : -1
     );
@@ -571,35 +625,77 @@ const fetchKoiosGovernance = async (networkId, options) => {
   };
 };
 
+const lookupBlockfrostDrep = async (networkId, drepId, signal) => {
+  const normalizedNetwork = normalizeNetworkId(networkId);
+  const blockfrostProjectId = provider.api.key(normalizedNetwork)?.blockfrost_project_id;
+  if (!isUsableBlockfrostProjectId(blockfrostProjectId)) {
+    return { status: 'unavailable' };
+  }
+
+  const baseUrl = BLOCKFROST_BASE_URLS[normalizedNetwork];
+  try {
+    const response = await fetch(
+      `${baseUrl}/governance/dreps/${encodeURIComponent(drepId)}`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          project_id: blockfrostProjectId,
+        },
+        signal,
+      }
+    );
+    if (response.status === 404) return { status: 'not_found' };
+    if (!response.ok) return { status: 'unavailable' };
+    const payload = await response.json();
+    if (payload && (payload.drep_id || payload.hex || payload.active !== undefined)) {
+      return { status: 'found', payload };
+    }
+    return { status: 'unavailable' };
+  } catch {
+    return { status: 'unavailable' };
+  }
+};
+
 /**
- * Check whether the current wallet's DRep credential is registered on-chain.
+ * Check whether a DRep credential is registered on-chain.
  * Tries Blockfrost first (GET /governance/dreps/{drep_id} → 404 when not
- * registered), then falls back to Koios /drep_info. Returns a normalized shape.
+ * registered), then falls back to Koios /drep_info.
+ * `lookupFailed` is true only when no indexer could confirm presence or absence.
  */
 export const fetchDRepRegistration = async (networkId, ids = {}, options = {}) => {
   const candidates = [ids.drepIdCip129, ids.drepIdLegacy].filter(
     (value) => typeof value === 'string' && value.trim()
   );
   if (candidates.length === 0) {
-    return { registered: false, source: '', drep: null, drepId: '' };
+    return {
+      registered: false,
+      source: '',
+      drep: null,
+      drepId: '',
+      lookupFailed: false,
+    };
   }
 
+  let blockfrostNotFound = false;
+
   for (const drepId of candidates) {
-    const payload = await fetchBlockfrostJsonMaybe(
-      networkId,
-      `/governance/dreps/${encodeURIComponent(drepId)}`,
-      options.signal
-    );
-    if (payload && (payload.drep_id || payload.hex || payload.active !== undefined)) {
+    const result = await lookupBlockfrostDrep(networkId, drepId, options.signal);
+    if (result.status === 'found') {
       return {
-        registered: payload.active !== false,
+        registered: result.payload.active !== false,
         source: 'blockfrost',
-        drep: payload,
+        drep: result.payload,
         drepId,
+        lookupFailed: false,
       };
+    }
+    if (result.status === 'not_found') {
+      blockfrostNotFound = true;
     }
   }
 
+  let koiosSucceeded = false;
   try {
     const rows = await koiosRequestEnhanced(
       '/drep_info',
@@ -608,28 +704,60 @@ export const fetchDRepRegistration = async (networkId, ids = {}, options = {}) =
       options.signal,
       networkId
     );
-    const row = Array.isArray(rows)
-      ? rows.find(
-          (entry) =>
-            entry &&
-            (entry.registered === true ||
-              entry.registered === 't' ||
-              entry.registered === 'true')
-        )
-      : null;
-    if (row) {
-      return {
-        registered: true,
-        source: 'koios',
-        drep: row,
-        drepId: firstString(row.drep_id, candidates[0]),
-      };
+    if (Array.isArray(rows)) {
+      koiosSucceeded = true;
+      const row = rows.find(
+        (entry) =>
+          entry &&
+          (entry.registered === true ||
+            entry.registered === 't' ||
+            entry.registered === 'true')
+      );
+      if (row) {
+        return {
+          registered: true,
+          source: 'koios',
+          drep: row,
+          drepId: firstString(row.drep_id, candidates[0]),
+          lookupFailed: false,
+        };
+      }
     }
   } catch {
-    /* ignore — treat as not registered */
+    /* indexer outage — only treat as unregistered when another source already 404'd */
   }
 
-  return { registered: false, source: '', drep: null, drepId: candidates[0] };
+  if (koiosSucceeded || blockfrostNotFound) {
+    return {
+      registered: false,
+      source: koiosSucceeded ? 'koios' : 'blockfrost',
+      drep: null,
+      drepId: candidates[0],
+      lookupFailed: false,
+    };
+  }
+
+  return {
+    registered: false,
+    source: '',
+    drep: null,
+    drepId: candidates[0],
+    lookupFailed: true,
+  };
+};
+
+/**
+ * Refuse a named DRep vote-delegation before submit when the indexer can
+ * confirm the credential is not registered. Indexer outages still allow
+ * the tx to be built; wrapSubmitError humanizes a later ledger reject.
+ */
+export const ensureDrepRegisteredForDelegation = async (networkId, keyHashHex) => {
+  const ids = await bech32IdsForDrepKeyHash(keyHashHex);
+  const registration = await fetchDRepRegistration(networkId, ids);
+  if (registration.lookupFailed) return;
+  if (!registration.registered) {
+    throw new Error(DREP_NOT_REGISTERED);
+  }
 };
 
 const normalizeVoteKind = (value) => {

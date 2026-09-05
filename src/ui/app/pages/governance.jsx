@@ -49,6 +49,7 @@ import {
   voteTx,
 } from '../../../api/extension/wallet';
 import {
+  ensureDrepRegisteredForDelegation,
   fetchDRepRegistration,
   fetchDRepVotes,
   fetchGovernanceOverview,
@@ -492,6 +493,9 @@ const Governance = () => {
 
       const currentDelegation = await getDelegation();
       const protocolParameters = await initTx();
+      if (voteType === 'key_hash' && keyHashHex) {
+        await ensureDrepRegisteredForDelegation(networkId, keyHashHex);
+      }
       const tx = await voteDelegationTx(
         currentAccount,
         currentDelegation || {},
@@ -577,7 +581,7 @@ const Governance = () => {
         description:
           reason === 'script_hash'
             ? 'This DRep ID is a script hash. Lucem can only delegate to key-hash DReps.'
-            : 'Paste a gov.tools drep1… ID or a 56-character hex key hash.',
+            : 'Paste a gov.tools drep1… ID, CIP-129 hex, or a 56-character key hash.',
         status: 'warning',
         duration: 3500,
         isClosable: true,

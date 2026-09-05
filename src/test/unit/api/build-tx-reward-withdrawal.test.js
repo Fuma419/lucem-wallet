@@ -49,6 +49,7 @@ import {
   buildTx,
   keyHashesForTx,
   rewardWithdrawalLovelaceFromTx,
+  sendAllTx,
 } from '../../../api/extension/wallet';
 import { buildUnsignedSimpleTx } from '../../../api/tx/csl-unsigned-tx';
 
@@ -133,7 +134,7 @@ describe('buildTx — auto-withdraw rewards to cover an ADA gap', () => {
       makeOutputs(97_000_000),
       PROTOCOL_PARAMS,
       null,
-      { delegation: { rewards: '5000000' } }
+      { delegation: { rewards: '5000000', delegatedDrep: 'drep_always_abstain' } }
     );
 
     expect(withdrawalCount(tx)).toBe(1);
@@ -171,6 +172,22 @@ describe('buildTx — auto-withdraw rewards to cover an ADA gap', () => {
     ).toBe(false);
   });
 
+  test('gap without vote delegation does not attach a Conway-illegal withdrawal', async () => {
+    await expect(
+      buildTx(
+        ACCOUNT,
+        [makeUtxo(95_000_000)],
+        makeOutputs(97_000_000),
+        PROTOCOL_PARAMS,
+        null,
+        { delegation: { rewards: '5000000' } }
+      )
+    ).rejects.toThrow(/vote delegation/i);
+    expect(
+      buildUnsignedSimpleTx.mock.calls.some(([opts]) => opts.withdrawal)
+    ).toBe(false);
+  });
+
   test('gap larger than spendable + rewards fails with insufficient funds', async () => {
     await expect(
       buildTx(
@@ -179,8 +196,40 @@ describe('buildTx — auto-withdraw rewards to cover an ADA gap', () => {
         makeOutputs(101_000_000),
         PROTOCOL_PARAMS,
         null,
-        { delegation: { rewards: '5000000' } }
+        { delegation: { rewards: '5000000', delegatedDrep: 'drep_always_abstain' } }
       )
     ).rejects.toThrow(/including staking rewards/i);
+  });
+});
+
+describe('sendAllTx — Conway DRep gate on reward withdrawals', () => {
+  test('sweeps UTxOs without withdrawing when the stake key has no DRep', async () => {
+    const tx = await sendAllTx(
+      [makeUtxo(95_000_000)],
+      TEST_ADDR,
+      PROTOCOL_PARAMS,
+      null,
+      { account: ACCOUNT, delegation: { rewards: '5000000' } }
+    );
+    expect(withdrawalCount(tx)).toBe(0);
+    expect(rewardWithdrawalLovelaceFromTx(tx)).toBe('0');
+  });
+
+  test('includes a full reward withdrawal when vote-delegated', async () => {
+    const tx = await sendAllTx(
+      [makeUtxo(95_000_000)],
+      TEST_ADDR,
+      PROTOCOL_PARAMS,
+      null,
+      {
+        account: ACCOUNT,
+        delegation: {
+          rewards: '5000000',
+          delegatedDrep: 'drep_always_abstain',
+        },
+      }
+    );
+    expect(withdrawalCount(tx)).toBe(1);
+    expect(rewardWithdrawalLovelaceFromTx(tx)).toBe('5000000');
   });
 });

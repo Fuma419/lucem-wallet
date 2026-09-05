@@ -9,7 +9,21 @@ export const emptyDelegation = (stakeAddress = '') => ({
   description: '',
   name: '',
   homepage: '',
+  delegatedDrep: '',
 });
+
+/**
+ * Conway: a reward account cannot withdraw unless it has delegated voting
+ * power (a DRep, Always Abstain, or No Confidence). The ledger rejects the
+ * withdrawal with `ConwayWdrlNotDelegatedToDRep`.
+ */
+export const REWARD_WITHDRAWAL_NEEDS_DREP =
+  'Withdrawing staking rewards requires vote delegation. Open Vote and delegate to a DRep (or Always Abstain), then try again.';
+
+export const canWithdrawRewards = (delegation) => {
+  const id = String(delegation?.delegatedDrep || '').trim();
+  return id.length > 0 && id.toLowerCase() !== 'null';
+};
 
 export const toPoolMetric = (value, fallback = '0') => {
   if (value == null || value === '') return fallback;
@@ -69,12 +83,21 @@ export function buildStakePoolSearchRequest(query) {
   };
 }
 
-export const normalizeDelegationRow = (stakeRow = {}, stakeAddress = '') => ({
-  ...emptyDelegation(stakeAddress),
-  registered: true,
-  active: Boolean(
-    stakeRow.active || stakeRow.delegated_pool || stakeRow.pool_id
-  ),
-  rewards: toPoolMetric(stakeRow.withdrawable_amount ?? stakeRow.rewards_available),
-  poolId: stakeRow.delegated_pool || stakeRow.pool_id || '',
-});
+export const normalizeDelegationRow = (stakeRow = {}, stakeAddress = '') => {
+  const delegatedDrep = String(
+    stakeRow.delegated_drep || stakeRow.drep_id || ''
+  ).trim();
+  return {
+    ...emptyDelegation(stakeAddress),
+    registered: true,
+    active: Boolean(
+      stakeRow.active || stakeRow.delegated_pool || stakeRow.pool_id
+    ),
+    rewards: toPoolMetric(stakeRow.withdrawable_amount ?? stakeRow.rewards_available),
+    poolId: stakeRow.delegated_pool || stakeRow.pool_id || '',
+    delegatedDrep:
+      delegatedDrep && delegatedDrep.toLowerCase() !== 'null'
+        ? delegatedDrep
+        : '',
+  };
+};

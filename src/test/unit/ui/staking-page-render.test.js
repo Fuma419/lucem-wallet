@@ -272,10 +272,23 @@ describe('Staking page — behavioral render', () => {
       registered: true,
       active: true,
       rewards: '2500000',
+      delegatedDrep: 'drep_always_abstain',
     });
     const { container } = await renderStaking();
     const withdrawBtn = buttonByText(container, 'Start');
     expect(withdrawBtn).toBeTruthy();
     expect(withdrawBtn.disabled).toBe(false);
+  });
+
+  test('reward withdrawal is disabled without vote delegation', async () => {
+    getDelegation.mockResolvedValue({
+      registered: true,
+      active: true,
+      rewards: '2500000',
+    });
+    const { container } = await renderStaking();
+    const withdrawBtn = buttonByText(container, 'Start');
+    expect(withdrawBtn).toBeTruthy();
+    expect(withdrawBtn.disabled).toBe(true);
   });
 });

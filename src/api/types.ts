@@ -72,6 +72,8 @@ export type KoiosAccountInfoRow = {
   registered: boolean;
   active?: boolean;
   pool_id: string | null;
+  delegated_drep?: string | null;
+  drep_id?: string | null;
   withdrawable_amount: string;
   rewards_available: string;
   controlled_amount: string;

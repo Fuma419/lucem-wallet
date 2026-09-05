@@ -60,6 +60,7 @@ import {
 import ConfirmModal from '../components/confirmModal';
 import UnitDisplay from '../components/unitDisplay';
 import useSurfaceColors from '../hooks/useSurfaceColors';
+import { canWithdrawRewards } from '../../../api/staking';
 
 const LOVELACE_PER_ADA = 1000000n;
 const MIN_REWARD_WITHDRAWAL = 2000000n;
@@ -481,6 +482,7 @@ const Staking = () => {
     }
     : null;
   const rewards = toBigInt(delegation?.rewards);
+  const voteDelegated = canWithdrawRewards(delegation);
   const activeLabel =
     activePool?.ticker ||
     activePool?.name ||
@@ -686,9 +688,13 @@ const Staking = () => {
             <ActionCard
               icon={MdOutlineSavings}
               title="Withdraw Rewards"
-              text="Collect available staking rewards back into your wallet balance."
+              text={
+                voteDelegated
+                  ? 'Collect available staking rewards back into your wallet balance.'
+                  : 'Delegate voting power (Vote) before withdrawing rewards.'
+              }
               onClick={buildWithdrawalPreview}
-              isDisabled={rewards < MIN_REWARD_WITHDRAWAL}
+              isDisabled={rewards < MIN_REWARD_WITHDRAWAL || !voteDelegated}
               isLoading={isBuilding && txMode === 'withdraw'}
             />
             <ActionCard

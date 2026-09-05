@@ -78,6 +78,12 @@ import {
   getBalanceExtended,
   getTransactions,
 } from './chain-reads';
+import {
+  glowEffectsDomValue,
+  parseStoredGlowEffects,
+  resolveGlowEffects,
+  storageValueForGlowEffects,
+} from './glow-effects';
 
 export {
   getStorage,
@@ -209,21 +215,39 @@ export const getSwapTrays = async () => {
 export const setSwapTrays = (swapTrays) =>
   setStorage({ [STORAGE.swapTrays]: Boolean(swapTrays) });
 
-/** Neon glows default on; only an explicit `false` disables them. */
-export const getGlowEffects = async () => {
-  const value = await getStorage(STORAGE.glowEffects);
-  return value !== false;
+export {
+  glowEffectsDomValue,
+  parseStoredGlowEffects,
+  resolveGlowEffects,
+} from './glow-effects';
+
+/** Unset / legacy `true` → theme default (light off, dark on). */
+export const getStoredGlowEffects = async () =>
+  parseStoredGlowEffects(await getStorage(STORAGE.glowEffects));
+
+/** Resolved boolean for the current (or provided) color mode. */
+export const getGlowEffects = async (colorMode) => {
+  const stored = await getStoredGlowEffects();
+  const mode =
+    colorMode ||
+    (typeof document !== 'undefined'
+      ? document.documentElement.getAttribute('data-theme')
+      : null) ||
+    'dark';
+  return resolveGlowEffects(stored, mode);
 };
 
 export const setGlowEffects = (glowEffects) =>
-  setStorage({ [STORAGE.glowEffects]: Boolean(glowEffects) });
+  setStorage({
+    [STORAGE.glowEffects]: storageValueForGlowEffects(Boolean(glowEffects)),
+  });
 
-/** Reflect glow preference on <html data-glow> for CSS. */
-export const syncGlowEffectsDom = (glowEffects) => {
+/** Reflect stored intent on <html data-glow> (`on` / `off` / `auto`). */
+export const syncGlowEffectsDom = (stored) => {
   if (typeof document === 'undefined') return;
   document.documentElement.setAttribute(
     'data-glow',
-    glowEffects === false ? 'off' : 'on'
+    glowEffectsDomValue(stored)
   );
 };
 

@@ -357,7 +357,15 @@ html[data-glow='off'] .lucem-sign-amount-out,
 html[data-glow='off'] .lucem-sign-amount-in,
 html[data-glow='off'] .lucem-sign-chip,
 html[data-glow='off'] .lucem-sign-asset-out,
-html[data-glow='off'] .lucem-sign-asset-in {
+html[data-glow='off'] .lucem-sign-asset-in,
+html[data-theme='light']:not([data-glow='on']) .lucem-sign-origin,
+html[data-theme='light']:not([data-glow='on']) .lucem-inset-surface.lucem-sign-hero,
+html[data-theme='light']:not([data-glow='on']) .lucem-inset-surface.lucem-sign-hero:hover,
+html[data-theme='light']:not([data-glow='on']) .lucem-sign-amount-out,
+html[data-theme='light']:not([data-glow='on']) .lucem-sign-amount-in,
+html[data-theme='light']:not([data-glow='on']) .lucem-sign-chip,
+html[data-theme='light']:not([data-glow='on']) .lucem-sign-asset-out,
+html[data-theme='light']:not([data-glow='on']) .lucem-sign-asset-in {
   box-shadow: none;
   text-shadow: none;
 }
@@ -383,14 +391,14 @@ html[data-theme='light'] .lucem-inset-row.is-current {
     0 0 0 1px rgba(180, 83, 9, 0.4);
 }
 
-html:not([data-glow='off']) .lucem-inset-row.is-current {
+html:not([data-theme='light']):not([data-glow='off']) .lucem-inset-row.is-current {
   box-shadow:
     inset 3px 0 0 0 #ffb020,
     0 0 0 1px rgba(255, 176, 32, 0.6),
     0 0 18px rgba(255, 176, 32, 0.2);
 }
 
-html[data-theme='light']:not([data-glow='off']) .lucem-inset-row.is-current {
+html[data-theme='light'][data-glow='on'] .lucem-inset-row.is-current {
   box-shadow:
     inset 3px 0 0 0 #b45309,
     0 0 0 1px rgba(180, 83, 9, 0.45),
@@ -1415,19 +1423,20 @@ input.lucem-send-amount {
   letter-spacing: 0.01em;
 }
 
-/* Global glow kill-switch (Settings → Button glow effects). */
-html[data-glow='off'] .button,
-html[data-glow='off'] .button:hover,
-html[data-glow='off'] .button:focus-visible,
-html[data-glow='off'] .button[data-active],
-html[data-glow='off'] .glow,
-html[data-glow='off'] .chakra-modal__content.modal-glow-purple,
-html[data-glow='off'] .modal-glow-purple,
-html[data-glow='off'] .chakra-modal__content.modal-glow-cyan,
-html[data-glow='off'] .modal-glow-cyan,
-html[data-glow='off'] .chakra-modal__content.modal-glow-yellow-green,
-html[data-glow='off'] .modal-glow-yellow-green,
-html[data-glow='off'] .chakra-modal__content.modal-glow-backup,
-html[data-glow='off'] .modal-glow-backup {
+/* Global glow kill-switch (Settings → Button glow effects).
+ * Light mode is off unless the user explicitly sets data-glow=on. */
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .button,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .button:hover,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .button:focus-visible,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .button[data-active],
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .glow,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .chakra-modal__content.modal-glow-purple,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .modal-glow-purple,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .chakra-modal__content.modal-glow-cyan,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .modal-glow-cyan,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .chakra-modal__content.modal-glow-yellow-green,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .modal-glow-yellow-green,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .chakra-modal__content.modal-glow-backup,
+html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .modal-glow-backup {
   box-shadow: none !important;
 }

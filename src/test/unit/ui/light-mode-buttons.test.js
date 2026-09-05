@@ -72,6 +72,15 @@ describe('light-mode neon button contrast', () => {
     );
   });
 
+  test('light mode kills neon glow unless data-glow is explicitly on', () => {
+    expect(css).toContain(
+      "html[data-theme='light']:not([data-glow='on'])"
+    );
+    expect(css).toContain(
+      "html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .button"
+    );
+  });
+
   test('does not paint a fill over account-option avatars', () => {
     const block = css.slice(lightButtonsStart, lightButtonsEnd);
     const fillProp = 'rgba(var(--btn-fill), 0.82)';

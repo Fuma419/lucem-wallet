@@ -164,6 +164,30 @@ describe('account-selector tray — behavioral render', () => {
     expect(option.querySelector('img')).toBeTruthy();
   });
 
+  test('opening one tray closes the other', async () => {
+    const { container } = await renderTrays();
+    const accountToggle = container.querySelector(
+      '[data-testid="account-tray-toggle"]'
+    );
+    const actionToggle = container.querySelector(
+      '[data-testid="wallet-action-tray-toggle"]'
+    );
+    expect(accountToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(actionToggle.getAttribute('aria-expanded')).toBe('false');
+
+    await click(accountToggle);
+    expect(accountToggle.getAttribute('aria-expanded')).toBe('true');
+    expect(actionToggle.getAttribute('aria-expanded')).toBe('false');
+
+    await click(actionToggle);
+    expect(accountToggle.getAttribute('aria-expanded')).toBe('false');
+    expect(actionToggle.getAttribute('aria-expanded')).toBe('true');
+
+    await click(accountToggle);
+    expect(accountToggle.getAttribute('aria-expanded')).toBe('true');
+    expect(actionToggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
   test('the toggle icon is static even when accounts are empty', async () => {
     const { container } = await renderTrays({
       accounts: {},

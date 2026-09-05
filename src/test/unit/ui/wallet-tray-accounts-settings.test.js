@@ -51,6 +51,22 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).toContain('labelSide');
   });
 
+  test('only one bottom tray can be open at a time', () => {
+    expect(traysSrc).toContain('const toggleAccountTray = () => {');
+    expect(traysSrc).toContain('const toggleActionTray = () => {');
+    expect(traysSrc).toContain('setIsAccountTrayOpen((open) => !open);');
+    expect(traysSrc).toContain('setIsTrayOpen((open) => !open);');
+    expect(traysSrc).toContain('onClick={toggleAccountTray}');
+    expect(traysSrc).toContain('onClick={toggleActionTray}');
+    expect(traysSrc).toContain('aria-expanded={isAccountTrayOpen}');
+    expect(traysSrc).toContain('aria-expanded={isTrayOpen}');
+    expect(traysSrc).toContain('data-testid="wallet-action-tray-toggle"');
+    expect(traysSrc).not.toContain(
+      'onClick={() => setIsAccountTrayOpen(!isAccountTrayOpen)}'
+    );
+    expect(traysSrc).not.toContain('onClick={() => setIsTrayOpen(!isTrayOpen)}');
+  });
+
   test('left tray is a dynamic account selector with avatar FABs', () => {
     expect(traysSrc).toContain('TrayLabeledButton');
     // Options come from the live accounts map, so the tray grows/shrinks as

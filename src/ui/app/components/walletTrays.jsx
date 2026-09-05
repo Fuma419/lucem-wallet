@@ -123,7 +123,18 @@ const WalletTrays = ({
   const path = location.pathname;
   const go = (to) => {
     setIsTrayOpen(false);
+    setIsAccountTrayOpen(false);
     if (path !== to) navigate(to);
+  };
+
+  const toggleAccountTray = () => {
+    setIsAccountTrayOpen((open) => !open);
+    setIsTrayOpen(false);
+  };
+
+  const toggleActionTray = () => {
+    setIsTrayOpen((open) => !open);
+    setIsAccountTrayOpen(false);
   };
 
   // On the tray's destination pages the toggle becomes a Home button that
@@ -220,8 +231,9 @@ const WalletTrays = ({
         <Button
           {...walletFabBase}
           className="button fab-account-toggle"
-          onClick={() => setIsAccountTrayOpen(!isAccountTrayOpen)}
+          onClick={toggleAccountTray}
           aria-label="Toggle account menu"
+          aria-expanded={isAccountTrayOpen}
           data-testid="account-tray-toggle"
         >
           {/* Static glowing account icon — deliberately not the active
@@ -312,8 +324,10 @@ const WalletTrays = ({
           <Button
             {...walletFabBase}
             className="button fab-toggle"
-            onClick={() => setIsTrayOpen(!isTrayOpen)}
+            onClick={toggleActionTray}
             aria-label="Toggle action menu"
+            aria-expanded={isTrayOpen}
+            data-testid="wallet-action-tray-toggle"
           >
             <Icon
               as={isTrayOpen ? ChevronDownIcon : ChevronUpIcon}

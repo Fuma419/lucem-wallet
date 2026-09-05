@@ -41,6 +41,7 @@ describe('lint gate', () => {
 
   test('generated code is ignored — it is never hand-edited', () => {
     expect(ignored).toContain('src/wasm/');
+    expect(ignored).toContain('android/app/src/main/assets/');
   });
 
   test('no hand-written source file is excluded from linting', () => {

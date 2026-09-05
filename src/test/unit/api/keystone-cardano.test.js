@@ -383,4 +383,46 @@ describe('keystone-cardano', () => {
       "m/1852'/1815'/0'/2/0",
     ]);
   });
+
+  test('buildKeystoneExtraSigners includes CIP-105 DRep path for a vote', () => {
+    const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
+    const entropy = Buffer.alloc(32, 0x42);
+    const accountPub = CSL.Bip32PrivateKey.from_bip39_entropy(
+      entropy,
+      Buffer.alloc(0)
+    )
+      .derive(1852 + 0x80000000)
+      .derive(1815 + 0x80000000)
+      .derive(0x80000000)
+      .to_public();
+    const publicKeyHex = Buffer.from(accountPub.as_bytes()).toString('hex');
+    const paymentKeyHash = Buffer.from(
+      accountPub.derive(0).derive(0).to_raw_key().hash().to_bytes()
+    ).toString('hex');
+    const drepKeyHash = Buffer.from(
+      accountPub.derive(3).derive(0).to_raw_key().hash().to_bytes()
+    ).toString('hex');
+    const extra = buildKeystoneExtraSigners(
+      {
+        body: () => ({
+          required_signers: () => null,
+          certs: () => null,
+          withdrawals: () => null,
+        }),
+      },
+      {
+        paymentAddr: 'addr_test1abc',
+        paymentKeyHash,
+        stakeKeyHash: 'bb'.repeat(28),
+        publicKey: publicKeyHex,
+      },
+      { id: 'deadbeef', account: 0 },
+      [paymentKeyHash, drepKeyHash],
+      CSL
+    );
+    expect(extra.map((s) => s.keyPath)).toEqual([
+      "m/1852'/1815'/0'/0/0",
+      "m/1852'/1815'/0'/3/0",
+    ]);
+  });
 });

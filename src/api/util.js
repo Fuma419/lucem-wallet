@@ -785,6 +785,124 @@ const outputsToLedger = (outputs, address, index) => {
   return ledgerOutputs;
 };
 
+const bytesToHex = (value) =>
+  Buffer.from(value.to_bytes()).toString('hex');
+
+// Numeric values match @cardano-foundation/ledgerjs-hw-app-cardano enums
+// (VoteOption / VoterType). Keep literals so tests that stub that package
+// can still load util.js.
+const LEDGER_VOTE = { NO: 0, YES: 1, ABSTAIN: 2 };
+const LEDGER_VOTER = {
+  COMMITTEE_KEY_HASH: 0,
+  COMMITTEE_SCRIPT_HASH: 1,
+  DREP_KEY_HASH: 2,
+  DREP_SCRIPT_HASH: 3,
+  STAKE_POOL_KEY_HASH: 4,
+  DREP_KEY_PATH: 102,
+  STAKE_POOL_KEY_PATH: 104,
+};
+
+const CSL_VOTE_TO_LEDGER = {
+  0: LEDGER_VOTE.NO,
+  1: LEDGER_VOTE.YES,
+  2: LEDGER_VOTE.ABSTAIN,
+};
+
+const cslVoterToLedger = (voter, keys) => {
+  const kind = voter.kind();
+  const keyHash = typeof voter.to_key_hash === 'function' ? voter.to_key_hash() : null;
+  const keyHashHex = keyHash ? bytesToHex(keyHash) : null;
+
+  if (kind === 2) {
+    if (keyHashHex && keys?.drep?.hash === keyHashHex && keys.drep.path) {
+      return { type: LEDGER_VOTER.DREP_KEY_PATH, keyPath: keys.drep.path };
+    }
+    if (!keyHashHex) {
+      throw new Error('DRep voter is missing a key hash');
+    }
+    return { type: LEDGER_VOTER.DREP_KEY_HASH, keyHashHex };
+  }
+  if (kind === 3) {
+    const credential = voter.to_drep_credential();
+    return {
+      type: LEDGER_VOTER.DREP_SCRIPT_HASH,
+      scriptHashHex: bytesToHex(credential.to_scripthash()),
+    };
+  }
+  if (kind === 0) {
+    if (!keyHashHex) {
+      throw new Error('Committee voter is missing a key hash');
+    }
+    return { type: LEDGER_VOTER.COMMITTEE_KEY_HASH, keyHashHex };
+  }
+  if (kind === 1) {
+    const credential = voter.to_constitutional_committee_hot_credential();
+    return {
+      type: LEDGER_VOTER.COMMITTEE_SCRIPT_HASH,
+      scriptHashHex: bytesToHex(credential.to_scripthash()),
+    };
+  }
+  if (kind === 4) {
+    if (keyHashHex && keys?.stake?.hash === keyHashHex && keys.stake.path) {
+      return { type: LEDGER_VOTER.STAKE_POOL_KEY_PATH, keyPath: keys.stake.path };
+    }
+    if (!keyHashHex) {
+      throw new Error('Stake pool voter is missing a key hash');
+    }
+    return { type: LEDGER_VOTER.STAKE_POOL_KEY_HASH, keyHashHex };
+  }
+  throw new Error(`Unsupported governance voter kind: ${kind}`);
+};
+
+const ledgerVoteAnchor = (procedure) => {
+  const anchor =
+    procedure && typeof procedure.anchor === 'function' ? procedure.anchor() : null;
+  if (!anchor) return undefined;
+  return {
+    url: anchor.url().url(),
+    hashHex: bytesToHex(anchor.anchor_data_hash()),
+  };
+};
+
+/**
+ * Map CSL `voting_procedures` to Ledger `votingProcedures`.
+ * Own DRep key hash uses KEY_PATH so the device witnesses CIP-105 role 3.
+ */
+export const votingProceduresToLedger = (txBody, keys) => {
+  if (!txBody || typeof txBody.voting_procedures !== 'function') return null;
+  const procedures = txBody.voting_procedures();
+  if (!procedures || typeof procedures.get_voters !== 'function') return null;
+  const voters = procedures.get_voters();
+  if (!voters || voters.len() === 0) return null;
+
+  const rows = [];
+  for (let i = 0; i < voters.len(); i += 1) {
+    const voter = voters.get(i);
+    const actionIds = procedures.get_governance_action_ids_by_voter(voter);
+    const votes = [];
+    for (let j = 0; j < actionIds.len(); j += 1) {
+      const actionId = actionIds.get(j);
+      const procedure = procedures.get(voter, actionId);
+      const vote = CSL_VOTE_TO_LEDGER[procedure.vote_kind()];
+      if (vote === undefined) {
+        throw new Error(`Unsupported vote kind: ${procedure.vote_kind()}`);
+      }
+      const votingProcedure = { vote };
+      const anchor = ledgerVoteAnchor(procedure);
+      if (anchor) votingProcedure.anchor = anchor;
+      votes.push({
+        govActionId: {
+          txHashHex: bytesToHex(actionId.transaction_id()),
+          govActionIndex: actionId.index(),
+        },
+        votingProcedure,
+      });
+    }
+    rows.push({ voter: cslVoterToLedger(voter, keys), votes });
+  }
+  return rows;
+};
+
 /**
  *
  * @param {*} tx
@@ -1064,6 +1182,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
   additionalWitnessPaths = [];
   if (keys.payment.path) additionalWitnessPaths.push(keys.payment.path);
   if (keys.stake.path) additionalWitnessPaths.push(keys.stake.path);
+  if (keys.drep?.path) additionalWitnessPaths.push(keys.drep.path);
 
   // Plutus
   const scriptDataHashHex = tx.body().script_data_hash()
@@ -1151,6 +1270,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
   }
 
   const includeNetworkId = !!tx.body().network_id();
+  const ledgerVotingProcedures = votingProceduresToLedger(tx.body(), keys);
 
   const ledgerTx = {
     network: {
@@ -1173,6 +1293,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     collateralOutput,
     totalCollateral,
     referenceInputs,
+    votingProcedures: ledgerVotingProcedures,
   };
 
   Object.keys(ledgerTx).forEach(

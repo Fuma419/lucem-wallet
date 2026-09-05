@@ -140,6 +140,9 @@ describe('governance page and wallet network button wiring', () => {
     expect(governanceSrc).toContain('data-testid="governance-vote-actions"');
     expect(governanceSrc).toContain('data-testid="governance-drep-id-input"');
     expect(governanceSrc).toContain('drep1… or 56-character hex key hash');
+    expect(governanceSrc).not.toContain(
+      'Hardware wallet DRep voting is not supported yet'
+    );
     expect(governanceSrc).not.toContain('noOfLines={2}');
     const delegateSection = governanceSrc.slice(
       governanceSrc.indexOf('Delegate Voting Power')

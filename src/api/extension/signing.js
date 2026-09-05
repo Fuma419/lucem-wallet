@@ -24,7 +24,7 @@ import {
   txToLedger,
 } from '../util';
 import { ADDRESS_ROLE, getExternalIndices, getInternalIndices, listEnabledPaymentAddresses } from './multi-address';
-import { deriveAccountDRepPrivateKey, requestAccountKey } from './keys';
+import { deriveAccountDRepKeyHashHex, deriveAccountDRepPrivateKey, requestAccountKey } from './keys';
 import { getNetwork, getStorage } from './storage';
 
 
@@ -441,6 +441,7 @@ export const signTxHW = async (
   const keys = {
     payment: { hash: null, path: null },
     stake: { hash: null, path: null },
+    drep: { hash: null, path: null },
   };
   if (hw.device === HW.ledger) {
     const appAda = hw.appAda;
@@ -463,6 +464,9 @@ export const signTxHW = async (
         role: ADDRESS_ROLE.external,
       };
     }
+    const drepKeyHash = account?.publicKey
+      ? deriveAccountDRepKeyHashHex(account.publicKey)
+      : null;
     keyHashes.forEach((keyHash) => {
       if (paymentIndexByHash[keyHash] != null) {
         const { index: addrIdx, role } = paymentIndexByHash[keyHash];
@@ -480,6 +484,17 @@ export const signTxHW = async (
         keys.stake = {
           hash: keyHash,
           path: [HARDENED + 1852, HARDENED + 1815, HARDENED + hw.account, 2, 0],
+        };
+      else if (drepKeyHash && keyHash === drepKeyHash)
+        keys.drep = {
+          hash: keyHash,
+          path: [
+            HARDENED + 1852,
+            HARDENED + 1815,
+            HARDENED + hw.account,
+            ADDRESS_ROLE.drep,
+            0,
+          ],
         };
       else if (!partialSign) throw TxSignError.ProofGeneration;
       else return;
@@ -521,6 +536,17 @@ export const signTxHW = async (
           account.publicKey
         )
           .derive(2)
+          .derive(0)
+          .to_raw_key();
+        const signature = Loader.Cardano.Ed25519Signature.from_hex(
+          witness.witnessSignatureHex
+        );
+        vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
+      } else if (role === ADDRESS_ROLE.drep) {
+        const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
+          account.publicKey
+        )
+          .derive(ADDRESS_ROLE.drep)
           .derive(0)
           .to_raw_key();
         const signature = Loader.Cardano.Ed25519Signature.from_hex(

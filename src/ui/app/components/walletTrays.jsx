@@ -26,8 +26,8 @@ import { isSameAccountIndex } from '../utils/accountIndex';
 
 /**
  * Shared circular FAB chrome. Visual color / glow come from CSS `.button.fab-*`
- * (and `html[data-glow]`); keep Chakra props theme-agnostic so icons stay
- * white in light/dark and glow on/off.
+ * (and `html[data-glow]` / `html[data-theme]`). Chakra props stay theme-agnostic
+ * (white icons); light-mode CSS paints dark glyphs on the tinted fill.
  */
 const walletFabBase = {
   rounded: 'full',

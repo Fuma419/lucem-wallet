@@ -803,7 +803,7 @@ html[data-layout='extension'] .lucem-sign-payload-body {
   box-shadow: 0px 0px 25px rgba(0, 122, 255, 0.9);
 }
 
-/* Tray FAB icons stay white in every theme / glow mode (Chakra Icon inherits). */
+/* Tray FAB icons default to white on the dark fill. Light mode overrides below. */
 .button.fab-vote,
 .button.fab-stake,
 .button.fab-accounts,
@@ -996,23 +996,141 @@ html[data-layout='extension'] .lucem-sign-payload-body {
   opacity: 1;
 }
 
-/* Light theme keeps the yellow ring over the dimmed tray backdrop. */
-html[data-theme='light'] .button.fab-account,
-html[data-theme='light'] .button.fab-account-toggle {
-  opacity: 0.95;
-  border: thin solid rgba(255, 238, 0, 0.55);
+/*
+ * Light mode neon buttons.
+ *
+ * The dark-mode recipe (opacity 0.85 + 50% black in the gradient + white type)
+ * composites to a muddy mid-tone on #f4f6fb, so labels and FAB glyphs wash
+ * out. Drop the black veil, paint a saturated tint, and use dark type — the
+ * same treatment as the testnet banner.
+ */
+html[data-theme='light'] .button {
+  opacity: 1;
+  color: #1a2233 !important;
+}
+
+html[data-theme='light'] .button.new-wallet,
+html[data-theme='light'] .button.new-account,
+html[data-theme='light'] .button.fab-settings {
+  --btn-fill: 220, 27, 250;
+}
+
+html[data-theme='light'] .button.import-wallet,
+html[data-theme='light'] .button.fab-vote {
+  --btn-fill: 0, 245, 255;
+}
+
+html[data-theme='light'] .button.enter-wallet,
+html[data-theme='light'] .button.fab-toggle {
+  --btn-fill: 0, 122, 255;
+}
+
+html[data-theme='light'] .button.hw-wallet,
+html[data-theme='light'] .button.fab-stake {
+  --btn-fill: 206, 250, 0;
+}
+
+html[data-theme='light'] .button.fab-accounts {
+  --btn-fill: 255, 140, 0;
+}
+
+html[data-theme='light'] .button.import-backup,
+html[data-theme='light'] .button.settings {
+  --btn-fill: 100, 116, 139;
 }
 
 html[data-theme='light'] .button.fab-account-toggle {
-  border-color: rgba(255, 238, 0, 1);
-  box-shadow: 0px 0px 15px rgba(255, 238, 0, 0.6);
+  --btn-fill: 255, 196, 0;
+}
+
+html[data-theme='light'] .button.new-wallet,
+html[data-theme='light'] .button.new-account,
+html[data-theme='light'] .button.import-wallet,
+html[data-theme='light'] .button.import-backup,
+html[data-theme='light'] .button.settings,
+html[data-theme='light'] .button.enter-wallet,
+html[data-theme='light'] .button.hw-wallet,
+html[data-theme='light'] .button.fab-vote,
+html[data-theme='light'] .button.fab-stake,
+html[data-theme='light'] .button.fab-accounts,
+html[data-theme='light'] .button.fab-settings,
+html[data-theme='light'] .button.fab-toggle,
+html[data-theme='light'] .button.fab-account-toggle {
+  background: radial-gradient(
+    115.83% 134.17% at 50% 118.06%,
+    rgba(var(--btn-fill), 0.82),
+    rgba(var(--btn-fill), 0.48)
+  );
+  box-shadow: 0 0 16px rgba(var(--btn-fill), 0.5);
+}
+
+html[data-theme='light'] .button.new-wallet:hover,
+html[data-theme='light'] .button.new-account:hover,
+html[data-theme='light'] .button.import-wallet:hover,
+html[data-theme='light'] .button.import-backup:hover,
+html[data-theme='light'] .button.settings:hover,
+html[data-theme='light'] .button.enter-wallet:hover,
+html[data-theme='light'] .button.hw-wallet:hover,
+html[data-theme='light'] .button.fab-vote:hover,
+html[data-theme='light'] .button.fab-stake:hover,
+html[data-theme='light'] .button.fab-accounts:hover,
+html[data-theme='light'] .button.fab-settings:hover,
+html[data-theme='light'] .button.fab-toggle:hover,
+html[data-theme='light'] .button.fab-account-toggle:hover {
+  background: radial-gradient(
+    115.83% 134.17% at 50% 118.06%,
+    rgba(var(--btn-fill), 0.95),
+    rgba(var(--btn-fill), 0.62)
+  );
+  box-shadow: 0 0 20px rgba(var(--btn-fill), 0.62);
+}
+
+html[data-theme='light'] .button.settings,
+html[data-theme='light'] .button.settings:hover,
+html[data-theme='light'] .button.settings[data-active] {
+  border-color: rgba(15, 23, 42, 0.22);
+  box-shadow: 0 0 16px rgba(var(--btn-fill), 0.5) !important;
+}
+
+html[data-theme='light'] .button.settings:hover,
+html[data-theme='light'] .button.settings[data-active] {
+  box-shadow: 0 0 20px rgba(var(--btn-fill), 0.62) !important;
+}
+
+html[data-theme='light'] .button.fab-vote,
+html[data-theme='light'] .button.fab-stake,
+html[data-theme='light'] .button.fab-accounts,
+html[data-theme='light'] .button.fab-settings,
+html[data-theme='light'] .button.fab-toggle,
+html[data-theme='light'] .button.fab-account-toggle {
+  color: #1a2233 !important;
+}
+
+html[data-theme='light'] .button.fab-vote svg,
+html[data-theme='light'] .button.fab-stake svg,
+html[data-theme='light'] .button.fab-accounts svg,
+html[data-theme='light'] .button.fab-settings svg,
+html[data-theme='light'] .button.fab-toggle svg,
+html[data-theme='light'] .button.fab-account-toggle svg {
+  color: #1a2233 !important;
+  fill: currentColor;
+}
+
+html[data-theme='light'] .button.fab-account,
+html[data-theme='light'] .button.fab-account-toggle {
+  opacity: 1;
+  border-color: rgba(180, 140, 0, 0.9);
+}
+
+html[data-theme='light'] .button.fab-account-toggle {
+  box-shadow: 0 0 14px rgba(255, 196, 0, 0.45);
 }
 
 html[data-theme='light'] .button.fab-account[data-active],
 html[data-theme='light'] .button.fab-account-toggle:hover,
 html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   opacity: 1;
-  box-shadow: 0px 0px 25px rgba(255, 238, 0, 0.8);
+  box-shadow: 0 0 20px rgba(255, 196, 0, 0.55);
 }
 
 /* In-flow testnet badge — below the header orbs (not in the punch-hole row). */

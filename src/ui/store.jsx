@@ -3,13 +3,14 @@ import {
   getCurrency,
   getNetwork,
   getSwapTrays,
-  getGlowEffects,
+  getStoredGlowEffects,
   requestAccountKey,
   setCurrency,
   setNetwork,
   setSwapTrays,
   setGlowEffects,
   syncGlowEffectsDom,
+  resolveGlowEffects,
 } from '../api/extension';
 import { NETWORK_ID, NODE } from '../config/config';
 import {
@@ -43,20 +44,32 @@ const settings = {
     if (Object.prototype.hasOwnProperty.call(settings, 'swapTrays')) {
       setSwapTrays(settings.swapTrays);
     }
+    const storedGlow = Object.prototype.hasOwnProperty.call(
+      settings,
+      'glowEffectsStored'
+    )
+      ? settings.glowEffectsStored
+      : state.settings?.glowEffectsStored;
     const glowEffects = Object.prototype.hasOwnProperty.call(
       settings,
       'glowEffects'
     )
       ? Boolean(settings.glowEffects)
-      : !(state.settings && state.settings.glowEffects === false);
-    if (Object.prototype.hasOwnProperty.call(settings, 'glowEffects')) {
-      setGlowEffects(glowEffects);
+      : resolveGlowEffects(storedGlow);
+    if (
+      Object.prototype.hasOwnProperty.call(settings, 'glowEffectsStored') &&
+      state.settings != null
+    ) {
+      if (storedGlow === true || storedGlow === false) {
+        setGlowEffects(storedGlow);
+      }
     }
-    syncGlowEffectsDom(glowEffects);
+    syncGlowEffectsDom(storedGlow);
     state.settings = {
       ...settings,
       swapTrays: Boolean(settings.swapTrays),
       glowEffects,
+      glowEffectsStored: storedGlow,
       adaSymbol:
         settings.network.id === NETWORK_ID.mainnet
           ? '₳'
@@ -83,7 +96,7 @@ const globalModel = persist(
 const initSettings = async (setSettings) => {
   const currency = await getCurrency();
   const swapTrays = await getSwapTrays();
-  const glowEffects = await getGlowEffects();
+  const glowEffectsStored = await getStoredGlowEffects();
   const storedNetwork = await getNetwork();
   const network =
     storedNetwork && NODE[storedNetwork.id]
@@ -92,11 +105,16 @@ const initSettings = async (setSettings) => {
   if (storedNetwork && !NODE[storedNetwork.id]) {
     await setNetwork(network);
   }
-  syncGlowEffectsDom(glowEffects);
+  const colorMode =
+    (typeof document !== 'undefined'
+      ? document.documentElement.getAttribute('data-theme')
+      : null) || 'dark';
+  syncGlowEffectsDom(glowEffectsStored);
   setSettings({
     currency: currency || 'usd',
     swapTrays: Boolean(swapTrays),
-    glowEffects,
+    glowEffects: resolveGlowEffects(glowEffectsStored, colorMode),
+    glowEffectsStored,
     network: network || { id: NETWORK_ID.mainnet, node: NODE.mainnet },
     adaSymbol: network
       ? network.id === NETWORK_ID.mainnet

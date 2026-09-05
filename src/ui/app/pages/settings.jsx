@@ -17,6 +17,7 @@ import {
   ModalBody,
   ModalFooter,
   useColorModeValue,
+  useColorMode,
   Stack,
 } from '@chakra-ui/react';
 import { useAppearancePreference } from '../../appearanceContext';
@@ -35,6 +36,7 @@ import {
   setStorage,
   exportAppData,
   importAppData,
+  resolveGlowEffects,
 } from '../../../api/extension';
 import { vaultRequiresExistingPassword } from '../../../api/extension/vault';
 import { useNavigate } from 'react-router-dom';
@@ -72,6 +74,8 @@ const Settings = () => {
     (actions) => actions.settings.setSettings
   );
   const { appearance, setAppearance } = useAppearancePreference();
+  const { colorMode } = useColorMode();
+  const glowOn = resolveGlowEffects(settings?.glowEffectsStored, colorMode);
   const { mutedFg, subtleFg } = useSurfaceColors();
   const {
     inputProps: settingsInputProps,
@@ -371,17 +375,18 @@ const Settings = () => {
                 data-testid="settings-glow-effects"
                 label="Button glow effects"
                 hint={
-                  settings.glowEffects !== false
-                    ? 'Neon glows on wallet and tray buttons in light and dark mode.'
-                    : 'Solid buttons without neon glow.'
+                  glowOn
+                    ? 'Neon glows on wallet and tray buttons. Light mode is off unless you turn this on.'
+                    : 'Solid buttons without neon glow. Light mode is off by default.'
                 }
-                isChecked={settings.glowEffects !== false}
+                isChecked={glowOn}
                 offLabel="Off"
                 onLabel="On"
                 onChange={(checked) => {
                   setSettings({
                     ...settings,
                     glowEffects: checked,
+                    glowEffectsStored: checked,
                   });
                 }}
                 aria-label="Enable button glow effects"

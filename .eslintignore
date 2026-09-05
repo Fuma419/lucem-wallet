@@ -1,5 +1,10 @@
 node_modules/
 build/
 
+# Capacitor copies webpack output here (`npm run mobile:sync`). Never lint
+# generated bundles — leftover files from a prior mobile stage break `eslint .`.
+android/app/src/main/assets/
+ios/App/App/public/
+
 # Generated WASM bindings. AGENTS.md: never modify by hand, so never lint.
 src/wasm/

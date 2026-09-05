@@ -188,6 +188,7 @@ describe('Blockfrost → Koios adapter', () => {
         return jsonResponse(200, {
           active: true,
           pool_id: 'pool1abc',
+          drep_id: 'drep_always_abstain',
           controlled_amount: '9000000',
           withdrawable_amount: '1000000',
         });
@@ -208,6 +209,7 @@ describe('Blockfrost → Koios adapter', () => {
       registered: true,
       status: 'registered',
       pool_id: 'pool1abc',
+      delegated_drep: 'drep_always_abstain',
       utxo: '9000000',
       withdrawable_amount: '1000000',
     });

@@ -29,6 +29,10 @@ import type {
   ProtocolParametersSnapshot,
 } from '../types';
 import { koiosRequestEnhanced as koiosRequestEnhancedUntyped } from '../util';
+import {
+  canWithdrawRewards,
+  REWARD_WITHDRAWAL_NEEDS_DREP,
+} from '../staking';
 
 const koiosRequestEnhanced = koiosRequestEnhancedUntyped as KoiosRequestEnhanced;
 
@@ -44,6 +48,7 @@ type DelegationState = {
   registered?: boolean;
   active?: boolean;
   rewards?: string | number;
+  delegatedDrep?: string;
 };
 
 const utxosOrEmpty = async () => (await getUtxos()) || [];
@@ -61,6 +66,20 @@ const rewardLovelaceString = (delegation?: DelegationState | null) => {
   } catch {
     return '0';
   }
+};
+
+/** Full reward withdrawal only when Conway allows it (vote-delegated). */
+const rewardWithdrawalIfAllowed = (
+  account?: WalletAccount | null,
+  delegation?: DelegationState | null
+): RewardWithdrawal | undefined => {
+  const rewards = rewardLovelaceString(delegation);
+  if (rewards === '0' || !account?.rewardAddr) return undefined;
+  if (!canWithdrawRewards(delegation)) return undefined;
+  return {
+    rewardAddressBech32: account.rewardAddr,
+    amountLovelace: rewards,
+  };
 };
 
 const uniqueKeyHashes = (hashes: Array<string | undefined | null>) => {
@@ -276,6 +295,11 @@ export const buildTx = async (
         account.rewardAddr &&
         isInsufficientAdaError(first)
       ) {
+        if (!canWithdrawRewards(options?.delegation)) {
+          throw new Error(
+            'This send needs your staking rewards, but withdrawing them requires vote delegation. Delegate voting power in Vote, or send a smaller amount.'
+          );
+        }
         try {
           return assemble({
             rewardAddressBech32: account.rewardAddr,
@@ -326,14 +350,10 @@ export const sendAllTx = async (
     const paymentHashes = (await paymentKeyHashesForSigning()).filter(
       (h: unknown): h is string => typeof h === 'string' && h.length > 0
     );
-    const rewards = rewardLovelaceString(options?.delegation);
-    const withdrawal: RewardWithdrawal | undefined =
-      rewards !== '0' && options?.account?.rewardAddr
-        ? {
-            rewardAddressBech32: options.account.rewardAddr,
-            amountLovelace: rewards,
-          }
-        : undefined;
+    const withdrawal = rewardWithdrawalIfAllowed(
+      options?.account,
+      options?.delegation
+    );
     const requiredVkeyHashesHex = uniqueKeyHashes([
       ...paymentHashes,
       ...(withdrawal && options?.account?.stakeKeyHash
@@ -432,7 +452,9 @@ export const wrapSubmitError = (error: unknown): SubmitError => {
       : 'Transaction submission failed';
   const message = /FeeTooSmallUTxO/i.test(raw)
     ? 'The network rejected this transaction because the fee was too small. Try sending again.'
-    : raw;
+    : /ConwayWdrlNotDelegatedToDRep/i.test(raw)
+      ? REWARD_WITHDRAWAL_NEEDS_DREP
+      : raw;
   const wrapped = new Error(message) as SubmitError;
   wrapped.code = ERROR.submit;
   if (error && error !== ERROR.submit) {
@@ -602,6 +624,13 @@ export const withdrawalTx = async (
 ) => {
   await Loader.load();
 
+  if (
+    rewardLovelaceString(delegation) !== '0' &&
+    !canWithdrawRewards(delegation)
+  ) {
+    throw new Error(REWARD_WITHDRAWAL_NEEDS_DREP);
+  }
+
   return assembleCertTx({
     Cardano: Loader.Cardano,
     protocolParameters,
@@ -642,7 +671,11 @@ export const undelegateTx = async (
     emptyUtxosMessage: 'No UTxOs available to pay undelegation fee',
     label: 'Undelegation transaction',
     configure: (txBuilder, Cardano) => {
-      if (rewardLovelace(delegation) > 0 && account.rewardAddr) {
+      if (
+        rewardLovelace(delegation) > 0 &&
+        account.rewardAddr &&
+        canWithdrawRewards(delegation)
+      ) {
         const withdrawalsBuilder = Cardano.WithdrawalsBuilder.new();
         withdrawalsBuilder.add(
           Cardano.RewardAddress.from_address(

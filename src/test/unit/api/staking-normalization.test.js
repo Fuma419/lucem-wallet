@@ -1,5 +1,6 @@
 import {
   buildStakePoolSearchRequest,
+  canWithdrawRewards,
   emptyDelegation,
   normalizeDelegationRow,
   normalizeStakePool,
@@ -18,6 +19,7 @@ describe('staking normalization', () => {
       description: '',
       name: '',
       homepage: '',
+      delegatedDrep: '',
     });
   });
 
@@ -135,5 +137,35 @@ describe('staking normalization', () => {
       blocks: '12',
       status: 'registered',
     });
+  });
+
+  test('maps Koios delegated_drep and Blockfrost drep_id onto delegatedDrep', () => {
+    expect(
+      normalizeDelegationRow(
+        { delegated_drep: 'drep1abc', withdrawable_amount: '1' },
+        'stake_test1abc'
+      ).delegatedDrep
+    ).toBe('drep1abc');
+    expect(
+      normalizeDelegationRow(
+        { drep_id: 'drep_always_abstain', withdrawable_amount: '1' },
+        'stake_test1abc'
+      ).delegatedDrep
+    ).toBe('drep_always_abstain');
+    expect(
+      normalizeDelegationRow({ status: 'registered' }, 'stake_test1abc')
+        .delegatedDrep
+    ).toBe('');
+  });
+
+  test('canWithdrawRewards is true only with a vote delegation', () => {
+    expect(canWithdrawRewards({ delegatedDrep: 'drep1abc' })).toBe(true);
+    expect(canWithdrawRewards({ delegatedDrep: 'drep_always_abstain' })).toBe(
+      true
+    );
+    expect(canWithdrawRewards({ rewards: '5000000' })).toBe(false);
+    expect(canWithdrawRewards({ delegatedDrep: '' })).toBe(false);
+    expect(canWithdrawRewards({ delegatedDrep: 'null' })).toBe(false);
+    expect(canWithdrawRewards(null)).toBe(false);
   });
 });

@@ -218,6 +218,7 @@ export async function blockfrostKoiosCompatibleRequest(
           registered: true,
           active: account.active,
           pool_id: account.pool_id || null,
+          delegated_drep: account.drep_id || null,
           withdrawable_amount: withdrawable,
           rewards_available: withdrawable,
           controlled_amount: controlled,

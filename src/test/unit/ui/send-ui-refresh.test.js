@@ -89,6 +89,8 @@ describe('Send UI refresh — structural contracts', () => {
     expect(sendSrc).toContain('data-testid="send-confirm-reward-withdrawal"');
     expect(sendSrc).toMatch(/Includes withdrawal of/);
     expect(sendSrc).toMatch(/reward balance will drop to/);
+    expect(sendSrc).toContain('data-testid="send-confirm-rewards-held"');
+    expect(sendSrc).toMatch(/Staking rewards stay in this account/);
   });
 
   test('shows available balance and 25/50/75/Max chips', () => {

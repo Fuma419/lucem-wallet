@@ -1623,6 +1623,26 @@ const Send = () => {
                 </Text>
               </Box>
             ) : null}
+            {value.sendAll &&
+            rewardsLovelace > 0n &&
+            bigIntLovelace(rewardWithdrawalLovelace) === 0n ? (
+              <Box
+                mt={2}
+                rounded="xl"
+                borderWidth="1px"
+                borderColor="yellow.400"
+                bg="blackAlpha.400"
+                px={3}
+                py={2}
+                data-testid="send-confirm-rewards-held"
+              >
+                <Text fontSize="xs" color="yellow.200">
+                  Staking rewards stay in this account. Withdrawing them
+                  requires vote delegation (Vote → delegate to a DRep or
+                  Always Abstain).
+                </Text>
+              </Box>
+            ) : null}
             {value.sendAll && (
               <Box
                 mt={2}

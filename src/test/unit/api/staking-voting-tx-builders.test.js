@@ -158,7 +158,7 @@ describe('staking page — withdrawalTx', () => {
   test('builds a withdrawal for the reward address when rewards exist', async () => {
     const tx = await withdrawalTx(
       ACCOUNT,
-      { rewards: '3450000' },
+      { rewards: '3450000', delegatedDrep: 'drep_always_abstain' },
       PROTOCOL_PARAMS,
       [makeUtxo(50_000_000)]
     );
@@ -166,6 +166,17 @@ describe('staking page — withdrawalTx', () => {
     expect(withdrawals).toBeDefined();
     expect(withdrawals.len()).toBe(1);
     expectFeeCoversDummyVkeys(tx, 2);
+  });
+
+  test('refuses to build a withdrawal without vote delegation', async () => {
+    await expect(
+      withdrawalTx(
+        ACCOUNT,
+        { rewards: '3450000' },
+        PROTOCOL_PARAMS,
+        [makeUtxo(50_000_000)]
+      )
+    ).rejects.toThrow(/vote delegation/i);
   });
 });
 
@@ -250,9 +261,12 @@ describe('shared assembler — all five builders', () => {
           POOL_KEY_HASH
         ),
       () =>
-        withdrawalTx(ACCOUNT, { rewards: '3450000' }, PROTOCOL_PARAMS, [
-          makeUtxo(50_000_000),
-        ]),
+        withdrawalTx(
+          ACCOUNT,
+          { rewards: '3450000', delegatedDrep: 'drep_always_abstain' },
+          PROTOCOL_PARAMS,
+          [makeUtxo(50_000_000)]
+        ),
       () =>
         undelegateTx(
           ACCOUNT,
@@ -302,6 +316,16 @@ describe('signAndSubmitHW submit errors', () => {
     );
     expect(isSubmitError(wrapped)).toBe(true);
     expect(wrapped.message).toMatch(/fee was too small/);
+  });
+
+  test('wrapSubmitError humanizes ConwayWdrlNotDelegatedToDRep', () => {
+    const wrapped = wrapSubmitError(
+      new Error(
+        'Transaction submission failed: Koios API error: 400  — {"contents":{"era":"ShelleyBasedEraConway","error":["ConwayWdrlNotDelegatedToDRep (KeyHash {unKeyHash = \\"d2cfce07\\"}"]}'
+      )
+    );
+    expect(isSubmitError(wrapped)).toBe(true);
+    expect(wrapped.message).toMatch(/vote delegation/i);
   });
 
   test('signAndSubmitHW surfaces the provider submit message', async () => {

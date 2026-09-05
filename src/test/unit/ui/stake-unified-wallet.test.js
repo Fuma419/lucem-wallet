@@ -109,7 +109,10 @@ describe('stake-unified wallet source guards', () => {
     expect(src).toMatch(
       /Spend only from addresses we can witness/
     );
-    expect(src).toMatch(/Token UTxOs often sit on a change/);
+    // The rescue must not be limited to token UTxOs: ADA-only UTxOs on an
+    // undiscovered change/receive index have to stay spendable too.
+    expect(src).toMatch(/unknownAddrs/);
+    expect(src).not.toMatch(/asset_list\) && utxo\.asset_list\.length > 0/);
     expect(src).toMatch(/matchInternalIndicesFromAddresses/);
   });
 });

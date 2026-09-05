@@ -456,7 +456,8 @@ export const delegationTx = async (
     changeAddressBech32: account.paymentAddr,
     getUtxos: utxosOrEmpty,
     requiredVkeyHashesHex: await certRequiredVkeyHashes(account),
-    emptyUtxosMessage: 'No UTxOs available to pay delegation deposit and fee',
+    emptyUtxosMessage:
+      'No spendable ADA in this account. Delegating needs ADA to cover the stake deposit and the network fee.',
     label: 'Delegation transaction',
     configure: (txBuilder, Cardano) => {
       const certsBuilder = Cardano.CertificatesBuilder.new();

@@ -1119,12 +1119,20 @@ export async function assembleCertTx({
   let selectionRetries = retries;
 
   while (selectionRetries > 0) {
+    let utxos;
     try {
-      const utxos = await getUtxos();
-      if (!utxos || utxos.length === 0) {
-        throw new Error(emptyUtxosMessage);
-      }
+      utxos = await getUtxos();
+    } catch (error) {
+      selectionRetries = retryCertTx(error, selectionRetries, label, totalAttempts);
+      continue;
+    }
+    // Deterministic: retrying cannot conjure inputs, and the retry wrapper
+    // would bury the one message that tells the user what to do.
+    if (!utxos || utxos.length === 0) {
+      throw new Error(emptyUtxosMessage);
+    }
 
+    try {
       const changeAddress = Cardano.Address.from_bech32(changeAddressBech32);
       const utxoCollection = Cardano.TransactionUnspentOutputs.new();
       utxos.forEach((utxo) => utxoCollection.add(utxo));

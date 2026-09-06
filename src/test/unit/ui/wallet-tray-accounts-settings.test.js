@@ -220,6 +220,22 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(css).toMatch(/\.button\.fab-settings[\s\S]*rgba\(220,\s*27,\s*250/);
   });
 
+  test('actions-tray FABs keep static colors, not the network accent', () => {
+    const stakeRule = css.match(/\.button\.fab-stake \{([\s\S]*?)\}/);
+    const voteRule = css.match(/\.button\.fab-vote \{([\s\S]*?)\}/);
+    const toggleRule = css.match(/\.button\.fab-toggle \{([\s\S]*?)\}/);
+    expect(stakeRule).toBeTruthy();
+    expect(voteRule).toBeTruthy();
+    expect(toggleRule).toBeTruthy();
+    expect(stakeRule[1]).toContain('rgba(var(--lucem-lime)');
+    expect(stakeRule[1]).not.toContain('--lucem-accent');
+    expect(voteRule[1]).toMatch(/rgba\(0,\s*245,\s*255/);
+    expect(toggleRule[1]).toMatch(/rgba\(0,\s*122,\s*255/);
+    expect(css).toMatch(
+      /html\[data-theme='light'\] \.button\.fab-stake \{[\s\S]*--btn-fill:\s*var\(--lucem-lime\)/
+    );
+  });
+
   test('right tray toggle becomes a Home button on tray destination pages', () => {
     expect(traysSrc).toContain('MdHome');
     expect(traysSrc).toContain('isOnNavPage');

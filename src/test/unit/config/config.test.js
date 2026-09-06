@@ -27,6 +27,7 @@ describe('STORAGE keys', () => {
     expect(STORAGE.swapTrays).toBe('swapTrays');
     expect(STORAGE.glowEffects).toBe('glowEffects');
     expect(STORAGE.whitelisted).toBe('whitelisted');
+    expect(STORAGE.dappAccounts).toBe('dappAccounts');
     expect(STORAGE.migration).toBe('migration');
   });
 });

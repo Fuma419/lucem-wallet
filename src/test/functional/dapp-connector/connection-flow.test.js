@@ -36,12 +36,15 @@ jest.mock('../../../api/extension', () => ({
   verifyPayload: jest.fn(),
   verifyTx: jest.fn(),
   extractKeyHash: jest.fn(),
+  resolveCip30Account: jest.fn(),
+  bindCip30AccountIfUnbound: jest.fn(),
 }));
 
 const { Messaging } = require('../../../api/messaging');
 const { APIError, POPUP } = require('../../../config/config');
 
 const bytes = (hex) => ({ to_bytes: () => Buffer.from(hex, 'hex') });
+const CIP30_ACCOUNT = { index: 0, name: 'Account 0' };
 
 let dapp;
 let extension;
@@ -81,6 +84,8 @@ beforeEach(() => {
   extension.verifyPayload.mockReset().mockReturnValue(true);
   extension.verifyTx.mockReset().mockResolvedValue(undefined);
   extension.extractKeyHash.mockReset().mockResolvedValue('key_hash');
+  extension.resolveCip30Account.mockReset().mockResolvedValue(CIP30_ACCOUNT);
+  extension.bindCip30AccountIfUnbound.mockReset().mockResolvedValue(undefined);
   Messaging.sendToPopupInternal.mockReset().mockResolvedValue({ data: true });
 });
 
@@ -157,13 +162,17 @@ describe('dApp connector — read methods (whitelisted session)', () => {
       'de',
       'ad',
     ]);
-    expect(extension.getUtxos).toHaveBeenCalledWith('1000000', { page: 0, limit: 2 });
+    expect(extension.getUtxos).toHaveBeenCalledWith(
+      '1000000',
+      { page: 0, limit: 2 },
+      CIP30_ACCOUNT
+    );
   });
 
   test('getCollateral returns hex-encoded collateral UTxOs', async () => {
     const params = { amount: '1a000f4240' };
     await expect(dapp.getCollateral(params)).resolves.toEqual(['c0', 'c1']);
-    expect(extension.getCollateral).toHaveBeenCalledWith(params);
+    expect(extension.getCollateral).toHaveBeenCalledWith(params, CIP30_ACCOUNT);
   });
 
   test('getCollateral returns null when the wallet has no suitable UTxOs', async () => {

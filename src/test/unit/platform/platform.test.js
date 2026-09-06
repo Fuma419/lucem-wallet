@@ -100,6 +100,18 @@ describe('import abandon navigation', () => {
   const fs = require('fs');
   const path = require('path');
 
+  test('createPopup opens a single window via url, without a leftover tab', () => {
+    const extSrc = fs.readFileSync(
+      path.join(__dirname, '../../../platform/extension.js'),
+      'utf8'
+    );
+    const createPopupSrc = extSrc.split('createTab:')[0];
+    expect(createPopupSrc).toContain('createPopup:');
+    expect(createPopupSrc).toContain('url: chrome.runtime.getURL');
+    expect(createPopupSrc).toContain("type: 'popup'");
+    expect(createPopupSrc).not.toContain('chrome.tabs.create');
+  });
+
   test('web and extension adapters expose openMainRoute with an allowlist', () => {
     const webSrc = fs.readFileSync(
       path.join(__dirname, '../../../platform/web.js'),

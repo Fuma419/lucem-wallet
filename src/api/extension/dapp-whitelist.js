@@ -10,12 +10,17 @@
  * Storage-only: depends on the platform adapter and the `STORAGE` key, with no
  * dependency back on `index.js`, so it can be imported anywhere without risking
  * an import cycle. `index.js` re-exports these names to preserve its public API.
+ *
+ * CIP-30 sessions are also bound to the account that was selected at `enable()`
+ * (Eternl-style). Reads and signing then use that account even if the user
+ * later switches in the popup.
  */
-import platform from '../../platform';
 import { STORAGE } from '../../config/config';
-
-const getStorage = (key) => platform.storage.get(key);
-const setStorage = (item) => platform.storage.set(item);
+import {
+  getCurrentAccountIndex,
+  getStorage,
+  setStorage,
+} from './storage';
 
 export const getWhitelisted = async () => {
   const result = await getStorage(STORAGE.whitelisted);
@@ -29,15 +34,64 @@ export const isWhitelisted = async (_origin) => {
   return access;
 };
 
-export const setWhitelisted = async (origin) => {
-  let whitelisted = await getWhitelisted();
-  whitelisted ? whitelisted.push(origin) : (whitelisted = [origin]);
-  return await setStorage({ [STORAGE.whitelisted]: whitelisted });
+const readDappAccounts = async () => {
+  const stored = await getStorage(STORAGE.dappAccounts);
+  return stored && typeof stored === 'object' ? stored : {};
+};
+
+/**
+ * Account storage index this origin was connected with, or `null` if unbound
+ * (legacy whitelist entries from before session binding).
+ */
+export const getDappAccountIndex = async (origin) => {
+  if (!origin) return null;
+  const dappAccounts = await readDappAccounts();
+  if (!Object.prototype.hasOwnProperty.call(dappAccounts, origin)) {
+    return null;
+  }
+  const value = dappAccounts[origin];
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  return value;
+};
+
+export const setWhitelisted = async (origin, accountIndex) => {
+  const whitelisted = await getWhitelisted();
+  if (!whitelisted.includes(origin)) {
+    whitelisted.push(origin);
+  }
+  const dappAccounts = { ...(await readDappAccounts()) };
+  const index =
+    accountIndex !== undefined && accountIndex !== null && accountIndex !== ''
+      ? accountIndex
+      : await getCurrentAccountIndex();
+  dappAccounts[origin] = index;
+  return setStorage({
+    [STORAGE.whitelisted]: whitelisted,
+    [STORAGE.dappAccounts]: dappAccounts,
+  });
 };
 
 export const removeWhitelisted = async (origin) => {
   const whitelisted = await getWhitelisted();
   const index = whitelisted.indexOf(origin);
-  whitelisted.splice(index, 1);
-  return await setStorage({ [STORAGE.whitelisted]: whitelisted });
+  if (index >= 0) whitelisted.splice(index, 1);
+  const dappAccounts = { ...(await readDappAccounts()) };
+  delete dappAccounts[origin];
+  return setStorage({
+    [STORAGE.whitelisted]: whitelisted,
+    [STORAGE.dappAccounts]: dappAccounts,
+  });
+};
+
+/**
+ * First CIP-30 `enable()` after a legacy whitelist grant: snapshot the
+ * currently selected account so later switches do not mix UTxOs/keys.
+ */
+export const bindCip30AccountIfUnbound = async (origin) => {
+  const existing = await getDappAccountIndex(origin);
+  if (existing == null) {
+    await setWhitelisted(origin);
+  }
 };

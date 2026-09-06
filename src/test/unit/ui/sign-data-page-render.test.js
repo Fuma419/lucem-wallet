@@ -35,6 +35,11 @@ jest.mock('../../../api/extension', () => ({
     name: 'Account 0',
     avatar: 'a',
   }),
+  resolveCip30Account: jest.fn().mockResolvedValue({
+    index: 0,
+    name: 'Account 0',
+    avatar: 'a',
+  }),
   isHW: (...args) => mockIsHW(...args),
   signData: jest.fn(),
   signDataCIP30: (...args) => mockSignDataCIP30(...args),

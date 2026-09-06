@@ -86,6 +86,24 @@ export const getCurrentAccount = async () => {
   return accountToNetworkSpecific(accounts[currentAccountIndex], network);
 };
 
+/**
+ * Network-specific account for a storage slot. Missing / unknown index falls
+ * back to the UI-selected account (legacy CIP-30 sessions with no binding).
+ */
+export const getAccountByIndex = async (index) => {
+  if (index === undefined || index === null || index === '') {
+    return getCurrentAccount();
+  }
+  const accounts = await getStorage(STORAGE.accounts);
+  const network = await getNetwork();
+  const row =
+    accounts?.[index] ?? accounts?.[String(index)] ?? accounts?.[Number(index)];
+  if (!row || !network) {
+    return getCurrentAccount();
+  }
+  return accountToNetworkSpecific(row, network);
+};
+
 /** True when encrypted storage has at least one account (wallet bootstrap / routing). */
 export const hasStoredAccounts = async () => {
   const accounts = await getStorage(STORAGE.accounts);

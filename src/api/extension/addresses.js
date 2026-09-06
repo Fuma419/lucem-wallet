@@ -43,25 +43,25 @@ import { toCip30AddressHex } from './cip30-address';
 export { toCip30AddressHex } from './cip30-address';
 
 
-export const getAddress = async () => {
+export const getAddress = async (account) => {
   await Loader.load();
-  const currentAccount = await getCurrentAccount();
+  const currentAccount = account || (await getCurrentAccount());
   // Primary receive address remains external index 0 (CIP-30 / QR default).
   return currentAccount.paymentAddr;
 };
 
-export const getCip30Address = async () => {
+export const getCip30Address = async (account) => {
   await Loader.load();
-  return toCip30AddressHex(await getAddress());
+  return toCip30AddressHex(await getAddress(account));
 };
 
 /**
- * Enabled CIP-1852 external payment addresses for the current account
+ * Enabled CIP-1852 external payment addresses for an account
  * (index 0 plus any Advanced multi-address indices).
  */
-export const getEnabledPaymentAddresses = async () => {
+export const getEnabledPaymentAddresses = async (account) => {
   await Loader.load();
-  const currentAccount = await getCurrentAccount();
+  const currentAccount = account || (await getCurrentAccount());
   const network = await getNetwork();
   const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
   return listEnabledPaymentAddresses(
@@ -76,8 +76,8 @@ export const getEnabledPaymentAddresses = async () => {
  * spend from (enabled external + internal). Unique; external index 0 first.
  * getChangeAddress stays primary receive (external index 0) via getAddress.
  */
-export const getCip30UsedAddresses = async () => {
-  const rows = await getEnabledPaymentAddresses();
+export const getCip30UsedAddresses = async (account) => {
+  const rows = await getEnabledPaymentAddresses(account);
   const seen = new Set();
   const out = [];
   for (const row of rows) {
@@ -428,22 +428,22 @@ export const disableExternalAddressIndex = async (addressIndex) => {
   return nextExternal;
 };
 
-export const getRewardAddress = async () => {
+export const getRewardAddress = async (account) => {
   await Loader.load();
-  const currentAccount = await getCurrentAccount();
+  const currentAccount = account || (await getCurrentAccount());
   // Wallet-internal: full Bech32 stake address (Koios / UI). CIP-30 uses
   // getCip30RewardAddress() so dApps receive hex CBOR.
   return currentAccount.rewardAddr;
 };
 
-export const getCip30RewardAddress = async () => {
+export const getCip30RewardAddress = async (account) => {
   await Loader.load();
-  return toCip30AddressHex(await getRewardAddress());
+  return toCip30AddressHex(await getRewardAddress(account));
 };
 
-export const getPubDRepKey = async () => {
+export const getPubDRepKey = async (account) => {
   await Loader.load();
-  const currentAccount = await getCurrentAccount();
+  const currentAccount = account || (await getCurrentAccount());
   if (!currentAccount?.publicKey) {
     throw APIError.InternalError;
   }
@@ -483,9 +483,9 @@ export const getAccountDRepId = async () => {
   return { drepKeyHashHex, drepIdCip129, drepIdLegacy };
 };
 
-export const getRegisteredPubStakeKeys = async () => {
+export const getRegisteredPubStakeKeys = async (account) => {
   await Loader.load();
-  const currentAccount = await getCurrentAccount();
+  const currentAccount = account || (await getCurrentAccount());
   if (!currentAccount?.publicKey || !currentAccount?.rewardAddr) {
     throw APIError.InternalError;
   }
@@ -505,12 +505,12 @@ export const getRegisteredPubStakeKeys = async () => {
   return isRegistered ? [stakePubKeyHex] : [];
 };
 
-export const getUnregisteredPubStakeKeys = async () => {
-  const registeredKeys = await getRegisteredPubStakeKeys();
+export const getUnregisteredPubStakeKeys = async (account) => {
+  const registeredKeys = await getRegisteredPubStakeKeys(account);
   if (registeredKeys.length > 0) {
     return [];
   }
-  const currentAccount = await getCurrentAccount();
+  const currentAccount = account || (await getCurrentAccount());
   if (!currentAccount?.publicKey) {
     throw APIError.InternalError;
   }

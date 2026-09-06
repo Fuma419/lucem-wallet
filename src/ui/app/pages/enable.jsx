@@ -1,7 +1,7 @@
 import { CheckIcon } from '@chakra-ui/icons';
 import { Box, Button, Flex, Stack, Text, Image } from '@chakra-ui/react';
 import React from 'react';
-import { setWhitelisted } from '../../../api/extension';
+import { getCurrentAccountIndex, setWhitelisted } from '../../../api/extension';
 import { APIError } from '../../../config/config';
 import platform from '../../../platform';
 import Account from '../components/account';
@@ -45,7 +45,7 @@ const Enable = ({ request, controller }) => {
   };
 
   const grant = async () => {
-    await setWhitelisted(request.origin);
+    await setWhitelisted(request.origin, await getCurrentAccountIndex());
     await controller.returnData({ data: true });
     window.close();
   };

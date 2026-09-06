@@ -5,14 +5,19 @@ import Logo from '../../../assets/img/icon-128.svg';
 import { Box, Flex, Text, Image, useColorModeValue } from '@chakra-ui/react';
 import AvatarLoader from './avatarLoader';
 
-const Account = React.forwardRef(({ leadingSlot, ...props }, ref) => {
+const Account = React.forwardRef(({ leadingSlot, account: accountProp, ...props }, ref) => {
   const avatarBg = useColorModeValue('gray.100', 'gray.900');
   const panelBg = useColorModeValue('gray.100', 'gray.800');
   const nameColor = useColorModeValue('gray.900', 'white');
-  const [account, setAccount] = React.useState(null);
+  const [account, setAccount] = React.useState(accountProp || null);
 
-  const initAccount = () =>
-    getCurrentAccount().then((account) => setAccount(account));
+  const initAccount = () => {
+    if (accountProp) {
+      setAccount(accountProp);
+      return Promise.resolve();
+    }
+    return getCurrentAccount().then((next) => setAccount(next));
+  };
 
   React.useImperativeHandle(ref, () => ({
     updateAccount() {
@@ -22,7 +27,7 @@ const Account = React.forwardRef(({ leadingSlot, ...props }, ref) => {
 
   React.useEffect(() => {
     initAccount();
-  }, []);
+  }, [accountProp]);
 
   return (
     <Box

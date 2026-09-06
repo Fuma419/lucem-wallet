@@ -46,9 +46,10 @@ test('should have whitelist', async () => {
   await setWhitelisted('https://www.hodlerstaking.com/');
   const store = await getStorage();
   expect(store).toHaveProperty(STORAGE.whitelisted);
+  expect(store).toHaveProperty(STORAGE.dappAccounts);
   const whitelisted = await getWhitelisted();
   expect(whitelisted).toEqual(['https://www.hodlerstaking.com/']);
-  expect(Object.keys(store).length).toBe(6);
+  expect(Object.keys(store).length).toBe(7);
 });
 
 test('account structure is correct', async () => {

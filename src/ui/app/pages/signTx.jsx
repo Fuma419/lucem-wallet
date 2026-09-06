@@ -3,13 +3,16 @@ import platform from '../../../platform';
 import {
   bytesAddressToBinary,
   extractKeyOrScriptHash,
-  getCurrentAccount,
+  getNetwork,
   getSpecificUtxo,
   getUtxos,
   isHW,
+  paymentKeyHashesForSigning,
+  resolveCip30Account,
   signTx,
   signTxHW,
 } from '../../../api/extension';
+import { listEnabledPaymentAddresses } from '../../../api/extension/multi-address';
 import Account from '../components/account';
 import { Scrollbars } from '../components/scrollbar';
 import ConfirmModal from '../components/confirmModal';
@@ -20,7 +23,7 @@ import MiddleEllipsis from 'react-middle-ellipsis';
 import AssetFingerprint from '@emurgo/cip14-js';
 import Copy from '../components/copy';
 import { valueToAssets } from '../../../api/util';
-import { TxSignError } from '../../../config/config';
+import { TxSignError, NETWORKD_ID_NUMBER } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
 import {
   Box,
@@ -55,6 +58,7 @@ import {
 } from '../../../api/keystone-cardano';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
 import { appendRequiredKeyHashesFromCerts } from '../../../api/tx/cert-required-key-hashes';
+import { ownedInputPaymentHashes } from '../../../api/tx/cip30-input-key-hashes';
 import useSurfaceColors from '../hooks/useSurfaceColors';
 import {
   outputDatumHashHex,
@@ -87,7 +91,7 @@ const SignTxKeystoneInline = ({
     (async () => {
       try {
         await Loader.load();
-        const utxos = await getUtxos();
+        const utxos = await getUtxos(undefined, undefined, account);
         const { ur, sdk } = await buildKeystoneCardanoSignRequest({
           txHex,
           account,
@@ -126,7 +130,7 @@ const SignTxKeystoneInline = ({
       const witnessSet = Loader.Cardano.TransactionWitnessSet.from_bytes(
         Buffer.from(wh, 'hex')
       );
-      const utxos = await getUtxos();
+      const utxos = await getUtxos(undefined, undefined, account);
       assertKeystoneWitnessesCover(
         Loader.Cardano,
         rawTx,
@@ -316,6 +320,27 @@ const SignTx = ({ request, controller }) => {
         inputValue = inputValue.checked_add(utxo.output().amount());
       }
     }
+    const network = await getNetwork();
+    const networkId = NETWORKD_ID_NUMBER[network.name || network.id];
+    const ownAddrs = new Set();
+    const ownHashBech32 = new Set();
+    if (account.paymentAddr) ownAddrs.add(account.paymentAddr);
+    if (account.paymentKeyHashBech32) {
+      ownHashBech32.add(account.paymentKeyHashBech32);
+    }
+    try {
+      for (const row of listEnabledPaymentAddresses(
+        Loader.Cardano,
+        account,
+        networkId
+      )) {
+        if (row.paymentAddr) ownAddrs.add(row.paymentAddr);
+        if (row.paymentKeyHashBech32) ownHashBech32.add(row.paymentKeyHashBech32);
+      }
+    } catch (/** @type {any} */ _) {
+      /* keep primary address only */
+    }
+
     const outputs = tx.body().outputs();
     let ownOutputValue = Loader.Cardano.Value.new_with_assets(
       Loader.Cardano.BigNum.from_str('0'),
@@ -329,8 +354,8 @@ const SignTx = ({ request, controller }) => {
       const hashBech32 = await extractKeyOrScriptHash(
         Buffer.from(output.address().to_bytes()).toString('hex')
       );
-      // making sure funds at mangled addresses are also included
-      if (hashBech32 === account.paymentKeyHashBech32) {
+      // Own outputs: primary, change, extra receive, and mangled same-vkey addrs.
+      if (ownAddrs.has(address) || ownHashBech32.has(hashBech32)) {
         //own
         ownOutputValue = ownOutputValue.checked_add(output.amount());
       } else {
@@ -449,9 +474,6 @@ const SignTx = ({ request, controller }) => {
     const baseAddr = Loader.Cardano.BaseAddress.from_address(
       Loader.Cardano.Address.from_bech32(account.paymentAddr)
     );
-    const paymentKeyHash = Buffer.from(
-      baseAddr.payment_cred().to_keyhash().to_bytes()
-    ).toString('hex');
     const stakeKeyHash = Buffer.from(
       baseAddr.stake_cred().to_keyhash().to_bytes()
     ).toString('hex');
@@ -466,27 +488,11 @@ const SignTx = ({ request, controller }) => {
         ).toString('hex')
       : null;
 
-    //get key hashes from inputs
-    const inputs = tx.body().inputs();
-    for (let i = 0; i < inputs.len(); i++) {
-      const input = inputs.get(i);
-      const txHash = Buffer.from(input.transaction_id().to_bytes()).toString(
-        'hex'
-      );
-      const index = parseInt(input.index().toString());
-      if (
-        utxos.some(
-          (utxo) =>
-            Buffer.from(utxo.input().transaction_id().to_bytes()).toString(
-              'hex'
-            ) === txHash && parseInt(utxo.input().index().toString()) === index
-        )
-      ) {
-        requiredKeyHashes.push(paymentKeyHash);
-      } else {
-        requiredKeyHashes.push('<not_owned_key_hash>');
-      }
-    }
+    // Payment hashes from UTxOs this account actually owns (change / extra
+    // receive), not always the primary external-0 key.
+    requiredKeyHashes.push(
+      ...ownedInputPaymentHashes(Loader.Cardano, tx, utxos)
+    );
 
     const txBody = tx.body();
     if (txBody.certs()) {
@@ -558,7 +564,10 @@ const SignTx = ({ request, controller }) => {
 
     const keyKind = [];
     requiredKeyHashes = [...new Set(requiredKeyHashes)];
-    if (requiredKeyHashes.includes(paymentKeyHash)) keyKind.push('payment');
+    const paymentHashes = new Set(await paymentKeyHashesForSigning(account));
+    if (requiredKeyHashes.some((h) => paymentHashes.has(h))) {
+      keyKind.push('payment');
+    }
     if (requiredKeyHashes.includes(stakeKeyHash)) keyKind.push('stake');
     if (drepKeyHash && requiredKeyHashes.includes(drepKeyHash)) keyKind.push('drep');
     if (keyKind.length <= 0) {
@@ -638,9 +647,11 @@ const SignTx = ({ request, controller }) => {
   const getInfo = async () => {
     try {
       await Loader.load();
-      const currentAccount = await getCurrentAccount();
+      let currentAccount = await resolveCip30Account(request.origin);
       setAccount(currentAccount);
-      let utxos = await getUtxos();
+      let utxos = await getUtxos(undefined, undefined, currentAccount);
+      currentAccount = await resolveCip30Account(request.origin);
+      setAccount(currentAccount);
       const txHex = String(request.data.tx || '').replace(/^0x/i, '');
       const tx = Loader.Cardano.Transaction.from_hex(txHex);
       setTx(txHex);
@@ -759,7 +770,7 @@ const SignTx = ({ request, controller }) => {
         </Box>
       ) : (
         <Box {...shellProps}>
-          <Account background={pageBg} shadow="none" />
+          <Account account={account} background={pageBg} shadow="none" />
           <Box
             data-testid="sign-tx-form-scroll"
             flex="1"

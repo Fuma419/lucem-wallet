@@ -12,6 +12,15 @@
 
 export const LEDGER_USB_ID = 'usb';
 
+/** Ledger VID (`@ledgerhq/devices` ledgerUSBVendorId). Nano S also used ST 0x2581. */
+export const LEDGER_USB_VENDOR_ID = 0x2c97;
+const LEDGER_USB_LEGACY_VENDOR_ID = 0x2581;
+
+export const LEDGER_USB_DEVICE_FILTERS = [
+  { vendorId: LEDGER_USB_VENDOR_ID },
+  { vendorId: LEDGER_USB_LEGACY_VENDOR_ID },
+];
+
 export const isLedgerUsbId = (id) => {
   if (id == null) return false;
   const s = String(id).toLowerCase();
@@ -138,6 +147,79 @@ const loadUsb = async () => {
   return cachedUsb;
 };
 
+const ensureDeviceClosed = async (device) => {
+  if (device && device.opened && typeof device.close === 'function') {
+    try {
+      await device.close();
+    } catch (/** @type {any} */ _) {
+      // already closed
+    }
+  }
+};
+
+/**
+ * Show the Chrome USB/HID chooser. Must be the first `await` in the tap
+ * handler — any import() before requestDevice() drops the user-gesture on
+ * Android Chrome and the picker never appears.
+ * @returns {Promise<{ usbDevice?: *, hidDevice?: * }>}
+ */
+export const pickLedgerUsbDevice = async () => {
+  if (!hasLedgerUsbApi()) {
+    throw new Error(ledgerUsbUnavailableMessage());
+  }
+  const android = isAndroidLike();
+  const useUsb = hasWebUsb() && (android || !hasWebHid());
+  if (useUsb) {
+    const usbDevice = await navigator.usb.requestDevice({
+      filters: LEDGER_USB_DEVICE_FILTERS,
+    });
+    return { usbDevice };
+  }
+  if (hasWebHid()) {
+    const hidDevices = await navigator.hid.requestDevice({
+      filters: LEDGER_USB_DEVICE_FILTERS,
+    });
+    const hidDevice = Array.isArray(hidDevices) ? hidDevices[0] : hidDevices;
+    if (!hidDevice) {
+      throw new DOMException('No device selected.', 'NotFoundError');
+    }
+    return { hidDevice };
+  }
+  const usbDevice = await navigator.usb.requestDevice({
+    filters: LEDGER_USB_DEVICE_FILTERS,
+  });
+  return { usbDevice };
+};
+
+/**
+ * Open a device the user already picked (gesture-safe path).
+ * @param {{ usbDevice?: any, hidDevice?: any }} picked
+ */
+export const openPickedLedgerDevice = async (picked = {}) => {
+  if (picked.usbDevice) {
+    await ensureDeviceClosed(picked.usbDevice);
+    const Transport = await loadUsb();
+    return Transport.open(picked.usbDevice);
+  }
+  if (picked.hidDevice) {
+    await ensureDeviceClosed(picked.hidDevice);
+    const Transport = await loadHid();
+    return Transport.open(picked.hidDevice);
+  }
+  throw new Error('Missing Ledger device');
+};
+
+export const closeLedgerApp = async (appAda) => {
+  if (!appAda || !appAda.transport || typeof appAda.transport.close !== 'function') {
+    return;
+  }
+  try {
+    await appAda.transport.close();
+  } catch (/** @type {any} */ _) {
+    // already closed
+  }
+};
+
 /**
  * Open a transport. `prompt: true` always shows the browser USB/HID picker
  * (needed on first connect). Never use Transport.create() — it hangs.
@@ -207,12 +289,15 @@ const openUsbTransport = async (opts = {}) => {
 /**
  * Open a Ledger transport for import or signing.
  * USB when `id` is the USB sentinel; otherwise WebBLE (`bleDevice` or `id`).
- * @param {{ id?: string, bleDevice?: { gatt?: unknown }, promptUsb?: boolean }} [opts]
+ * @param {{ id?: string, bleDevice?: { gatt?: unknown }, promptUsb?: boolean, usbDevice?: any, hidDevice?: any }} [opts]
  */
 export const openLedgerTransport = async (opts = {}) => {
-  const { id, bleDevice, promptUsb } = opts;
+  const { id, bleDevice, promptUsb, usbDevice, hidDevice } = opts;
   if (bleDevice && bleDevice.gatt) {
     return openBleTransport(bleDevice);
+  }
+  if (usbDevice || hidDevice) {
+    return openPickedLedgerDevice({ usbDevice, hidDevice });
   }
   if (isLedgerUsbId(id)) {
     return openUsbTransport({ prompt: Boolean(promptUsb) });

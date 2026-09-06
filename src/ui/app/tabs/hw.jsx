@@ -65,11 +65,13 @@ import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import { ensureCameraPermission } from '../../../platform/capacitor';
 import {
   LEDGER_USB_ID,
+  closeLedgerApp,
   countGrantedLedgerUsbDevices,
   hasLedgerUsbApi,
   isAndroidLike,
   isLedgerUsbId,
   ledgerUsbUnavailableMessage,
+  pickLedgerUsbDevice,
   preloadLedgerUsbTransports,
 } from '../../../api/extension/ledger-transport';
 
@@ -306,12 +308,16 @@ const App = () => {
                   id,
                   keystoneAccounts,
                   keystoneExportProfile,
+                  usbDevice,
+                  hidDevice,
                 }) => {
                   data.current = {
                     device,
                     id,
                     keystoneAccounts,
                     keystoneExportProfile,
+                    usbDevice,
+                    hidDevice,
                   };
                   setTab(1);
                 }}
@@ -334,6 +340,7 @@ const ConnectHW = ({ onConfirm }) => {
     hasLedgerUsbApi() ? 'usb' : 'ble'
   );
   const [usbGranted, setUsbGranted] = React.useState(0);
+  const [usbPromptOpen, setUsbPromptOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const [keystoneStep, setKeystoneStep] = React.useState('pick');
@@ -978,7 +985,7 @@ const ConnectHW = ({ onConfirm }) => {
               ? usbGranted > 0
                 ? 'Chrome already allowed a USB device. Unlock the Ledger, open the Cardano app, then tap Continue.'
                 : isAndroidLike()
-                  ? 'A plugged-in Ledger does not show as connected until Chrome asks for USB access. Use a USB-OTG adapter, unlock the device, open the Cardano app, then tap Continue and pick it in the list that appears.'
+                  ? 'A plugged-in Ledger does not show as connected until Chrome asks for USB access. Use a USB-OTG adapter, unlock the device, open the Cardano app, then tap Continue. Chrome should open a USB list right away — pick the Ledger.'
                   : 'Plug in Ledger over USB, unlock it, open the Cardano app, then tap Continue and pick the device in the browser list.'
               : ledgerUsbUnavailableMessage()
             : ledgerBluetoothHelpText()}
@@ -1034,9 +1041,11 @@ const ConnectHW = ({ onConfirm }) => {
           {error}
         </Text>
       )}
-      {isLoading && selected === HW.ledger && ledgerLink === 'usb' && (
+      {(usbPromptOpen || isLoading) &&
+        selected === HW.ledger &&
+        ledgerLink === 'usb' && (
         <Text mt={3} fontSize="sm" color="whiteAlpha.800" textAlign="center" maxW="320px">
-          Waiting for USB permission. Pick your Ledger in the system list. If nothing appears, tap Continue again.
+          Pick your Ledger in the list Chrome shows. If nothing appears, tap Continue again.
         </Text>
       )}
       <Button
@@ -1046,8 +1055,8 @@ const ConnectHW = ({ onConfirm }) => {
         w="100%"
         maxW="300px"
         minH="44px"
-        isDisabled={isLoading || !selected}
-        isLoading={isLoading}
+        isDisabled={!selected || (isLoading && ledgerLink !== 'usb')}
+        isLoading={isLoading && ledgerLink !== 'usb'}
         mt={8}
         alignSelf="center"
         display="inline-flex"
@@ -1065,43 +1074,74 @@ const ConnectHW = ({ onConfirm }) => {
             setScanError('');
             return;
           }
-          setIsLoading(true);
-          try {
-            if (ledgerLink === 'usb') {
-              if (!hasLedgerUsbApi()) {
-                setError(ledgerUsbUnavailableMessage());
-                setIsLoading(false);
-                return;
-              }
-              try {
-                await initHW({
-                  device: selected,
-                  id: LEDGER_USB_ID,
-                  promptUsb: true,
-                });
-              } catch (e) {
-                if (e && (e.name === 'NotFoundError' || e.name === 'AbortError')) {
-                  setError(
-                    'No Ledger was chosen. Tap Continue and pick it in the browser USB list. Unlock the device and open the Cardano app first.'
-                  );
-                } else if (e && e.name === 'SecurityError') {
-                  setError(
-                    'Chrome blocked the USB picker (needs a direct tap). Tap Continue again. If you are in the Lucem app, open the Lucem website in Chrome instead.'
-                  );
-                } else {
-                  setError(
-                    e && e.message
-                      ? String(e.message)
-                      : 'Cardano app not opened or USB connection failed.'
-                  );
-                }
-                setIsLoading(false);
-                return;
-              }
-              onConfirm({ device: selected, id: LEDGER_USB_ID });
-              setIsLoading(false);
+          if (ledgerLink === 'usb') {
+            if (!hasLedgerUsbApi()) {
+              setError(ledgerUsbUnavailableMessage());
               return;
             }
+            // First await must be requestDevice() so Chrome still has the tap gesture.
+            setUsbPromptOpen(true);
+            let picked;
+            try {
+              picked = await pickLedgerUsbDevice();
+            } catch (e) {
+              setUsbPromptOpen(false);
+              if (e && (e.name === 'NotFoundError' || e.name === 'AbortError')) {
+                setError(
+                  'No Ledger was chosen. Tap Continue and pick it in the browser USB list. Unlock the device and open the Cardano app first.'
+                );
+              } else if (e && e.name === 'SecurityError') {
+                setError(
+                  'Chrome blocked the USB picker (needs a direct tap). Tap Continue again. If you are in the Lucem app, open the Lucem website in Chrome instead.'
+                );
+              } else {
+                setError(
+                  e && e.message
+                    ? String(e.message)
+                    : 'Could not open the USB device picker.'
+                );
+              }
+              return;
+            }
+            setUsbPromptOpen(false);
+            setIsLoading(true);
+            try {
+              const appAda = await initHW({
+                device: selected,
+                id: LEDGER_USB_ID,
+                usbDevice: picked.usbDevice,
+                hidDevice: picked.hidDevice,
+              });
+              await closeLedgerApp(appAda);
+              onConfirm({
+                device: selected,
+                id: LEDGER_USB_ID,
+                usbDevice: picked.usbDevice,
+                hidDevice: picked.hidDevice,
+              });
+            } catch (e) {
+              if (e && (e.name === 'NotFoundError' || e.name === 'AbortError')) {
+                setError(
+                  'No Ledger was chosen. Tap Continue and pick it in the browser USB list. Unlock the device and open the Cardano app first.'
+                );
+              } else if (e && e.name === 'SecurityError') {
+                setError(
+                  'Chrome blocked the USB picker (needs a direct tap). Tap Continue again. If you are in the Lucem app, open the Lucem website in Chrome instead.'
+                );
+              } else {
+                setError(
+                  e && e.message
+                    ? String(e.message)
+                    : 'Cardano app not opened or USB connection failed.'
+                );
+              }
+            } finally {
+              setIsLoading(false);
+            }
+            return;
+          }
+          setIsLoading(true);
+          try {
             if (
               isIosLikeWithoutWebBluetooth() ||
               !hasWebBluetoothRequestDevice()
@@ -1401,7 +1441,12 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   };
                 });
               } else if (device === HW.ledger) {
-                const appAda = await initHW({ device, id });
+                const appAda = await initHW({
+                  device,
+                  id,
+                  usbDevice: data.usbDevice,
+                  hidDevice: data.hidDevice,
+                });
                 const ledgerKeys = await appAda.getExtendedPublicKeys({
                   paths: accountIndexes.map((index) => [
                     HARDENED + 1852,

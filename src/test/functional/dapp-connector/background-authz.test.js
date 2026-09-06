@@ -37,12 +37,15 @@ jest.mock('../../../api/extension', () => ({
   verifyPayload: jest.fn(),
   verifyTx: jest.fn(),
   extractKeyHash: jest.fn(),
+  resolveCip30Account: jest.fn(),
+  bindCip30AccountIfUnbound: jest.fn(),
 }));
 
 const { Messaging } = require('../../../api/messaging');
 const { APIError, METHOD, SENDER, TARGET } = require('../../../config/config');
 
 const bytes = (hex) => ({ to_bytes: () => Buffer.from(hex, 'hex') });
+const CIP30_ACCOUNT = { index: 0, name: 'Account 0' };
 
 let extension;
 
@@ -106,6 +109,8 @@ beforeEach(() => {
   extension.verifyPayload.mockReset().mockReturnValue(true);
   extension.verifyTx.mockReset().mockResolvedValue(undefined);
   extension.extractKeyHash.mockReset().mockResolvedValue('key_hash');
+  extension.resolveCip30Account.mockReset().mockResolvedValue(CIP30_ACCOUNT);
+  extension.bindCip30AccountIfUnbound.mockReset().mockResolvedValue(undefined);
   Messaging.sendToPopupInternal.mockReset().mockResolvedValue({ data: 'approved' });
 });
 

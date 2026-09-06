@@ -142,29 +142,55 @@ export const Messaging = {
     });
   },
   sendToPopupInternal: function (tab, request) {
-    return new Promise((res, rej) => {
-      chrome.runtime.onConnect.addListener(function connetionHandler(port) {
-        port.onMessage.addListener(function messageHandler(response) {
+    return new Promise((res) => {
+      let settled = false;
+      const settle = (payload) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        res(payload);
+      };
+      const refused = () =>
+        settle({
+          target: TARGET,
+          sender: SENDER.extension,
+          error: APIError.Refused,
+        });
+
+      const connectionHandler = (port) => {
+        if (port.name !== 'internal-background-popup-communication') return;
+        const senderTabId = port.sender && port.sender.tab && port.sender.tab.id;
+        if (tab.id != null && senderTabId != null && senderTabId !== tab.id) {
+          return;
+        }
+        const messageHandler = (response) => {
           if (response.tabId !== tab.id) return;
           if (response.method === METHOD.requestData) {
             port.postMessage(request);
           }
           if (response.method === METHOD.returnData) {
-            res(response);
+            settle(response);
           }
-          chrome.tabs.onRemoved.addListener(function tabsHandler(tabId) {
-            if (tab.id !== tabId) return;
-            res({
-              target: TARGET,
-              sender: SENDER.extension,
-              error: APIError.Refused,
-            });
-            chrome.runtime.onConnect.removeListener(connetionHandler);
-            port.onMessage.removeListener(messageHandler);
-            chrome.tabs.onRemoved.removeListener(tabsHandler);
-          });
+        };
+        port.onMessage.addListener(messageHandler);
+        port.onDisconnect.addListener(function disconnectHandler() {
+          port.onMessage.removeListener(messageHandler);
+          port.onDisconnect.removeListener(disconnectHandler);
         });
-      });
+      };
+
+      const tabsHandler = (tabId) => {
+        if (tab.id !== tabId) return;
+        refused();
+      };
+
+      const cleanup = () => {
+        chrome.runtime.onConnect.removeListener(connectionHandler);
+        chrome.tabs.onRemoved.removeListener(tabsHandler);
+      };
+
+      chrome.runtime.onConnect.addListener(connectionHandler);
+      chrome.tabs.onRemoved.addListener(tabsHandler);
     });
   },
   createInternalController: () => new InternalController(),

@@ -105,6 +105,7 @@ describe('getUtxos keeps ADA on undiscovered change/receive addresses', () => {
 
     // Discovery has only ever enabled external index 0.
     mockGetCurrentAccount.mockResolvedValue({
+      index: 0,
       paymentAddr: external0.paymentAddr,
       paymentKeyHash: external0.paymentKeyHash,
       publicKey: publicKeyHex,
@@ -137,6 +138,30 @@ describe('getUtxos keeps ADA on undiscovered change/receive addresses', () => {
     const written = mockSetStorage.mock.calls.at(-1)?.[0];
     expect(written).toBeDefined();
     expect(Object.values(written)[0]['0'].internalIndices).toContain(0);
+  });
+
+  test('persists discovered change indices on the CIP-30 bound account', async () => {
+    mockKoiosRequest.mockResolvedValue([utxoRow(internal0.paymentAddr)]);
+    mockGetStorage.mockResolvedValue({
+      0: { externalIndices: [0] },
+      1: { externalIndices: [0] },
+    });
+    const bound = {
+      index: 1,
+      paymentAddr: external0.paymentAddr,
+      paymentKeyHash: external0.paymentKeyHash,
+      publicKey: publicKeyHex,
+      rewardAddr: REWARD_ADDR,
+      externalIndices: [0],
+      internalIndices: [],
+    };
+
+    await getUtxos(undefined, undefined, bound);
+
+    const written = mockSetStorage.mock.calls.at(-1)?.[0];
+    const accounts = Object.values(written)[0];
+    expect(accounts['1'].internalIndices).toContain(0);
+    expect(accounts['0'].internalIndices).toBeUndefined();
   });
 
   test('still keeps UTxOs on the enabled primary address', async () => {

@@ -9,13 +9,16 @@ import {
   isWhitelisted,
   setWhitelisted,
   removeWhitelisted,
+  getDappAccountIndex,
+  bindCip30AccountIfUnbound,
 } from '../../../../api/extension/dapp-whitelist';
+import { STORAGE } from '../../../../config/config';
 
 const DAPP = 'https://dapp.example';
 const OTHER = 'https://other.example';
 
 beforeEach(() => {
-  global.mockStore = {};
+  global.mockStore = { [STORAGE.currentAccount]: 2 };
 });
 
 describe('dApp whitelist', () => {
@@ -61,5 +64,39 @@ describe('dApp whitelist', () => {
     );
     await expect(isWhitelisted('https://dapp.exampl')).resolves.toBe(false);
     await expect(isWhitelisted(`${DAPP}/path`)).resolves.toBe(false);
+  });
+
+  test('setWhitelisted does not duplicate an origin already on the list', async () => {
+    await setWhitelisted(DAPP, 0);
+    await setWhitelisted(DAPP, 0);
+    await expect(getWhitelisted()).resolves.toEqual([DAPP]);
+  });
+
+  test('setWhitelisted binds the origin to the given account index', async () => {
+    await setWhitelisted(DAPP, 1);
+    await expect(getDappAccountIndex(DAPP)).resolves.toBe(1);
+    await expect(getDappAccountIndex(OTHER)).resolves.toBeNull();
+  });
+
+  test('setWhitelisted without an index uses the currently selected account', async () => {
+    await setWhitelisted(DAPP);
+    await expect(getDappAccountIndex(DAPP)).resolves.toBe(2);
+  });
+
+  test('removeWhitelisted drops the origin and its account binding', async () => {
+    await setWhitelisted(DAPP, 1);
+    await removeWhitelisted(DAPP);
+    await expect(getDappAccountIndex(DAPP)).resolves.toBeNull();
+    await expect(isWhitelisted(DAPP)).resolves.toBe(false);
+  });
+
+  test('bindCip30AccountIfUnbound snapshots the current account only once', async () => {
+    await setWhitelisted(DAPP, 0);
+    global.mockStore[STORAGE.currentAccount] = 9;
+    await bindCip30AccountIfUnbound(DAPP);
+    await expect(getDappAccountIndex(DAPP)).resolves.toBe(0);
+
+    await bindCip30AccountIfUnbound(OTHER);
+    await expect(getDappAccountIndex(OTHER)).resolves.toBe(9);
   });
 });

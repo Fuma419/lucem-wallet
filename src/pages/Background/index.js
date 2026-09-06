@@ -1,4 +1,5 @@
 import {
+  bindCip30AccountIfUnbound,
   createPopup,
   extractKeyHash,
   getCip30Address,
@@ -12,6 +13,7 @@ import {
   getPubDRepKey,
   getUtxos,
   isWhitelisted,
+  resolveCip30Account,
   submitTx,
   verifyPayload,
   verifyTx,
@@ -27,6 +29,19 @@ import {
 } from '../../config/config';
 
 const app = Messaging.createBackgroundController();
+
+const inflightSignTx = new Map();
+
+const signTxDedupeKey = (request) =>
+  `${request.origin || ''}:${request.data?.partialSign ? '1' : '0'}:${
+    request.data?.tx || ''
+  }`;
+
+/**
+ * CIP-30 methods must use the account bound at `enable()`, not the account
+ * currently selected in the extension popup.
+ */
+const cip30Account = (request) => resolveCip30Account(request.origin);
 
 /**
  * listens to requests from the web context
@@ -65,24 +80,24 @@ const requireWhitelist = (handler) => async (request, sendResponse) => {
 
 app.add(
   METHOD.getBalance,
-  requireWhitelist((request, sendResponse) => {
-    getBalance()
-      .then((value) => {
-        sendResponse({
-          id: request.id,
-          data: Buffer.from(value.to_bytes()).toString('hex'),
-          target: TARGET,
-          sender: SENDER.extension,
-        });
-      })
-      .catch((e) => {
-        sendResponse({
-          id: request.id,
-          error: e,
-          target: TARGET,
-          sender: SENDER.extension,
-        });
+  requireWhitelist(async (request, sendResponse) => {
+    try {
+      const account = await cip30Account(request);
+      const value = await getBalance(account);
+      sendResponse({
+        id: request.id,
+        data: Buffer.from(value.to_bytes()).toString('hex'),
+        target: TARGET,
+        sender: SENDER.extension,
       });
+    } catch (e) {
+      sendResponse({
+        id: request.id,
+        error: e,
+        target: TARGET,
+        sender: SENDER.extension,
+      });
+    }
   })
 );
 
@@ -90,6 +105,7 @@ app.add(METHOD.enable, async (request, sendResponse) => {
   isWhitelisted(request.origin)
     .then(async (whitelisted) => {
       if (whitelisted) {
+        await bindCip30AccountIfUnbound(request.origin);
         sendResponse({
           id: request.id,
           data: true,
@@ -157,7 +173,8 @@ app.add(METHOD.isEnabled, (request, sendResponse) => {
 app.add(
   METHOD.getAddress,
   requireWhitelist(async (request, sendResponse) => {
-    const address = await getCip30Address();
+    const account = await cip30Account(request);
+    const address = await getCip30Address(account);
     if (address) {
       sendResponse({
         id: request.id,
@@ -180,7 +197,8 @@ app.add(
   METHOD.getUsedAddresses,
   requireWhitelist(async (request, sendResponse) => {
     try {
-      const addresses = await getCip30UsedAddresses();
+      const account = await cip30Account(request);
+      const addresses = await getCip30UsedAddresses(account);
       sendResponse({
         id: request.id,
         data: addresses,
@@ -201,7 +219,8 @@ app.add(
 app.add(
   METHOD.getRewardAddress,
   requireWhitelist(async (request, sendResponse) => {
-    const address = await getCip30RewardAddress();
+    const account = await cip30Account(request);
+    const address = await getCip30RewardAddress(account);
     if (address) {
       sendResponse({
         id: request.id,
@@ -224,7 +243,8 @@ app.add(
   METHOD.getRegisteredPubStakeKeys,
   requireWhitelist(async (request, sendResponse) => {
     try {
-      const keys = await getRegisteredPubStakeKeys();
+      const account = await cip30Account(request);
+      const keys = await getRegisteredPubStakeKeys(account);
       sendResponse({
         id: request.id,
         data: keys,
@@ -246,7 +266,8 @@ app.add(
   METHOD.getUnregisteredPubStakeKeys,
   requireWhitelist(async (request, sendResponse) => {
     try {
-      const keys = await getUnregisteredPubStakeKeys();
+      const account = await cip30Account(request);
+      const keys = await getUnregisteredPubStakeKeys(account);
       sendResponse({
         id: request.id,
         data: keys,
@@ -268,7 +289,8 @@ app.add(
   METHOD.getPubDRepKey,
   requireWhitelist(async (request, sendResponse) => {
     try {
-      const key = await getPubDRepKey();
+      const account = await cip30Account(request);
+      const key = await getPubDRepKey(account);
       sendResponse({
         id: request.id,
         data: key,
@@ -288,53 +310,57 @@ app.add(
 
 app.add(
   METHOD.getUtxos,
-  requireWhitelist((request, sendResponse) => {
-    getUtxos(request.data.amount, request.data.paginate)
-      .then((utxos) => {
-        utxos = utxos
-          ? utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'))
-          : null;
-        sendResponse({
-          id: request.id,
-          data: utxos,
-          target: TARGET,
-          sender: SENDER.extension,
-        });
-      })
-      .catch((e) => {
-        sendResponse({
-          id: request.id,
-          error: e,
-          target: TARGET,
-          sender: SENDER.extension,
-        });
+  requireWhitelist(async (request, sendResponse) => {
+    try {
+      const account = await cip30Account(request);
+      let utxos = await getUtxos(
+        request.data.amount,
+        request.data.paginate,
+        account
+      );
+      utxos = utxos
+        ? utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'))
+        : null;
+      sendResponse({
+        id: request.id,
+        data: utxos,
+        target: TARGET,
+        sender: SENDER.extension,
       });
+    } catch (e) {
+      sendResponse({
+        id: request.id,
+        error: e,
+        target: TARGET,
+        sender: SENDER.extension,
+      });
+    }
   })
 );
 
 app.add(
   METHOD.getCollateral,
-  requireWhitelist((request, sendResponse) => {
-    getCollateral(request.data)
-      .then((utxos) => {
-        utxos = utxos
-          ? utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'))
-          : null;
-        sendResponse({
-          id: request.id,
-          data: utxos,
-          target: TARGET,
-          sender: SENDER.extension,
-        });
-      })
-      .catch((e) => {
-        sendResponse({
-          id: request.id,
-          error: e,
-          target: TARGET,
-          sender: SENDER.extension,
-        });
+  requireWhitelist(async (request, sendResponse) => {
+    try {
+      const account = await cip30Account(request);
+      let utxos = await getCollateral(request.data, account);
+      utxos = utxos
+        ? utxos.map((utxo) => Buffer.from(utxo.to_bytes()).toString('hex'))
+        : null;
+      sendResponse({
+        id: request.id,
+        data: utxos,
+        target: TARGET,
+        sender: SENDER.extension,
       });
+    } catch (e) {
+      sendResponse({
+        id: request.id,
+        error: e,
+        target: TARGET,
+        sender: SENDER.extension,
+      });
+    }
   })
 );
 
@@ -448,9 +474,17 @@ app.add(
   requireWhitelist(async (request, sendResponse) => {
     try {
       await verifyTx(request.data.tx);
-      const response = await createPopup(POPUP.internal)
-        .then((tab) => Messaging.sendToPopupInternal(tab, request))
-        .then((response) => response);
+      const key = signTxDedupeKey(request);
+      let pending = inflightSignTx.get(key);
+      if (!pending) {
+        pending = createPopup(POPUP.internal)
+          .then((tab) => Messaging.sendToPopupInternal(tab, request))
+          .finally(() => {
+            inflightSignTx.delete(key);
+          });
+        inflightSignTx.set(key, pending);
+      }
+      const response = await pending;
 
       if (response.data) {
         sendResponse({

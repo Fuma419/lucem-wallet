@@ -100,6 +100,10 @@ describe('CIP-30 sign UI refresh — structural contracts', () => {
     expect(signSrc).toContain('ref.current.openModal(account.index)');
     expect(signSrc).toContain('signTxHW');
     expect(signSrc).toContain('signTx(');
+    expect(signSrc).toContain('resolveCip30Account');
+    expect(signSrc).toContain('ownedInputPaymentHashes');
+    expect(signSrc).not.toContain('<not_owned_key_hash>');
+    expect(signSrc).toContain('account={account}');
   });
 
   test('account header orbs use the extension sizing class', () => {

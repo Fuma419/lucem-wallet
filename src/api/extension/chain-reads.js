@@ -230,19 +230,21 @@ export const resolveStakeAddressFromPaymentAddress = async (paymentAddr) => {
 };
 
 /**
- * Stake account for the current wallet: prefer stored rewardAddr, otherwise
+ * Stake account for a wallet: prefer stored rewardAddr, otherwise
  * resolve it from the primary payment address through the chain API.
  */
-export const getAccountStakeAddress = async () => {
-  const stored = await getRewardAddress();
+export const getAccountStakeAddress = async (account) => {
+  if (account?.rewardAddr) return account.rewardAddr;
+  const stored = await getRewardAddress(account);
   if (stored) return stored;
-  const paymentAddr = await getAddress();
+  const paymentAddr = account?.paymentAddr || (await getAddress(account));
   return resolveStakeAddressFromPaymentAddress(paymentAddr);
 };
 
-export const getBalance = async () => {
+export const getBalance = async (account) => {
   await Loader.load();
-  const stakeAddress = await getAccountStakeAddress();
+  const currentAccount = account || (await getCurrentAccount());
+  const stakeAddress = await getAccountStakeAddress(currentAccount);
   let utxos = [];
   if (stakeAddress) {
     // `_extended: true` is required on Koios — otherwise asset_list is null and
@@ -258,7 +260,7 @@ export const getBalance = async () => {
   }
   // Fallback: enabled payment addresses only (legacy / no stake addr).
   if (utxos.length === 0 && !stakeAddress) {
-    const paymentAddresses = await getEnabledPaymentAddresses();
+    const paymentAddresses = await getEnabledPaymentAddresses(currentAccount);
     const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
     if (addressList.length === 0) {
       return Loader.Cardano.Value.new(Loader.Cardano.BigNum.from_str('0'));
@@ -903,13 +905,18 @@ export const getSpecificUtxo = async (txHash, txId) => {
  *
  * @param {string} [amount] - cbor value
  * @param {{ page: number, limit: number }} [paginate]
+ * @param {object} [account] - CIP-30 bound account; defaults to UI selection
  * @returns
  */
-export const getUtxos = async (amount = undefined, paginate = undefined) => {
-  const currentAccount = await getCurrentAccount();
-  const paymentAddresses = await getEnabledPaymentAddresses();
+export const getUtxos = async (
+  amount = undefined,
+  paginate = undefined,
+  account = undefined
+) => {
+  const currentAccount = account || (await getCurrentAccount());
+  const paymentAddresses = await getEnabledPaymentAddresses(currentAccount);
   const addressList = paymentAddresses.map((a) => a.paymentAddr).filter(Boolean);
-  const stakeAddress = await getAccountStakeAddress();
+  const stakeAddress = await getAccountStakeAddress(currentAccount);
 
   let result;
   if (stakeAddress) {
@@ -1015,14 +1022,17 @@ export const getUtxos = async (amount = undefined, paginate = undefined) => {
         mergedInt.length !== prevInt.length ||
         mergedInt.some((n, i) => n !== prevInt[i]);
       if (extChanged || intChanged) {
-        const currentIndex = await getCurrentAccountIndex();
+        const persistIndex =
+          currentAccount.index !== undefined && currentAccount.index !== null
+            ? currentAccount.index
+            : await getCurrentAccountIndex();
         const accounts = await getStorage(STORAGE.accounts);
-        if (accounts?.[currentIndex]) {
-          if (!Array.isArray(accounts[currentIndex].userExternalIndices)) {
-            accounts[currentIndex].userExternalIndices = prevExt;
+        if (accounts?.[persistIndex]) {
+          if (!Array.isArray(accounts[persistIndex].userExternalIndices)) {
+            accounts[persistIndex].userExternalIndices = prevExt;
           }
-          accounts[currentIndex].externalIndices = mergedExt;
-          accounts[currentIndex].internalIndices = mergedInt;
+          accounts[persistIndex].externalIndices = mergedExt;
+          accounts[persistIndex].internalIndices = mergedInt;
           await setStorage({ [STORAGE.accounts]: { ...accounts } });
           invalidateReadCache();
         }
@@ -1131,11 +1141,15 @@ const decodeCollateralCoinCbor = (hex) => {
 /**
  * CIP-30 getCollateral (deprecated; prefer CIP-40 collateral return).
  * @param {{ amount?: string|number }|string|number|undefined} params
+ * @param {object} [account] - CIP-30 bound account; defaults to UI selection
  * @returns {Promise<any[]|null>}
  */
-export const getCollateral = async (params) => {
+export const getCollateral = async (params, account) => {
   await Loader.load();
-  const currentIndex = await getCurrentAccountIndex();
+  const currentIndex =
+    account?.index !== undefined && account?.index !== null
+      ? account.index
+      : await getCurrentAccountIndex();
   const accounts = await getStorage(STORAGE.accounts);
   const currentAccount = accounts[currentIndex];
   const network = await getNetwork();
@@ -1185,7 +1199,11 @@ export const getCollateral = async (params) => {
     }
   }
 
-  const utxos = await getUtxos();
+  const utxos = await getUtxos(
+    undefined,
+    undefined,
+    account || (await getCurrentAccount())
+  );
   if (!utxos || utxos.length <= 0) return null;
 
   const candidates = utxos.map((utxo) => {

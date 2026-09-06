@@ -4,11 +4,19 @@
 
 jest.mock('@ledgerhq/hw-transport-webhid', () => ({
   __esModule: true,
-  default: { create: jest.fn(async () => ({ kind: 'hid' })) },
+  default: {
+    create: jest.fn(async () => ({ kind: 'hid-create' })),
+    openConnected: jest.fn(async () => null),
+    request: jest.fn(async () => ({ kind: 'hid' })),
+  },
 }));
 jest.mock('@ledgerhq/hw-transport-webusb', () => ({
   __esModule: true,
-  default: { create: jest.fn(async () => ({ kind: 'usb' })) },
+  default: {
+    create: jest.fn(async () => ({ kind: 'usb-create' })),
+    openConnected: jest.fn(async () => null),
+    request: jest.fn(async () => ({ kind: 'usb' })),
+  },
 }));
 jest.mock('@ledgerhq/hw-transport-web-ble', () => ({
   __esModule: true,
@@ -29,10 +37,15 @@ describe('ledger USB / BLE transport', () => {
   const originalHid = navigator.hid;
   const originalUsb = navigator.usb;
   const originalBluetooth = navigator.bluetooth;
+  const originalUa = navigator.userAgent;
 
   afterEach(() => {
     TransportWebHID.create.mockClear();
+    TransportWebHID.openConnected.mockClear();
+    TransportWebHID.request.mockClear();
     TransportWebUSB.create.mockClear();
+    TransportWebUSB.openConnected.mockClear();
+    TransportWebUSB.request.mockClear();
     TransportWebBLE.open.mockClear();
     if (originalHid === undefined) delete navigator.hid;
     else navigator.hid = originalHid;
@@ -40,6 +53,10 @@ describe('ledger USB / BLE transport', () => {
     else navigator.usb = originalUsb;
     if (originalBluetooth === undefined) delete navigator.bluetooth;
     else navigator.bluetooth = originalBluetooth;
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: originalUa,
+    });
   });
 
   test('isLedgerUsbId recognizes stored USB sentinels', () => {
@@ -57,18 +74,40 @@ describe('ledger USB / BLE transport', () => {
     expect(hasLedgerUsbApi()).toBe(true);
   });
 
-  test('openLedgerTransport uses WebHID for the USB sentinel', async () => {
+  test('openLedgerTransport prompts HID and never calls create()', async () => {
     Object.defineProperty(navigator, 'hid', {
       configurable: true,
       value: { requestDevice: jest.fn() },
     });
-    const t = await openLedgerTransport({ id: LEDGER_USB_ID });
+    const t = await openLedgerTransport({
+      id: LEDGER_USB_ID,
+      promptUsb: true,
+    });
     expect(t).toEqual({ kind: 'hid' });
-    expect(TransportWebHID.create).toHaveBeenCalled();
+    expect(TransportWebHID.request).toHaveBeenCalled();
+    expect(TransportWebHID.create).not.toHaveBeenCalled();
+    expect(TransportWebHID.openConnected).not.toHaveBeenCalled();
     expect(TransportWebBLE.open).not.toHaveBeenCalled();
   });
 
-  test('openLedgerTransport falls back to WebUSB when HID fails', async () => {
+  test('reconnect tries openConnected before requesting a picker', async () => {
+    Object.defineProperty(navigator, 'hid', {
+      configurable: true,
+      value: { requestDevice: jest.fn() },
+    });
+    TransportWebHID.openConnected.mockResolvedValueOnce({ kind: 'hid-existing' });
+    const t = await openLedgerTransport({ id: LEDGER_USB_ID });
+    expect(t).toEqual({ kind: 'hid-existing' });
+    expect(TransportWebHID.openConnected).toHaveBeenCalled();
+    expect(TransportWebHID.request).not.toHaveBeenCalled();
+    expect(TransportWebHID.create).not.toHaveBeenCalled();
+  });
+
+  test('Android uses WebUSB request, not HID create', async () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0',
+    });
     Object.defineProperty(navigator, 'hid', {
       configurable: true,
       value: { requestDevice: jest.fn() },
@@ -77,10 +116,11 @@ describe('ledger USB / BLE transport', () => {
       configurable: true,
       value: { requestDevice: jest.fn() },
     });
-    TransportWebHID.create.mockRejectedValueOnce(new Error('hid busy'));
-    const t = await openLedgerTransport({ id: 'usb' });
+    const t = await openLedgerTransport({ id: 'usb', promptUsb: true });
     expect(t).toEqual({ kind: 'usb' });
-    expect(TransportWebUSB.create).toHaveBeenCalled();
+    expect(TransportWebUSB.request).toHaveBeenCalled();
+    expect(TransportWebHID.request).not.toHaveBeenCalled();
+    expect(TransportWebUSB.create).not.toHaveBeenCalled();
   });
 
   test('openLedgerTransport opens BLE when a gatt device is passed', async () => {

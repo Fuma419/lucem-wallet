@@ -65,9 +65,12 @@ import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import { ensureCameraPermission } from '../../../platform/capacitor';
 import {
   LEDGER_USB_ID,
+  countGrantedLedgerUsbDevices,
   hasLedgerUsbApi,
+  isAndroidLike,
   isLedgerUsbId,
   ledgerUsbUnavailableMessage,
+  preloadLedgerUsbTransports,
 } from '../../../api/extension/ledger-transport';
 
 const ledgerBleRequestOptions = () => {
@@ -330,6 +333,7 @@ const ConnectHW = ({ onConfirm }) => {
   const [ledgerLink, setLedgerLink] = React.useState(() =>
     hasLedgerUsbApi() ? 'usb' : 'ble'
   );
+  const [usbGranted, setUsbGranted] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const [keystoneStep, setKeystoneStep] = React.useState('pick');
@@ -342,6 +346,36 @@ const ConnectHW = ({ onConfirm }) => {
   );
   const [keystoneExportProfile, setKeystoneExportProfile] = React.useState(null);
   const [keystonePendingScan, setKeystonePendingScan] = React.useState(null);
+
+  React.useEffect(() => {
+    if (hasLedgerUsbApi()) {
+      preloadLedgerUsbTransports().catch(() => {});
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (selected !== HW.ledger || ledgerLink !== 'usb') return undefined;
+    preloadLedgerUsbTransports().catch(() => {});
+    let cancelled = false;
+    const refreshGranted = async () => {
+      const n = await countGrantedLedgerUsbDevices();
+      if (!cancelled) setUsbGranted(n);
+    };
+    refreshGranted();
+    const usb = typeof navigator !== 'undefined' ? navigator.usb : null;
+    if (usb && typeof usb.addEventListener === 'function') {
+      usb.addEventListener('connect', refreshGranted);
+      usb.addEventListener('disconnect', refreshGranted);
+      return () => {
+        cancelled = true;
+        usb.removeEventListener('connect', refreshGranted);
+        usb.removeEventListener('disconnect', refreshGranted);
+      };
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [selected, ledgerLink]);
 
   const keystoneRequestedIndices = React.useMemo(() => {
     return Object.keys(keystoneAccountChecks)
@@ -941,7 +975,11 @@ const ConnectHW = ({ onConfirm }) => {
         >
           {ledgerLink === 'usb'
             ? hasLedgerUsbApi()
-              ? 'Plug in Ledger over USB, unlock it, open the Cardano app, then Continue and pick the device in the browser dialog. Chrome or Edge on the Lucem web app (HTTPS).'
+              ? usbGranted > 0
+                ? 'Chrome already allowed a USB device. Unlock the Ledger, open the Cardano app, then tap Continue.'
+                : isAndroidLike()
+                  ? 'A plugged-in Ledger does not show as connected until Chrome asks for USB access. Use a USB-OTG adapter, unlock the device, open the Cardano app, then tap Continue and pick it in the list that appears.'
+                  : 'Plug in Ledger over USB, unlock it, open the Cardano app, then tap Continue and pick the device in the browser list.'
               : ledgerUsbUnavailableMessage()
             : ledgerBluetoothHelpText()}
         </Text>
@@ -991,6 +1029,16 @@ const ConnectHW = ({ onConfirm }) => {
           </Button>
         </Box>
       )}
+      {error && (
+        <Text mt={4} fontSize="sm" color="red.200" textAlign="center" maxW="320px">
+          {error}
+        </Text>
+      )}
+      {isLoading && selected === HW.ledger && ledgerLink === 'usb' && (
+        <Text mt={3} fontSize="sm" color="whiteAlpha.800" textAlign="center" maxW="320px">
+          Waiting for USB permission. Pick your Ledger in the system list. If nothing appears, tap Continue again.
+        </Text>
+      )}
       <Button
         type="button"
         variant="unstyled"
@@ -1026,10 +1074,20 @@ const ConnectHW = ({ onConfirm }) => {
                 return;
               }
               try {
-                await initHW({ device: selected, id: LEDGER_USB_ID });
+                await initHW({
+                  device: selected,
+                  id: LEDGER_USB_ID,
+                  promptUsb: true,
+                });
               } catch (e) {
                 if (e && (e.name === 'NotFoundError' || e.name === 'AbortError')) {
-                  setError('No device selected or pairing was cancelled.');
+                  setError(
+                    'No Ledger was chosen. Tap Continue and pick it in the browser USB list. Unlock the device and open the Cardano app first.'
+                  );
+                } else if (e && e.name === 'SecurityError') {
+                  setError(
+                    'Chrome blocked the USB picker (needs a direct tap). Tap Continue again. If you are in the Lucem app, open the Lucem website in Chrome instead.'
+                  );
                 } else {
                   setError(
                     e && e.message
@@ -1101,12 +1159,6 @@ const ConnectHW = ({ onConfirm }) => {
         alignSelf="center"
         onClick={() => leaveSetupFlow()}
       />
-
-      {error && (
-        <Text mt={3} fontSize="xs" color="red.200" textAlign="center">
-          {error}
-        </Text>
-      )}
     </Box>
   );
 };

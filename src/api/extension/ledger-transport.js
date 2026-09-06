@@ -1,9 +1,10 @@
 /**
  * Ledger transports for the Lucem web app / PWA (HTTPS).
  *
- * USB uses WebHID (desktop Chrome/Edge) then WebUSB (Android Chrome).
- * Bluetooth stays on WebBLE. Stored USB accounts use id `usb` so reconnect
- * does not go through BLE (`ledger-usb-0` round-trips via indexToHw).
+ * USB uses WebUSB on Android Chrome and WebHID (then WebUSB) on desktop.
+ * Never call Transport.create() — it listen()s with no timeout and hangs
+ * when the Nano is already plugged in and not yet permitted.
+ * Bluetooth stays on WebBLE. Stored USB accounts use id `usb`.
  *
  * Transports are imported on demand so Jest can load wallet code without
  * parsing Ledger's export maps.
@@ -28,6 +29,17 @@ export const hasWebUsb = () =>
   typeof navigator.usb.requestDevice === 'function';
 
 export const hasLedgerUsbApi = () => hasWebHid() || hasWebUsb();
+
+export const isAndroidLike = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /Android/i.test(navigator.userAgent || '');
+};
+
+const isNativeShell = () =>
+  typeof window !== 'undefined' &&
+  window.Capacitor &&
+  typeof window.Capacitor.isNativePlatform === 'function' &&
+  window.Capacitor.isNativePlatform();
 
 export const hasWebBluetoothRequestDevice = () =>
   typeof navigator !== 'undefined' &&
@@ -55,8 +67,12 @@ const isUserCancelled = (err) => {
   );
 };
 
-export const ledgerUsbUnavailableMessage = () =>
-  'Ledger USB needs Chrome or Edge over HTTPS (the Lucem web app), with the device unlocked and the Cardano app open. Safari and Firefox do not expose WebHID/WebUSB. On iPhone/iPad use Keystone with QR, or a Bluetooth Ledger on desktop.';
+export const ledgerUsbUnavailableMessage = () => {
+  if (isNativeShell()) {
+    return 'Ledger USB does not work inside the Lucem app. Open the Lucem website in Chrome on this phone, plug in the device with a USB-OTG adapter, unlock it, open the Cardano app, then tap Continue so Chrome can show the USB list.';
+  }
+  return 'Ledger USB needs Chrome or Edge over HTTPS (the Lucem web app), with the device unlocked and the Cardano app open. Safari, Firefox, and in-app browsers do not expose WebUSB. On iPhone/iPad use Keystone with QR.';
+};
 
 export const ledgerBluetoothUnavailableMessage = () => {
   if (isIosBrowserWithoutWebBluetooth()) {
@@ -72,6 +88,74 @@ const bleMissingMessage = () =>
 
 const defaultExport = (mod) => (mod && (mod.default || mod));
 
+/** @type {any} */
+let cachedHid = null;
+/** @type {any} */
+let cachedUsb = null;
+
+export const preloadLedgerUsbTransports = async () => {
+  const jobs = [];
+  if (hasWebUsb()) {
+    jobs.push(
+      import('@ledgerhq/hw-transport-webusb').then((m) => {
+        cachedUsb = defaultExport(m);
+      })
+    );
+  }
+  if (hasWebHid() && !isAndroidLike()) {
+    jobs.push(
+      import('@ledgerhq/hw-transport-webhid').then((m) => {
+        cachedHid = defaultExport(m);
+      })
+    );
+  }
+  await Promise.all(jobs);
+};
+
+export const countGrantedLedgerUsbDevices = async () => {
+  if (!hasWebUsb() || typeof navigator.usb.getDevices !== 'function') {
+    return 0;
+  }
+  try {
+    const devices = await navigator.usb.getDevices();
+    return Array.isArray(devices) ? devices.length : 0;
+  } catch (/** @type {any} */ _) {
+    return 0;
+  }
+};
+
+const loadHid = async () => {
+  if (!cachedHid) {
+    cachedHid = defaultExport(await import('@ledgerhq/hw-transport-webhid'));
+  }
+  return cachedHid;
+};
+
+const loadUsb = async () => {
+  if (!cachedUsb) {
+    cachedUsb = defaultExport(await import('@ledgerhq/hw-transport-webusb'));
+  }
+  return cachedUsb;
+};
+
+/**
+ * Open a transport. `prompt: true` always shows the browser USB/HID picker
+ * (needed on first connect). Never use Transport.create() — it hangs.
+ * @param {any} Transport
+ * @param {boolean} prompt
+ */
+const openPickedTransport = async (Transport, prompt) => {
+  if (!prompt) {
+    try {
+      const connected = await Transport.openConnected();
+      if (connected) return connected;
+    } catch (/** @type {any} */ err) {
+      if (isUserCancelled(err)) throw err;
+    }
+  }
+  return Transport.request();
+};
+
 const openBleTransport = async (device) => {
   const TransportWebBLE = defaultExport(
     await import('@ledgerhq/hw-transport-web-ble')
@@ -79,28 +163,34 @@ const openBleTransport = async (device) => {
   return TransportWebBLE.open(device);
 };
 
-const openUsbTransport = async () => {
+/**
+ * @param {{ prompt?: boolean }} [opts]
+ */
+const openUsbTransport = async (opts = {}) => {
+  const prompt = Boolean(opts.prompt);
   if (!hasLedgerUsbApi()) {
     throw new Error(ledgerUsbUnavailableMessage());
   }
   const errors = [];
-  if (hasWebHid()) {
+  const android = isAndroidLike();
+  const tryHid = hasWebHid() && !android;
+  const tryUsb = hasWebUsb();
+
+  const attempts = android
+    ? [
+        tryUsb ? loadUsb : null,
+        tryHid ? loadHid : null,
+      ]
+    : [
+        tryHid ? loadHid : null,
+        tryUsb ? loadUsb : null,
+      ];
+
+  for (const load of attempts) {
+    if (!load) continue;
     try {
-      const TransportWebHID = defaultExport(
-        await import('@ledgerhq/hw-transport-webhid')
-      );
-      return await TransportWebHID.create();
-    } catch (/** @type {any} */ err) {
-      if (isUserCancelled(err)) throw err;
-      errors.push(err);
-    }
-  }
-  if (hasWebUsb()) {
-    try {
-      const TransportWebUSB = defaultExport(
-        await import('@ledgerhq/hw-transport-webusb')
-      );
-      return await TransportWebUSB.create();
+      const Transport = await load();
+      return await openPickedTransport(Transport, prompt);
     } catch (/** @type {any} */ err) {
       if (isUserCancelled(err)) throw err;
       errors.push(err);
@@ -110,22 +200,22 @@ const openUsbTransport = async () => {
   throw new Error(
     last && last.message
       ? String(last.message)
-      : 'Could not open Ledger over USB. Unlock the device, open the Cardano app, and try again.'
+      : 'Could not open Ledger over USB. Unlock the device, open the Cardano app, tap Continue, and pick it in the browser list.'
   );
 };
 
 /**
  * Open a Ledger transport for import or signing.
  * USB when `id` is the USB sentinel; otherwise WebBLE (`bleDevice` or `id`).
- * @param {{ id?: string, bleDevice?: { gatt?: unknown } }} [opts]
+ * @param {{ id?: string, bleDevice?: { gatt?: unknown }, promptUsb?: boolean }} [opts]
  */
 export const openLedgerTransport = async (opts = {}) => {
-  const { id, bleDevice } = opts;
+  const { id, bleDevice, promptUsb } = opts;
   if (bleDevice && bleDevice.gatt) {
     return openBleTransport(bleDevice);
   }
   if (isLedgerUsbId(id)) {
-    return openUsbTransport();
+    return openUsbTransport({ prompt: Boolean(promptUsb) });
   }
   if (id != null && String(id) !== '') {
     if (typeof navigator === 'undefined' || !navigator.bluetooth) {

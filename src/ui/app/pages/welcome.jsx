@@ -16,7 +16,6 @@ import { WalletSetupButtons } from '../components/walletSetupFlow';
 
 const Welcome = () => {
   const navigate = useNavigate();
-  const pageBg = useColorModeValue('#f4f6fb', '#121212');
   const pageFg = useColorModeValue('#1a2233', '#ffffff');
   const [hasWallet, setHasWallet] = React.useState(false);
 
@@ -31,7 +30,7 @@ const Welcome = () => {
       display="flex"
       flexDirection="column"
       alignItems="stretch"
-      bg={pageBg}
+      bg="transparent"
       color={pageFg}
       className="lucem-wallet-main-column lucem-welcome-root"
     >

@@ -108,11 +108,11 @@ describe('governance page and wallet network button wiring', () => {
     // Rounded badge matching the Send/Receive button shape (not the old U-shape/rectangle)
     expect(css).toMatch(/\.network-banner[\s\S]*border-top:\s*thin\s+solid/);
     expect(css).toMatch(/\.network-banner[\s\S]*border-radius:\s*1rem/);
-    // Testnet indicators: blue (preprod) and emerald (preview) — distinct from
-    // Send (purple) / Receive (cyan), mainnet lime, and Accounts orange
-    expect(css).toMatch(/\.network-banner-mainnet[\s\S]*rgba\(206,\s*250,\s*0/);
-    expect(css).toMatch(/\.network-banner-preprod[\s\S]*rgba\(0,\s*122,\s*255/);
-    expect(css).toMatch(/\.network-banner-preview[\s\S]*rgba\(0,\s*230,\s*118/);
+    // Network chrome: lime (mainnet), cyan (preprod), magenta (preview) —
+    // same mapping as the Magic Delegation Portal.
+    expect(css).toMatch(/\.network-banner-mainnet[\s\S]*--lucem-lime/);
+    expect(css).toMatch(/\.network-banner-preprod[\s\S]*--lucem-cyan/);
+    expect(css).toMatch(/\.network-banner-preview[\s\S]*--lucem-magenta/);
   });
 
   test('governance page uses API-backed governance loading and confirm modal signing flow', () => {
@@ -159,7 +159,7 @@ describe('staking and governance theme surfaces', () => {
       path.join(__dirname, '../../../ui/app/hooks/useSurfaceColors.js'),
       'utf8'
     );
-    expect(hookSrc).toContain("useColorModeValue('#f4f6fb', '#080808')");
+    expect(hookSrc).toMatch(/pageBg:\s*'transparent'/);
     expect(hookSrc).toContain('panelShadow');
     // panelBorder used to be transparent in both modes, which left cards with no
     // edge at all against a near-black page. See dark-surface-contrast.test.js.

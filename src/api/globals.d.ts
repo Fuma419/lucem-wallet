@@ -16,6 +16,8 @@ declare global {
 
   interface Navigator {
     bluetooth?: any;
+    hid?: any;
+    usb?: any;
   }
 }
 

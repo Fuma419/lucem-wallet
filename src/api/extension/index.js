@@ -32,8 +32,8 @@ import {
   toAssetUnit,
   Data,
 } from '../util';
-import TransportWebBLE from '@ledgerhq/hw-transport-web-ble';
 import Ada from '@cardano-foundation/ledgerjs-hw-app-cardano';
+import { openLedgerTransport } from './ledger-transport';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { milkomedaNetworks } from '@dcspark/milkomeda-constants';
 import { KOIOS_REQUESTS, addressTxsIndicatesHistory } from '../koios-endpoints';
@@ -1365,35 +1365,9 @@ export const getHwAccounts = (accounts, { device, id }) => {
 
 export const isHW = (accountIndex) => isHardwareAccountIndex(accountIndex);
 
-const isIosBrowserWithoutWebBluetooth = () => {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent || '';
-  if (/iPhone|iPod|iPad/i.test(ua)) return true;
-  if (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) {
-    return true;
-  }
-  return false;
-};
-
 export const initHW = async ({ device, id, bleDevice }) => {
   if (device == HW.ledger) {
-    const bluetooth =
-      typeof navigator !== 'undefined' ? navigator.bluetooth : undefined;
-    if (!bluetooth) {
-      throw new Error(
-        isIosBrowserWithoutWebBluetooth()
-          ? 'Ledger Bluetooth is not supported on iPhone or iPad — iOS browsers do not expose Web Bluetooth. Use Lucem on a desktop or laptop with Chrome or Edge and a Bluetooth Ledger, or use Keystone with QR on this device.'
-          : 'Web Bluetooth is not available. Use Chrome or Edge over HTTPS (or localhost), enable Bluetooth, and use a Bluetooth-capable Ledger (e.g. Nano X, Flex, Stax). Extension pages may not support Web Bluetooth — try the Lucem web app if connection fails.'
-      );
-    }
-    let transport;
-    if (bleDevice && bleDevice.gatt) {
-      transport = await TransportWebBLE.open(bleDevice);
-    } else if (id != null && String(id) !== '') {
-      transport = await TransportWebBLE.open(String(id));
-    } else {
-      throw new Error('Missing Ledger Bluetooth device');
-    }
+    const transport = await openLedgerTransport({ id, bleDevice });
     const appAda = new Ada(transport);
     await appAda.getVersion(); // check if Ledger has Cardano app opened
     return appAda;

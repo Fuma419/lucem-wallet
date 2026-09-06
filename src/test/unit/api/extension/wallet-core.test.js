@@ -285,6 +285,13 @@ describe('indexToHw', () => {
     expect(hw.account).toBe(2);
   });
 
+  test('parses ledger USB sentinel id without hex-encoding', () => {
+    const hw = indexToHw('ledger-usb-0');
+    expect(hw.device).toBe('ledger');
+    expect(hw.id).toBe('usb');
+    expect(hw.account).toBe(0);
+  });
+
   test('parses ledger account index (Bluetooth id as hex utf-8)', () => {
     const oid = 'opaque-ble-device-id';
     const hex = Buffer.from(oid, 'utf8').toString('hex');

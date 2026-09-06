@@ -60,9 +60,15 @@ import {
   KEYSTONE_ANIMATED_QR_OPTIONS,
   KEYSTONE_DERIVATION,
 } from '../../../api/keystone-cardano';
-import { MdBluetooth } from 'react-icons/md';
+import { MdBluetooth, MdUsb } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import { ensureCameraPermission } from '../../../platform/capacitor';
+import {
+  LEDGER_USB_ID,
+  hasLedgerUsbApi,
+  isLedgerUsbId,
+  ledgerUsbUnavailableMessage,
+} from '../../../api/extension/ledger-transport';
 
 const ledgerBleRequestOptions = () => {
   const uuids = getBluetoothServiceUuids();
@@ -321,6 +327,9 @@ const App = () => {
 
 const ConnectHW = ({ onConfirm }) => {
   const [selected, setSelected] = React.useState('');
+  const [ledgerLink, setLedgerLink] = React.useState(() =>
+    hasLedgerUsbApi() ? 'usb' : 'ble'
+  );
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const [keystoneStep, setKeystoneStep] = React.useState('pick');
@@ -773,14 +782,17 @@ const ConnectHW = ({ onConfirm }) => {
           }}
           onClick={() => {
             setSelected(HW.ledger);
-            if (
-              isIosLikeWithoutWebBluetooth() ||
-              !hasWebBluetoothRequestDevice()
-            ) {
-              setError(ledgerBluetoothUnavailableMessage());
+            if (hasLedgerUsbApi()) {
+              setLedgerLink('usb');
+              setError('');
               return;
             }
-            setError('');
+            if (hasWebBluetoothRequestDevice()) {
+              setLedgerLink('ble');
+              setError('');
+              return;
+            }
+            setError(ledgerBluetoothUnavailableMessage());
           }}
         >
           <Box
@@ -927,17 +939,57 @@ const ConnectHW = ({ onConfirm }) => {
           fontSize="sm"
           color="whiteAlpha.800"
         >
-          {ledgerBluetoothHelpText()}
+          {ledgerLink === 'usb'
+            ? hasLedgerUsbApi()
+              ? 'Plug in Ledger over USB, unlock it, open the Cardano app, then Continue and pick the device in the browser dialog. Chrome or Edge on the Lucem web app (HTTPS).'
+              : ledgerUsbUnavailableMessage()
+            : ledgerBluetoothHelpText()}
         </Text>
       )}
       {selected === HW.ledger && (
-        <Icon
-          as={MdBluetooth}
-          boxSize={7}
-          mt="6"
-          color={HW_LIME}
-          alignSelf="center"
-        />
+        <Box
+          mt={4}
+          display="flex"
+          gap={2}
+          justifyContent="center"
+          flexWrap="wrap"
+        >
+          <Button
+            type="button"
+            size="sm"
+            variant={ledgerLink === 'usb' ? 'solid' : 'outline'}
+            colorScheme="yellow"
+            leftIcon={<Icon as={MdUsb} />}
+            isDisabled={!hasLedgerUsbApi()}
+            onClick={() => {
+              setLedgerLink('usb');
+              setError(hasLedgerUsbApi() ? '' : ledgerUsbUnavailableMessage());
+            }}
+          >
+            USB
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={ledgerLink === 'ble' ? 'solid' : 'outline'}
+            colorScheme="yellow"
+            leftIcon={<Icon as={MdBluetooth} />}
+            isDisabled={
+              isIosLikeWithoutWebBluetooth() || !hasWebBluetoothRequestDevice()
+            }
+            onClick={() => {
+              setLedgerLink('ble');
+              setError(
+                isIosLikeWithoutWebBluetooth() ||
+                  !hasWebBluetoothRequestDevice()
+                  ? ledgerBluetoothUnavailableMessage()
+                  : ''
+              );
+            }}
+          >
+            Bluetooth
+          </Button>
+        </Box>
       )}
       <Button
         type="button"
@@ -967,6 +1019,31 @@ const ConnectHW = ({ onConfirm }) => {
           }
           setIsLoading(true);
           try {
+            if (ledgerLink === 'usb') {
+              if (!hasLedgerUsbApi()) {
+                setError(ledgerUsbUnavailableMessage());
+                setIsLoading(false);
+                return;
+              }
+              try {
+                await initHW({ device: selected, id: LEDGER_USB_ID });
+              } catch (e) {
+                if (e && (e.name === 'NotFoundError' || e.name === 'AbortError')) {
+                  setError('No device selected or pairing was cancelled.');
+                } else {
+                  setError(
+                    e && e.message
+                      ? String(e.message)
+                      : 'Cardano app not opened or USB connection failed.'
+                  );
+                }
+                setIsLoading(false);
+                return;
+              }
+              onConfirm({ device: selected, id: LEDGER_USB_ID });
+              setIsLoading(false);
+              return;
+            }
             if (
               isIosLikeWithoutWebBluetooth() ||
               !hasWebBluetoothRequestDevice()
@@ -1011,7 +1088,7 @@ const ConnectHW = ({ onConfirm }) => {
             onConfirm({ device: selected, id: bleDevice.id });
           } catch (e) {
             setError(
-              e && e.message ? String(e.message) : 'Bluetooth setup failed.'
+              e && e.message ? String(e.message) : 'Ledger setup failed.'
             );
           }
           setIsLoading(false);
@@ -1280,7 +1357,9 @@ const SelectAccounts = ({ data, onConfirm }) => {
                     HARDENED + parseInt(index, 10),
                   ]),
                 });
-                const idHex = Buffer.from(String(id), 'utf8').toString('hex');
+                const idHex = isLedgerUsbId(id)
+                  ? LEDGER_USB_ID
+                  : Buffer.from(String(id), 'utf8').toString('hex');
                 accounts = ledgerKeys.map(
                   ({ publicKeyHex, chainCodeHex }, index) => ({
                     accountIndex: `${HW.ledger}-${idHex}-${accountIndexes[index]}`,

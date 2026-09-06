@@ -18,6 +18,7 @@ import {
 import React from 'react';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
 import { indexToHw, initHW, isHW } from '../../../api/extension';
+import { isLedgerUsbId } from '../../../api/extension/ledger-transport';
 import {
   ERROR,
   HW,
@@ -347,9 +348,21 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                       </>
                     )
                   ) : !waitReady ? (
-                    `Waiting for ${deviceLabel(hw.device)}`
+                    `Waiting for ${deviceLabel(hw.device)}${
+                      hw.device === HW.ledger && isLedgerUsbId(hw.id)
+                        ? ' (USB)'
+                        : hw.device === HW.ledger
+                          ? ' (Bluetooth)'
+                          : ''
+                    }`
                   ) : (
-                    `Connect ${deviceLabel(hw.device)}`
+                    `Connect ${deviceLabel(hw.device)}${
+                      hw.device === HW.ledger && isLedgerUsbId(hw.id)
+                        ? ' over USB'
+                        : hw.device === HW.ledger
+                          ? ' over Bluetooth'
+                          : ''
+                    }`
                   )}
                 </Box>
               </Box>

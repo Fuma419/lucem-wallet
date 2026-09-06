@@ -112,6 +112,29 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toMatch(/requestDevice/);
   });
 
+  test('Ledger USB is offered next to Bluetooth on the hardware tab', () => {
+    expect(hwSrc).toContain('LEDGER_USB_ID');
+    expect(hwSrc).toContain('hasLedgerUsbApi');
+    expect(hwSrc).toMatch(/>\s*USB\s*</);
+    expect(hwSrc).toMatch(/>\s*Bluetooth\s*</);
+    expect(hwSrc).toContain("ledgerLink === 'usb'");
+    expect(hwSrc).toContain('isLedgerUsbId(id)');
+    const transportSrc = fs.readFileSync(
+      path.join(__dirname, '../../api/extension/ledger-transport.js'),
+      'utf8'
+    );
+    expect(transportSrc).toContain('hw-transport-webhid');
+    expect(transportSrc).toContain('hw-transport-webusb');
+    expect(transportSrc).toContain('openLedgerTransport');
+    const vercelSrc = fs.readFileSync(
+      path.join(__dirname, '../../../vercel.json'),
+      'utf8'
+    );
+    expect(vercelSrc).toContain('Permissions-Policy');
+    expect(vercelSrc).toContain('hid=(self)');
+    expect(vercelSrc).toContain('usb=(self)');
+  });
+
   test('ledger flow checks for requestDevice capability (not only navigator.bluetooth)', () => {
     expect(hwSrc).toMatch(/const hasWebBluetoothRequestDevice/);
     expect(hwSrc).toMatch(/!hasWebBluetoothRequestDevice\(\)/);
@@ -241,6 +264,8 @@ describe('Keystone guards in extension signing / index', () => {
     expect(indexSrc).toMatch(
       /device\s*==\s*HW\.keystone[\s\S]*?throw new Error/
     );
+    expect(indexSrc).toContain('openLedgerTransport');
+    expect(indexSrc).not.toContain("from '@ledgerhq/hw-transport-web-ble'");
   });
 });
 

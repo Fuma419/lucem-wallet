@@ -21,5 +21,16 @@
     { "source": "/enable", "destination": "/internalPopup.html" },
     { "source": "/signTx", "destination": "/internalPopup.html" },
     { "source": "/signData", "destination": "/internalPopup.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "hid=(self), usb=(self), bluetooth=(self)"
+        }
+      ]
+    }
   ]
 }

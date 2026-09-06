@@ -12,7 +12,9 @@ import { useColorModeValue } from '@chakra-ui/react';
  */
 export default function useSurfaceColors() {
   return {
-    pageBg: useColorModeValue('#f4f6fb', '#080808'),
+    // Transparent so the portal-style page wash (Theme PageBackground) shows
+    // through. html/body still paint the #080808 / #f4f6fb canvas underneath.
+    pageBg: 'transparent',
     pageFg: useColorModeValue('gray.900', 'white'),
     panelBg: useColorModeValue('rgba(255, 255, 255, 0.92)', '#121212'),
     panelBorder: useColorModeValue(

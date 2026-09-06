@@ -61,4 +61,15 @@ describe('portal page background wiring', () => {
     expect(stylesSrc).toContain('--lucem-page-glow-left');
     expect(stylesSrc).toContain('rgba(var(--lucem-accent)');
   });
+
+  test('page chrome is transparent so the wash is visible', () => {
+    const hookSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/hooks/useSurfaceColors.js'),
+      'utf8'
+    );
+    expect(hookSrc).toMatch(/pageBg:\s*'transparent'/);
+    expect(stylesSrc).toMatch(
+      /\.lucem-settings-shell \{[\s\S]*background-color:\s*transparent/
+    );
+  });
 });

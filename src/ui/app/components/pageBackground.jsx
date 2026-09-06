@@ -3,24 +3,45 @@ import React from 'react';
 /**
  * Full-page wash copied from the Magic Delegation Portal Once UI Background:
  * a dual radial glow (network accent on the left, cyan on the right) plus a
- * faint dot grid, revealed under a cursor-following mask.
+ * faint dot grid. On fine pointers it is revealed under a cursor-following
+ * mask; on touch / reduced-motion the full wash stays visible.
  */
 const PageBackground = () => {
   const layerRef = React.useRef(null);
   const cursorRef = React.useRef({ x: 0, y: 0 });
   const [smooth, setSmooth] = React.useState({ x: 0, y: 0 });
   const [reduceMotion, setReduceMotion] = React.useState(false);
+  const [pointerFine, setPointerFine] = React.useState(false);
 
   React.useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const apply = () => setReduceMotion(Boolean(mq.matches));
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const pointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const apply = () => {
+      setReduceMotion(Boolean(motion.matches));
+      setPointerFine(Boolean(pointer.matches));
+    };
     apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
+    motion.addEventListener('change', apply);
+    pointer.addEventListener('change', apply);
+    return () => {
+      motion.removeEventListener('change', apply);
+      pointer.removeEventListener('change', apply);
+    };
   }, []);
 
+  const useMask = !reduceMotion && pointerFine;
+
   React.useEffect(() => {
-    if (reduceMotion) return undefined;
+    if (!useMask) return undefined;
+    const centerOnLayer = () => {
+      const el = layerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const next = { x: rect.width / 2, y: rect.height / 2 };
+      cursorRef.current = next;
+      setSmooth(next);
+    };
+    centerOnLayer();
     const onMove = (event) => {
       const el = layerRef.current;
       if (!el) return;
@@ -32,10 +53,10 @@ const PageBackground = () => {
     };
     document.addEventListener('mousemove', onMove, { passive: true });
     return () => document.removeEventListener('mousemove', onMove);
-  }, [reduceMotion]);
+  }, [useMask]);
 
   React.useEffect(() => {
-    if (reduceMotion) return undefined;
+    if (!useMask) return undefined;
     let frame;
     const tick = () => {
       setSmooth((prev) => {
@@ -49,16 +70,16 @@ const PageBackground = () => {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [reduceMotion]);
+  }, [useMask]);
 
-  const maskStyle = reduceMotion
-    ? undefined
-    : {
+  const maskStyle = useMask
+    ? {
         WebkitMaskImage: `radial-gradient(circle 600px at ${smooth.x}px ${smooth.y}px, rgba(0, 0, 0, 1) 20%, rgba(0, 0, 0, 0) 100%)`,
         maskImage: `radial-gradient(circle 600px at ${smooth.x}px ${smooth.y}px, rgba(0, 0, 0, 1) 20%, rgba(0, 0, 0, 0) 100%)`,
         WebkitMaskSize: '100% 100%',
         maskSize: '100% 100%',
-      };
+      }
+    : undefined;
 
   return (
     <>

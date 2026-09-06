@@ -282,13 +282,13 @@ html {
   flex-shrink: 0;
 }
 
-/* Settings shell — dark by default; follows Chakra `html[data-theme]`. */
+/* Settings/send/sign shells sit on the portal wash (html/body canvas). */
 .lucem-settings-shell {
-  background-color: #080808;
+  background-color: transparent;
 }
 
 html[data-theme='light'] .lucem-settings-shell {
-  background-color: #f4f6fb;
+  background-color: transparent;
 }
 
 /*

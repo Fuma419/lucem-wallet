@@ -159,7 +159,7 @@ describe('staking and governance theme surfaces', () => {
       path.join(__dirname, '../../../ui/app/hooks/useSurfaceColors.js'),
       'utf8'
     );
-    expect(hookSrc).toContain("useColorModeValue('#f4f6fb', '#080808')");
+    expect(hookSrc).toMatch(/pageBg:\s*'transparent'/);
     expect(hookSrc).toContain('panelShadow');
     // panelBorder used to be transparent in both modes, which left cards with no
     // edge at all against a near-black page. See dark-surface-contrast.test.js.

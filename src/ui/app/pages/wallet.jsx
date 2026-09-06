@@ -111,7 +111,6 @@ const Wallet = () => {
   const settings = useStoreState((state) => state.settings.settings);
   const isDesktop = useLayoutSurface() === LUCEM_LAYOUT.desktop;
   const avatarBg = useColorModeValue('gray.100', 'gray.900');
-  const panelBg = useColorModeValue('#f4f6fb', '#080808');
   // Always use neon button classes (same as tray FABs). Glow on/off is owned by
   // `html[data-glow]` + CSS — do not swap to solid Chakra fills when glow is
   // off, or dark mode falls back to light-looking brand colors.
@@ -394,8 +393,7 @@ const Wallet = () => {
       >
         <Box className="lucem-wallet-main-column lucem-wallet-home" flex="1" display="flex" flexDirection="column">
         <Box
-          background={panelBg}
-          shadow="md"
+          background="transparent"
           width="full"
           maxWidth="100%"
           position="relative"

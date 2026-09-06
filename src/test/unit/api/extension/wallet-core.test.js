@@ -655,6 +655,21 @@ describe('mergeConfirmedWithApi', () => {
     ]);
   });
 
+  test('keeps several pending stubs that are not yet in the API', () => {
+    const confirmed = ['pending_a', 'pending_b', 'main_a'];
+    const api = ['main_a', 'main_b'];
+    const details = {
+      pending_a: { pending: true },
+      pending_b: { pending: true },
+    };
+    expect(mergeConfirmedWithApi(confirmed, api, { details })).toEqual([
+      'pending_a',
+      'pending_b',
+      'main_a',
+      'main_b',
+    ]);
+  });
+
   test('replace option trusts API only', () => {
     const confirmed = ['optimistic_local', 'preview_leak', 'main_a'];
     const api = ['main_a', 'main_b'];

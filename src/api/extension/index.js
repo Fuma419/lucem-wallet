@@ -205,6 +205,8 @@ export {
   bindCip30AccountIfUnbound,
 } from './dapp-whitelist';
 
+export { prependPendingHash as prependTxHash, recordSubmittedTx } from '../tx/pending-history';
+
 export { resolveCip30Account } from './cip30-session';
 
 export const getCurrency = () => getStorage(STORAGE.currency);
@@ -416,6 +418,30 @@ export const onAccountChange = (callback) => {
       response.target !== TARGET ||
       !response.event ||
       response.event !== EVENT.accountChange ||
+      !response.sender ||
+      response.sender !== SENDER.extension
+    )
+      return;
+    callback(response.data);
+  }
+  window.addEventListener('message', responseHandler);
+  return {
+    remove: () => {
+      window.removeEventListener('message', responseHandler);
+    },
+  };
+};
+
+export const onUtxoChange = (callback) => {
+  function responseHandler(e) {
+    const response = e.data;
+    if (
+      typeof response !== 'object' ||
+      response === null ||
+      !response.target ||
+      response.target !== TARGET ||
+      !response.event ||
+      response.event !== EVENT.utxoChange ||
       !response.sender ||
       response.sender !== SENDER.extension
     )
@@ -1923,7 +1949,9 @@ export const updateBalance = async (currentAccount, network, { force = false } =
  *
  * @param {string[]} confirmed
  * @param {string[]} apiHashes
- * @param {{ replace?: boolean }} [opts] - when replace=true, trust API only
+ * @param {{ replace?: boolean, details?: Record<string, { pending?: boolean }> }} [opts]
+ *   replace=true trusts API only. details.pending marks local-only submits to
+ *   keep even when several are waiting to be indexed.
  * @returns {string[]}
  */
 export const mergeConfirmedWithApi = (confirmed, apiHashes, opts = {}) => {
@@ -1935,17 +1963,21 @@ export const mergeConfirmedWithApi = (confirmed, apiHashes, opts = {}) => {
   const prev = Array.isArray(confirmed) ? confirmed : [];
   if (prev[0] === apiHashes[0]) return prev;
 
-  const apiSet = new Set(apiHashes);
+  const apiSet = new Set(apiHashes.map((hash) => String(hash).toLowerCase()));
   const pending = [];
   for (const hash of prev) {
-    if (apiSet.has(hash)) break;
+    if (apiSet.has(String(hash).toLowerCase())) break;
     pending.push(hash);
   }
 
-  // Several local-only hashes in front of a known API tx ⇒ poisoned list
-  // from a network-switch race. A single pending hash is optimistic submit.
-  if (pending.length > 1 && prev.includes(apiHashes[0])) {
-    return apiHashes;
+  const details = opts.details && typeof opts.details === 'object' ? opts.details : {};
+  const pendingStubs = pending.filter((hash) => details[hash]?.pending);
+  const unknown = pending.filter((hash) => !details[hash]?.pending);
+
+  // Several local-only hashes in front of a known API tx, with no pending
+  // stubs ⇒ poisoned list from a network-switch race.
+  if (unknown.length > 1 && prev.includes(apiHashes[0])) {
+    return [...pendingStubs, ...apiHashes];
   }
 
   return [...pending, ...apiHashes];
@@ -1955,8 +1987,12 @@ const updateTransactions = async (currentAccount, network, { replace = false, fo
   const transactions = await getTransactions(1, 10, { force });
   if (transactions.length <= 0) return false;
   const apiHashes = transactions.map((tx) => tx.txHash);
-  const confirmed = currentAccount[network.id].history.confirmed;
-  const next = mergeConfirmedWithApi(confirmed, apiHashes, { replace });
+  const history = currentAccount[network.id].history;
+  const confirmed = history.confirmed;
+  const next = mergeConfirmedWithApi(confirmed, apiHashes, {
+    replace,
+    details: history.details,
+  });
   if (
     next.length === confirmed.length &&
     next.every((hash, i) => hash === confirmed[i])
@@ -1977,22 +2013,6 @@ export const setTransactions = async (txs) => {
       ...accounts,
     },
   });
-};
-
-/**
- * Optimistically prepend a just-submitted tx hash so the history viewer
- * shows it immediately, before Koios indexes the block.
- */
-export const prependTxHash = async (txHash) => {
-  if (!txHash) return;
-  const currentIndex = await getCurrentAccountIndex();
-  const network = await getNetwork();
-  const accounts = await getStorage(STORAGE.accounts);
-  const confirmed = accounts[currentIndex][network.id].history.confirmed;
-  if (!confirmed.includes(txHash)) {
-    confirmed.unshift(txHash);
-    await setStorage({ [STORAGE.accounts]: { ...accounts } });
-  }
 };
 
 export const setCollateral = async (collateral) => {

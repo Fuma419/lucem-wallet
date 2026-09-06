@@ -16,7 +16,6 @@ import {
   isHW,
   isValidAddress,
   paymentKeyHashesForSigning,
-  prependTxHash,
   toUnit,
   updateRecentSentToAddress,
 } from '../../../api/extension';
@@ -1720,9 +1719,6 @@ const Send = () => {
               duration: 4000,
               isClosable: true,
             });
-            if (typeof signedTx === 'string' && /^[a-f0-9]{64}$/i.test(signedTx)) {
-              await prependTxHash(signedTx);
-            }
             if (await isValidAddress(address.result))
               await updateRecentSentToAddress(address.result);
           } else if (signedTx === ERROR.fullMempool) {

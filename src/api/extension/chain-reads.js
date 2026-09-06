@@ -57,6 +57,7 @@ import {
   getStorage,
   setStorage,
 } from './storage';
+import { extraFromKoiosInfo, koiosKindCounts } from '../tx/tx-kind';
 
 
 const compareValues = (value1, value2) => {
@@ -756,37 +757,9 @@ export const getTxMetadata = async (txHash) => {
 // Helper function to convert Koios transaction format to expected format
 const convertKoiosTxToExpectedFormat = (koiosTx) => {
   if (!koiosTx) return null;
-  
-  // Calculate transaction type indicators from certificates and other data
-  const certificates = koiosTx.certificates || [];
-  const withdrawals = koiosTx.withdrawals || [];
-  const assetsMinted = koiosTx.assets_minted || [];
-  const plutusContracts = koiosTx.plutus_contracts || [];
-  
-  // Count different types of certificates
-  const delegationCount = certificates.filter(cert => 
-    cert.cert_type === 'delegation' || cert.cert_type === 'deleg_reg'
-  ).length;
-  
-  const stakeCertCount = certificates.filter(cert => 
-    cert.cert_type === 'stake_registration' || cert.cert_type === 'stake_deregistration'
-  ).length;
-  
-  const poolRetireCount = certificates.filter(cert => 
-    cert.cert_type === 'pool_retirement'
-  ).length;
-  
-  const poolUpdateCount = certificates.filter(cert => 
-    cert.cert_type === 'pool_registration' || cert.cert_type === 'pool_update'
-  ).length;
-  
-  // Count other transaction types
-  const withdrawalCount = withdrawals.length;
-  const assetMintOrBurnCount = assetsMinted.length;
-  const redeemerCount = plutusContracts.reduce((count, contract) => 
-    count + (contract.redeemers ? contract.redeemers.length : 0), 0
-  );
-  
+
+  const counts = koiosKindCounts(koiosTx);
+
   return {
     // Basic transaction info
     tx_hash: koiosTx.tx_hash,
@@ -822,56 +795,79 @@ const convertKoiosTxToExpectedFormat = (koiosTx) => {
     certificates: koiosTx.certificates,
     native_scripts: koiosTx.native_scripts,
     plutus_contracts: koiosTx.plutus_contracts,
+    voting_procedures: koiosTx.voting_procedures || [],
     
     // Legacy field names for compatibility
     fees: koiosTx.fee,
     valid_contract: true, // Default to true for now
     
     // Transaction type detection fields
-    redeemer_count: redeemerCount,
-    withdrawal_count: withdrawalCount,
-    delegation_count: delegationCount,
-    asset_mint_or_burn_count: assetMintOrBurnCount,
-    stake_cert_count: stakeCertCount,
-    pool_retire_count: poolRetireCount,
-    pool_update_count: poolUpdateCount
+    redeemer_count: counts.redeemerCount,
+    withdrawal_count: counts.withdrawalCount,
+    delegation_count: counts.delegationCount,
+    drep_delegation_count: counts.drepDelegationCount,
+    drep_registration_count: counts.drepRegistrationCount,
+    vote_count: counts.voteCount,
+    asset_mint_or_burn_count: counts.assetMintOrBurnCount,
+    stake_cert_count: counts.stakeCertCount,
+    pool_retire_count: counts.poolRetireCount,
+    pool_update_count: counts.poolUpdateCount
   };
 };
 
 export const updateTxInfo = async (txHash) => {
   const currentAccount = await getCurrentAccount();
   const network = await getNetwork();
+  const history = currentAccount[network.id]?.history || currentAccount.history;
+  const stored = history?.details?.[txHash];
+  const pendingStub =
+    stored && typeof stored === 'object' && stored.pending ? stored : null;
+  const complete =
+    stored &&
+    typeof stored === 'object' &&
+    stored.info &&
+    stored.block &&
+    stored.utxos &&
+    !stored.pending;
 
-  let detail = await currentAccount[network.id].history.details[txHash];
+  if (complete) return stored;
 
-  if (typeof detail !== 'object' || !detail.info || !detail.block || !detail.utxos || !detail.metadata) {
-    detail = {};
-    
-    // Get transaction info
-    const info = await getTxInfo(txHash);
-    
-    if (info) {
-      // Convert Koios format to expected format
-      detail.info = convertKoiosTxToExpectedFormat(info);
-      
-      // Get block info if we have block height
-      if (info.block_height) {
-        detail.block = await getBlock(info.block_height);
-      }
+  const detail = {};
+
+  const info = await getTxInfo(txHash);
+  if (info) {
+    detail.info = convertKoiosTxToExpectedFormat(info);
+    if (info.block_height) {
+      detail.block = await getBlock(info.block_height);
     }
-    
-    // Get transaction UTXOs
-    const uTxOs = await getTxUTxOs(txHash);
-    
-    if (uTxOs) {
-      detail.utxos = uTxOs;
-    }
-    
-    // Get transaction metadata
-    const metadata = await getTxMetadata(txHash);
-    if (metadata) {
-      detail.metadata = metadata;
-    }
+  }
+
+  const uTxOs = await getTxUTxOs(txHash);
+  if (uTxOs) {
+    detail.utxos = uTxOs;
+  }
+
+  const metadata = await getTxMetadata(txHash);
+  if (metadata) {
+    detail.metadata = metadata;
+  }
+
+  if (detail.info && detail.utxos && detail.block) {
+    return { ...detail, pending: false };
+  }
+
+  if (pendingStub || detail.info) {
+    return {
+      pending: true,
+      submittedAt: pendingStub?.submittedAt,
+      extra:
+        (detail.info && extraFromKoiosInfo(detail.info)) ||
+        pendingStub?.extra ||
+        [],
+      info: detail.info,
+      utxos: detail.utxos,
+      metadata: detail.metadata,
+    };
   }
 
   return detail;

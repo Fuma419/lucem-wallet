@@ -50,6 +50,7 @@ jest.mock('../../../api/extension', () => ({
   getNetwork: jest.fn().mockResolvedValue({ id: 'mainnet', name: 'mainnet' }),
   updateAccount: jest.fn().mockResolvedValue(undefined),
   onAccountChange: jest.fn(() => ({ remove: jest.fn() })),
+  onUtxoChange: jest.fn(() => ({ remove: jest.fn() })),
   getStorage: jest.fn().mockResolvedValue({}),
   setStorage: jest.fn().mockResolvedValue(true),
 }));

@@ -568,16 +568,10 @@ export const signTxHW = async (
   throw new Error('Unsupported hardware wallet device');
 };
 
-/**
- *
- * @param {string} tx - cbor hex string
- * @returns
- */
-
 const rememberSubmitted = async (txHex, result) => {
   try {
     await recordSubmittedTx(txHex, result);
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.warn(
       'Could not record pending history after submit:',
       error?.message || error
@@ -585,6 +579,11 @@ const rememberSubmitted = async (txHex, result) => {
   }
 };
 
+/**
+ *
+ * @param {string} tx - cbor hex string
+ * @returns
+ */
 export const submitTx = async (tx) => {
   const network = await getNetwork();
   

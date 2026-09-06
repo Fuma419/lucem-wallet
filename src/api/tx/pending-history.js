@@ -100,7 +100,7 @@ export const recordSubmittedTx = async (txHex, submittedHash) => {
       );
       if (!hash) hash = hashFromTxHex(Loader.Cardano, txHex);
     }
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     console.warn(
       'Could not classify submitted transaction for history:',
       error?.message || error

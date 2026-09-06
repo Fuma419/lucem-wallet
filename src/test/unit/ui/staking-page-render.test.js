@@ -291,4 +291,22 @@ describe('Staking page — behavioral render', () => {
     expect(withdrawBtn).toBeTruthy();
     expect(withdrawBtn.disabled).toBe(true);
   });
+
+  test('current status shows ticker and pool name when delegated', async () => {
+    getDelegation.mockResolvedValue({
+      registered: true,
+      active: true,
+      rewards: '0',
+      ticker: 'HODLR',
+      name: 'HODLR Pool',
+      poolId: 'pool1hodlr',
+    });
+    const { container } = await renderStaking();
+    const status = container.querySelector('[data-testid="stake-current-status"]');
+    const poolName = container.querySelector(
+      '[data-testid="stake-current-pool-name"]'
+    );
+    expect(status?.textContent).toBe('Delegated to HODLR');
+    expect(poolName?.textContent).toBe('HODLR Pool');
+  });
 });

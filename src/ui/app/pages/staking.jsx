@@ -99,6 +99,21 @@ const shortPoolId = (pool) => {
   return `${id.slice(0, 12)}...${id.slice(-8)}`;
 };
 
+/** Status card: ticker in the headline, full pool name on the next line. */
+const statusPoolCopy = (pool) => {
+  const ticker = String(pool?.ticker || '').trim();
+  const name = String(pool?.name || '').trim();
+  const usefulTicker = ticker && ticker !== 'Unknown' ? ticker : '';
+  const usefulName =
+    name && name !== 'Unknown pool' && name !== usefulTicker ? name : '';
+  const headline =
+    usefulTicker || usefulName || (pool ? shortPoolId(pool) : 'your pool');
+  return {
+    headline,
+    name: usefulTicker && usefulName ? usefulName : '',
+  };
+};
+
 const actionCopy = {
   delegate: {
     title: 'Confirm Delegation',
@@ -483,10 +498,9 @@ const Staking = () => {
     : null;
   const rewards = toBigInt(delegation?.rewards);
   const voteDelegated = canWithdrawRewards(delegation);
-  const activeLabel =
-    activePool?.ticker ||
-    activePool?.name ||
-    (activePool ? shortPoolId(activePool) : 'your pool');
+  const { headline: activeHeadline, name: activePoolName } = statusPoolCopy(
+    activePool
+  );
 
   return (
     <PullToRefresh onRefresh={() => loadStakeState({ force: true })}>
@@ -532,13 +546,25 @@ const Staking = () => {
                 <Flex rounded="2xl" bg="yellow.400" color="gray.900" boxSize="12" align="center" justify="center">
                   <Icon as={delegation?.active ? MdOutlineVerified : MdOutlineHowToReg} boxSize={7} />
                 </Flex>
-                <Box>
+                <Box minW={0}>
                   <Text fontSize="xs" color={mutedFg}>
                     Current status
                   </Text>
-                  <Text fontWeight="bold">
-                    {delegation?.active ? `Delegated to ${activeLabel}` : 'Ready to delegate'}
+                  <Text fontWeight="bold" data-testid="stake-current-status">
+                    {delegation?.active
+                      ? `Delegated to ${activeHeadline}`
+                      : 'Ready to delegate'}
                   </Text>
+                  {delegation?.active && activePoolName ? (
+                    <Text
+                      fontSize="sm"
+                      color={softFg}
+                      noOfLines={2}
+                      data-testid="stake-current-pool-name"
+                    >
+                      {activePoolName}
+                    </Text>
+                  ) : null}
                 </Box>
               </HStack>
               <Stack spacing={3} mt={5}>

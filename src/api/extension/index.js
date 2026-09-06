@@ -1365,9 +1365,22 @@ export const getHwAccounts = (accounts, { device, id }) => {
 
 export const isHW = (accountIndex) => isHardwareAccountIndex(accountIndex);
 
-export const initHW = async ({ device, id, bleDevice, promptUsb }) => {
+export const initHW = async ({
+  device,
+  id,
+  bleDevice,
+  promptUsb,
+  usbDevice,
+  hidDevice,
+}) => {
   if (device == HW.ledger) {
-    const transport = await openLedgerTransport({ id, bleDevice, promptUsb });
+    const transport = await openLedgerTransport({
+      id,
+      bleDevice,
+      promptUsb,
+      usbDevice,
+      hidDevice,
+    });
     const appAda = new Ada(transport);
     await appAda.getVersion(); // check if Ledger has Cardano app opened
     return appAda;

@@ -63,6 +63,9 @@ describe('portal page background wiring', () => {
     expect(stylesSrc).toContain('--lucem-cursor-x');
     expect(stylesSrc).toContain('.lucem-page-bg--cursor');
     expect(stylesSrc).toContain('circle 42vmax at var(--lucem-cursor-x)');
+    expect(stylesSrc).toMatch(
+      /\.lucem-page-bg-gradient \{[\s\S]*?opacity:\s*0\.11;/
+    );
   });
 
   test('page chrome is transparent so the wash is visible', () => {

@@ -39,6 +39,12 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(traysSrc).not.toContain('MenuList');
   });
 
+  test('tray FABs use double the previous 2-space gap', () => {
+    expect((traysSrc.match(/spacing=\{4\}/g) || []).length).toBe(2);
+    expect((traysSrc.match(/mb=\{4\}/g) || []).length).toBe(2);
+    expect(traysSrc).not.toContain('spacing={2}');
+  });
+
   test('right tray action FABs show visible text descriptors', () => {
     expect(traysSrc).toContain('TrayLabeledButton');
     expect(traysSrc).toContain('label="Vote"');

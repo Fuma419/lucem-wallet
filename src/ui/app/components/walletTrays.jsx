@@ -186,7 +186,7 @@ const WalletTrays = ({
         display="flex"
         flexDirection="column"
         justifyContent="flex-end"
-        gap={2}
+        gap={4}
         data-testid="wallet-account-tray"
         data-tray-side={traysSwapped ? 'right' : 'left'}
         {...accountSideProps}
@@ -196,7 +196,7 @@ const WalletTrays = ({
           animateOpacity
           style={{ overflow: 'visible' }}
         >
-          <Stack spacing={2} mb={2} alignItems="stretch" className={accountMenuClass}>
+          <Stack spacing={4} mb={4} alignItems="stretch" className={accountMenuClass}>
             {accountEntries.map(({ key, info }) => {
               const switchKey = accountKeyFor(info, key);
               const isActive = isSameAccountIndex(currentAccountIndex, switchKey);
@@ -249,15 +249,15 @@ const WalletTrays = ({
         display="flex"
         flexDirection="column"
         justifyContent="flex-end"
-        gap={2}
+        gap={4}
         data-testid="wallet-action-tray"
         data-tray-side={traysSwapped ? 'left' : 'right'}
         {...actionSideProps}
       >
         <Collapse in={isTrayOpen} animateOpacity style={{ overflow: 'visible' }}>
           <Stack
-            spacing={2}
-            mb={2}
+            spacing={4}
+            mb={4}
             className={actionMenuClass}
             data-testid="wallet-action-tray-menu"
           >

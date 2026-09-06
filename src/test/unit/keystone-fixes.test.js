@@ -126,6 +126,12 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(transportSrc).toContain('hw-transport-webhid');
     expect(transportSrc).toContain('hw-transport-webusb');
     expect(transportSrc).toContain('openLedgerTransport');
+    expect(transportSrc).toContain('openConnected');
+    expect(transportSrc).toContain('promptUsb');
+    expect(transportSrc).toContain('Transport.request()');
+    expect(transportSrc).toContain('Never use Transport.create');
+    expect(hwSrc).toContain('promptUsb: true');
+    expect(hwSrc).toContain('Waiting for USB permission');
     const vercelSrc = fs.readFileSync(
       path.join(__dirname, '../../../vercel.json'),
       'utf8'

@@ -47,6 +47,9 @@ describe('stake center page wiring', () => {
     expect(stakingSrc).toContain('data-testid="stake-pool-details"');
     expect(stakingSrc).toContain('data-testid="stake-confirm-transaction"');
     expect(stakingSrc).toContain('data-testid="stake-reward-actions"');
+    expect(stakingSrc).toContain('data-testid="stake-current-status"');
+    expect(stakingSrc).toContain('data-testid="stake-current-pool-name"');
+    expect(stakingSrc).toContain('statusPoolCopy');
     expect(stakingSrc).toContain('lucem-equal-width-actions');
     expect(stakingSrc).toContain('Unable to prepare delegation transaction.');
   });

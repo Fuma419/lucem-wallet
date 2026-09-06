@@ -26,6 +26,7 @@ import {
 import { ADDRESS_ROLE, getExternalIndices, getInternalIndices, listEnabledPaymentAddresses } from './multi-address';
 import { deriveAccountDRepKeyHashHex, deriveAccountDRepPrivateKey, requestAccountKey } from './keys';
 import { getNetwork, getStorage } from './storage';
+import { recordSubmittedTx } from '../tx/pending-history';
 
 
 const hasTaggedSets = (cbor) => {
@@ -573,6 +574,17 @@ export const signTxHW = async (
  * @returns
  */
 
+const rememberSubmitted = async (txHex, result) => {
+  try {
+    await recordSubmittedTx(txHex, result);
+  } catch (error) {
+    console.warn(
+      'Could not record pending history after submit:',
+      error?.message || error
+    );
+  }
+};
+
 export const submitTx = async (tx) => {
   const network = await getNetwork();
   
@@ -589,7 +601,9 @@ export const submitTx = async (tx) => {
       // Balance/UTxO/history caches are now stale — drop them so the next read
       // reflects the just-submitted transaction.
       invalidateReadCache();
-      return await result.json();
+      const payload = await result.json();
+      await rememberSubmitted(txHex, payload);
+      return payload;
     }
     throw APIError.InvalidRequest;
   }
@@ -597,6 +611,7 @@ export const submitTx = async (tx) => {
   try {
     const result = await koiosSubmitTransaction(txHex);
     invalidateReadCache();
+    await rememberSubmitted(txHex, result);
     return result;
   } catch (/** @type {any} */ error) {
     console.error('Koios transaction submission error:', error);

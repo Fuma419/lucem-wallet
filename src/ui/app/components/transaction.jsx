@@ -31,11 +31,17 @@ import AssetFingerprint from '@emurgo/cip14-js';
 import { hexToAscii } from '../../../api/util';
 import { NETWORK_ID } from '../../../config/config';
 import { useStoreState } from 'easy-peasy';
-import { FaCoins, FaPiggyBank, FaTrashAlt, FaRegEdit, FaUserCheck, FaUsers, FaRegFileCode } from 'react-icons/fa';
+import { FaCoins, FaPiggyBank, FaTrashAlt, FaRegEdit, FaUserCheck, FaUsers, FaRegFileCode, FaBalanceScale } from 'react-icons/fa';
 import { IoRemoveCircleSharp } from 'react-icons/io5';
 import { TiArrowForward, TiArrowBack, TiArrowShuffle, TiArrowLoop } from 'react-icons/ti';
 import { GiAnvilImpact } from 'react-icons/gi';
+import { MdHowToVote } from 'react-icons/md';
 import Loader from '../../../api/loader';
+import {
+  extraFromKoiosInfo,
+  formatTxKindLabels,
+  TX_KIND_LABEL,
+} from '../../../api/tx/tx-kind';
 
 TimeAgo.addDefaultLocale(en);
 
@@ -54,19 +60,13 @@ const txTypeColor = {
   mint: 'blue.500',
   multisig: 'orange.400',
   contract: 'yellow.400',
+  vote: 'purple.400',
+  drepDelegation: 'cyan.400',
+  drepRegistration: 'cyan.500',
+  pending: 'yellow.400',
 };
 
-const txTypeLabel = {
-  withdrawal: 'Withdrawal',
-  delegation: 'Delegation',
-  stake: 'Stake Registration',
-  unstake: 'Stake Deregistration',
-  poolUpdate: 'Pool Update',
-  poolRetire: 'Pool Retire',
-  mint: 'Minting',
-  multisig: 'Multi-signatures',
-  contract: 'Contract',
-};
+const txTypeLabel = TX_KIND_LABEL;
 
 const txFlowLabel = {
   self: 'Self transfer',
@@ -104,6 +104,12 @@ const Transaction = ({
 }) => {
   const [displayInfo, setDisplayInfo] = React.useState(null);
   const [failed, setFailed] = React.useState(false);
+  const [isPending, setIsPending] = React.useState(() =>
+    Boolean(detail?.pending)
+  );
+  const [pendingExtra, setPendingExtra] = React.useState(() =>
+    Array.isArray(detail?.extra) ? detail.extra : []
+  );
   const isMounted = useIsMounted();
 
   const settings = useStoreState((state) => state.settings.settings);
@@ -114,38 +120,75 @@ const Transaction = ({
     assetsBtnHover: useColorModeValue('yellow.300', 'gray.900'),
   };
 
-  const getTxDetail = async () => {
-    if (displayInfo || failed) return;
-    try {
-      const txDetail = await withTimeout(updateTxInfo(txHash), 25000);
-      onLoad(txHash, txDetail);
-      if (!isMounted.current) return;
-      const newDisplayInfo = genDisplayInfo(
-        txHash,
-        txDetail,
-        currentAddr,
-        addresses
-      );
-      if (!newDisplayInfo) {
-        // Incomplete/undecodable detail: fall back instead of an endless skeleton.
-        setFailed(true);
-        return;
+  const onLoadRef = React.useRef(onLoad);
+  onLoadRef.current = onLoad;
+  const displayRef = React.useRef(null);
+
+  const applyDetail = React.useCallback(
+    (txDetail) => {
+      if (!txDetail) return false;
+      if (txDetail.pending) {
+        setIsPending(true);
+        if (Array.isArray(txDetail.extra) && txDetail.extra.length) {
+          setPendingExtra(txDetail.extra);
+        }
+        return false;
       }
-      setDisplayInfo(newDisplayInfo);
-    } catch (error) {
-      if (!isMounted.current) return;
-      console.warn(
-        'Failed to load transaction detail',
-        txHash,
-        error?.message || error
-      );
-      setFailed(true);
-    }
-  };
+      const next = genDisplayInfo(txHash, txDetail, currentAddr, addresses);
+      if (!next) return false;
+      displayRef.current = next;
+      setIsPending(false);
+      setDisplayInfo(next);
+      return true;
+    },
+    [txHash, currentAddr, addresses]
+  );
 
   React.useEffect(() => {
-    getTxDetail();
-  });
+    let cancelled = false;
+    const load = async () => {
+      if (displayRef.current) return;
+      try {
+        const txDetail = await withTimeout(updateTxInfo(txHash), 25000);
+        if (cancelled || !isMounted.current) return;
+        if (typeof onLoadRef.current === 'function' && txDetail && !txDetail.pending) {
+          onLoadRef.current(txHash, txDetail);
+        }
+        applyDetail(txDetail);
+        if (
+          !displayRef.current &&
+          !txDetail?.pending &&
+          !(detail && detail.pending)
+        ) {
+          setFailed(true);
+        }
+      } catch (error) {
+        if (cancelled || !isMounted.current) return;
+        console.warn(
+          'Failed to load transaction detail',
+          txHash,
+          error?.message || error
+        );
+        if (!(detail && detail.pending)) {
+          setFailed(true);
+        }
+      }
+    };
+    load();
+    const timer = setInterval(load, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [txHash, applyDetail, isMounted]);
+
+  const category = displayInfo
+    ? formatTxKindLabels(displayInfo.extra) ||
+      txFlowLabel[displayInfo.type] ||
+      'Transaction'
+    : formatTxKindLabels(pendingExtra) || 'Transaction';
+
+  const showPending = !displayInfo && (isPending || Boolean(detail?.pending));
 
   return (
     <AccordionItem borderTop="none" _last={{ borderBottom: 'none' }}>
@@ -158,6 +201,10 @@ const Transaction = ({
               locale="en-US"
               timeStyle="round-minute"
             />
+          </Box>
+        ) : showPending ? (
+          <Box align="center" fontSize={14} fontWeight={500} color="gray.500">
+            Just now
           </Box>
         ) : failed ? null : (
           <Skeleton width="34%" height="22px" rounded="md" />
@@ -222,16 +269,15 @@ const Transaction = ({
                     symbol={settings.adaSymbol}
                   />
                 </HStack>
-              ) : displayInfo.extra.length ? (
-                <Text fontSize={12} fontWeight="semibold" color="orange.600">
-                  {getTxExtra(displayInfo.extra)}
-                </Text>
-              ) : (
-                ''
-              )}
+              ) : null}
               <Text fontSize={11} fontWeight="semibold" color="gray.500">
-                {txFlowLabel[displayInfo.type] || 'Transaction'}
+                {category}
               </Text>
+              {displayInfo.extra.length > 0 && txFlowLabel[displayInfo.type] ? (
+                <Text fontSize={11} color="gray.500">
+                  {txFlowLabel[displayInfo.type]}
+                </Text>
+              ) : null}
               {!['internalIn', 'externalIn'].includes(displayInfo.type) ? (
                 <Box flexDirection="row" fontSize={12}>
                   Fee:{' '}
@@ -282,6 +328,12 @@ const Transaction = ({
             </Box>
             <AccordionIcon color="yellow.500" mr={5} fontSize={20} />
           </AccordionButton>
+        ) : showPending ? (
+          <PendingTxRow
+            txHash={txHash}
+            extra={pendingExtra}
+            network={network}
+          />
         ) : failed ? (
           <TxFallback txHash={txHash} network={network} />
         ) : (
@@ -312,6 +364,52 @@ const Transaction = ({
         </Box>
       </VStack>
     </AccordionItem>
+  );
+};
+
+const PendingTxRow = ({ txHash, extra, network }) => {
+  const explorer = explorerBase(network);
+  const label = formatTxKindLabels(extra) || 'Transaction';
+  const iconKind = extra && extra[0] ? extra[0] : 'pending';
+  return (
+    <Box
+      display="flex"
+      alignItems="center"
+      justifyContent="space-between"
+      gap={3}
+      bg="gray.900"
+      borderRadius={20}
+      borderLeftRadius={30}
+      px={4}
+      py={3}
+      width="70%"
+      maxWidth="70%"
+      data-testid="history-pending-tx"
+    >
+      <HStack spacing={3} minW={0}>
+        <TxIcon txType={iconKind} extra={extra || []} />
+        <Box minW={0}>
+          <Badge colorScheme="yellow" variant="subtle" borderRadius="md">
+            Pending
+          </Badge>
+          <Text fontSize="sm" fontWeight="semibold" noOfLines={1}>
+            {label}
+          </Text>
+          <Text fontSize="xs" color="gray.500">
+            Waiting for confirmation
+          </Text>
+        </Box>
+      </HStack>
+      <Link
+        href={explorer.tx ? explorer.tx + txHash : undefined}
+        isExternal
+        color="blue.400"
+        fontSize="xs"
+        flexShrink={0}
+      >
+        {truncateMiddle(txHash)} <ExternalLinkIcon mx="1px" />
+      </Link>
+    </Box>
   );
 };
 
@@ -360,6 +458,10 @@ const TxIcon = ({ txType, extra }) => {
     mint: GiAnvilImpact,
     multisig: FaUsers,
     contract: FaRegFileCode,
+    vote: MdHowToVote,
+    drepDelegation: FaBalanceScale,
+    drepRegistration: FaBalanceScale,
+    pending: TiArrowLoop,
   };
 
   if (extra.length) txType = extra[0];
@@ -560,7 +662,7 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
   const lovelaceAmount = amounts.find((amount) => amount.unit === 'lovelace');
   const lovelace = lovelaceAmount ? BigInt(lovelaceAmount.quantity) : 0n;
 
-  const extra = getExtra(detail.info, type);
+const extra = extraFromKoiosInfo(detail.info, type);
 
   let displayLovelace = ['internalIn', 'externalIn', 'multisig'].includes(type)
     ? lovelace
@@ -787,24 +889,9 @@ const calculateAmount = (currentAddr, uTxOList, validContract = true) => {
   return amounts.concat(outputs);
 };
 
-const getExtra = (info, txType) => {
-  let extra = [];
-  if (info.redeemer_count) {
-    extra.push('contract');
-  } else if (txType === 'multisig') {
-    extra.push('multisig');
-  }
-  if (info.withdrawal_count && txType === 'self') extra.push('withdrawal');
-  if (info.delegation_count) extra.push('delegation');
-  if (info.asset_mint_or_burn_count) extra.push('mint');
-  if (info.stake_cert_count && parseInt(info.deposit) >= 0) extra.push('stake');
-  if (info.stake_cert_count && parseInt(info.deposit) < 0)
-    extra.push('unstake');
-  if (info.pool_retire_count) extra.push('poolRetire');
-  if (info.pool_update_count) extra.push('poolUpdate');
+const getExtra = (info, txType) => extraFromKoiosInfo(info, txType);
 
-  return extra;
-};
+const getTxExtra = (extra) => formatTxKindLabels(extra);
 
 const viewMetadata = (metadata) => {
   const HighlightJson = () => (
@@ -836,11 +923,6 @@ const viewMetadata = (metadata) => {
   newTab.document.write(ReactDOMServer.renderToString(<HighlightJson />));
   newTab.document.close();
 };
-
-const getTxExtra = (extra) =>
-  extra.map((item, index, array) =>
-    index < array.length - 1 ? txTypeLabel[item] + ', ' : txTypeLabel[item]
-  );
 
 const isOwnAddress = (address, addresses, ownCreds) => {
   if (!address) return false;
@@ -921,4 +1003,5 @@ export {
   getTxType,
   getCounterparty,
   truncateMiddle,
+  getExtra,
 };

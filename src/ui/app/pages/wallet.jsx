@@ -46,7 +46,7 @@ import {
 import ReceivePanel from '../components/receivePanel';
 import UnitDisplay from '../components/unitDisplay';
 import PullToRefresh from '../components/pullToRefresh';
-import { onAccountChange } from '../../../api/extension';
+import { onAccountChange, onUtxoChange } from '../../../api/extension';
 import HistoryViewer from '../components/historyViewer';
 import { useStoreState } from 'easy-peasy';
 import AvatarLoader from '../components/avatarLoader';
@@ -279,12 +279,14 @@ const Wallet = () => {
 
   React.useEffect(() => {
     let accountChangeHandler;
+    let utxoChangeHandler;
     getData().then(() => {
       if (!isMounted.current) return;
       if (location.state?.postTx) {
         schedulePostTxRefresh(15000);
       }
       accountChangeHandler = onAccountChange(() => getData({ skipUpdate: true }));
+      utxoChangeHandler = onUtxoChange(() => getData({ skipUpdate: true }));
     }).catch((e) => {
       setIsFetching(false);
       console.error('Failed to load account data:', e);
@@ -319,6 +321,7 @@ const Wallet = () => {
         clearTimeout(refreshTimeoutRef.current);
       }
       accountChangeHandler && accountChangeHandler.remove();
+      utxoChangeHandler && utxoChangeHandler.remove();
     };
   }, []);
 

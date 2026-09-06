@@ -81,9 +81,11 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
     }
   };
 
+  const headHash = history?.confirmed?.[0];
+
   React.useEffect(() => {
     resetPaging();
-  }, [network?.id, currentAddr, resetPaging]);
+  }, [network?.id, currentAddr, headHash, resetPaging]);
 
   React.useEffect(() => {
     getTxs();

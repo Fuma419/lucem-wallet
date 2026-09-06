@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import {
-  getCurrentAccount,
   isHW,
+  resolveCip30Account,
   signData,
   signDataCIP30,
 } from '../../../api/extension';
@@ -38,7 +38,7 @@ const SignData = ({ request, controller }) => {
   const initial = (host || '?').charAt(0).toUpperCase();
 
   const getAccount = async () => {
-    const currentAccount = await getCurrentAccount();
+    const currentAccount = await resolveCip30Account(request.origin);
     if (isHW(currentAccount.index)) {
       setError('Hardware wallets cannot sign data yet.');
     }
@@ -165,7 +165,7 @@ const SignData = ({ request, controller }) => {
   return (
     <>
       <Box {...shellProps} data-testid="sign-data-page">
-        <Account background={pageBg} shadow="none" />
+        <Account account={account} background={pageBg} shadow="none" />
         <Box
           flex="1"
           minH={0}

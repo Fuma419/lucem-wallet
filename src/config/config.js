@@ -56,6 +56,11 @@ localStorage = {
 
 export const STORAGE = {
   whitelisted: 'whitelisted',
+  /**
+   * Origin → account storage index for CIP-30. Eternl binds `enable()` to the
+   * selected account; Lucem used whichever account was selected at call time.
+   */
+  dappAccounts: 'dappAccounts',
   encryptedKey: 'encryptedKey',
   /**
    * Multi-seed vault: map of `walletId -> encrypted root key`. Legacy single-seed

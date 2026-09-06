@@ -51,26 +51,27 @@ const extensionAdapter = {
         left = Math.max(screenX + (outerWidth - POPUP_WINDOW.width), 0);
       }
 
-      const { popupWindow, tab } = await new Promise((res) =>
-        chrome.tabs.create(
+      // Open the popup window directly. `tabs.create` + `windows.create({tabId})`
+      // left a background tab in the last focused window *and* a popup, so CIP-30
+      // sign/enable looked like two concurrent transactions.
+      const popupWindow = await new Promise((res, rej) =>
+        chrome.windows.create(
           {
             url: chrome.runtime.getURL(popup + '.html'),
-            active: false,
+            type: 'popup',
+            focused: true,
+            ...POPUP_WINDOW,
+            left,
+            top,
           },
-          function (tab) {
-            chrome.windows.create(
-              {
-                tabId: tab.id,
-                type: 'popup',
-                focused: true,
-                ...POPUP_WINDOW,
-                left,
-                top,
-              },
-              function (newWindow) {
-                return res({ popupWindow: newWindow, tab });
-              }
-            );
+          function (newWindow) {
+            if (chrome.runtime.lastError || !newWindow) {
+              rej(
+                chrome.runtime.lastError || new Error('Failed to open popup')
+              );
+              return;
+            }
+            res(newWindow);
           }
         )
       );
@@ -79,6 +80,10 @@ const extensionAdapter = {
         await new Promise((res) => {
           chrome.windows.update(popupWindow.id, { left, top }, () => res());
         });
+      }
+      const tab = popupWindow.tabs && popupWindow.tabs[0];
+      if (!tab) {
+        throw new Error('Popup window opened without a tab');
       }
       return tab;
     },

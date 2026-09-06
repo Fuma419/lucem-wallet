@@ -58,7 +58,9 @@ describe('CIP-30 enable UI refresh — structural contracts', () => {
   });
 
   test('keeps whitelist grant/refuse wiring', () => {
-    expect(enableSrc).toContain('setWhitelisted(request.origin)');
+    expect(enableSrc).toContain(
+      'setWhitelisted(request.origin, await getCurrentAccountIndex())'
+    );
     expect(enableSrc).toContain('APIError.Refused');
     expect(enableSrc).toContain('controller.returnData');
     expect(enableSrc).toContain('getFaviconUrl(request.origin)');

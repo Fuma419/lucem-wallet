@@ -30,6 +30,7 @@ const mockSetWhitelisted = jest.fn().mockResolvedValue(true);
 jest.mock('../../../api/extension', () => ({
   __esModule: true,
   setWhitelisted: (...args) => mockSetWhitelisted(...args),
+  getCurrentAccountIndex: jest.fn().mockResolvedValue(0),
   getCurrentAccount: jest.fn().mockResolvedValue({
     name: 'Account 0',
     avatar: 'a',
@@ -130,7 +131,7 @@ describe('Enable connection approval — render', () => {
       container.querySelector('[data-testid="enable-connect"]').click();
     });
 
-    expect(mockSetWhitelisted).toHaveBeenCalledWith('https://gov.tools');
+    expect(mockSetWhitelisted).toHaveBeenCalledWith('https://gov.tools', 0);
     expect(returnData).toHaveBeenCalledWith({ data: true });
     expect(closeSpy).toHaveBeenCalled();
     await unmount();

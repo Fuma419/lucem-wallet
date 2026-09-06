@@ -93,6 +93,7 @@ export {
   getNetwork,
   setNetwork,
   getCurrentAccount,
+  getAccountByIndex,
   hasStoredAccounts,
   getAccounts,
 } from './storage';
@@ -200,7 +201,11 @@ export {
   isWhitelisted,
   setWhitelisted,
   removeWhitelisted,
+  getDappAccountIndex,
+  bindCip30AccountIfUnbound,
 } from './dapp-whitelist';
+
+export { resolveCip30Account } from './cip30-session';
 
 export const getCurrency = () => getStorage(STORAGE.currency);
 
@@ -647,6 +652,7 @@ const BACKUP_STORAGE_KEYS = [
   STORAGE.colorMode,
   STORAGE.migration,
   STORAGE.whitelisted,
+  STORAGE.dappAccounts,
   STORAGE.acceptedLegalDocsVersion,
   STORAGE.userId,
 ];

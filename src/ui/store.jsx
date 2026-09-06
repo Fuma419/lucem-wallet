@@ -13,6 +13,7 @@ import {
   resolveGlowEffects,
 } from '../api/extension';
 import { NETWORK_ID, NODE } from '../config/config';
+import { syncNetworkAccentDom } from './networkAccent';
 import {
   createStore,
   action,
@@ -65,6 +66,7 @@ const settings = {
       }
     }
     syncGlowEffectsDom(storedGlow);
+    syncNetworkAccentDom(settings.network?.id);
     state.settings = {
       ...settings,
       swapTrays: Boolean(settings.swapTrays),
@@ -110,6 +112,7 @@ const initSettings = async (setSettings) => {
       ? document.documentElement.getAttribute('data-theme')
       : null) || 'dark';
   syncGlowEffectsDom(glowEffectsStored);
+  syncNetworkAccentDom(network?.id);
   setSettings({
     currency: currency || 'usd',
     swapTrays: Boolean(swapTrays),

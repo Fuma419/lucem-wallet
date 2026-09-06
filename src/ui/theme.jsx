@@ -1,8 +1,9 @@
 import React from 'react';
-import { ChakraProvider, extendTheme, createLocalStorageManager, useColorMode } from '@chakra-ui/react';
+import { Box, ChakraProvider, extendTheme, createLocalStorageManager, useColorMode } from '@chakra-ui/react';
 import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
 import { AppearancePreferenceProvider } from './appearanceContext';
+import PageBackground from './app/components/pageBackground';
 
 const scaledFont = (rem) => `calc(${rem} * var(--lucem-font-scale, 1))`;
 
@@ -328,7 +329,10 @@ function SyncPwaThemeColor() {
 const Theme = ({ children }) => (
   <ChakraProvider theme={theme} colorModeManager={lucemChakraColorModeManager}>
     <SyncPwaThemeColor />
-    <AppearancePreferenceProvider>{children}</AppearancePreferenceProvider>
+    <PageBackground />
+    <Box position="relative" zIndex={1} h="100%" minH="100%">
+      <AppearancePreferenceProvider>{children}</AppearancePreferenceProvider>
+    </Box>
   </ChakraProvider>
 );
 

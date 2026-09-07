@@ -14,7 +14,7 @@ platform.icons.getFaviconUrl(origin)
 1. Never add `chrome.*` in shared code. Use `platform.*`.
 2. New platform capabilities → add to both `extension.js` and `web.js`.
 3. Web `createTab` uses same-tab navigation (`location.assign`), not `window.open`.
-4. Extension `createTab` must use `chrome.tabs.create` (current browser window). Do **not** `location.assign` from the toolbar popup — Chrome closes it, so create/import appears to do nothing. Do **not** `chrome.windows.create` for those flows (that spawned a leftover window).
+4. Extension `createTab` is for hardware / Keystone full pages (`chrome.tabs.create` in the current window). Create/import seed flows stay **inside** the popup SPA (`navigate` to `/generate` or `/import`) so Chrome does not close the toolbar popup.
 5. Test both: extension (reload in Chrome) and web (Vercel or `npx serve build`).
 
 ## Files importing platform

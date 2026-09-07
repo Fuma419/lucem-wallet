@@ -17,6 +17,14 @@ export const FLOW_RETURN_ROUTES = [
   '/send',
 ];
 
+/** Create/import seed steps hosted inside the main popup SPA. */
+export const FLOW_SETUP_PATHS = [
+  '/generate',
+  '/verify',
+  '/account',
+  '/import',
+];
+
 export function sanitizeFlowReturnPath(path) {
   if (!path || typeof path !== 'string') return null;
   const normalized = path.startsWith('/') ? path : `/${path}`;
@@ -75,8 +83,9 @@ export function resolveSetupReturnPath(fromPath, hasAccounts) {
 /**
  * Leave create/import/HW account setup without writing anything.
  * Prefers `?from=` (initiator). Falls back to accounts vs welcome.
+ * When already in the main popup SPA, `navigateTo` stays in that window.
  */
-export async function leaveSetupFlow() {
+export async function leaveSetupFlow(navigateTo) {
   const from = readFlowReturnPath();
   let hasAccounts = false;
   if (!from) {
@@ -90,7 +99,15 @@ export async function leaveSetupFlow() {
       hasAccounts = false;
     }
   }
-  await openReturnRoute(resolveSetupReturnPath(from, hasAccounts));
+  const dest = resolveSetupReturnPath(from, hasAccounts);
+  const standaloneTab =
+    typeof document !== 'undefined' &&
+    !!document.querySelector('#createWalletTab');
+  if (!standaloneTab && typeof navigateTo === 'function') {
+    navigateTo(dest);
+    return;
+  }
+  await openReturnRoute(dest);
 }
 
 /**

@@ -47,7 +47,7 @@ describe('setup pages wire Cancel on every step', () => {
     const src = read('ui/app/tabs/createWallet.jsx');
     expect(src).toContain('SetupCancelButton');
     expect(src).toContain('leaveSetupFlow');
-    const cancelCalls = src.match(/SetupCancelButton[\s\S]*?leaveSetupFlow\(\)/g) || [];
+    const cancelCalls = src.match(/SetupCancelButton[\s\S]*?leaveSetupFlow\(/g) || [];
     expect(cancelCalls.length).toBeGreaterThanOrEqual(4);
     expect(src).not.toContain('SetupCardCloseButton');
     expect(src).not.toContain('setup-card-close');
@@ -66,12 +66,14 @@ describe('setup pages wire Cancel on every step', () => {
   test('welcome/accounts modals stamp from= for create/import/HW', () => {
     const src = read('ui/app/components/walletSetupFlow.jsx');
     expect(src).toContain('appendFlowReturnQuery');
+    expect(src).toContain('openSeedSetup');
     expect(src).toMatch(
       /appendFlowReturnQuery\('\?type=generate', returnTo\)/
     );
     expect(src).toMatch(
       /appendFlowReturnQuery\(`\?type=import&length=\$\{seedLength\}`, returnTo\)/
     );
+    expect(src).not.toMatch(/createTab\(\s*TAB\.createWallet/);
     expect(src).toMatch(
       /createTab\(TAB\.hw, appendFlowReturnQuery\('', returnTo\)\)/
     );

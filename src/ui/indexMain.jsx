@@ -27,6 +27,13 @@ import { useStoreActions, useStoreState } from 'easy-peasy';
 import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
 import PreventHistoryBack from './app/components/PreventHistoryBack';
 import { initNativeShell } from '../platform/capacitor';
+import { FLOW_SETUP_PATHS } from './app/components/flowCancel';
+
+const CreateWalletApp = React.lazy(() =>
+  import('./app/tabs/createWallet').then((mod) => ({
+    default: mod.CreateWalletApp,
+  }))
+);
 
 /**
  * OS / browser back gestures (e.g. iOS swipe-back) restore a prior history entry such as
@@ -86,6 +93,7 @@ function WalletEntryGate({ children }) {
 function shouldReplayPersistedRoute(route) {
   if (!route || route === '/wallet') return false;
   if (route === '/welcome' || route === '/') return false;
+  if (FLOW_SETUP_PATHS.includes(route)) return false;
   if (/\.html$/i.test(route)) return false;
   return true;
 }
@@ -105,6 +113,10 @@ const App = () => {
     // /wallet bootstrap so Cancel from import lands where the user expects.
     const nextParam = new URLSearchParams(window.location.search).get('next');
     const pathNow = location.pathname;
+    if (FLOW_SETUP_PATHS.includes(pathNow)) {
+      setIsLoading(false);
+      return;
+    }
     const allowedDeep = [
       '/accounts',
       '/welcome',
@@ -172,6 +184,23 @@ const App = () => {
   ) : (
     <div style={{ overflowX: 'hidden', height: '100%' }}>
       <PreventHistoryBack />
+      {FLOW_SETUP_PATHS.includes(location.pathname) ? (
+        <React.Suspense
+          fallback={
+            <Box
+              height="full"
+              width="full"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Spinner color="yellow" speed="0.5s" />
+            </Box>
+          }
+        >
+          <CreateWalletApp />
+        </React.Suspense>
+      ) : (
       <Routes>
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/send" element={<Send />} />
@@ -192,6 +221,7 @@ const App = () => {
           <Route path="*" element={<Wallet />} />
         </Route>
       </Routes>
+      )}
     </div>
   );
 };

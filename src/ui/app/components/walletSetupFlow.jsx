@@ -26,7 +26,7 @@ import { TAB } from '../../../config/config';
 import { shouldOfferLedgerImport } from '../../../api/extension/ledger-transport';
 import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
 import platform from '../../../platform';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   appendFlowReturnQuery,
   sanitizeFlowReturnPath,
@@ -41,6 +41,23 @@ const useFlowReturnPath = () => {
     ) ||
     '/wallet'
   );
+};
+
+const useOpenSeedSetup = () => {
+  const navigate = useNavigate();
+  return (query) => {
+    const params = new URLSearchParams(
+      String(query || '').replace(/^\?/, '')
+    );
+    const type = params.get('type');
+    const pathname = type === 'import' ? '/import' : '/generate';
+    const search = query
+      ? query.startsWith('?')
+        ? query
+        : `?${query}`
+      : '';
+    navigate({ pathname, search });
+  };
 };
 
 /** Create Wallet / Restore Wallet / Connect Hardware — start-screen actions. */
@@ -111,6 +128,7 @@ export const WalletModal = React.forwardRef((props, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { accepted, setAccepted } = useAcceptDocs();
   const returnTo = useFlowReturnPath();
+  const openSeedSetup = useOpenSeedSetup();
 
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
@@ -181,12 +199,12 @@ export const WalletModal = React.forwardRef((props, ref) => {
             <Button
               className="button new-wallet"
               isDisabled={!accepted}
-              onClick={() =>
-                createTab(
-                  TAB.createWallet,
+              onClick={() => {
+                onClose();
+                openSeedSetup(
                   appendFlowReturnQuery('?type=generate', returnTo)
-                )
-              }
+                );
+              }}
             >
               Continue
             </Button>
@@ -205,6 +223,7 @@ export const ImportModal = React.forwardRef((props, ref) => {
   const [selected, setSelected] = React.useState(null);
   const [hasProceeded, setHasProceeded] = React.useState(false);
   const returnTo = useFlowReturnPath();
+  const openSeedSetup = useOpenSeedSetup();
 
   const termsRef = React.useRef();
   const privacyPolicyRef = React.useRef();
@@ -224,8 +243,8 @@ export const ImportModal = React.forwardRef((props, ref) => {
     }
 
     setHasProceeded(true);
-    createTab(
-      TAB.createWallet,
+    onClose();
+    openSeedSetup(
       appendFlowReturnQuery(`?type=import&length=${seedLength}`, returnTo)
     );
   };

@@ -226,6 +226,21 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(css).toMatch(/\.button\.fab-settings[\s\S]*rgba\(220,\s*27,\s*250/);
   });
 
+  test('account tray toggle uses the same radial fill as the action toggle, in yellow', () => {
+    const actionToggle = css.match(/\.button\.fab-toggle \{([\s\S]*?)\}/);
+    const accountToggle = css.match(
+      /\.button\.fab-account-toggle \{\n  color: #ffffff;\n([\s\S]*?)\}/
+    );
+    expect(actionToggle).toBeTruthy();
+    expect(accountToggle).toBeTruthy();
+    expect(actionToggle[1]).toContain(
+      'radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(0, 122, 255, .5), rgba(0, 0, 0, .5))'
+    );
+    expect(accountToggle[1]).toContain(
+      'radial-gradient(115.83% 134.17% at 50% 118.06%, rgba(255, 238, 0, .5), rgba(0, 0, 0, .5))'
+    );
+  });
+
   test('actions-tray FABs keep static colors, not the network accent', () => {
     const stakeRule = css.match(/\.button\.fab-stake \{([\s\S]*?)\}/);
     const voteRule = css.match(/\.button\.fab-vote \{([\s\S]*?)\}/);

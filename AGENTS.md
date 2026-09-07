@@ -79,6 +79,7 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 | Task | Command |
 |------|---------|
 | Build | `npm run build` |
+| Build all local artifacts (pulls `main`) | `npm run build:all` |
 | Dev server | `npm start` (localhost:3000) |
 | Test (unit, no live chain) | `NODE_ENV=test npx jest` |
 | Integration (Preview self-send + Preprod 0→1; never mainnet) | `npm run test:integration` |

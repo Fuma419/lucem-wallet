@@ -90,14 +90,19 @@ const extensionAdapter = {
 
     createTab: (tab, query = '') => {
       const url = chrome.runtime.getURL(`${tab}.html${query || ''}`);
-      // Same-window like the PWA: do not spawn a new Chrome window for
-      // create/import wallet, hardware setup, or Keystone sign.
-      if (typeof window !== 'undefined' && window.location) {
-        window.location.assign(url);
-        return Promise.resolve({ id: Date.now() });
-      }
-      return new Promise((res) => {
-        chrome.tabs.create({ url, active: true }, (created) => res(created));
+      // Toolbar action popups cannot host another extension page: Chrome
+      // closes them on location.assign, so create/import looked like a no-op.
+      // Open a tab in the existing browser window (no extra windows.create).
+      return new Promise((res, rej) => {
+        chrome.tabs.create({ url, active: true }, (created) => {
+          if (chrome.runtime.lastError || !created) {
+            rej(
+              chrome.runtime.lastError || new Error('Failed to open tab')
+            );
+            return;
+          }
+          res(created);
+        });
       });
     },
 

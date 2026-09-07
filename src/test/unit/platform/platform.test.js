@@ -112,6 +112,17 @@ describe('import abandon navigation', () => {
     expect(createPopupSrc).not.toContain('chrome.tabs.create');
   });
 
+  test('extension createTab stays in the current window like the PWA', () => {
+    const extSrc = fs.readFileSync(
+      path.join(__dirname, '../../../platform/extension.js'),
+      'utf8'
+    );
+    const afterCreateTab = extSrc.split('createTab:')[1] || '';
+    const createTabSrc = afterCreateTab.split('closeCurrentTab:')[0];
+    expect(createTabSrc).toContain('location.assign');
+    expect(createTabSrc).not.toContain('chrome.windows.create');
+  });
+
   test('web and extension adapters expose openMainRoute with an allowlist', () => {
     const webSrc = fs.readFileSync(
       path.join(__dirname, '../../../platform/web.js'),

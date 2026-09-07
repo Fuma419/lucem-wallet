@@ -969,7 +969,7 @@ const Send = () => {
           <>
             <Flex
               align="center"
-              px={{ base: 3, md: 5 }}
+              className="lucem-page-gutter"
               pt="calc(0.75rem + env(safe-area-inset-top, 0px))"
               pb={2}
               gap={2}
@@ -1011,7 +1011,7 @@ const Send = () => {
               overflowX="hidden"
               overscrollBehavior="contain"
               w="full"
-              px={{ base: 4, md: 6 }}
+              className="lucem-page-gutter"
               pt={1}
               pb={4}
             >
@@ -1345,11 +1345,10 @@ const Send = () => {
             </Box>
 
             <Box
-              className="lucem-send-footer"
+              className="lucem-send-footer lucem-page-gutter"
               data-testid="send-footer"
               flexShrink={0}
               w="full"
-              px={{ base: 4, md: 6 }}
               pt={3}
               pb="calc(1.25rem + env(safe-area-inset-bottom, 0px))"
               borderTopWidth="1px"

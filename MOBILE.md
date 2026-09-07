@@ -35,12 +35,15 @@ on device locally with any account.
 
 ## One-time: generate the native projects
 
+`android/` and `ios/` are committed (same Capacitor skeleton; build copies and
+Pods stay gitignored). Only regenerate if a platform directory is missing:
+
 ```bash
 nvm use            # Node 24
 NODE_ENV=development npm install
 npm run mobile:build      # builds build/ (and copies mainPopup.html -> index.html)
-npx cap add android       # creates android/
-npx cap add ios           # creates ios/ (Mac only)
+npx cap add android       # creates android/ if absent
+npx cap add ios           # creates ios/ if absent (Mac only)
 ```
 
 App icons and splash (provide a 1024x1024 `resources/icon.png` and optional

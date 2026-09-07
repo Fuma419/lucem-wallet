@@ -52,6 +52,30 @@ describe('single version source of truth', () => {
     expect(gradle).toMatch(new RegExp(`versionCode\\s+${expectedCode}\\b`));
   });
 
+  test('ios Info.plist versions match package.json via versionCode encoding', () => {
+    const {
+      versionCodeFromSemver,
+    } = require('../../../scripts/sync-mobile-version');
+    const plist = fs.readFileSync(
+      path.join(root, 'ios/App/App/Info.plist'),
+      'utf8'
+    );
+    const expectedCode = versionCodeFromSemver(packageJson.version);
+    const escaped = packageJson.version.replace(/\./g, '\\.');
+    expect(plist).toMatch(
+      new RegExp(
+        `<key>CFBundleShortVersionString</key>\\s*<string>${escaped}</string>`
+      )
+    );
+    expect(plist).toMatch(
+      new RegExp(
+        `<key>CFBundleVersion</key>\\s*<string>${expectedCode}</string>`
+      )
+    );
+    expect(plist).toContain('NSCameraUsageDescription');
+    expect(plist).toMatch(/Keystone QR/);
+  });
+
   test('runtime version consumers import package.json, not the extension manifest', () => {
     const about = fs.readFileSync(
       path.join(root, 'src/ui/app/components/about.jsx'),

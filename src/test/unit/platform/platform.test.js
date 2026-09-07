@@ -96,6 +96,45 @@ describe('platform/web.js - navigation', () => {
   });
 });
 
+describe('platform/extension.js - createTab', () => {
+  afterEach(() => {
+    jest.resetModules();
+    delete global.chrome;
+  });
+
+  test('opens create/import in a tab and does not navigate the popup', async () => {
+    const created = { id: 42, url: 'chrome-extension://ext/createWalletTab.html' };
+    global.chrome = {
+      runtime: {
+        id: 'ext',
+        getURL: (p) => `chrome-extension://ext/${p}`,
+        lastError: undefined,
+      },
+      tabs: {
+        create: jest.fn((opts, cb) => cb(created)),
+      },
+      windows: { create: jest.fn() },
+      storage: { local: {} },
+    };
+
+    const extAdapter = require('../../../platform/extension').default;
+    const tab = await extAdapter.navigation.createTab(
+      'createWalletTab',
+      '?type=generate'
+    );
+
+    expect(tab).toEqual(created);
+    expect(global.chrome.tabs.create).toHaveBeenCalledWith(
+      {
+        url: 'chrome-extension://ext/createWalletTab.html?type=generate',
+        active: true,
+      },
+      expect.any(Function)
+    );
+    expect(global.chrome.windows.create).not.toHaveBeenCalled();
+  });
+});
+
 describe('import abandon navigation', () => {
   const fs = require('fs');
   const path = require('path');
@@ -112,15 +151,18 @@ describe('import abandon navigation', () => {
     expect(createPopupSrc).not.toContain('chrome.tabs.create');
   });
 
-  test('extension createTab stays in the current window like the PWA', () => {
+  test('extension createTab opens a tab in the current window, not a new window', () => {
     const extSrc = fs.readFileSync(
       path.join(__dirname, '../../../platform/extension.js'),
       'utf8'
     );
     const afterCreateTab = extSrc.split('createTab:')[1] || '';
     const createTabSrc = afterCreateTab.split('closeCurrentTab:')[0];
-    expect(createTabSrc).toContain('location.assign');
+    expect(createTabSrc).toContain('chrome.tabs.create');
     expect(createTabSrc).not.toContain('chrome.windows.create');
+    // Toolbar popups die on in-document navigation; that is why create/import
+    // appeared to do nothing after the PWA-style same-document navigation.
+    expect(createTabSrc).not.toMatch(/location\.assign\(/);
   });
 
   test('web and extension adapters expose openMainRoute with an allowlist', () => {

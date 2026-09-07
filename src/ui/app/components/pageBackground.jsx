@@ -1,4 +1,5 @@
 import React from 'react';
+import { isNativePlatform } from '../../../platform/capacitor';
 
 /**
  * Full-page wash copied from the Magic Delegation Portal Once UI Background:
@@ -12,6 +13,7 @@ const PageBackground = () => {
   const smoothRef = React.useRef({ x: 0, y: 0 });
   const [reduceMotion, setReduceMotion] = React.useState(false);
   const [pointerFine, setPointerFine] = React.useState(false);
+  const nativeShell = isNativePlatform();
 
   React.useEffect(() => {
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -84,6 +86,11 @@ const PageBackground = () => {
     >
       <div className="lucem-page-bg-gradient" />
       <div className="lucem-page-bg-dots" />
+      {/* Soften the PWA/iOS status-bar seam without viewport-fit=cover.
+          Native Capacitor already paints the system bar in #080808. */}
+      {nativeShell ? null : (
+        <div className="lucem-page-bg-horizon" data-testid="lucem-page-bg-horizon" />
+      )}
     </div>
   );
 };

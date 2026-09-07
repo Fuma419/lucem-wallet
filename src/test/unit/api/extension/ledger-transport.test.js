@@ -36,6 +36,8 @@ const {
   isSafariOrIosWebKit,
   canConnectLedgerInThisBrowser,
   ledgerCannotConnectMessage,
+  isMobilePlatform,
+  shouldOfferLedgerImport,
   openLedgerTransport,
   pickLedgerUsbDevice,
   closeLedgerApp,
@@ -47,6 +49,8 @@ describe('ledger USB / BLE transport', () => {
   const originalBluetooth = navigator.bluetooth;
   const originalUa = navigator.userAgent;
   const originalVendor = navigator.vendor;
+  const originalPlatform = navigator.platform;
+  const originalMaxTouchPoints = navigator.maxTouchPoints;
 
   afterEach(() => {
     TransportWebHID.create.mockClear();
@@ -75,6 +79,14 @@ describe('ledger USB / BLE transport', () => {
         value: originalVendor,
       });
     }
+    Object.defineProperty(navigator, 'platform', {
+      configurable: true,
+      value: originalPlatform,
+    });
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      configurable: true,
+      value: originalMaxTouchPoints,
+    });
   });
 
   test('isLedgerUsbId recognizes stored USB sentinels', () => {
@@ -233,5 +245,44 @@ describe('ledger USB / BLE transport', () => {
     expect(isSafariOrIosWebKit()).toBe(true);
     expect(canConnectLedgerInThisBrowser()).toBe(false);
     expect(ledgerCannotConnectMessage()).toMatch(/Chrome or Edge/);
+  });
+
+  test('does not offer Ledger import on iPhone or Android', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+    });
+    expect(isMobilePlatform()).toBe(true);
+    expect(shouldOfferLedgerImport()).toBe(false);
+
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0 Mobile Safari/537.36',
+    });
+    Object.defineProperty(navigator, 'usb', {
+      configurable: true,
+      value: { requestDevice: jest.fn() },
+    });
+    expect(isMobilePlatform()).toBe(true);
+    expect(shouldOfferLedgerImport()).toBe(false);
+  });
+
+  test('offers Ledger import on desktop Chrome', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
+    Object.defineProperty(navigator, 'platform', {
+      configurable: true,
+      value: 'Win32',
+    });
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      configurable: true,
+      value: 0,
+    });
+    expect(isMobilePlatform()).toBe(false);
+    expect(shouldOfferLedgerImport()).toBe(true);
   });
 });

@@ -49,10 +49,12 @@ export const isAndroidLike = () => {
 };
 
 const isNativeShell = () =>
-  typeof window !== 'undefined' &&
-  window.Capacitor &&
-  typeof window.Capacitor.isNativePlatform === 'function' &&
-  window.Capacitor.isNativePlatform();
+  Boolean(
+    typeof window !== 'undefined' &&
+      window.Capacitor &&
+      typeof window.Capacitor.isNativePlatform === 'function' &&
+      window.Capacitor.isNativePlatform()
+  );
 
 export const hasWebBluetoothRequestDevice = () =>
   Boolean(
@@ -91,6 +93,12 @@ export const isSafariOrIosWebKit = () => {
 
 export const canConnectLedgerInThisBrowser = () =>
   Boolean(hasLedgerUsbApi() || hasWebBluetoothRequestDevice());
+
+/** Phones/tablets (and the native app). Desktop Chrome/Edge still offer Ledger. */
+export const isMobilePlatform = () =>
+  Boolean(isIosLikeDevice() || isAndroidLike() || isNativeShell());
+
+export const shouldOfferLedgerImport = () => !isMobilePlatform();
 
 const isUserCancelled = (err) => {
   if (!err) return false;

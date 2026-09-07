@@ -75,6 +75,7 @@ import {
   ledgerUsbUnavailableMessage,
   pickLedgerUsbDevice,
   preloadLedgerUsbTransports,
+  shouldOfferLedgerImport,
 } from '../../../api/extension/ledger-transport';
 
 const ledgerBleRequestOptions = () => {
@@ -337,7 +338,10 @@ const App = () => {
 };
 
 const ConnectHW = ({ onConfirm }) => {
-  const [selected, setSelected] = React.useState('');
+  const offerLedger = shouldOfferLedgerImport();
+  const [selected, setSelected] = React.useState(() =>
+    offerLedger ? '' : HW.keystone
+  );
   const [ledgerLink, setLedgerLink] = React.useState(() =>
     hasLedgerUsbApi() ? 'usb' : 'ble'
   );
@@ -357,7 +361,7 @@ const ConnectHW = ({ onConfirm }) => {
   const [keystonePendingScan, setKeystonePendingScan] = React.useState(null);
 
   React.useEffect(() => {
-    if (hasLedgerUsbApi()) {
+    if (shouldOfferLedgerImport() && hasLedgerUsbApi()) {
       preloadLedgerUsbTransports().catch(() => {});
     }
   }, []);
@@ -791,6 +795,7 @@ const ConnectHW = ({ onConfirm }) => {
             Keystone
           </Text>
         </Box>
+        {offerLedger && (
         <Box
           as="button"
           type="button"
@@ -869,6 +874,7 @@ const ConnectHW = ({ onConfirm }) => {
             Ledger
           </Text>
         </Box>
+        )}
       </Box>
       <Box h={10} />
       {selected === HW.keystone && (

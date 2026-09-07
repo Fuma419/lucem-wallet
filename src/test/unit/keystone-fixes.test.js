@@ -157,6 +157,18 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toMatch(/setError\(ledgerBluetoothUnavailableMessage\(\)\)/);
   });
 
+  test('Ledger import is hidden on mobile platforms', () => {
+    expect(hwSrc).toContain('shouldOfferLedgerImport');
+    expect(hwSrc).toContain('offerLedger');
+    expect(hwSrc).toContain('{offerLedger && (');
+    const setupSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/walletSetupFlow.jsx'),
+      'utf8'
+    );
+    expect(setupSrc).toContain('shouldOfferLedgerImport');
+    expect(setupSrc).toContain('On a phone or tablet, connect a Keystone');
+  });
+
   test('Ledger BLE options helper is defined', () => {
     expect(hwSrc).toMatch(/ledgerBleRequestOptions/);
   });

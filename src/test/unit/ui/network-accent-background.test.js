@@ -58,6 +58,7 @@ describe('portal page background wiring', () => {
     expect(stylesSrc).toContain("html[data-network='preview']");
     expect(stylesSrc).toContain('.lucem-page-bg-gradient');
     expect(stylesSrc).toContain('.lucem-page-bg-dots');
+    expect(stylesSrc).toContain('.lucem-page-bg-horizon');
     expect(stylesSrc).toContain('--lucem-page-glow-left');
     expect(stylesSrc).toContain('rgba(var(--lucem-accent)');
     expect(stylesSrc).toContain('--lucem-cursor-x');

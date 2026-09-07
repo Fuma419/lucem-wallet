@@ -33,8 +33,8 @@ describe('Vercel staging hosting', () => {
     expect(cmd).toContain('staging');
     expect(cmd).toContain('exit 1');
     expect(cmd).toContain('exit 0');
-    expect(cmd).toContain('Skipping Vercel preview deployment');
-    expect(cmd).toContain('staging branch');
+    expect(cmd).toContain('Skip Preview');
+    expect(cmd.length).toBeLessThanOrEqual(256);
   });
 
   test('webpack inlines VERCEL_ENV for the staging chip', () => {

@@ -2,7 +2,7 @@
   "buildCommand": "npm run build:webpack",
   "outputDirectory": "build",
   "installCommand": "npm ci",
-  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ] || [ \"$VERCEL_GIT_COMMIT_REF\" = \"staging\" ]; then exit 1; else echo \"Skipping Vercel preview deployment; Jenkins gates and protected branch merge control releases. Preview deploys only from the staging branch.\"; exit 0; fi",
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ] || [ \"$VERCEL_GIT_COMMIT_REF\" = \"staging\" ]; then exit 1; else echo \"Skip Preview (staging only).\"; exit 0; fi",
   "framework": null,
   "rewrites": [
     { "source": "/api/koios/mainnet/:path*", "destination": "https://api.koios.rest/api/v1/:path*" },

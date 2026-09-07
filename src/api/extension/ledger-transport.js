@@ -28,14 +28,18 @@ export const isLedgerUsbId = (id) => {
 };
 
 export const hasWebHid = () =>
-  typeof navigator !== 'undefined' &&
-  navigator.hid &&
-  typeof navigator.hid.requestDevice === 'function';
+  Boolean(
+    typeof navigator !== 'undefined' &&
+      navigator.hid &&
+      typeof navigator.hid.requestDevice === 'function'
+  );
 
 export const hasWebUsb = () =>
-  typeof navigator !== 'undefined' &&
-  navigator.usb &&
-  typeof navigator.usb.requestDevice === 'function';
+  Boolean(
+    typeof navigator !== 'undefined' &&
+      navigator.usb &&
+      typeof navigator.usb.requestDevice === 'function'
+  );
 
 export const hasLedgerUsbApi = () => hasWebHid() || hasWebUsb();
 
@@ -51,11 +55,13 @@ const isNativeShell = () =>
   window.Capacitor.isNativePlatform();
 
 export const hasWebBluetoothRequestDevice = () =>
-  typeof navigator !== 'undefined' &&
-  navigator.bluetooth &&
-  typeof navigator.bluetooth.requestDevice === 'function';
+  Boolean(
+    typeof navigator !== 'undefined' &&
+      navigator.bluetooth &&
+      typeof navigator.bluetooth.requestDevice === 'function'
+  );
 
-const isIosBrowserWithoutWebBluetooth = () => {
+export const isIosLikeDevice = () => {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
   if (/iPhone|iPod|iPad/i.test(ua)) return true;
@@ -64,6 +70,27 @@ const isIosBrowserWithoutWebBluetooth = () => {
   }
   return false;
 };
+
+const isIosBrowserWithoutWebBluetooth = () => isIosLikeDevice();
+
+/** Safari, iOS WebKit (incl. Chrome on iPhone), and the home-screen PWA. */
+export const isSafariOrIosWebKit = () => {
+  if (typeof navigator === 'undefined') return false;
+  if (isIosLikeDevice()) return true;
+  const ua = navigator.userAgent || '';
+  if (/CriOS|FxiOS|EdgiOS|OPiOS/i.test(ua)) return true;
+  const vendor = typeof navigator.vendor === 'string' ? navigator.vendor : '';
+  if (vendor === 'Apple Computer, Inc.') {
+    return !/Chrome|Chromium|Edg|OPR|Firefox|Android/i.test(ua);
+  }
+  return (
+    /Safari/i.test(ua) &&
+    !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|Android/i.test(ua)
+  );
+};
+
+export const canConnectLedgerInThisBrowser = () =>
+  Boolean(hasLedgerUsbApi() || hasWebBluetoothRequestDevice());
 
 const isUserCancelled = (err) => {
   if (!err) return false;
@@ -76,12 +103,17 @@ const isUserCancelled = (err) => {
   );
 };
 
-export const ledgerUsbUnavailableMessage = () => {
+export const ledgerCannotConnectMessage = () => {
   if (isNativeShell()) {
     return 'Ledger USB does not work inside the Lucem app. Open the Lucem website in Chrome on this phone, plug in the device with a USB-OTG adapter, unlock it, open the Cardano app, then tap Continue so Chrome can show the USB list.';
   }
-  return 'Ledger USB needs Chrome or Edge over HTTPS (the Lucem web app), with the device unlocked and the Cardano app open. Safari, Firefox, and in-app browsers do not expose WebUSB. On iPhone/iPad use Keystone with QR.';
+  if (isIosLikeDevice() || isSafariOrIosWebKit()) {
+    return 'Safari cannot talk to Ledger — including Lucem added to the home screen. Apple does not give websites USB or Bluetooth. On iPhone/iPad choose Keystone and scan the QR. On a Mac or Android phone, open Lucem in Chrome or Edge (not Safari).';
+  }
+  return 'This browser cannot connect Ledger. Use Chrome or Edge over HTTPS (the Lucem web app). Safari, Firefox, and in-app browsers do not expose USB. On iPhone/iPad use Keystone with QR.';
 };
+
+export const ledgerUsbUnavailableMessage = () => ledgerCannotConnectMessage();
 
 export const ledgerBluetoothUnavailableMessage = () => {
   if (isIosBrowserWithoutWebBluetooth()) {

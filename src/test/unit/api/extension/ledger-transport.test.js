@@ -33,6 +33,9 @@ const {
   LEDGER_USB_VENDOR_ID,
   isLedgerUsbId,
   hasLedgerUsbApi,
+  isSafariOrIosWebKit,
+  canConnectLedgerInThisBrowser,
+  ledgerCannotConnectMessage,
   openLedgerTransport,
   pickLedgerUsbDevice,
   closeLedgerApp,
@@ -43,6 +46,7 @@ describe('ledger USB / BLE transport', () => {
   const originalUsb = navigator.usb;
   const originalBluetooth = navigator.bluetooth;
   const originalUa = navigator.userAgent;
+  const originalVendor = navigator.vendor;
 
   afterEach(() => {
     TransportWebHID.create.mockClear();
@@ -64,6 +68,13 @@ describe('ledger USB / BLE transport', () => {
       configurable: true,
       value: originalUa,
     });
+    if (originalVendor === undefined) delete navigator.vendor;
+    else {
+      Object.defineProperty(navigator, 'vendor', {
+        configurable: true,
+        value: originalVendor,
+      });
+    }
   });
 
   test('isLedgerUsbId recognizes stored USB sentinels', () => {
@@ -184,5 +195,43 @@ describe('ledger USB / BLE transport', () => {
     const close = jest.fn(async () => {});
     await closeLedgerApp({ transport: { close } });
     expect(close).toHaveBeenCalled();
+  });
+
+  test('iPhone Safari / PWA cannot connect Ledger', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+    });
+    Object.defineProperty(navigator, 'vendor', {
+      configurable: true,
+      value: 'Apple Computer, Inc.',
+    });
+    delete navigator.hid;
+    delete navigator.usb;
+    delete navigator.bluetooth;
+    expect(isSafariOrIosWebKit()).toBe(true);
+    expect(canConnectLedgerInThisBrowser()).toBe(false);
+    expect(ledgerCannotConnectMessage()).toMatch(/Safari cannot talk to Ledger/);
+    expect(ledgerCannotConnectMessage()).toMatch(/home screen/);
+    expect(ledgerCannotConnectMessage()).toMatch(/Keystone/);
+  });
+
+  test('macOS Safari cannot connect Ledger', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+    });
+    Object.defineProperty(navigator, 'vendor', {
+      configurable: true,
+      value: 'Apple Computer, Inc.',
+    });
+    delete navigator.hid;
+    delete navigator.usb;
+    delete navigator.bluetooth;
+    expect(isSafariOrIosWebKit()).toBe(true);
+    expect(canConnectLedgerInThisBrowser()).toBe(false);
+    expect(ledgerCannotConnectMessage()).toMatch(/Chrome or Edge/);
   });
 });

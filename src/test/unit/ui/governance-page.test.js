@@ -46,6 +46,18 @@ describe('governance page and wallet network button wiring', () => {
     expect(css).toMatch(
       /\.button\.fab-account-toggle \{[\s\S]*?box-shadow[\s\S]*?rgba\(255,\s*238,\s*0/
     );
+    // Same radial fill recipe as `.fab-toggle`, in the tray's yellow.
+    expect(css).toMatch(
+      /\.button\.fab-account-toggle \{[\s\S]*?radial-gradient\(115\.83% 134\.17% at 50% 118\.06%, rgba\(255,\s*238,\s*0,\s*\.5\), rgba\(0,\s*0,\s*0,\s*\.5\)\)/
+    );
+    expect(css).toMatch(
+      /\.button\.fab-account-toggle:hover \{[\s\S]*?radial-gradient\(115\.83% 134\.17% at 50% 118\.06%, rgba\(255,\s*238,\s*0,\s*1\), rgba\(0,\s*0,\s*0,\s*\.5\)\)/
+    );
+    // Avatar option FABs must not pick up that fill — they show the account image.
+    const avatarBase = css.match(
+      /\.button\.fab-account,\s*\.button\.fab-account-toggle \{([\s\S]*?)\}/
+    );
+    expect(avatarBase[1]).not.toContain('radial-gradient');
     // Neither the old orange (255,140,0) nor the too-bright gold (255,214,0)
     // drive the account selector any more.
     expect(base[1]).not.toContain('rgba(255, 140, 0');

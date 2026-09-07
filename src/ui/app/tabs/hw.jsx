@@ -65,11 +65,13 @@ import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import { ensureCameraPermission } from '../../../platform/capacitor';
 import {
   LEDGER_USB_ID,
+  canConnectLedgerInThisBrowser,
   closeLedgerApp,
   countGrantedLedgerUsbDevices,
   hasLedgerUsbApi,
   isAndroidLike,
   isLedgerUsbId,
+  ledgerCannotConnectMessage,
   ledgerUsbUnavailableMessage,
   pickLedgerUsbDevice,
   preloadLedgerUsbTransports,
@@ -833,7 +835,7 @@ const ConnectHW = ({ onConfirm }) => {
               setError('');
               return;
             }
-            setError(ledgerBluetoothUnavailableMessage());
+            setError(ledgerCannotConnectMessage());
           }}
         >
           <Box
@@ -978,7 +980,9 @@ const ConnectHW = ({ onConfirm }) => {
           textAlign="center"
           mx="auto"
           fontSize="sm"
-          color="whiteAlpha.800"
+          color={
+            canConnectLedgerInThisBrowser() ? 'whiteAlpha.800' : 'red.200'
+          }
         >
           {ledgerLink === 'usb'
             ? hasLedgerUsbApi()
@@ -987,8 +991,10 @@ const ConnectHW = ({ onConfirm }) => {
                 : isAndroidLike()
                   ? 'A plugged-in Ledger does not show as connected until Chrome asks for USB access. Use a USB-OTG adapter, unlock the device, open the Cardano app, then tap Continue. Chrome should open a USB list right away — pick the Ledger.'
                   : 'Plug in Ledger over USB, unlock it, open the Cardano app, then tap Continue and pick the device in the browser list.'
-              : ledgerUsbUnavailableMessage()
-            : ledgerBluetoothHelpText()}
+              : ledgerCannotConnectMessage()
+            : !canConnectLedgerInThisBrowser()
+              ? ledgerCannotConnectMessage()
+              : ledgerBluetoothHelpText()}
         </Text>
       )}
       {selected === HW.ledger && (
@@ -1055,7 +1061,11 @@ const ConnectHW = ({ onConfirm }) => {
         w="100%"
         maxW="300px"
         minH="44px"
-        isDisabled={!selected || (isLoading && ledgerLink !== 'usb')}
+        isDisabled={
+          !selected ||
+          (selected === HW.ledger && !canConnectLedgerInThisBrowser()) ||
+          (isLoading && ledgerLink !== 'usb')
+        }
         isLoading={isLoading && ledgerLink !== 'usb'}
         mt={8}
         alignSelf="center"

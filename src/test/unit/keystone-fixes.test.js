@@ -148,9 +148,11 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toMatch(/!hasWebBluetoothRequestDevice\(\)/);
   });
 
-  test('continue button stays clickable and unsupported ledger is handled in click path', () => {
-    expect(hwSrc).not.toMatch(
-      /\(selected === HW\.ledger && isIosLikeWithoutWebBluetooth\(\)\)/
+  test('continue is disabled when this browser cannot talk to Ledger', () => {
+    expect(hwSrc).toContain('canConnectLedgerInThisBrowser');
+    expect(hwSrc).toContain('ledgerCannotConnectMessage');
+    expect(hwSrc).toMatch(
+      /selected === HW\.ledger && !canConnectLedgerInThisBrowser\(\)/
     );
     expect(hwSrc).toMatch(/setError\(ledgerBluetoothUnavailableMessage\(\)\)/);
   });

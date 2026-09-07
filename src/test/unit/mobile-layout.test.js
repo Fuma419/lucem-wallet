@@ -487,6 +487,25 @@ describe('mobile layout - iOS PWA top chrome', () => {
     expect(src).toMatch(/apple-mobile-web-app-status-bar-style/);
     expect(src).toMatch(/colorMode === 'light' \? 'default' : 'black'/);
   });
+
+  test('page wash fades into the iOS status bar instead of extending under it', () => {
+    const bgSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/pageBackground.jsx'),
+      'utf8'
+    );
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/styles.css'),
+      'utf8'
+    );
+    expect(bgSrc).toContain('lucem-page-bg-horizon');
+    expect(bgSrc).toContain('isNativePlatform');
+    expect(css).toMatch(
+      /\.lucem-page-bg-horizon \{[\s\S]*linear-gradient\(\s*to bottom/
+    );
+    expect(css).toMatch(/\.lucem-page-bg-horizon \{[\s\S]*#000000/);
+    expect(css).toContain("html[data-layout='extension'] .lucem-page-bg-horizon");
+    expect(css).toContain("html[data-layout='desktop'] .lucem-page-bg-horizon");
+  });
 });
 
 describe('mobile layout - UnitDisplay handles zero correctly', () => {

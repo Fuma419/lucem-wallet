@@ -137,6 +137,42 @@ html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .lucem-pa
 }
 
 /*
+ * PWA / iOS standalone: the system status bar is opaque black while the page
+ * wash is #080808 + dots, which reads as a hard line. Fade the wash into that
+ * chrome. Do not use viewport-fit=cover / black-translucent (iOS shell shift).
+ */
+.lucem-page-bg-horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5.5rem;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    #000000 0%,
+    rgba(0, 0, 0, 0.78) 28%,
+    rgba(8, 8, 8, 0.32) 62%,
+    transparent 100%
+  );
+}
+
+html[data-theme='light'] .lucem-page-bg-horizon {
+  background: linear-gradient(
+    to bottom,
+    #f4f6fb 0%,
+    rgba(244, 246, 251, 0.82) 40%,
+    transparent 100%
+  );
+}
+
+html[data-layout='extension'] .lucem-page-bg-horizon,
+html[data-layout='desktop'] .lucem-page-bg-horizon {
+  display: none;
+}
+
+/*
  * Lucem responsive layout system (safe areas, scroll regions, modal caps).
  * Used by wallet hero, create-wallet tab, and fixed controls.
  */

@@ -257,6 +257,20 @@ describe('wallet tray accounts vs settings FABs', () => {
     );
   });
 
+  test('connect-hardware button stays lime, not the network accent', () => {
+    const hwRule = css.match(/\.button\.hw-wallet \{([\s\S]*?)\}/);
+    const hwHover = css.match(/\.button\.hw-wallet:hover \{([\s\S]*?)\}/);
+    expect(hwRule).toBeTruthy();
+    expect(hwHover).toBeTruthy();
+    expect(hwRule[1]).toContain('rgba(var(--lucem-lime)');
+    expect(hwRule[1]).not.toContain('--lucem-accent');
+    expect(hwHover[1]).toContain('rgba(var(--lucem-lime)');
+    expect(hwHover[1]).not.toContain('--lucem-accent');
+    expect(css).toMatch(
+      /html\[data-theme='light'\] \.button\.hw-wallet \{[\s\S]*--btn-fill:\s*var\(--lucem-lime\)/
+    );
+  });
+
   test('right tray toggle becomes a Home button on tray destination pages', () => {
     expect(traysSrc).toContain('MdHome');
     expect(traysSrc).toContain('isOnNavPage');

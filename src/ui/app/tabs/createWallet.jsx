@@ -1111,11 +1111,6 @@ const MakeAccount = ({ colorTheme }) => {
   );
 };
 
-const isExtension =
-  typeof chrome !== 'undefined' &&
-  typeof chrome.runtime !== 'undefined' &&
-  typeof chrome.runtime.id !== 'undefined';
-
 const SuccessAndClose = ({ flow }) => {
   return (
     <Box
@@ -1133,26 +1128,21 @@ const SuccessAndClose = ({ flow }) => {
           : 'Successfully created wallet!'}
       </Text>
       <Box h={10} />
-      <Text px={2}>
-        {isExtension
-          ? 'You can now close this tab and continue with the extension.'
-          : 'Redirecting to your wallet...'}
-      </Text>
+      <Text px={2}>Redirecting to your wallet...</Text>
       <Box h={10} />
       <Button
         type="button"
         className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
         mt="auto"
         onClick={async () => {
-          if (isExtension) {
-            platform.navigation.closeCurrentTab();
-          } else {
-            // Load the main bundle at /wallet so the URL matches the in-app route (matches Vercel rewrites).
-            window.location.assign(`${window.location.origin}/wallet`);
+          if (typeof platform.navigation.openMainRoute === 'function') {
+            await platform.navigation.openMainRoute('/wallet');
+            return;
           }
+          window.location.assign(`${window.location.origin}/wallet`);
         }}
       >
-        {isExtension ? 'Close' : 'Open Wallet'}
+        Open Wallet
       </Button>
     </Box>
   );

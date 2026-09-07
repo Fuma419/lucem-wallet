@@ -140,6 +140,23 @@ describe('import abandon navigation', () => {
     expect(webSrc).not.toMatch(/location\.href = tab \+ '\.html'/);
   });
 
+  test('create/import success opens the wallet in the same window', () => {
+    const createSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),
+      'utf8'
+    );
+    expect(createSrc).toContain('Open Wallet');
+    expect(createSrc).toContain("openMainRoute('/wallet')");
+    expect(createSrc).not.toContain('close this tab and continue with the extension');
+    expect(createSrc).not.toMatch(/isExtension \? 'Close'/);
+    const hwSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/tabs/hw.jsx'),
+      'utf8'
+    );
+    expect(hwSrc).toContain('Open Wallet');
+    expect(hwSrc).not.toContain('close this tab and continue with the extension');
+  });
+
   test('create/import tabs expose Cancel via leaveSetupFlow', () => {
     const createSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),

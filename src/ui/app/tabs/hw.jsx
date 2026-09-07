@@ -1541,7 +1541,7 @@ const SuccessAndClose = () => {
         fontSize="sm"
         color="whiteAlpha.800"
       >
-        You can now close this tab and continue with the extension.
+        You can now open your wallet.
       </Text>
       <Button
         type="button"
@@ -1556,7 +1556,7 @@ const SuccessAndClose = () => {
         justifyContent="center"
         onClick={() => closeCurrentTab()}
       >
-        Close
+        Open Wallet
       </Button>
     </Box>
   );

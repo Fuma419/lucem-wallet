@@ -55,6 +55,7 @@ npm run mobile:assets
 
 ## Everyday loop
 
+- `npm run build:all` - `git pull` latest `main`, webpack, extension zip in `dist/`, Android debug APK, iOS sync (Mac). Does not upload to stores.
 - `npm run mobile:sync` - rebuild web assets and copy them into `android/`/`ios/`.
 - `npm run mobile:sync:android` - same, Android only (skips CocoaPods).
 - `npm run mobile:android` - sync and open Android Studio.

@@ -10,6 +10,7 @@
   "scripts": {
     "build": "NODE_OPTIONS=\"--max-old-space-size=4096\" NODE_ENV=test jest && NODE_OPTIONS=\"--max-old-space-size=4096\" node utils/build.js",
     "build:webpack": "NODE_OPTIONS=\"--max-old-space-size=4096\" node utils/build.js",
+    "build:all": "bash scripts/build-all.sh",
     "start": "NODE_OPTIONS=\"--max-old-space-size=4096\" node utils/webserver.js",
     "prettier": "prettier --write '**/*.{js,jsx,css,html}'",
     "test": "NODE_ENV=test jest",

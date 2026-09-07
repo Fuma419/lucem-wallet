@@ -133,7 +133,10 @@ Optional env (see `.env.example`): `KOIOS_API_KEY_MAINNET` / `_PREPROD` / `_PREV
 
 ```bash
 NODE_ENV=test npx jest    # unit tests
+npm run build:all         # pull latest main, then extension zip + web + Android APK + iOS
 ```
+
+`build:all` writes `dist/lucem-wallet-<version>-extension.zip` (and a debug APK when the Android SDK is present). It does not deploy Vercel or upload to Play / TestFlight. Use `-- --no-pull` or `-- --current` to skip switching to `main`.
 
 Do not paste recovery phrases, private keys, or passwords into issues or this repo. See **[SECURITY.md](SECURITY.md)**.
 

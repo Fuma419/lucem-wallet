@@ -149,7 +149,7 @@ const Accounts = () => {
       className="lucem-wallet-main-column"
       data-testid="accounts-page"
     >
-      <Flex align="center" px={{ base: 4, md: 6 }} pt={4} pb={2}>
+      <Flex align="center" className="lucem-page-gutter" pt={4} pb={2}>
         <Text
           flex="1"
           textAlign="center"
@@ -166,8 +166,7 @@ const Accounts = () => {
         minH={0}
         overflowY="auto"
         w="full"
-        className="lucem-tray-clearance"
-        px={{ base: 4, md: 6 }}
+        className="lucem-tray-clearance lucem-page-gutter"
         pb={TRAY_CLEARANCE_PB}
       >
         <Stack spacing={4} w="full" maxW={{ base: '100%', xl: 'sm' }} mx="auto" pt={1}>

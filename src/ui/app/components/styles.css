@@ -300,6 +300,32 @@ html {
   margin-right: auto;
 }
 
+/*
+ * Side gutters so inset panels are not flush with the viewport. The empty
+ * strip is a place to grab for vertical scroll on phones / PWA.
+ */
+.lucem-page-gutter {
+  padding-left: max(1.75rem, 10vw, env(safe-area-inset-left, 0px));
+  padding-right: max(1.75rem, 10vw, env(safe-area-inset-right, 0px));
+}
+
+@media (min-width: 48em) {
+  .lucem-page-gutter {
+    padding-left: max(2.25rem, env(safe-area-inset-left, 0px));
+    padding-right: max(2.25rem, env(safe-area-inset-right, 0px));
+  }
+}
+
+html[data-layout='desktop'] .lucem-page-gutter {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+html[data-layout='extension'] .lucem-page-gutter {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
 /* Send sits inside Main `#scroll`. 100vh here is a second scrollport
    (and in the Chrome popup 100vh can be the monitor). Fill the parent. */
 .lucem-send-page {

@@ -217,7 +217,7 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(accountsSrc).toContain('useSurfaceColors');
     expect(accountsSrc).toContain('lucem-inset-surface');
     expect(accountsSrc).toMatch(/rounded="3xl"/);
-    expect(accountsSrc).toMatch(/px=\{\{\s*base:\s*4,\s*md:\s*6\s*\}\}/);
+    expect(accountsSrc).toContain('lucem-page-gutter');
     expect(accountsSrc).toMatch(/AlertDialogContent[\s\S]*mx=\{4\}/);
   });
 

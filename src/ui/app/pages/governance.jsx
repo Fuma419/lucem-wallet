@@ -632,8 +632,7 @@ const Governance = () => {
       sx={{ '@supports (height: 100dvh)': { minHeight: '100dvh' } }}
       bg={pageBg}
       color={pageFg}
-      px={{ base: 4, md: 6 }}
-      className="lucem-tray-clearance"
+      className="lucem-tray-clearance lucem-wallet-main-column lucem-page-gutter"
       py={5}
       pb="calc(6.5rem + env(safe-area-inset-bottom, 0px))"
     >

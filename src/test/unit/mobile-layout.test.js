@@ -219,6 +219,28 @@ describe('mobile layout - no hardcoded overflow widths', () => {
     expect(legalSrc).not.toContain('SettingsPageTitle');
   });
 
+  test('vote, stake, accounts, settings, and send use side gutters', () => {
+    const stylesSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/styles.css'),
+      'utf8'
+    );
+    expect(stylesSrc).toContain('.lucem-page-gutter');
+    expect(stylesSrc).toContain('10vw');
+    [
+      'governance.jsx',
+      'staking.jsx',
+      'accounts.jsx',
+      'settings.jsx',
+      'send.jsx',
+    ].forEach((file) => {
+      const src = fs.readFileSync(
+        path.join(__dirname, '../../ui/app/pages', file),
+        'utf8'
+      );
+      expect(src).toContain('lucem-page-gutter');
+    });
+  });
+
   test('enable.jsx should use safe-area footer padding for action buttons', () => {
     const enableSrc = fs.readFileSync(
       path.join(__dirname, '../../ui/app/pages/enable.jsx'),

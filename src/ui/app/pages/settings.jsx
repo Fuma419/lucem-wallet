@@ -245,7 +245,7 @@ const Settings = () => {
       className="lucem-settings-shell lucem-wallet-main-column"
       data-testid="settings-page"
     >
-      <Flex align="center" px={{ base: 3, md: 4 }} pt={4} pb={2}>
+      <Flex align="center" className="lucem-page-gutter" pt={4} pb={2}>
         <Text flex="1" textAlign="center" fontSize="xl" fontWeight="bold">
           Settings
         </Text>
@@ -256,8 +256,7 @@ const Settings = () => {
         minH={0}
         overflowY="auto"
         w="full"
-        className="lucem-tray-clearance"
-        px={{ base: 4, md: 6 }}
+        className="lucem-tray-clearance lucem-page-gutter"
         pb={TRAY_CLEARANCE_PB}
       >
         <Stack spacing={4} w="full" maxW={{ base: '100%', xl: 'sm' }} mx="auto" pt={1}>

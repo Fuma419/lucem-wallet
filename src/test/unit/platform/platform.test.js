@@ -224,4 +224,31 @@ describe('import abandon navigation', () => {
     expect(src).toContain(".get('next')");
     expect(src).toContain("deepLink !== '/welcome'");
   });
+
+  test('create/import seed flows stay in the main popup SPA', () => {
+    const mainSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/indexMain.jsx'),
+      'utf8'
+    );
+    const setupSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
+      'utf8'
+    );
+    const createSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),
+      'utf8'
+    );
+    const cancelSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/flowCancel.jsx'),
+      'utf8'
+    );
+    expect(mainSrc).toContain('FLOW_SETUP_PATHS');
+    expect(mainSrc).toContain('CreateWalletApp');
+    expect(setupSrc).toContain('openSeedSetup');
+    expect(setupSrc).not.toMatch(/createTab\(\s*TAB\.createWallet/);
+    expect(createSrc).toContain('export const CreateWalletApp');
+    expect(createSrc).toContain("navigate('/wallet')");
+    expect(cancelSrc).toContain('FLOW_SETUP_PATHS');
+    expect(cancelSrc).toContain('#createWalletTab');
+  });
 });

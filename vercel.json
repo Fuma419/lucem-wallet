@@ -18,6 +18,10 @@
     { "source": "/governance", "destination": "/mainPopup.html" },
     { "source": "/settings", "destination": "/mainPopup.html" },
     { "source": "/settings/:path*", "destination": "/mainPopup.html" },
+    { "source": "/generate", "destination": "/mainPopup.html" },
+    { "source": "/verify", "destination": "/mainPopup.html" },
+    { "source": "/account", "destination": "/mainPopup.html" },
+    { "source": "/import", "destination": "/mainPopup.html" },
     { "source": "/enable", "destination": "/internalPopup.html" },
     { "source": "/signTx", "destination": "/internalPopup.html" },
     { "source": "/signData", "destination": "/internalPopup.html" }

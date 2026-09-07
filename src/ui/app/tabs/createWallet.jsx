@@ -129,7 +129,15 @@ const BackgroundImagePurple = '/assets/img/background-purple.webp';
 const BackgroundImageCyan = '/assets/img/background-cyan.webp';
 const LogoWhite = '/assets/img/bannerBlack.png';
 
-const App = () => {
+/** Keep `?type=` / `?from=` when moving between setup steps (BrowserRouter). */
+function navigateSetup(navigate, location, pathname, state, replace = false) {
+  navigate(
+    { pathname, search: location.search || '' },
+    { state: { ...(location.state || {}), ...(state || {}) }, replace }
+  );
+}
+
+export const CreateWalletApp = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [colorTheme, setColorTheme] = React.useState('purple');
@@ -153,17 +161,17 @@ const App = () => {
 
     if (type === 'import') {
       if (!validLengths.includes(seedLength)) {
-        navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
+        navigateSetup(navigate, location, '/generate', { colorTheme: 'purple' }, true);
         setColorTheme('purple');
         return;
       }
-      navigate('/import', { state: { seedLength, colorTheme: 'cyan' }, replace: true });
+      navigateSetup(navigate, location, '/import', { seedLength, colorTheme: 'cyan' }, true);
       setColorTheme('cyan');
     } else if (type === 'generate') {
-      navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
+      navigateSetup(navigate, location, '/generate', { colorTheme: 'purple' }, true);
       setColorTheme('purple');
     } else {
-      navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
+      navigateSetup(navigate, location, '/generate', { colorTheme: 'purple' }, true);
       setColorTheme('purple');
     }
     // Intentionally []: bootstrap from URL once. Including `navigate` re-runs when the
@@ -272,6 +280,7 @@ const App = () => {
 
 const GenerateSeed = ({ colorTheme }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   // Store only the mnemonic string in state
   const [mnemonicStr, setMnemonicStr] = React.useState('');
   const [checked, setChecked] = React.useState(false);
@@ -375,12 +384,15 @@ const GenerateSeed = ({ colorTheme }) => {
           rightIcon={<ChevronRightIcon />}
           onClick={() => {
             // Pass the original mnemonic string (not the object)
-            navigate('/verify', { state: { mnemonic: mnemonicStr, colorTheme } });
+            navigateSetup(navigate, location, '/verify', {
+              mnemonic: mnemonicStr,
+              colorTheme,
+            });
           }}
         >
           Next
         </Button>
-        <SetupCancelButton onClick={() => leaveSetupFlow()} />
+        <SetupCancelButton onClick={() => leaveSetupFlow(navigate)} />
       </SetupFlowActions>
     </Box>
   );
@@ -388,7 +400,8 @@ const GenerateSeed = ({ colorTheme }) => {
 
 const VerifySeed = ({ colorTheme }) => {
   const navigate = useNavigate();
-  const { state: { mnemonic, colorTheme: stateColorTheme } = {} } = useLocation();
+  const location = useLocation();
+  const { state: { mnemonic, colorTheme: stateColorTheme } = {} } = location;
   colorTheme = colorTheme || stateColorTheme;
   // Use a separate variable for display purposes
   const displayMnemonic = typeof mnemonic === 'string' ? mnemonicToObject(mnemonic) : mnemonic;
@@ -512,8 +525,10 @@ const VerifySeed = ({ colorTheme }) => {
             className="button"
             onClick={() => {
               // Pass the original mnemonic string for account creation
-              navigate('/account', {
-                state: { mnemonic, flow: 'create-wallet', colorTheme },
+              navigateSetup(navigate, location, '/account', {
+                mnemonic,
+                flow: 'create-wallet',
+                colorTheme,
               });
             }}
           >
@@ -526,15 +541,17 @@ const VerifySeed = ({ colorTheme }) => {
             isDisabled={!allValid}
             rightIcon={<ChevronRightIcon />}
             onClick={() => {
-              navigate('/account', {
-                state: { mnemonic, flow: 'create-wallet', colorTheme },
+              navigateSetup(navigate, location, '/account', {
+                mnemonic,
+                flow: 'create-wallet',
+                colorTheme,
               });
             }}
           >
             Next
           </Button>
         </Stack>
-        <SetupCancelButton onClick={() => leaveSetupFlow()} />
+        <SetupCancelButton onClick={() => leaveSetupFlow(navigate)} />
       </SetupFlowActions>
     </Box>
   );
@@ -554,7 +571,7 @@ const ImportSeed = ({ colorTheme }) => {
 
   React.useEffect(() => {
     if (seedLength == null) {
-      navigate('/generate', { state: { colorTheme: 'purple' }, replace: true });
+      navigateSetup(navigate, location, '/generate', { colorTheme: 'purple' }, true);
     }
   }, [seedLength, navigate]);
 
@@ -712,20 +729,23 @@ const ImportSeed = ({ colorTheme }) => {
               ? fullSeedPhrase.trim().toLowerCase()
               : mnemonicFromObject(input);
 
-            navigate('/account', {
-              state: { mnemonic, flow: 'restore-wallet', colorTheme },
+            navigateSetup(navigate, location, '/account', {
+              mnemonic,
+              flow: 'restore-wallet',
+              colorTheme,
             });
           }}
         >
           Next
         </Button>
-        <SetupCancelButton onClick={() => leaveSetupFlow()} />
+        <SetupCancelButton onClick={() => leaveSetupFlow(navigate)} />
       </SetupFlowActions>
     </Box>
   );
 };
 
 const MakeAccount = ({ colorTheme }) => {
+  const navigate = useNavigate();
   /** Uncontrolled password inputs so Safari / iOS Keychain autofill is not wiped by React controlled values. */
   const passwordRef = React.useRef(null);
   const confirmRef = React.useRef(null);
@@ -1103,7 +1123,7 @@ const MakeAccount = ({ colorTheme }) => {
           </Button>
           <SetupCancelButton
             isDisabled={loading}
-            onClick={() => leaveSetupFlow()}
+            onClick={() => leaveSetupFlow(navigate)}
           />
         </Stack>
       </Box>
@@ -1112,6 +1132,21 @@ const MakeAccount = ({ colorTheme }) => {
 };
 
 const SuccessAndClose = ({ flow }) => {
+  const navigate = useNavigate();
+  const openWallet = async () => {
+    const standaloneTab =
+      typeof document !== 'undefined' &&
+      !!document.querySelector(`#${TAB.createWallet}`);
+    if (!standaloneTab) {
+      navigate('/wallet');
+      return;
+    }
+    if (typeof platform.navigation.openMainRoute === 'function') {
+      await platform.navigation.openMainRoute('/wallet');
+      return;
+    }
+    window.location.assign(`${window.location.origin}/wallet`);
+  };
   return (
     <Box
       display="flex"
@@ -1134,13 +1169,7 @@ const SuccessAndClose = ({ flow }) => {
         type="button"
         className={`button ${flow === 'restore-wallet' ? 'import-wallet' : 'new-wallet'}`}
         mt="auto"
-        onClick={async () => {
-          if (typeof platform.navigation.openMainRoute === 'function') {
-            await platform.navigation.openMainRoute('/wallet');
-            return;
-          }
-          window.location.assign(`${window.location.origin}/wallet`);
-        }}
+        onClick={openWallet}
       >
         Open Wallet
       </Button>
@@ -1148,16 +1177,22 @@ const SuccessAndClose = ({ flow }) => {
   );
 };
 
-const root = createRoot(window.document.querySelector(`#${TAB.createWallet}`));
-root.render(
-  <CreateWalletShell>
-    <Router>
-      <>
-        <PreventHistoryBack />
-        <App />
-      </>
-    </Router>
-  </CreateWalletShell>
-);
+const mountEl =
+  typeof document !== 'undefined'
+    ? document.querySelector(`#${TAB.createWallet}`)
+    : null;
+if (mountEl) {
+  const root = createRoot(mountEl);
+  root.render(
+    <CreateWalletShell>
+      <Router>
+        <>
+          <PreventHistoryBack />
+          <CreateWalletApp />
+        </>
+      </Router>
+    </CreateWalletShell>
+  );
+}
 
 if (module.hot) module.hot.accept();

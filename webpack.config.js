@@ -55,6 +55,9 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 // Empty-string defaults keep builds green when a key is not configured.
 const envsToExpose = {
   NODE_ENV: process.env.NODE_ENV || 'development',
+  // Vercel sets this at build time (`production` | `preview` | `development`).
+  // Empty default keeps local / Jenkins webpack from throwing.
+  VERCEL_ENV: process.env.VERCEL_ENV || '',
   BLOCKFROST_PROJECT_ID_MAINNET: '',
   BLOCKFROST_MAINNET_PROJECT_ID: '',
   BLOCKFROST_PROJECT_ID_TESTNET: '',

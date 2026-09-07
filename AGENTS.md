@@ -158,6 +158,9 @@ The project deploys to Vercel via `vercel.json`:
 - **Node version:** 24.x — pinned by `.nvmrc` / `.node-version` (`24.19.0`) and `engines` (`engine-strict=true`). Vercel reads `engines.node` and uses the latest 24.x.
 - Secrets auto-generated in `utils/build.js` — no manual setup required.
 - **Vercel CLI auth:** requires `VERCEL_TOKEN` secret. Scope: `my-team-5c660a1c`. Project: `lucem-wallet`.
+- **Which deploys run:** `vercel.json` `ignoreCommand` **builds** Production (`VERCEL_ENV=production`) and Preview for git branch **`staging`** only. Every other Preview (agent PRs, feature branches) is skipped — Jenkins + protected `main` still gate releases.
+- **App staging vs Cardano preview/preprod:** `staging` is a **hosting** environment (stable Vercel URL, IndexedDB isolated from production). Cardano **Preview** / **Preprod** are in-wallet networks (`NETWORK_ID`) and are independent of that URL. The yellow **Staging** chip appears only when `VERCEL_ENV=preview` (the `staging` branch deploy), not because the wallet is on Cardano preview.
+- **Branch flow:** land experimental work on `staging`, dogfood the Preview URL, then PR `staging` → `main` for Production. Merge `main` back into `staging` regularly. Local `npm start` is unmarked.
 
 **Reproduce the Vercel build locally** (aligned environment — do this instead of `npm run build` when chasing a Vercel-only failure):
 

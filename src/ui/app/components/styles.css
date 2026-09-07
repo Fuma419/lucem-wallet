@@ -1338,6 +1338,35 @@ html[data-theme='light'] .button.fab-account-toggle:focus-visible {
   box-shadow: 0 0 20px rgba(255, 196, 0, 0.55);
 }
 
+/* Hosting environment chip — Vercel Preview (`staging` branch), not Cardano preview. */
+.lucem-staging-banner {
+  position: fixed;
+  z-index: 40;
+  top: max(0.4rem, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+  padding: 0.28rem 0.75rem;
+  pointer-events: none;
+  color: #1a1a1a;
+  background: rgba(255, 196, 0, 0.92);
+  border-radius: 1rem;
+  box-shadow: 0 0 12px rgba(255, 196, 0, 0.45);
+}
+
+html[data-theme='light'] .lucem-staging-banner {
+  color: #1a1a1a;
+  background: rgba(245, 158, 11, 0.92);
+}
+
 /* In-flow testnet badge — below the header orbs (not in the punch-hole row). */
 .network-banner {
   position: relative;

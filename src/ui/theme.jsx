@@ -4,6 +4,7 @@ import './app/components/styles.css';
 import 'focus-visible/dist/focus-visible';
 import { AppearancePreferenceProvider } from './appearanceContext';
 import PageBackground from './app/components/pageBackground';
+import StagingBanner from './app/components/stagingBanner';
 
 const scaledFont = (rem) => `calc(${rem} * var(--lucem-font-scale, 1))`;
 
@@ -330,6 +331,7 @@ const Theme = ({ children }) => (
   <ChakraProvider theme={theme} colorModeManager={lucemChakraColorModeManager}>
     <SyncPwaThemeColor />
     <PageBackground />
+    <StagingBanner />
     <Box position="relative" zIndex={1} h="100%" minH="100%">
       <AppearancePreferenceProvider>{children}</AppearancePreferenceProvider>
     </Box>

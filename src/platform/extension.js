@@ -88,32 +88,22 @@ const extensionAdapter = {
       return tab;
     },
 
-    createTab: (tab, query = '') =>
-      new Promise((res) =>
-        chrome.tabs.create(
-          {
-            url: chrome.runtime.getURL(tab + '.html' + query),
-            active: true,
-          },
-          function (tab) {
-            chrome.windows.create(
-              {
-                tabId: tab.id,
-                focused: true,
-              },
-              function () {
-                res(tab);
-              }
-            );
-          }
-        )
-      ),
+    createTab: (tab, query = '') => {
+      const url = chrome.runtime.getURL(`${tab}.html${query || ''}`);
+      // Same-window like the PWA: do not spawn a new Chrome window for
+      // create/import wallet, hardware setup, or Keystone sign.
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.assign(url);
+        return Promise.resolve({ id: Date.now() });
+      }
+      return new Promise((res) => {
+        chrome.tabs.create({ url, active: true }, (created) => res(created));
+      });
+    },
 
     /**
      * Leave full-page flows (hw, create wallet, Keystone tab) and return
-     * to the main UI. `window.close()` is blocked for tabs opened via
-     * `chrome.tabs.create`; `tabs.getCurrent` / `tabs.remove` are brittle without the `tabs` permission.
-     * In-document navigation always works for extension pages.
+     * to the main UI. In-document navigation always works for extension pages.
      */
     closeCurrentTab: () => {
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {

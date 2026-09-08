@@ -317,7 +317,9 @@ describe('stake-consolidated balance (resolve stake from payment address)', () =
           primaryAssets.find((a) => a.unit === 'lovelace').quantity
         );
 
-        expect(stakeAda).toBeGreaterThan(primaryAda * 7n);
+        // Stake-controlled ADA must exceed the payment address alone. Do not
+        // pin a ratio — UTxO mix on this fixture moves over time.
+        expect(stakeAda).toBeGreaterThan(primaryAda);
         expect(stakeAssets.length).toBeGreaterThan(primaryAssets.length);
         expect(stakeAssets.some((a) => a.unit === ASSET_XSPO)).toBe(true);
         expect(stakeAssets.some((a) => a.unit === ASSET_T_MINSWAP)).toBe(true);

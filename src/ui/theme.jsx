@@ -5,6 +5,7 @@ import 'focus-visible/dist/focus-visible';
 import { AppearancePreferenceProvider } from './appearanceContext';
 import PageBackground from './app/components/pageBackground';
 import StagingBanner from './app/components/stagingBanner';
+import { applyPwaChrome } from './pwaChrome';
 
 const scaledFont = (rem) => `calc(${rem} * var(--lucem-font-scale, 1))`;
 
@@ -302,26 +303,19 @@ const theme = extendTheme({
   },
 });
 
-const PWA_THEME_COLOR = {
-  light: '#f4f6fb',
-  dark: '#080808',
-};
-
-/** Keep Safari / iOS PWA chrome sampled from the app surface, not #000. */
+/** Keep Safari / iOS PWA chrome sampled from the app surface, not OS Light Mode. */
 function SyncPwaThemeColor() {
   const { colorMode } = useColorMode();
   React.useEffect(() => {
-    const color = PWA_THEME_COLOR[colorMode] || PWA_THEME_COLOR.dark;
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', color);
-    document.documentElement.style.backgroundColor = color;
-    // Opaque system bar (`black` / `default`) so time and battery stay visible.
-    const bar = document.querySelector(
-      'meta[name="apple-mobile-web-app-status-bar-style"]'
-    );
-    if (bar) {
-      bar.setAttribute('content', colorMode === 'light' ? 'default' : 'black');
-    }
+    const paint = () => applyPwaChrome(colorMode);
+    paint();
+    // iOS often forgets theme-color after backgrounding the standalone PWA.
+    window.addEventListener('pageshow', paint);
+    document.addEventListener('visibilitychange', paint);
+    return () => {
+      window.removeEventListener('pageshow', paint);
+      document.removeEventListener('visibilitychange', paint);
+    };
   }, [colorMode]);
   return null;
 }

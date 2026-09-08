@@ -9,7 +9,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Lucem" />
+    <meta name="color-scheme" content="dark" />
+    <!-- iOS standalone uses the *matching* prefers-color-scheme tag. A single
+         theme-color is ignored in Light Mode and the Dynamic Island band goes white. -->
     <meta name="theme-color" content="#080808" />
+    <meta name="theme-color" content="#080808" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#080808" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/assets/img/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -26,7 +31,7 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick-theme.min.css"
     />
     <style>
-      html, body { margin: 0; padding: 0; background-color: #080808; color: white; }
+      html, body { margin: 0; padding: 0; background-color: #080808; color: white; color-scheme: dark; }
     </style>
   </head>
 

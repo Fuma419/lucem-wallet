@@ -449,6 +449,15 @@ describe('mobile layout - iOS PWA top chrome', () => {
     expect(html).not.toMatch(/black-translucent/);
     expect(html).not.toMatch(/class="lucem-ios-top-edge"/);
     expect(html).toMatch(/theme-color" content="#080808"/);
+    expect(html).toMatch(
+      /theme-color" content="#080808" media="\(prefers-color-scheme: light\)"/
+    );
+    expect(html).toMatch(
+      /theme-color" content="#080808" media="\(prefers-color-scheme: dark\)"/
+    );
+    expect(html).toMatch(/name="color-scheme" content="dark"/);
+    expect(html).toMatch(/color-scheme: dark/);
+    expect(html).not.toMatch(/<script>/);
     expect(html).not.toMatch(/theme-color" content="#000000"/);
     expect(html).not.toMatch(/background-color: #000000/);
   });
@@ -481,11 +490,25 @@ describe('mobile layout - iOS PWA top chrome', () => {
       path.join(__dirname, '../../ui/theme.jsx'),
       'utf8'
     );
+    const chromeSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/pwaChrome.js'),
+      'utf8'
+    );
+    const css = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/styles.css'),
+      'utf8'
+    );
     expect(src).toMatch(/SyncPwaThemeColor/);
-    expect(src).toMatch(/#080808/);
-    expect(src).toMatch(/#f4f6fb/);
-    expect(src).toMatch(/apple-mobile-web-app-status-bar-style/);
-    expect(src).toMatch(/colorMode === 'light' \? 'default' : 'black'/);
+    expect(src).toMatch(/applyPwaChrome/);
+    expect(src).toMatch(/pageshow/);
+    expect(src).toMatch(/visibilitychange/);
+    expect(chromeSrc).toMatch(/#080808/);
+    expect(chromeSrc).toMatch(/#f4f6fb/);
+    expect(chromeSrc).toMatch(/isLight \? 'default' : 'black'/);
+    expect(css).toMatch(/html,\s*body \{[\s\S]*color-scheme:\s*dark/);
+    expect(css).toMatch(
+      /html\[data-theme='light'\],\s*html\[data-theme='light'\] body \{[\s\S]*color-scheme:\s*light/
+    );
   });
 
   test('page wash fades into the iOS status bar instead of extending under it', () => {

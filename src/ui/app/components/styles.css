@@ -20,6 +20,7 @@ body::-webkit-scrollbar {
 html,
 body {
   background-color: #080808;
+  color-scheme: dark;
 }
 
 body {
@@ -31,6 +32,7 @@ body {
 html[data-theme='light'],
 html[data-theme='light'] body {
   background-color: #f4f6fb;
+  color-scheme: light;
 }
 
 /* Welcome: class-based hero copy follows color mode. */

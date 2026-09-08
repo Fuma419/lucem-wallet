@@ -33,24 +33,6 @@
     <style>
       html, body { margin: 0; padding: 0; background-color: #080808; color: white; color-scheme: dark; }
     </style>
-    <script>
-      (function () {
-        var dark = true;
-        try {
-          if (localStorage.getItem('chakra-ui-color-mode') === 'light') dark = false;
-        } catch (e) {}
-        var color = dark ? '#080808' : '#f4f6fb';
-        var scheme = dark ? 'dark' : 'light';
-        document.documentElement.style.backgroundColor = color;
-        document.documentElement.style.colorScheme = scheme;
-        var tags = document.querySelectorAll('meta[name="theme-color"]');
-        for (var i = 0; i < tags.length; i++) tags[i].setAttribute('content', color);
-        var cs = document.querySelector('meta[name="color-scheme"]');
-        if (cs) cs.setAttribute('content', scheme);
-        var bar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-        if (bar) bar.setAttribute('content', dark ? 'black' : 'default');
-      })();
-    </script>
   </head>
 
   <body>

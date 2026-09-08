@@ -457,6 +457,7 @@ describe('mobile layout - iOS PWA top chrome', () => {
     );
     expect(html).toMatch(/name="color-scheme" content="dark"/);
     expect(html).toMatch(/color-scheme: dark/);
+    expect(html).not.toMatch(/<script>/);
     expect(html).not.toMatch(/theme-color" content="#000000"/);
     expect(html).not.toMatch(/background-color: #000000/);
   });

@@ -1651,6 +1651,32 @@ input.lucem-send-amount {
   letter-spacing: 0.01em;
 }
 
+/* Combined-balance strip: live chains show an amount; others stay disconnected. */
+.lucem-portfolio {
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+.lucem-portfolio-chain {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.lucem-portfolio-chain[data-status='disconnected'] {
+  opacity: 0.42;
+}
+
+.lucem-portfolio-chain-status {
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-weight: 500;
+}
+
 /* Global glow kill-switch (Settings → Button glow effects).
  * Light mode is off unless the user explicitly sets data-glow=on. */
 html:is([data-glow='off'], [data-theme='light']:not([data-glow='on'])) .button,

@@ -27,6 +27,7 @@ Lucem is a Cardano blockchain browser extension wallet (Chrome/Firefox/Edge) **a
 | `src/api/tx/` | **Tx pipeline** — Koios protocol snapshot (`protocol-params.js`), CSL unsigned payment txs (`csl-unsigned-tx.js`); see `docs/TX_ARCHITECTURE_PLAN.md` |
 | `src/api/util.js` | HTTP helpers, UTXO/value conversions, HW wallet encoding, Plutus Data |
 | `src/api/koios-endpoints.js` | All Koios REST endpoint definitions and request builders |
+| `src/portfolio/` | Combined-balance math (Cardano live; Bitcoin/Solana disconnected until those wallets exist) |
 | `src/api/loader.js` | WASM module loader (`@emurgo/cardano-serialization-lib-browser`) |
 | `src/config/config.js` | Constants: `STORAGE` keys, `NETWORK_ID`, `METHOD`, `ERROR`, `EVENT` |
 | `src/config/provider.js` | Koios base URLs, API key resolution from secrets + env vars |

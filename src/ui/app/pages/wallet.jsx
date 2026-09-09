@@ -56,10 +56,15 @@ import { RxTokens } from "react-icons/rx";
 import { GoHistory } from "react-icons/go";
 import { MdRefresh } from 'react-icons/md';
 import CollectiblesViewer from '../components/collectiblesViewer';
+import PortfolioChainList from '../components/portfolioChainList';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { useColorModeValue } from '@chakra-ui/react';
 import { LUCEM_LAYOUT } from '../../layout/surface';
 import { useLayoutSurface } from '../../layout/LayoutSurfaceProvider';
+import {
+  assemblePortfolio,
+  cardanoAdaPosition,
+} from '../../../portfolio/balance';
 
 // Assets
 import Logo from '../../../assets/img/logo.png';
@@ -360,6 +365,17 @@ const Wallet = () => {
         )
       : undefined;
 
+  const portfolio = React.useMemo(() => {
+    if (displayTotalAda == null) return null;
+    return assemblePortfolio({
+      cardano: cardanoAdaPosition({
+        quantityAtomic: displayTotalAda,
+        fiatPrice: state.fiatPrice,
+        symbol: settings.adaSymbol,
+      }),
+    });
+  }, [displayTotalAda, state.fiatPrice, settings.adaSymbol]);
+
   const assetsViewer = (
     <CollectiblesViewer
       assets={collectibleAssets}
@@ -645,10 +661,15 @@ const Wallet = () => {
             <UnitDisplay
               className="lineClamp"
               fontSize="md"
-              quantity={fiatTotalCents}
+              quantity={
+                portfolio != null ? portfolio.fiatCents : fiatTotalCents
+              }
               symbol={currencyToSymbol(settings.currency)}
               decimals={2}
             />
+            {portfolio ? (
+              <PortfolioChainList positions={portfolio.positions} />
+            ) : null}
           </Flex>
 
           {/* Receive, delegation, Send — flows under balance (no overlap). */}

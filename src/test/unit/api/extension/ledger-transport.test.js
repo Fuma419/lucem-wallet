@@ -39,8 +39,10 @@ const {
   isMobilePlatform,
   shouldOfferLedgerImport,
   openLedgerTransport,
+  pickLedgerBluetoothDevice,
   pickLedgerUsbDevice,
   closeLedgerApp,
+  findGrantedBluetoothDevice,
 } = require('../../../../api/extension/ledger-transport');
 
 describe('ledger USB / BLE transport', () => {
@@ -190,6 +192,34 @@ describe('ledger USB / BLE transport', () => {
     expect(t).toEqual({ kind: 'ble', dev: ble });
     expect(TransportWebBLE.open).toHaveBeenCalledWith(ble);
     expect(navigator.bluetooth.requestDevice).not.toHaveBeenCalled();
+  });
+
+  test('BLE reconnect uses the only granted device when the stored id differs', async () => {
+    const ble = { id: 'opaque-chrome-id', gatt: {} };
+    Object.defineProperty(navigator, 'bluetooth', {
+      configurable: true,
+      value: {
+        getDevices: jest.fn(async () => [ble]),
+        requestDevice: jest.fn(),
+      },
+    });
+    const found = await findGrantedBluetoothDevice('old-id');
+    expect(found).toBe(ble);
+  });
+
+  test('pickLedgerBluetoothDevice uses acceptAllDevices so bonded Flex appears', async () => {
+    const ble = { id: 'flex-1', gatt: {} };
+    const requestDevice = jest.fn(async () => ble);
+    Object.defineProperty(navigator, 'bluetooth', {
+      configurable: true,
+      value: { requestDevice, getDevices: jest.fn(async () => []) },
+    });
+    const picked = await pickLedgerBluetoothDevice(['13d63400-2c97-3004-0000-4c6564676572']);
+    expect(picked).toBe(ble);
+    expect(requestDevice).toHaveBeenCalledWith({
+      acceptAllDevices: true,
+      optionalServices: ['13d63400-2c97-3004-0000-4c6564676572'],
+    });
   });
 
   test('pickLedgerUsbDevice calls requestDevice before any transport open', async () => {

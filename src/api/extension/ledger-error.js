@@ -22,7 +22,7 @@ export const LEDGER_APP_NOT_OPEN_MESSAGE =
   'Unlock the Ledger, close Ledger Live, then open the Cardano app so it fills the screen (not the home icon list). Leave it open and try again.';
 
 export const LEDGER_CHOOSER_CANCELLED_MESSAGE =
-  'Chrome closed the Ledger device list. Unlock the Ledger, open the Cardano app, tap Confirm, and pick it in the list that appears.';
+  'Chrome closed the Bluetooth or USB picker. Unlock the Ledger, open the Cardano app, tap Confirm again, and pick the Ledger in the list.';
 
 const LEDGER_LOCKED_MESSAGE =
   'The Ledger is locked. Unlock it, open the Cardano app, then try again.';

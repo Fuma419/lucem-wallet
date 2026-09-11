@@ -16,6 +16,7 @@ import {
   useBreakpointValue,
 } from '@chakra-ui/react';
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import { indexToHw, initHW, isHW } from '../../../api/extension';
@@ -24,8 +25,10 @@ import {
   isLedgerUsbId,
   listGrantedLedgerUsbPicks,
   listGrantedBluetoothDevices,
+  pickLedgerBluetoothDevice,
   pickLedgerUsbDevice,
   preferredGrantedLedgerUsbPick,
+  preloadLedgerBleTransport,
   preloadLedgerUsbTransports,
 } from '../../../api/extension/ledger-transport';
 import {
@@ -40,14 +43,6 @@ const deviceLabel = (device) =>
   ({ [HW.ledger]: 'Ledger', [HW.keystone]: 'Keystone', [HW.trezor]: 'Trezor' })[
     device
   ] || 'device';
-
-const ledgerBleRequestOptions = () => {
-  const uuids = getBluetoothServiceUuids();
-  return {
-    filters: uuids.map((uuid) => ({ services: [uuid] })),
-    optionalServices: uuids,
-  };
-};
 
 const ConfirmModal = React.forwardRef(
   (
@@ -259,6 +254,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
   const [grantedBleDevice, setGrantedBleDevice] = React.useState(null);
   const [forceUsbPicker, setForceUsbPicker] = React.useState(false);
   const [forceBlePicker, setForceBlePicker] = React.useState(false);
+  const [suspendModal, setSuspendModal] = React.useState(false);
 
   React.useEffect(() => {
     setError('');
@@ -266,6 +262,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
     setForceBlePicker(false);
     setGrantedUsbPick(null);
     setGrantedBleDevice(null);
+    setSuspendModal(false);
     if (!isOpen || !hw || hw.device !== HW.ledger) return undefined;
     let cancelled = false;
     if (isLedgerUsbId(hw.id)) {
@@ -278,11 +275,14 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         })
         .catch(() => {});
     } else {
+      preloadLedgerBleTransport().catch(() => {});
       listGrantedBluetoothDevices()
         .then((devices) => {
           if (cancelled) return;
+          const want = String(hw.id);
           const match =
-            devices.find((d) => d && String(d.id) === String(hw.id)) || null;
+            devices.find((d) => d && String(d.id) === want) ||
+            (devices.length === 1 ? devices[0] : null);
           setGrantedBleDevice(match);
         })
         .catch(() => {});
@@ -313,26 +313,37 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         let bleDevice;
         if (isLedgerUsbId(hw.id)) {
           if (forceUsbPicker || !grantedUsbPick) {
-            const picked = await pickLedgerUsbDevice();
-            usbDevice = picked.usbDevice;
-            hidDevice = picked.hidDevice;
+            flushSync(() => {
+              setSuspendModal(true);
+            });
+            try {
+              const picked = await pickLedgerUsbDevice();
+              usbDevice = picked.usbDevice;
+              hidDevice = picked.hidDevice;
+            } finally {
+              flushSync(() => {
+                setSuspendModal(false);
+              });
+            }
           } else {
             usbDevice = grantedUsbPick.usbDevice;
             hidDevice = grantedUsbPick.hidDevice;
           }
         } else if (forceBlePicker || !grantedBleDevice) {
-          if (
-            typeof navigator === 'undefined' ||
-            !navigator.bluetooth ||
-            typeof navigator.bluetooth.requestDevice !== 'function'
-          ) {
-            throw new Error(
-              'Web Bluetooth is not available. Use Chrome or Edge, or send with a USB Ledger.'
+          // Chakra's aria-modal dialog makes Chrome abort the BLE chooser.
+          // Unmount it in this same click, then requestDevice.
+          flushSync(() => {
+            setSuspendModal(true);
+          });
+          try {
+            bleDevice = await pickLedgerBluetoothDevice(
+              getBluetoothServiceUuids()
             );
+          } finally {
+            flushSync(() => {
+              setSuspendModal(false);
+            });
           }
-          bleDevice = await navigator.bluetooth.requestDevice(
-            ledgerBleRequestOptions()
-          );
         } else {
           bleDevice = grantedBleDevice;
         }
@@ -369,13 +380,32 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
 
   return (
     <>
+      {suspendModal && (
+        <Box
+          position="fixed"
+          inset={0}
+          zIndex={10000}
+          bg="blackAlpha.700"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          pointerEvents="none"
+          px={4}
+        >
+          <Text color="white" textAlign="center" fontSize="sm">
+            Pick your Ledger in the Chrome Bluetooth list. Leave the Cardano
+            app open.
+          </Text>
+        </Box>
+      )}
       <Modal
         size="xs"
-        isOpen={isOpen}
+        isOpen={isOpen && !suspendModal}
         onClose={onClose}
         isCentered={!isMobile}
         blockScrollOnMount={false}
         scrollBehavior="inside"
+        trapFocus={false}
       >
         <ModalOverlay />
         <ModalContent

@@ -192,10 +192,38 @@ export const listGrantedBluetoothDevices = async () => {
 };
 
 export const findGrantedBluetoothDevice = async (id) => {
-  if (id == null || String(id) === '') return null;
-  const want = String(id);
   const devices = await listGrantedBluetoothDevices();
-  return devices.find((device) => device && String(device.id) === want) || null;
+  if (id != null && String(id) !== '') {
+    const want = String(id);
+    const match =
+      devices.find((device) => device && String(device.id) === want) || null;
+    if (match) return match;
+  }
+  if (devices.length === 1) return devices[0];
+  return null;
+};
+
+/**
+ * Bluetooth picker for send/sign. `acceptAllDevices` is required because a
+ * bonded Flex often stops advertising the Ledger GATT service, so service
+ * filters make Chrome show an empty chooser and throw
+ * "User cancelled the requestDevice() chooser."
+ * `uuids` must be the Ledger BLE service list (`getBluetoothServiceUuids()`).
+ * @param {string[]} [uuids]
+ */
+export const pickLedgerBluetoothDevice = async (uuids = []) => {
+  if (
+    typeof navigator === 'undefined' ||
+    !navigator.bluetooth ||
+    typeof navigator.bluetooth.requestDevice !== 'function'
+  ) {
+    throw new Error(LEDGER_BLE_NEED_PICKER_MESSAGE);
+  }
+  const services = Array.isArray(uuids) ? uuids.filter(Boolean) : [];
+  return navigator.bluetooth.requestDevice({
+    acceptAllDevices: true,
+    optionalServices: services,
+  });
 };
 
 export const ledgerCannotConnectMessage = () => {
@@ -246,6 +274,16 @@ export const preloadLedgerUsbTransports = async () => {
     );
   }
   await Promise.all(jobs);
+};
+
+/** @type {any} */
+let cachedBle = null;
+
+export const preloadLedgerBleTransport = async () => {
+  if (!cachedBle) {
+    cachedBle = defaultExport(await import('@ledgerhq/hw-transport-web-ble'));
+  }
+  return cachedBle;
 };
 
 export const countGrantedLedgerUsbDevices = async () => {
@@ -365,9 +403,10 @@ const openPickedTransport = async (Transport, prompt) => {
 };
 
 const openBleTransport = async (device) => {
-  const TransportWebBLE = defaultExport(
-    await import('@ledgerhq/hw-transport-web-ble')
-  );
+  const TransportWebBLE = cachedBle
+    ? cachedBle
+    : defaultExport(await import('@ledgerhq/hw-transport-web-ble'));
+  cachedBle = TransportWebBLE;
   return TransportWebBLE.open(device);
 };
 

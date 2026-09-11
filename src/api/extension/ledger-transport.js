@@ -374,14 +374,41 @@ export const openPickedLedgerDevice = async (picked = {}) => {
   throw new Error('Missing Ledger device');
 };
 
+const ledgerTransportGatt = (transport) =>
+  transport && transport.device && transport.device.gatt
+    ? transport.device.gatt
+    : null;
+
+/** True when a BLE session can still send APDUs (GATT up). USB transports stay live. */
+export const isLedgerSessionLive = (appAda) => {
+  if (!appAda || !appAda.transport) return false;
+  const gatt = ledgerTransportGatt(appAda.transport);
+  if (!gatt) return true;
+  return Boolean(gatt.connected);
+};
+
 export const closeLedgerApp = async (appAda) => {
-  if (!appAda || !appAda.transport || typeof appAda.transport.close !== 'function') {
+  if (!appAda || !appAda.transport) {
     return;
   }
-  try {
-    await appAda.transport.close();
-  } catch (/** @type {any} */ _) {
-    // already closed
+  const transport = appAda.transport;
+  if (typeof transport.close === 'function') {
+    try {
+      await transport.close();
+    } catch (/** @type {any} */ _) {
+      // already closed
+    }
+  }
+  // WebBLE close() only waits for an in-flight exchange — it does not drop
+  // GATT. A second open() then stacks notify subscribers and pubkey-export
+  // APDUs never reach the Stax/Flex screen.
+  const gatt = ledgerTransportGatt(transport);
+  if (gatt && gatt.connected && typeof gatt.disconnect === 'function') {
+    try {
+      gatt.disconnect();
+    } catch (/** @type {any} */ _) {
+      // already gone
+    }
   }
 };
 
@@ -407,6 +434,17 @@ const openBleTransport = async (device) => {
     ? cachedBle
     : defaultExport(await import('@ledgerhq/hw-transport-web-ble'));
   cachedBle = TransportWebBLE;
+  const gatt = device && device.gatt;
+  // A leftover GATT from the connect step steals notify frames from a new
+  // Transport. Drop it so open() can subscribe cleanly.
+  if (gatt && gatt.connected && typeof gatt.disconnect === 'function') {
+    try {
+      gatt.disconnect();
+    } catch (/** @type {any} */ _) {
+      // already gone
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
   return TransportWebBLE.open(device);
 };
 

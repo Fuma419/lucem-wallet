@@ -1,5 +1,6 @@
 const {
   LEDGER_APP_NOT_OPEN_MESSAGE,
+  LEDGER_CHOOSER_CANCELLED_MESSAGE,
   LEDGER_SW,
   formatLedgerError,
   isLedgerAppNotSelectedError,
@@ -79,5 +80,14 @@ describe('formatLedgerError', () => {
     expect(formatLedgerError(new Error(ledgerAppTooOldMessage('8.0.1')))).toMatch(
       /too old/
     );
+  });
+
+  test('maps a cancelled requestDevice chooser to send retry copy', () => {
+    expect(
+      formatLedgerError({
+        name: 'NotFoundError',
+        message: 'User cancelled the requestDevice() chooser.',
+      })
+    ).toBe(LEDGER_CHOOSER_CANCELLED_MESSAGE);
   });
 });

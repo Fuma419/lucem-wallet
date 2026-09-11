@@ -120,17 +120,34 @@ describe('ledger USB / BLE transport', () => {
     expect(TransportWebBLE.open).not.toHaveBeenCalled();
   });
 
-  test('reconnect tries openConnected before requesting a picker', async () => {
+  test('reconnect opens a granted HID device and never shows the picker', async () => {
+    const hidDevice = { vendorId: LEDGER_USB_VENDOR_ID };
     Object.defineProperty(navigator, 'hid', {
       configurable: true,
-      value: { requestDevice: jest.fn() },
+      value: {
+        requestDevice: jest.fn(),
+        getDevices: jest.fn(async () => [hidDevice]),
+      },
     });
-    TransportWebHID.openConnected.mockResolvedValueOnce({ kind: 'hid-existing' });
     const t = await openLedgerTransport({ id: LEDGER_USB_ID });
-    expect(t).toEqual({ kind: 'hid-existing' });
-    expect(TransportWebHID.openConnected).toHaveBeenCalled();
+    expect(t).toEqual({ kind: 'hid-open', d: hidDevice });
+    expect(TransportWebHID.open).toHaveBeenCalledWith(hidDevice);
     expect(TransportWebHID.request).not.toHaveBeenCalled();
     expect(TransportWebHID.create).not.toHaveBeenCalled();
+  });
+
+  test('USB reconnect without a granted device does not call request()', async () => {
+    Object.defineProperty(navigator, 'hid', {
+      configurable: true,
+      value: {
+        requestDevice: jest.fn(),
+        getDevices: jest.fn(async () => []),
+      },
+    });
+    await expect(openLedgerTransport({ id: LEDGER_USB_ID })).rejects.toThrow(
+      /Tap Confirm and pick your Ledger/
+    );
+    expect(TransportWebHID.request).not.toHaveBeenCalled();
   });
 
   test('Android uses WebUSB request, not HID create', async () => {
@@ -158,6 +175,21 @@ describe('ledger USB / BLE transport', () => {
     const t = await openLedgerTransport({ id: 'ble-1', bleDevice });
     expect(t).toEqual({ kind: 'ble', dev: bleDevice });
     expect(TransportWebBLE.open).toHaveBeenCalledWith(bleDevice);
+  });
+
+  test('BLE reconnect opens a granted device by id without requestDevice', async () => {
+    const ble = { id: 'ble-1', gatt: {} };
+    Object.defineProperty(navigator, 'bluetooth', {
+      configurable: true,
+      value: {
+        getDevices: jest.fn(async () => [ble]),
+        requestDevice: jest.fn(),
+      },
+    });
+    const t = await openLedgerTransport({ id: 'ble-1' });
+    expect(t).toEqual({ kind: 'ble', dev: ble });
+    expect(TransportWebBLE.open).toHaveBeenCalledWith(ble);
+    expect(navigator.bluetooth.requestDevice).not.toHaveBeenCalled();
   });
 
   test('pickLedgerUsbDevice calls requestDevice before any transport open', async () => {

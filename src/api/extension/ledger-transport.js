@@ -21,6 +21,12 @@ export const LEDGER_USB_DEVICE_FILTERS = [
   { vendorId: LEDGER_USB_LEGACY_VENDOR_ID },
 ];
 
+export const LEDGER_USB_NEED_PICKER_MESSAGE =
+  'Tap Confirm and pick your Ledger in the Chrome list. Unlock it, close Ledger Live, and leave the Cardano app open.';
+
+export const LEDGER_BLE_NEED_PICKER_MESSAGE =
+  'Tap Confirm and pick your Ledger in the Bluetooth list. Unlock it, enable Bluetooth, and leave the Cardano app open.';
+
 export const isLedgerUsbId = (id) => {
   if (id == null) return false;
   const s = String(id).toLowerCase();
@@ -100,7 +106,7 @@ export const isMobilePlatform = () =>
 
 export const shouldOfferLedgerImport = () => !isMobilePlatform();
 
-const isUserCancelled = (err) => {
+export const isLedgerChooserCancelled = (err) => {
   if (!err) return false;
   const name = err.name || '';
   const msg = String(err.message || '');
@@ -109,6 +115,87 @@ const isUserCancelled = (err) => {
     name === 'AbortError' ||
     /cancel|denied|No device selected/i.test(msg)
   );
+};
+
+const isUserCancelled = isLedgerChooserCancelled;
+
+export const isLedgerUsbVendorId = (vendorId) =>
+  vendorId === LEDGER_USB_VENDOR_ID || vendorId === LEDGER_USB_LEGACY_VENDOR_ID;
+
+export const listGrantedLedgerUsbPicks = async () => {
+  const hidDevices = [];
+  const usbDevices = [];
+  try {
+    if (
+      hasWebHid() &&
+      navigator.hid &&
+      typeof navigator.hid.getDevices === 'function'
+    ) {
+      const list = await navigator.hid.getDevices();
+      (Array.isArray(list) ? list : []).forEach((device) => {
+        if (device && isLedgerUsbVendorId(device.vendorId)) {
+          hidDevices.push(device);
+        }
+      });
+    }
+  } catch (/** @type {any} */ _) {
+    // permission API can throw in tests / locked-down iframes
+  }
+  try {
+    if (
+      hasWebUsb() &&
+      navigator.usb &&
+      typeof navigator.usb.getDevices === 'function'
+    ) {
+      const list = await navigator.usb.getDevices();
+      (Array.isArray(list) ? list : []).forEach((device) => {
+        if (device && isLedgerUsbVendorId(device.vendorId)) {
+          usbDevices.push(device);
+        }
+      });
+    }
+  } catch (/** @type {any} */ _) {
+    // same as HID
+  }
+  return { hidDevices, usbDevices };
+};
+
+export const preferredGrantedLedgerUsbPick = (granted, opts = {}) => {
+  const useUsbFirst =
+    opts.android != null ? Boolean(opts.android) : isAndroidLike();
+  const hidDevices = (granted && granted.hidDevices) || [];
+  const usbDevices = (granted && granted.usbDevices) || [];
+  if (useUsbFirst) {
+    if (usbDevices[0]) return { usbDevice: usbDevices[0] };
+    if (hidDevices[0]) return { hidDevice: hidDevices[0] };
+  } else {
+    if (hidDevices[0]) return { hidDevice: hidDevices[0] };
+    if (usbDevices[0]) return { usbDevice: usbDevices[0] };
+  }
+  return null;
+};
+
+export const listGrantedBluetoothDevices = async () => {
+  if (
+    typeof navigator === 'undefined' ||
+    !navigator.bluetooth ||
+    typeof navigator.bluetooth.getDevices !== 'function'
+  ) {
+    return [];
+  }
+  try {
+    const list = await navigator.bluetooth.getDevices();
+    return Array.isArray(list) ? list : [];
+  } catch (/** @type {any} */ _) {
+    return [];
+  }
+};
+
+export const findGrantedBluetoothDevice = async (id) => {
+  if (id == null || String(id) === '') return null;
+  const want = String(id);
+  const devices = await listGrantedBluetoothDevices();
+  return devices.find((device) => device && String(device.id) === want) || null;
 };
 
 export const ledgerCannotConnectMessage = () => {
@@ -263,17 +350,16 @@ export const closeLedgerApp = async (appAda) => {
 /**
  * Open a transport. `prompt: true` always shows the browser USB/HID picker
  * (needed on first connect). Never use Transport.create() — it hangs.
+ * Reconnect (`prompt: false`) must not call request() — that needs a user
+ * gesture and otherwise Chrome reports "User cancelled the requestDevice() chooser."
  * @param {any} Transport
  * @param {boolean} prompt
  */
 const openPickedTransport = async (Transport, prompt) => {
   if (!prompt) {
-    try {
-      const connected = await Transport.openConnected();
-      if (connected) return connected;
-    } catch (/** @type {any} */ err) {
-      if (isUserCancelled(err)) throw err;
-    }
+    const connected = await Transport.openConnected();
+    if (connected) return connected;
+    throw new Error(LEDGER_USB_NEED_PICKER_MESSAGE);
   }
   return Transport.request();
 };
@@ -285,6 +371,15 @@ const openBleTransport = async (device) => {
   return TransportWebBLE.open(device);
 };
 
+const openGrantedUsbTransport = async () => {
+  const granted = await listGrantedLedgerUsbPicks();
+  const picked = preferredGrantedLedgerUsbPick(granted);
+  if (!picked) {
+    throw new Error(LEDGER_USB_NEED_PICKER_MESSAGE);
+  }
+  return openPickedLedgerDevice(picked);
+};
+
 /**
  * @param {{ prompt?: boolean }} [opts]
  */
@@ -292,6 +387,9 @@ const openUsbTransport = async (opts = {}) => {
   const prompt = Boolean(opts.prompt);
   if (!hasLedgerUsbApi()) {
     throw new Error(ledgerUsbUnavailableMessage());
+  }
+  if (!prompt) {
+    return openGrantedUsbTransport();
   }
   const errors = [];
   const android = isAndroidLike();
@@ -312,7 +410,7 @@ const openUsbTransport = async (opts = {}) => {
     if (!load) continue;
     try {
       const Transport = await load();
-      return await openPickedTransport(Transport, prompt);
+      return await openPickedTransport(Transport, true);
     } catch (/** @type {any} */ err) {
       if (isUserCancelled(err)) throw err;
       errors.push(err);
@@ -329,6 +427,8 @@ const openUsbTransport = async (opts = {}) => {
 /**
  * Open a Ledger transport for import or signing.
  * USB when `id` is the USB sentinel; otherwise WebBLE (`bleDevice` or `id`).
+ * Never pass a BLE id string into TransportWebBLE.open — that calls
+ * bluetooth.requestDevice() (see Ledger's open() TODO) and needs a gesture.
  * @param {{ id?: string, bleDevice?: { gatt?: unknown }, promptUsb?: boolean, usbDevice?: any, hidDevice?: any }} [opts]
  */
 export const openLedgerTransport = async (opts = {}) => {
@@ -346,7 +446,11 @@ export const openLedgerTransport = async (opts = {}) => {
     if (typeof navigator === 'undefined' || !navigator.bluetooth) {
       throw new Error(bleMissingMessage());
     }
-    return openBleTransport(String(id));
+    const granted = await findGrantedBluetoothDevice(String(id));
+    if (granted && granted.gatt) {
+      return openBleTransport(granted);
+    }
+    throw new Error(LEDGER_BLE_NEED_PICKER_MESSAGE);
   }
   throw new Error('Missing Ledger device');
 };

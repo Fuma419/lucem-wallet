@@ -170,8 +170,9 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(setupSrc).toContain('On a phone or tablet, connect a Keystone');
   });
 
-  test('Ledger BLE options helper is defined', () => {
-    expect(hwSrc).toMatch(/ledgerBleRequestOptions/);
+  test('Ledger BLE import uses acceptAllDevices via pickLedgerBluetoothDevice', () => {
+    expect(hwSrc).toContain('pickLedgerBluetoothDevice');
+    expect(hwSrc).not.toMatch(/ledgerBleRequestOptions/);
   });
 
   test('Keystone typo "Keysone" is not present', () => {

@@ -21,6 +21,9 @@ export const LEDGER_SW = {
 export const LEDGER_APP_NOT_OPEN_MESSAGE =
   'Unlock the Ledger, close Ledger Live, then open the Cardano app so it fills the screen (not the home icon list). Leave it open and try again.';
 
+export const LEDGER_CHOOSER_CANCELLED_MESSAGE =
+  'Chrome closed the Ledger device list. Unlock the Ledger, open the Cardano app, tap Confirm, and pick it in the list that appears.';
+
 const LEDGER_LOCKED_MESSAGE =
   'The Ledger is locked. Unlock it, open the Cardano app, then try again.';
 
@@ -64,6 +67,7 @@ const isAlreadyFriendly = (text) => {
   if (text.includes('Please consult')) return false;
   if (/^General error 0x/i.test(text)) return false;
   if (text === LEDGER_APP_NOT_OPEN_MESSAGE) return true;
+  if (text === LEDGER_CHOOSER_CANCELLED_MESSAGE) return true;
   if (text.startsWith('This Ledger Cardano app is too old')) return true;
   if (text.includes('open the Cardano app')) return true;
   return false;
@@ -82,6 +86,11 @@ export const formatLedgerError = (err, fallback) => {
   }
   if (isLedgerAppNotSelectedError(err)) {
     return LEDGER_APP_NOT_OPEN_MESSAGE;
+  }
+  if (
+    /cancelled the requestDevice|Must be handling a user gesture/i.test(text)
+  ) {
+    return LEDGER_CHOOSER_CANCELLED_MESSAGE;
   }
   if (text && !/please consult|general error 0x/i.test(text)) {
     return text;

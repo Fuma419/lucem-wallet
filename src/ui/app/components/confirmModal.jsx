@@ -17,9 +17,17 @@ import {
 } from '@chakra-ui/react';
 import React from 'react';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
+import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import { indexToHw, initHW, isHW } from '../../../api/extension';
 import { formatLedgerError } from '../../../api/extension/ledger-error';
-import { isLedgerUsbId } from '../../../api/extension/ledger-transport';
+import {
+  isLedgerUsbId,
+  listGrantedLedgerUsbPicks,
+  listGrantedBluetoothDevices,
+  pickLedgerUsbDevice,
+  preferredGrantedLedgerUsbPick,
+  preloadLedgerUsbTransports,
+} from '../../../api/extension/ledger-transport';
 import {
   ERROR,
   HW,
@@ -32,6 +40,14 @@ const deviceLabel = (device) =>
   ({ [HW.ledger]: 'Ledger', [HW.keystone]: 'Keystone', [HW.trezor]: 'Trezor' })[
     device
   ] || 'device';
+
+const ledgerBleRequestOptions = () => {
+  const uuids = getBluetoothServiceUuids();
+  return {
+    filters: uuids.map((uuid) => ({ services: [uuid] })),
+    optionalServices: uuids,
+  };
+};
 
 const ConfirmModal = React.forwardRef(
   (
@@ -239,15 +255,51 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
   const [waitReady, setWaitReady] = React.useState(true);
   const [error, setError] = React.useState('');
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false;
+  const [grantedUsbPick, setGrantedUsbPick] = React.useState(null);
+  const [grantedBleDevice, setGrantedBleDevice] = React.useState(null);
+  const [forceUsbPicker, setForceUsbPicker] = React.useState(false);
+  const [forceBlePicker, setForceBlePicker] = React.useState(false);
+
+  React.useEffect(() => {
+    setError('');
+    setForceUsbPicker(false);
+    setForceBlePicker(false);
+    setGrantedUsbPick(null);
+    setGrantedBleDevice(null);
+    if (!isOpen || !hw || hw.device !== HW.ledger) return undefined;
+    let cancelled = false;
+    if (isLedgerUsbId(hw.id)) {
+      preloadLedgerUsbTransports().catch(() => {});
+      listGrantedLedgerUsbPicks()
+        .then((granted) => {
+          if (!cancelled) {
+            setGrantedUsbPick(preferredGrantedLedgerUsbPick(granted));
+          }
+        })
+        .catch(() => {});
+    } else {
+      listGrantedBluetoothDevices()
+        .then((devices) => {
+          if (cancelled) return;
+          const match =
+            devices.find((d) => d && String(d.id) === String(hw.id)) || null;
+          setGrantedBleDevice(match);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, hw]);
 
   const confirmHandler = async () => {
     if (props.ready === false || !waitReady) return;
     try {
-      setWaitReady(false);
       if (
         hw.device === HW.keystone &&
         typeof props.onHwKeystone === 'function'
       ) {
+        setWaitReady(false);
         await Promise.resolve(props.onHwKeystone(hw));
         onClose();
         return;
@@ -256,10 +308,46 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         throw new Error(TREZOR_UNSUPPORTED);
       }
       if (hw.device === HW.ledger) {
-        const appAda = await initHW({ device: hw.device, id: hw.id });
+        let usbDevice;
+        let hidDevice;
+        let bleDevice;
+        if (isLedgerUsbId(hw.id)) {
+          if (forceUsbPicker || !grantedUsbPick) {
+            const picked = await pickLedgerUsbDevice();
+            usbDevice = picked.usbDevice;
+            hidDevice = picked.hidDevice;
+          } else {
+            usbDevice = grantedUsbPick.usbDevice;
+            hidDevice = grantedUsbPick.hidDevice;
+          }
+        } else if (forceBlePicker || !grantedBleDevice) {
+          if (
+            typeof navigator === 'undefined' ||
+            !navigator.bluetooth ||
+            typeof navigator.bluetooth.requestDevice !== 'function'
+          ) {
+            throw new Error(
+              'Web Bluetooth is not available. Use Chrome or Edge, or send with a USB Ledger.'
+            );
+          }
+          bleDevice = await navigator.bluetooth.requestDevice(
+            ledgerBleRequestOptions()
+          );
+        } else {
+          bleDevice = grantedBleDevice;
+        }
+        setWaitReady(false);
+        const appAda = await initHW({
+          device: hw.device,
+          id: hw.id,
+          usbDevice,
+          hidDevice,
+          bleDevice,
+        });
         const signedMessage = await props.sign(null, { ...hw, appAda });
         await props.onConfirm(true, signedMessage);
       } else {
+        setWaitReady(false);
         await props.sign(null, hw);
         onClose();
         return;
@@ -268,15 +356,16 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
       if (isSubmitError(e)) props.onConfirm(false, e);
       else {
         console.warn(e);
+        if (hw.device === HW.ledger && isLedgerUsbId(hw.id)) {
+          setForceUsbPicker(true);
+        } else if (hw.device === HW.ledger) {
+          setForceBlePicker(true);
+        }
         setError(formatLedgerError(e, 'An error occurred'));
       }
     }
     setWaitReady(true);
   };
-
-  React.useEffect(() => {
-    setError('');
-  }, [isOpen]);
 
   return (
     <>

@@ -11,8 +11,8 @@ Lucem is a Cardano blockchain browser extension wallet (Chrome/Firefox/Edge) **a
 | `mainPopup` | `src/ui/indexMain.jsx` | Primary wallet UI (popup or web root) |
 | `internalPopup` | `src/ui/indexInternal.jsx` | dApp approval prompts (enable/signTx/signData) |
 | `createWalletTab` | `src/ui/app/tabs/createWallet.jsx` | Full-page wallet creation flow |
-| `hwTab` | `src/ui/app/tabs/hw.jsx` | Hardware wallet connection (Ledger USB, Keystone QR) |
-| `keystoneTx` | `src/ui/app/tabs/keystoneTx.jsx` | Full-tab Keystone air-gapped transaction signing |
+| `hwTab` | `src/ui/app/tabs/hw.jsx` | Hardware wallet connection (Ledger USB/BLE, Keystone QR) |
+| `keystoneTx` | `src/ui/app/tabs/keystoneTx.jsx` | Keystone air-gapped transaction signing |
 | `background` | `src/pages/Background/index.js` | Extension service worker (extension-only) |
 | `contentScript` | `src/pages/Content/index.js` | dApp connector bridge (extension-only) |
 | `injected` | `src/pages/Content/injected.js` | CIP-30 API injection (extension-only) |
@@ -44,6 +44,24 @@ Lucem is a Cardano blockchain browser extension wallet (Chrome/Firefox/Edge) **a
 - **Koios HTTP:** `src/api/util.js` (`koiosRequest`, `koiosRequestEnhanced`), `src/config/provider.js` (API keys: `KOIOS_API_KEY_PREVIEW`, `KOIOS_API_KEY_PREPROD`, …).
 - **Networks:** `src/config/config.js` — `NETWORK_ID`, `NODE` (preview / preprod Koios base URLs).
 - **Do not edit:** `src/wasm/` (generated).
+
+### Where onboarding runs (extension)
+
+Create and restore run **inside the toolbar popup** as SPA routes
+(`/generate`, `/verify`, `/account`, `/import` — see `FLOW_SETUP_PATHS`).
+
+`hwTab` and `keystoneTx` cannot: Chrome destroys an action popup the moment a
+WebHID / WebUSB / Web Bluetooth chooser takes focus, which surfaces as
+`User cancelled the requestDevice() chooser`. They open through
+`platform.navigation.openFlowWindow` — a wallet-sized `FLOW_WINDOW` popup
+window in the extension, the same tab on web. **Do not** route them through
+`createTab`; a browser tab is not needed and is a worse experience.
+
+Leaving a full-page flow (`closeCurrentTab` / `openMainRoute`) loads
+`mainPopup.html?view=full`. That marker (`isFullPageView`) is the only way to
+tell a flow window or tab from the toolbar popup, and it keeps the layout
+responsive — without it `detectIsExtensionPopup` pins the document to
+`POPUP_WINDOW` and letterboxes a 533px wallet inside a full-size window.
 
 ### Platform adapter pattern
 

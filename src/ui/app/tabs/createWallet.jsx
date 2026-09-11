@@ -1133,7 +1133,7 @@ const MakeAccount = ({ colorTheme }) => {
 
 const SuccessAndClose = ({ flow }) => {
   const navigate = useNavigate();
-  const openWallet = async () => {
+  const openWallet = React.useCallback(async () => {
     const standaloneTab =
       typeof document !== 'undefined' &&
       !!document.querySelector(`#${TAB.createWallet}`);
@@ -1146,7 +1146,17 @@ const SuccessAndClose = ({ flow }) => {
       return;
     }
     window.location.assign(`${window.location.origin}/wallet`);
-  };
+  }, [navigate]);
+
+  // The screen says it is redirecting, so redirect; the button is for anyone
+  // who does not want to wait.
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      openWallet();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [openWallet]);
+
   return (
     <Box
       display="flex"

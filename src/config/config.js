@@ -144,6 +144,37 @@ export const POPUP_WINDOW = {
   height: 600,
 };
 
+/**
+ * Window for setup flows the toolbar popup cannot host: Chrome destroys an
+ * action popup the moment a WebHID / WebUSB / Web Bluetooth chooser takes
+ * focus, so Ledger and Keystone pairing dies there. Popup width keeps the
+ * wallet proportions; the extra height fits the account list.
+ */
+export const FLOW_WINDOW = {
+  width: POPUP_WINDOW.width,
+  height: 700,
+};
+
+/**
+ * `mainPopup.html` renders in three places: the toolbar action popup, a flow
+ * window, and a plain tab. Only the action popup may be pinned to
+ * POPUP_WINDOW, so the other two stamp this marker on the URL and stay
+ * responsive instead of letterboxing a 533px column.
+ */
+export const FULL_PAGE_VIEW = { param: 'view', value: 'full' };
+
+/** @param {string} [search] - `window.location.search` */
+export const isFullPageView = (search = '') => {
+  try {
+    return (
+      new URLSearchParams(String(search || '')).get(FULL_PAGE_VIEW.param) ===
+      FULL_PAGE_VIEW.value
+    );
+  } catch (_) {
+    return false;
+  }
+};
+
 export const ERROR = {
   accessDenied: 'Access denied',
   wrongPassword: 'Wrong password',

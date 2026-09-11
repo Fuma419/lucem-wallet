@@ -75,7 +75,7 @@ describe('setup pages wire Cancel on every step', () => {
     );
     expect(src).not.toMatch(/createTab\(\s*TAB\.createWallet/);
     expect(src).toMatch(
-      /createTab\(TAB\.hw, appendFlowReturnQuery\('', returnTo\)\)/
+      /openFlowWindow\(TAB\.hw, appendFlowReturnQuery\('', returnTo\)\)/
     );
   });
 });

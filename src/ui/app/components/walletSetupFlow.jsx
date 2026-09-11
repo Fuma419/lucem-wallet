@@ -21,7 +21,7 @@ import {
 import { ViewIcon, WarningTwoIcon, AttachmentIcon } from '@chakra-ui/icons';
 import TermsOfUse from './termsOfUse';
 import PrivacyPolicy from './privacyPolicy';
-import { createTab, importAppData } from '../../../api/extension';
+import { importAppData, openFlowWindow } from '../../../api/extension';
 import { TAB } from '../../../config/config';
 import { shouldOfferLedgerImport } from '../../../api/extension/ledger-transport';
 import { useAcceptDocs } from '../../../features/terms-and-privacy/hooks';
@@ -408,13 +408,13 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
             <Text fontSize="sm" color="whiteAlpha.800">
               {shouldOfferLedgerImport() ? (
                 <>
-                  Connect a Ledger via USB (Chrome or Edge on the Lucem web app)
-                  or Bluetooth (Nano X, Flex, Stax, …), or a
-                  Keystone in two steps: by default Lucem uses account 0 and
-                  Cardano standard derivation; use Advanced in the hardware tab for
-                  more accounts or Ledger-compatible keys. Scan Lucem&apos;s QR,
-                  then Keystone&apos;s QR (camera required in the browser for step
-                  2).
+                  Connect a Ledger via USB or Bluetooth (Nano X, Flex, Stax, …),
+                  or a Keystone in two steps. Pairing opens a separate Lucem
+                  window, because Chrome closes this popup as soon as the device
+                  chooser appears. By default Lucem uses account 0 and Cardano
+                  standard derivation; use Advanced there for more accounts or
+                  Ledger-compatible keys. Scan Lucem&apos;s QR, then
+                  Keystone&apos;s QR (camera required for step 2).
                 </>
               ) : (
                 <>
@@ -468,7 +468,7 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
               minW="120px"
               data-testid="hw-import-continue"
               onClick={() =>
-                createTab(TAB.hw, appendFlowReturnQuery('', returnTo))
+                openFlowWindow(TAB.hw, appendFlowReturnQuery('', returnTo))
               }
             >
               Continue

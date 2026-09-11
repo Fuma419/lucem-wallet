@@ -285,6 +285,15 @@ export const createPopup = (popup) => platform.navigation.createPopup(popup);
 export const createTab = (tab, query = '') =>
   platform.navigation.createTab(tab, query);
 
+/**
+ * Open a setup flow outside the toolbar popup without leaving the extension:
+ * a wallet-sized window in the extension, the same tab on the web app.
+ */
+export const openFlowWindow = (page, query = '') =>
+  typeof platform.navigation.openFlowWindow === 'function'
+    ? platform.navigation.openFlowWindow(page, query)
+    : platform.navigation.createTab(page, query);
+
 export const closeCurrentTab = () => platform.navigation.closeCurrentTab();
 
 const KEYSTONE_SIGN_PAYLOAD_TTL_MS = 2 * 60 * 60 * 1000;
@@ -331,14 +340,17 @@ export const clearKeystoneSignPayload = async (signId) => {
   await setStorage({ [STORAGE.keystoneTxPending]: next });
 };
 
-/** Air-gapped Keystone: opens full tab with QR flow. Payload stays until submit. */
+/**
+ * Air-gapped Keystone: opens the QR flow in its own window (camera plus two
+ * QR steps outlive the toolbar popup). Payload stays until submit.
+ */
 export const openKeystoneSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
   const signId = await pushKeystoneSignPayload({
     txHex,
     keyHashes,
     partialSign: !!partialSign,
   });
-  await createTab(
+  await openFlowWindow(
     TAB.keystoneTx,
     `?signId=${encodeURIComponent(signId)}`
   );

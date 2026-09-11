@@ -140,6 +140,17 @@ const webAdapter = {
       return Promise.resolve({ id: Date.now() });
     },
 
+    /**
+     * The web app has no toolbar popup to escape, so setup flows stay in this
+     * tab rather than opening a window a popup blocker could eat.
+     */
+    openFlowWindow: (page, query = '') => {
+      window.location.assign(
+        `${window.location.origin}/${page}.html${query || ''}`
+      );
+      return Promise.resolve({ id: Date.now() });
+    },
+
     closeCurrentTab: () => {
       window.location.assign(`${window.location.origin}/mainPopup.html`);
       return Promise.resolve(true);

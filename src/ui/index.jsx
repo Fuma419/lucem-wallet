@@ -24,9 +24,15 @@ import {
 const isMainPopup = window.document.querySelector(`#${POPUP.main}`);
 /** Full-page wallet HTML entries (not the extension toolbar popup) — use full width; no gray scroll panel. */
 const isFullBleedWalletTab = detectIsFullBleedWalletTab(window.document);
+/**
+ * Only the toolbar popup gets pinned to POPUP_WINDOW. The same HTML in a flow
+ * window or a browser tab stays responsive — pinned, it letterboxed a 533px
+ * wallet inside a full-size window.
+ */
 const isExtensionPopup = detectIsExtensionPopup(
   window.document,
-  typeof chrome !== 'undefined' ? chrome : undefined
+  typeof chrome !== 'undefined' ? chrome : undefined,
+  window.location.search
 );
 if (isExtensionPopup) {
   applyExtensionPopupDocument(window.document, POPUP_WINDOW);

@@ -150,11 +150,11 @@ describe('wallet tray accounts vs settings FABs', () => {
     expect(setupSrc).toContain('showBackupImport');
     expect(setupSrc).toContain('importAppData');
     expect(setupSrc).toContain('lucem-wallet-setup-actions');
-    // HardwareWalletModal must expose Continue → createTab(TAB.hw). The Exit
-    // revert (#181) accidentally dropped it and left only Close.
+    // HardwareWalletModal must expose Continue → openFlowWindow(TAB.hw). The
+    // Exit revert (#181) accidentally dropped it and left only Close.
     expect(setupSrc).toContain('data-testid="hw-import-continue"');
     expect(setupSrc).toMatch(
-      /createTab\(\s*TAB\.hw,\s*appendFlowReturnQuery\('', returnTo\)\)/
+      /openFlowWindow\(\s*TAB\.hw,\s*appendFlowReturnQuery\('', returnTo\)\)/
     );
     expect(setupSrc).toMatch(
       /HardwareWalletModal[\s\S]*hw-import-continue[\s\S]*Continue/

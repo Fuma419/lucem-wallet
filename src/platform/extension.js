@@ -1,5 +1,83 @@
 // @ts-nocheck
-import { POPUP_WINDOW } from '../config/config';
+import {
+  FLOW_WINDOW,
+  FULL_PAGE_VIEW,
+  isFullPageView,
+  POPUP_WINDOW,
+} from '../config/config';
+
+const FULL_PAGE_QUERY = `${FULL_PAGE_VIEW.param}=${FULL_PAGE_VIEW.value}`;
+
+/**
+ * URL of the main UI for anything that is not the toolbar popup. Without the
+ * marker `mainPopup.html` pins itself to POPUP_WINDOW, which letterboxes a
+ * 533px column inside a full window.
+ */
+export const mainPageUrl = (next) => {
+  const base = `${chrome.runtime.getURL('mainPopup.html')}?${FULL_PAGE_QUERY}`;
+  return next ? `${base}&next=${encodeURIComponent(next)}` : base;
+};
+
+/** Center a window of `size` on the last focused browser window. */
+const windowPlacement = async (size) => {
+  try {
+    const lastFocused = await new Promise((res) => {
+      chrome.windows.getLastFocused((windowObject) => res(windowObject));
+    });
+    return {
+      top: lastFocused.top,
+      left: lastFocused.left + Math.round((lastFocused.width - size.width) / 2),
+    };
+  } catch (_) {
+    const { screenX, screenY, outerWidth } = window;
+    return {
+      top: Math.max(screenY, 0),
+      left: Math.max(screenX + (outerWidth - size.width), 0),
+    };
+  }
+};
+
+/**
+ * Open an extension page as its own window.
+ *
+ * `tabs.create` + `windows.create({tabId})` left a background tab in the last
+ * focused window *and* a popup, so CIP-30 sign/enable looked like two
+ * concurrent transactions. Open the window directly.
+ */
+const openExtensionWindow = async (url, size) => {
+  const { left, top } = await windowPlacement(size);
+  const popupWindow = await new Promise((res, rej) =>
+    chrome.windows.create(
+      {
+        url,
+        type: 'popup',
+        focused: true,
+        width: size.width,
+        height: size.height,
+        left,
+        top,
+      },
+      function (newWindow) {
+        if (chrome.runtime.lastError || !newWindow) {
+          rej(chrome.runtime.lastError || new Error('Failed to open popup'));
+          return;
+        }
+        res(newWindow);
+      }
+    )
+  );
+
+  if (popupWindow.left !== left && popupWindow.state !== 'fullscreen') {
+    await new Promise((res) => {
+      chrome.windows.update(popupWindow.id, { left, top }, () => res());
+    });
+  }
+  const tab = popupWindow.tabs && popupWindow.tabs[0];
+  if (!tab) {
+    throw new Error('Popup window opened without a tab');
+  }
+  return tab;
+};
 
 const extensionAdapter = {
   storage: {
@@ -34,59 +112,23 @@ const extensionAdapter = {
   },
 
   navigation: {
-    createPopup: async (popup) => {
-      let left = 0;
-      let top = 0;
-      try {
-        const lastFocused = await new Promise((res) => {
-          chrome.windows.getLastFocused((windowObject) => res(windowObject));
-        });
-        top = lastFocused.top;
-        left =
-          lastFocused.left +
-          Math.round((lastFocused.width - POPUP_WINDOW.width) / 2);
-      } catch (_) {
-        const { screenX, screenY, outerWidth } = window;
-        top = Math.max(screenY, 0);
-        left = Math.max(screenX + (outerWidth - POPUP_WINDOW.width), 0);
-      }
+    createPopup: (popup) =>
+      openExtensionWindow(
+        chrome.runtime.getURL(`${popup}.html`),
+        POPUP_WINDOW
+      ),
 
-      // Open the popup window directly. `tabs.create` + `windows.create({tabId})`
-      // left a background tab in the last focused window *and* a popup, so CIP-30
-      // sign/enable looked like two concurrent transactions.
-      const popupWindow = await new Promise((res, rej) =>
-        chrome.windows.create(
-          {
-            url: chrome.runtime.getURL(popup + '.html'),
-            type: 'popup',
-            focused: true,
-            ...POPUP_WINDOW,
-            left,
-            top,
-          },
-          function (newWindow) {
-            if (chrome.runtime.lastError || !newWindow) {
-              rej(
-                chrome.runtime.lastError || new Error('Failed to open popup')
-              );
-              return;
-            }
-            res(newWindow);
-          }
-        )
-      );
-
-      if (popupWindow.left !== left && popupWindow.state !== 'fullscreen') {
-        await new Promise((res) => {
-          chrome.windows.update(popupWindow.id, { left, top }, () => res());
-        });
-      }
-      const tab = popupWindow.tabs && popupWindow.tabs[0];
-      if (!tab) {
-        throw new Error('Popup window opened without a tab');
-      }
-      return tab;
-    },
+    /**
+     * Host a setup flow (hardware wallet, Keystone signing) that the toolbar
+     * popup cannot run: the device chooser closes an action popup mid-pairing.
+     * A wallet-sized window keeps the user inside the extension instead of
+     * dumping them into a browser tab.
+     */
+    openFlowWindow: (page, query = '') =>
+      openExtensionWindow(
+        chrome.runtime.getURL(`${page}.html${query || ''}`),
+        FLOW_WINDOW
+      ),
 
     createTab: (tab, query = '') => {
       const url = chrome.runtime.getURL(`${tab}.html${query || ''}`);
@@ -112,14 +154,14 @@ const extensionAdapter = {
      */
     closeCurrentTab: () => {
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
-        window.location.href = chrome.runtime.getURL('mainPopup.html');
+        window.location.href = mainPageUrl();
       }
       return Promise.resolve(true);
     },
 
     /**
      * Leave a full-page flow and open a main-app route. Extension pages load
-     * `mainPopup.html`; non-default routes are passed as `?next=` so bootstrap
+     * `mainPopup.html`; non-default routes are passed as `next=` so bootstrap
      * can land on /accounts (etc.) instead of always /wallet.
      */
     openMainRoute: (path = '/wallet') => {
@@ -134,19 +176,23 @@ const extensionAdapter = {
       ]);
       const safe = allowed.has(path) ? path : '/wallet';
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
-        const base = chrome.runtime.getURL('mainPopup.html');
-        window.location.href =
-          safe === '/wallet'
-            ? base
-            : `${base}?next=${encodeURIComponent(safe)}`;
+        window.location.href = mainPageUrl(safe === '/wallet' ? null : safe);
       }
       return Promise.resolve(true);
     },
 
-    /** After full data wipe: reload entry HTML so SPA path is not stuck on /settings/… */
+    /**
+     * After full data wipe: reload entry HTML so SPA path is not stuck on
+     * /settings/…. Keeps the current surface — a wipe from a flow window must
+     * not come back pinned to the toolbar popup box.
+     */
     reloadToWalletBootstrap: () => {
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
-        window.location.replace(chrome.runtime.getURL('mainPopup.html'));
+        window.location.replace(
+          isFullPageView(window.location.search)
+            ? mainPageUrl()
+            : chrome.runtime.getURL('mainPopup.html')
+        );
       }
       return Promise.resolve(true);
     },

@@ -1,4 +1,9 @@
-import { POPUP, POPUP_WINDOW, TAB } from '../../config/config';
+import {
+  isFullPageView,
+  POPUP,
+  POPUP_WINDOW,
+  TAB,
+} from '../../config/config';
 import { isNativePlatform } from '../../platform/capacitor';
 
 export const LUCEM_LAYOUT = {
@@ -12,11 +17,15 @@ export const DESKTOP_MIN_WIDTH = 1024;
 
 /**
  * Chrome extension popup (main or dApp approval), not a full-page tab.
+ * A flow window or a tab loads the same `mainPopup.html`, so the URL marker
+ * is the only thing that tells them apart.
  * @param {Document | null | undefined} doc
  * @param {{ runtime?: { id?: string } } | null | undefined} chromeLike
+ * @param {string} [search] - `window.location.search`
  */
-export function detectIsExtensionPopup(doc, chromeLike) {
+export function detectIsExtensionPopup(doc, chromeLike, search = '') {
   if (!doc || typeof doc.querySelector !== 'function') return false;
+  if (isFullPageView(search)) return false;
   const isMain = !!doc.querySelector(`#${POPUP.main}`);
   const isInternal = !!doc.querySelector(`#${POPUP.internal}`);
   return (
@@ -86,7 +95,11 @@ export function readLucemLayoutInputs(win) {
     hover = !!target.matchMedia('(hover: hover)').matches;
   }
   return {
-    isExtensionPopup: detectIsExtensionPopup(target.document, chromeLike),
+    isExtensionPopup: detectIsExtensionPopup(
+      target.document,
+      chromeLike,
+      (target.location && target.location.search) || ''
+    ),
     isNative: isNativePlatform(),
     width: target.innerWidth || 0,
     finePointer,

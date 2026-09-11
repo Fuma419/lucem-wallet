@@ -94,6 +94,10 @@ describe('platform/web.js - navigation', () => {
   test('openMainRoute is available on the web adapter', () => {
     expect(typeof webAdapter.navigation.openMainRoute).toBe('function');
   });
+
+  test('openFlowWindow stays in the current tab on the web app', () => {
+    expect(typeof webAdapter.navigation.openFlowWindow).toBe('function');
+  });
 });
 
 describe('platform/extension.js - createTab', () => {
@@ -135,6 +139,89 @@ describe('platform/extension.js - createTab', () => {
   });
 });
 
+describe('platform/extension.js - openFlowWindow', () => {
+  afterEach(() => {
+    jest.resetModules();
+    delete global.chrome;
+  });
+
+  const mockChrome = () => {
+    const created = {
+      id: 7,
+      left: 300,
+      tabs: [{ id: 71, url: 'chrome-extension://ext/hwTab.html' }],
+    };
+    global.chrome = {
+      runtime: {
+        id: 'ext',
+        getURL: (p) => `chrome-extension://ext/${p}`,
+        lastError: undefined,
+      },
+      tabs: { create: jest.fn() },
+      windows: {
+        create: jest.fn((opts, cb) => cb(created)),
+        getLastFocused: jest.fn((cb) =>
+          cb({ top: 20, left: 100, width: 1400 })
+        ),
+        update: jest.fn((id, pos, cb) => cb()),
+      },
+      storage: { local: {} },
+    };
+    return created;
+  };
+
+  test('hardware setup opens a wallet-sized window, never a browser tab', async () => {
+    const created = mockChrome();
+    const { FLOW_WINDOW } = require('../../../config/config');
+    const extAdapter = require('../../../platform/extension').default;
+
+    const tab = await extAdapter.navigation.openFlowWindow(
+      'hwTab',
+      '?from=/welcome'
+    );
+
+    expect(tab).toEqual(created.tabs[0]);
+    expect(global.chrome.tabs.create).not.toHaveBeenCalled();
+    const opts = global.chrome.windows.create.mock.calls[0][0];
+    expect(opts.url).toBe('chrome-extension://ext/hwTab.html?from=/welcome');
+    expect(opts.type).toBe('popup');
+    expect(opts.width).toBe(FLOW_WINDOW.width);
+    expect(opts.height).toBe(FLOW_WINDOW.height);
+  });
+
+  test('leaving a flow marks the main UI as full-page so it is not letterboxed', () => {
+    mockChrome();
+    const { mainPageUrl } = require('../../../platform/extension');
+    const { isFullPageView } = require('../../../config/config');
+
+    expect(mainPageUrl()).toBe(
+      'chrome-extension://ext/mainPopup.html?view=full'
+    );
+    expect(mainPageUrl('/accounts')).toBe(
+      'chrome-extension://ext/mainPopup.html?view=full&next=%2Faccounts'
+    );
+    expect(isFullPageView('?view=full&next=%2Faccounts')).toBe(true);
+    expect(isFullPageView('?next=%2Faccounts')).toBe(false);
+    expect(isFullPageView('')).toBe(false);
+  });
+
+  test('closing a flow and a wipe both keep the surface they came from', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const extSrc = fs.readFileSync(
+      path.join(__dirname, '../../../platform/extension.js'),
+      'utf8'
+    );
+    const afterClose = extSrc.split('closeCurrentTab:')[1] || '';
+    expect(afterClose.split('},')[0]).toContain('mainPageUrl()');
+    // A wipe from the toolbar popup must stay pinned; from a flow window it
+    // must stay responsive.
+    expect(extSrc).toMatch(
+      /isFullPageView\(window\.location\.search\)\s*\?\s*mainPageUrl\(\)/
+    );
+  });
+});
+
 describe('import abandon navigation', () => {
   const fs = require('fs');
   const path = require('path');
@@ -146,9 +233,27 @@ describe('import abandon navigation', () => {
     );
     const createPopupSrc = extSrc.split('createTab:')[0];
     expect(createPopupSrc).toContain('createPopup:');
-    expect(createPopupSrc).toContain('url: chrome.runtime.getURL');
+    expect(createPopupSrc).toContain('openExtensionWindow');
+    expect(createPopupSrc).toContain('chrome.runtime.getURL');
     expect(createPopupSrc).toContain("type: 'popup'");
     expect(createPopupSrc).not.toContain('chrome.tabs.create');
+  });
+
+  test('hardware setup leaves the popup for a window, not a browser tab', () => {
+    const setupSrc = fs.readFileSync(
+      path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
+      'utf8'
+    );
+    expect(setupSrc).toMatch(
+      /openFlowWindow\(TAB\.hw, appendFlowReturnQuery\('', returnTo\)\)/
+    );
+    expect(setupSrc).not.toMatch(/createTab\(/);
+    const apiSrc = fs.readFileSync(
+      path.join(__dirname, '../../../api/extension/index.js'),
+      'utf8'
+    );
+    expect(apiSrc).toContain('export const openFlowWindow');
+    expect(apiSrc).toMatch(/openFlowWindow\(\s*TAB\.keystoneTx/);
   });
 
   test('extension createTab opens a tab in the current window, not a new window', () => {
@@ -177,7 +282,7 @@ describe('import abandon navigation', () => {
     expect(webSrc).toContain('openMainRoute:');
     expect(extSrc).toContain('openMainRoute:');
     expect(webSrc).toContain("'/accounts'");
-    expect(extSrc).toContain('?next=');
+    expect(extSrc).toContain('next=');
     expect(webSrc).toMatch(/location\.origin\}\/\$\{tab\}\.html/);
     expect(webSrc).not.toMatch(/location\.href = tab \+ '\.html'/);
   });

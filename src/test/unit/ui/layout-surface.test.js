@@ -116,6 +116,33 @@ describe('detectIsExtensionPopup / detectIsFullBleedWalletTab', () => {
     expect(detectIsExtensionPopup(queryDoc(POPUP.main), undefined)).toBe(false);
   });
 
+  test('the same HTML in a flow window or tab is responsive, not popup-pinned', () => {
+    expect(
+      detectIsExtensionPopup(
+        queryDoc(POPUP.main),
+        { runtime: { id: 'ext' } },
+        '?view=full'
+      )
+    ).toBe(false);
+    expect(
+      detectIsExtensionPopup(
+        queryDoc(POPUP.main),
+        { runtime: { id: 'ext' } },
+        '?view=full&next=%2Faccounts'
+      )
+    ).toBe(false);
+  });
+
+  test('an unrelated query still reads as the toolbar popup', () => {
+    expect(
+      detectIsExtensionPopup(
+        queryDoc(POPUP.main),
+        { runtime: { id: 'ext' } },
+        '?next=%2Faccounts'
+      )
+    ).toBe(true);
+  });
+
   test('create-wallet tab is full-bleed', () => {
     expect(detectIsFullBleedWalletTab(queryDoc(TAB.createWallet))).toBe(true);
     expect(detectIsFullBleedWalletTab(queryDoc(POPUP.main))).toBe(false);
@@ -125,6 +152,14 @@ describe('detectIsExtensionPopup / detectIsFullBleedWalletTab', () => {
 describe('desktop layout source contracts', () => {
   const read = (rel) =>
     fs.readFileSync(path.join(__dirname, '../../../', rel), 'utf8');
+
+  test('index.jsx passes the URL so only the toolbar popup is pinned', () => {
+    const src = read('ui/index.jsx');
+    expect(src).toContain('window.location.search');
+    const surfaceSrc = read('ui/layout/surface.js');
+    expect(surfaceSrc).toContain('isFullPageView(search)');
+    expect(surfaceSrc).toMatch(/target\.location && target\.location\.search/);
+  });
 
   test('index.jsx caps width at 480px only for the touch surface', () => {
     const src = read('ui/index.jsx');

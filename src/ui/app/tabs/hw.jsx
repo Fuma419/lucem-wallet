@@ -68,6 +68,7 @@ import {
   LEDGER_USB_ID,
   canConnectLedgerInThisBrowser,
   closeLedgerApp,
+  isLedgerSessionLive,
   countGrantedLedgerUsbDevices,
   hasLedgerUsbApi,
   isAndroidLike,
@@ -307,6 +308,8 @@ const App = () => {
                   keystoneExportProfile,
                   usbDevice,
                   hidDevice,
+                  bleDevice,
+                  appAda,
                 }) => {
                   data.current = {
                     device,
@@ -315,6 +318,8 @@ const App = () => {
                     keystoneExportProfile,
                     usbDevice,
                     hidDevice,
+                    bleDevice,
+                    appAda,
                   };
                   setTab(1);
                 }}
@@ -1187,8 +1192,9 @@ const ConnectHW = ({ onConfirm }) => {
               return;
             }
             setIsLoading(true);
+            let appAda;
             try {
-              await initHW({
+              appAda = await initHW({
                 device: selected,
                 id: bleDevice.id,
                 bleDevice,
@@ -1203,7 +1209,16 @@ const ConnectHW = ({ onConfirm }) => {
               setIsLoading(false);
               return;
             }
-            onConfirm({ device: selected, id: bleDevice.id });
+            // Keep the live BLE session. WebBLE close() does not drop GATT,
+            // and a second open() stacks notify listeners so the Stax never
+            // shows the public-key export. Pass the device so we can reconnect
+            // if the session dies before account select.
+            onConfirm({
+              device: selected,
+              id: bleDevice.id,
+              bleDevice,
+              appAda,
+            });
           } catch (e) {
             setError(formatLedgerError(e, 'Ledger setup failed.'));
           }
@@ -1459,29 +1474,40 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   };
                 });
               } else if (device === HW.ledger) {
-                const appAda = await initHW({
-                  device,
-                  id,
-                  usbDevice: data.usbDevice,
-                  hidDevice: data.hidDevice,
-                });
-                const ledgerKeys = await appAda.getExtendedPublicKeys({
-                  paths: accountIndexes.map((index) => [
-                    HARDENED + 1852,
-                    HARDENED + 1815,
-                    HARDENED + parseInt(index, 10),
-                  ]),
-                });
-                const idHex = isLedgerUsbId(id)
-                  ? LEDGER_USB_ID
-                  : Buffer.from(String(id), 'utf8').toString('hex');
-                accounts = ledgerKeys.map(
-                  ({ publicKeyHex, chainCodeHex }, index) => ({
-                    accountIndex: `${HW.ledger}-${idHex}-${accountIndexes[index]}`,
-                    publicKey: publicKeyHex + chainCodeHex,
-                    name: `Ledger ${parseInt(accountIndexes[index], 10) + 1}`,
-                  })
-                );
+                let appAda = isLedgerSessionLive(data.appAda)
+                  ? data.appAda
+                  : null;
+                if (!appAda) {
+                  appAda = await initHW({
+                    device,
+                    id,
+                    usbDevice: data.usbDevice,
+                    hidDevice: data.hidDevice,
+                    bleDevice: data.bleDevice,
+                  });
+                }
+                try {
+                  const ledgerKeys = await appAda.getExtendedPublicKeys({
+                    paths: accountIndexes.map((index) => [
+                      HARDENED + 1852,
+                      HARDENED + 1815,
+                      HARDENED + parseInt(index, 10),
+                    ]),
+                  });
+                  const idHex = isLedgerUsbId(id)
+                    ? LEDGER_USB_ID
+                    : Buffer.from(String(id), 'utf8').toString('hex');
+                  accounts = ledgerKeys.map(
+                    ({ publicKeyHex, chainCodeHex }, index) => ({
+                      accountIndex: `${HW.ledger}-${idHex}-${accountIndexes[index]}`,
+                      publicKey: publicKeyHex + chainCodeHex,
+                      name: `Ledger ${parseInt(accountIndexes[index], 10) + 1}`,
+                    })
+                  );
+                } finally {
+                  await closeLedgerApp(appAda);
+                  data.appAda = null;
+                }
               }
               if (!accounts || accounts.length === 0) {
                 throw new Error('No accounts selected');

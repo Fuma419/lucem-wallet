@@ -43,6 +43,7 @@ const {
   pickLedgerUsbDevice,
   closeLedgerApp,
   findGrantedBluetoothDevice,
+  isLedgerSessionLive,
 } = require('../../../../api/extension/ledger-transport');
 
 describe('ledger USB / BLE transport', () => {
@@ -269,6 +270,50 @@ describe('ledger USB / BLE transport', () => {
     const close = jest.fn(async () => {});
     await closeLedgerApp({ transport: { close } });
     expect(close).toHaveBeenCalled();
+  });
+
+  test('closeLedgerApp drops a leftover BLE GATT so the next open is clean', async () => {
+    const disconnect = jest.fn();
+    const close = jest.fn(async () => {});
+    const gatt = { connected: true, disconnect };
+    await closeLedgerApp({
+      transport: { close, device: { gatt } },
+    });
+    expect(close).toHaveBeenCalled();
+    expect(disconnect).toHaveBeenCalled();
+  });
+
+  test('isLedgerSessionLive follows BLE GATT connected', () => {
+    expect(isLedgerSessionLive(null)).toBe(false);
+    expect(isLedgerSessionLive({ transport: {} })).toBe(true);
+    expect(
+      isLedgerSessionLive({
+        transport: { device: { gatt: { connected: true } } },
+      })
+    ).toBe(true);
+    expect(
+      isLedgerSessionLive({
+        transport: { device: { gatt: { connected: false } } },
+      })
+    ).toBe(false);
+  });
+
+  test('BLE reopen disconnects a leftover GATT before Transport.open', async () => {
+    const disconnect = jest.fn();
+    const ble = {
+      id: 'stax-1',
+      gatt: { connected: true, disconnect },
+    };
+    Object.defineProperty(navigator, 'bluetooth', {
+      configurable: true,
+      value: {
+        getDevices: jest.fn(async () => [ble]),
+        requestDevice: jest.fn(),
+      },
+    });
+    await openLedgerTransport({ bleDevice: ble });
+    expect(disconnect).toHaveBeenCalled();
+    expect(TransportWebBLE.open).toHaveBeenCalledWith(ble);
   });
 
   test('iPhone Safari / PWA cannot connect Ledger', () => {

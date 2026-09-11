@@ -63,6 +63,7 @@ import {
 import { MdBluetooth, MdUsb } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import { ensureCameraPermission } from '../../../platform/capacitor';
+import { formatLedgerError } from '../../../api/extension/ledger-error';
 import {
   LEDGER_USB_ID,
   canConnectLedgerInThisBrowser,
@@ -111,7 +112,7 @@ const ledgerBluetoothHelpText = () => {
     return 'Ledger over Bluetooth is not supported on iPhone or iPad: no iOS browser exposes Web Bluetooth to websites (this also applies to Chrome on iPhone). Use Lucem in Chrome or Edge on a Mac or Windows PC with a Bluetooth Ledger (Nano X, Flex, Stax), or connect via USB on desktop. On this device, use Keystone with QR codes instead.';
   }
   if (hasWebBluetoothRequestDevice()) {
-    return 'Use a Bluetooth-capable Ledger (Nano X, Flex, Stax, etc.). Unlock it, enable Bluetooth on the device, open the Cardano app, then tap Continue and pick your Ledger in the browser dialog.';
+    return 'Use a Bluetooth-capable Ledger (Nano X, Flex, Stax, etc.). Unlock it, enable Bluetooth, close Ledger Live, open the Cardano app so it fills the screen, then tap Continue and pick your Ledger in the browser dialog.';
   }
   return 'Web Bluetooth is not available here. Use Chrome or Edge on desktop or the Lucem web app over HTTPS, with Bluetooth enabled. Note: some extension pages cannot use Web Bluetooth — open the hardware wallet flow in a normal browser tab if pairing fails.';
 };
@@ -993,10 +994,10 @@ const ConnectHW = ({ onConfirm }) => {
           {ledgerLink === 'usb'
             ? hasLedgerUsbApi()
               ? usbGranted > 0
-                ? 'Chrome already allowed a USB device. Unlock the Ledger, open the Cardano app, then tap Continue.'
+                ? 'Chrome already allowed a USB device. Unlock the Ledger, close Ledger Live, open the Cardano app so it fills the screen, then tap Continue.'
                 : isAndroidLike()
                   ? 'A plugged-in Ledger does not show as connected until Chrome asks for USB access. Use a USB-OTG adapter, unlock the device, open the Cardano app, then tap Continue. Chrome should open a USB list right away — pick the Ledger.'
-                  : 'Plug in Ledger over USB, unlock it, open the Cardano app, then tap Continue and pick the device in the browser list.'
+                  : 'Plug in Ledger over USB, unlock it, close Ledger Live, open the Cardano app so it fills the screen, then tap Continue and pick the device in the browser list.'
               : ledgerCannotConnectMessage()
             : !canConnectLedgerInThisBrowser()
               ? ledgerCannotConnectMessage()
@@ -1112,9 +1113,10 @@ const ConnectHW = ({ onConfirm }) => {
                 );
               } else {
                 setError(
-                  e && e.message
-                    ? String(e.message)
-                    : 'Could not open the USB device picker.'
+                  formatLedgerError(
+                    e,
+                    'Could not open the USB device picker.'
+                  )
                 );
               }
               return;
@@ -1146,9 +1148,10 @@ const ConnectHW = ({ onConfirm }) => {
                 );
               } else {
                 setError(
-                  e && e.message
-                    ? String(e.message)
-                    : 'Cardano app not opened or USB connection failed.'
+                  formatLedgerError(
+                    e,
+                    'Cardano app not opened or USB connection failed.'
+                  )
                 );
               }
             } finally {
@@ -1176,9 +1179,10 @@ const ConnectHW = ({ onConfirm }) => {
                 setError('No device selected or pairing was cancelled.');
               } else {
                 setError(
-                  e && e.message
-                    ? String(e.message)
-                    : 'Could not open Bluetooth device picker.'
+                  formatLedgerError(
+                    e,
+                    'Could not open Bluetooth device picker.'
+                  )
                 );
               }
               setIsLoading(false);
@@ -1192,18 +1196,17 @@ const ConnectHW = ({ onConfirm }) => {
               });
             } catch (e) {
               setError(
-                e && e.message
-                  ? String(e.message)
-                  : 'Cardano app not opened or Bluetooth connection failed.'
+                formatLedgerError(
+                  e,
+                  'Cardano app not opened or Bluetooth connection failed.'
+                )
               );
               setIsLoading(false);
               return;
             }
             onConfirm({ device: selected, id: bleDevice.id });
           } catch (e) {
-            setError(
-              e && e.message ? String(e.message) : 'Ledger setup failed.'
-            );
+            setError(formatLedgerError(e, 'Ledger setup failed.'));
           }
           setIsLoading(false);
         }}
@@ -1488,9 +1491,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
               onConfirm();
             } catch (e) {
               console.warn(e);
-              setError(
-                e && e.message ? String(e.message) : 'An error occured'
-              );
+              setError(formatLedgerError(e, 'An error occured'));
             } finally {
               setIsLoading(false);
             }

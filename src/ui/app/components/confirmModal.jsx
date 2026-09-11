@@ -18,6 +18,7 @@ import {
 import React from 'react';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
 import { indexToHw, initHW, isHW } from '../../../api/extension';
+import { formatLedgerError } from '../../../api/extension/ledger-error';
 import { isLedgerUsbId } from '../../../api/extension/ledger-transport';
 import {
   ERROR,
@@ -267,7 +268,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
       if (isSubmitError(e)) props.onConfirm(false, e);
       else {
         console.warn(e);
-        setError(e?.message || String(e) || 'An error occurred');
+        setError(formatLedgerError(e, 'An error occurred'));
       }
     }
     setWaitReady(true);

@@ -33,7 +33,12 @@ import {
   Data,
 } from '../util';
 import Ada from '@cardano-foundation/ledgerjs-hw-app-cardano';
-import { openLedgerTransport } from './ledger-transport';
+import {
+  formatLedgerError,
+  isLedgerAppNotSelectedError,
+  ledgerAppTooOldMessage,
+} from './ledger-error';
+import { closeLedgerApp, openLedgerTransport } from './ledger-transport';
 import AssetFingerprint from '@emurgo/cip14-js';
 import { milkomedaNetworks } from '@dcspark/milkomeda-constants';
 import { KOIOS_REQUESTS, addressTxsIndicatesHistory } from '../koios-endpoints';
@@ -1365,6 +1370,11 @@ export const getHwAccounts = (accounts, { device, id }) => {
 
 export const isHW = (accountIndex) => isHardwareAccountIndex(accountIndex);
 
+const LEDGER_GET_VERSION_ATTEMPTS = 3;
+const LEDGER_GET_VERSION_RETRY_MS = 600;
+
+const waitMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const initHW = async ({
   device,
   id,
@@ -1374,16 +1384,40 @@ export const initHW = async ({
   hidDevice,
 }) => {
   if (device == HW.ledger) {
-    const transport = await openLedgerTransport({
-      id,
-      bleDevice,
-      promptUsb,
-      usbDevice,
-      hidDevice,
-    });
-    const appAda = new Ada(transport);
-    await appAda.getVersion(); // check if Ledger has Cardano app opened
-    return appAda;
+    let appAda;
+    try {
+      const transport = await openLedgerTransport({
+        id,
+        bleDevice,
+        promptUsb,
+        usbDevice,
+        hidDevice,
+      });
+      appAda = new Ada(transport);
+      let versionInfo;
+      for (let attempt = 0; attempt < LEDGER_GET_VERSION_ATTEMPTS; attempt += 1) {
+        try {
+          versionInfo = await appAda.getVersion();
+          break;
+        } catch (e) {
+          const canRetry =
+            isLedgerAppNotSelectedError(e) &&
+            attempt < LEDGER_GET_VERSION_ATTEMPTS - 1;
+          if (!canRetry) throw e;
+          await waitMs(LEDGER_GET_VERSION_RETRY_MS);
+        }
+      }
+      const compatibility = versionInfo && versionInfo.compatibility;
+      if (compatibility && compatibility.isCompatible === false) {
+        throw new Error(
+          ledgerAppTooOldMessage(compatibility.recommendedVersion)
+        );
+      }
+      return appAda;
+    } catch (e) {
+      await closeLedgerApp(appAda);
+      throw new Error(formatLedgerError(e));
+    }
   } else if (device == HW.trezor) {
     throw new Error(TREZOR_UNSUPPORTED);
   } else if (device == HW.keystone) {

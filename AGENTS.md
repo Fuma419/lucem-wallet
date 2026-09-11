@@ -53,9 +53,11 @@ Create and restore run **inside the toolbar popup** as SPA routes
 `hwTab` and `keystoneTx` cannot: Chrome destroys an action popup the moment a
 WebHID / WebUSB / Web Bluetooth chooser takes focus, which surfaces as
 `User cancelled the requestDevice() chooser`. They open through
-`platform.navigation.openFlowWindow` — a wallet-sized `FLOW_WINDOW` popup
-window in the extension, the same tab on web. **Do not** route them through
-`createTab`; a browser tab is not needed and is a worse experience.
+`platform.navigation.openFlowWindow` — a wallet-sized `FLOW_WINDOW` **normal**
+window in the extension (not `type: popup`: Chrome cancels Web Bluetooth /
+WebHID choosers there), the same tab on web. **Do not** route them through
+`createTab` unless pairing itself is broken; dumping into the browsing
+session is a worse experience.
 
 Leaving a full-page flow (`closeCurrentTab` / `openMainRoute`) loads
 `mainPopup.html?view=full`. That marker (`isFullPageView`) is the only way to

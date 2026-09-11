@@ -43,14 +43,18 @@ const windowPlacement = async (size) => {
  * `tabs.create` + `windows.create({tabId})` left a background tab in the last
  * focused window *and* a popup, so CIP-30 sign/enable looked like two
  * concurrent transactions. Open the window directly.
+ *
+ * `type` matters: Chrome cancels WebHID / WebUSB / Web Bluetooth
+ * `requestDevice()` in `popup` windows (same NotFoundError as a cancelled
+ * chooser). Hardware pairing needs `normal`. CIP-30 approval stays `popup`.
  */
-const openExtensionWindow = async (url, size) => {
+const openExtensionWindow = async (url, size, type = 'popup') => {
   const { left, top } = await windowPlacement(size);
   const popupWindow = await new Promise((res, rej) =>
     chrome.windows.create(
       {
         url,
-        type: 'popup',
+        type,
         focused: true,
         width: size.width,
         height: size.height,
@@ -121,13 +125,15 @@ const extensionAdapter = {
     /**
      * Host a setup flow (hardware wallet, Keystone signing) that the toolbar
      * popup cannot run: the device chooser closes an action popup mid-pairing.
-     * A wallet-sized window keeps the user inside the extension instead of
-     * dumping them into a browser tab.
+     * A wallet-sized `normal` window keeps the user out of their browsing
+     * tabs. `popup` type is not used here — Chrome closes the BLE/USB
+     * chooser in those windows and reports "No device selected".
      */
     openFlowWindow: (page, query = '') =>
       openExtensionWindow(
         chrome.runtime.getURL(`${page}.html${query || ''}`),
-        FLOW_WINDOW
+        FLOW_WINDOW,
+        'normal'
       ),
 
     createTab: (tab, query = '') => {

@@ -74,18 +74,11 @@ import {
   isLedgerUsbId,
   ledgerCannotConnectMessage,
   ledgerUsbUnavailableMessage,
+  pickLedgerBluetoothDevice,
   pickLedgerUsbDevice,
   preloadLedgerUsbTransports,
   shouldOfferLedgerImport,
 } from '../../../api/extension/ledger-transport';
-
-const ledgerBleRequestOptions = () => {
-  const uuids = getBluetoothServiceUuids();
-  return {
-    filters: uuids.map((uuid) => ({ services: [uuid] })),
-    optionalServices: uuids,
-  };
-};
 
 /**
  * iPhone/iPad browsers (Safari and Chrome-on-iOS, which uses WebKit) do not expose
@@ -1159,24 +1152,30 @@ const ConnectHW = ({ onConfirm }) => {
             }
             return;
           }
-          setIsLoading(true);
           try {
             if (
               isIosLikeWithoutWebBluetooth() ||
               !hasWebBluetoothRequestDevice()
             ) {
               setError(ledgerBluetoothUnavailableMessage());
-              setIsLoading(false);
               return;
             }
             let bleDevice;
             try {
-              bleDevice = await navigator.bluetooth.requestDevice(
-                ledgerBleRequestOptions()
+              // First await must be requestDevice() so Chrome still has the tap.
+              // acceptAllDevices: a bonded Flex often stops advertising the
+              // Ledger GATT service, so UUID filters produce an empty chooser.
+              bleDevice = await pickLedgerBluetoothDevice(
+                getBluetoothServiceUuids()
               );
             } catch (e) {
-              if (e && e.name === 'NotFoundError') {
-                setError('No device selected or pairing was cancelled.');
+              if (
+                e &&
+                (e.name === 'NotFoundError' || e.name === 'AbortError')
+              ) {
+                setError(
+                  'Chrome closed the Bluetooth list. Unlock the Ledger, open the Cardano app, tap Continue, and pick it in the list that appears.'
+                );
               } else {
                 setError(
                   formatLedgerError(
@@ -1185,9 +1184,9 @@ const ConnectHW = ({ onConfirm }) => {
                   )
                 );
               }
-              setIsLoading(false);
               return;
             }
+            setIsLoading(true);
             try {
               await initHW({
                 device: selected,

@@ -184,7 +184,7 @@ describe('platform/extension.js - openFlowWindow', () => {
     expect(global.chrome.tabs.create).not.toHaveBeenCalled();
     const opts = global.chrome.windows.create.mock.calls[0][0];
     expect(opts.url).toBe('chrome-extension://ext/hwTab.html?from=/welcome');
-    expect(opts.type).toBe('popup');
+    expect(opts.type).toBe('normal');
     expect(opts.width).toBe(FLOW_WINDOW.width);
     expect(opts.height).toBe(FLOW_WINDOW.height);
   });
@@ -235,7 +235,8 @@ describe('import abandon navigation', () => {
     expect(createPopupSrc).toContain('createPopup:');
     expect(createPopupSrc).toContain('openExtensionWindow');
     expect(createPopupSrc).toContain('chrome.runtime.getURL');
-    expect(createPopupSrc).toContain("type: 'popup'");
+    expect(createPopupSrc).toContain("type = 'popup'");
+    expect(createPopupSrc).toContain("'normal'");
     expect(createPopupSrc).not.toContain('chrome.tabs.create');
   });
 

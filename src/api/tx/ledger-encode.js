@@ -108,19 +108,82 @@ export const cslMintPolicyTokens = (mint, policy) => {
   return tokens;
 };
 
+const cslStepError = (step, err) => {
+  const detail = err && err.message ? String(err.message) : String(err || '');
+  return new Error(`${step}: ${detail}`);
+};
+
+const coerceCslPublicKey = (Cardano, publicKey) => {
+  if (!publicKey) throw new Error('Missing public key for Ledger witness');
+  const raw =
+    typeof publicKey.to_raw_key === 'function'
+      ? publicKey.to_raw_key()
+      : publicKey;
+  if (typeof raw.as_bytes === 'function' && Cardano.PublicKey?.from_bytes) {
+    return Cardano.PublicKey.from_bytes(new Uint8Array(raw.as_bytes()));
+  }
+  if (typeof raw.to_hex === 'function' && Cardano.PublicKey?.from_hex) {
+    return Cardano.PublicKey.from_hex(raw.to_hex());
+  }
+  return raw;
+};
+
+const coerceCslSignature = (Cardano, signatureHex) => {
+  const hex = String(signatureHex || '')
+    .trim()
+    .replace(/^0x/i, '');
+  if (!/^[0-9a-fA-F]+$/.test(hex) || hex.length % 2 !== 0) {
+    throw new Error('Ledger returned an unreadable signature');
+  }
+  if (typeof Cardano.Ed25519Signature.from_bytes === 'function') {
+    return Cardano.Ed25519Signature.from_bytes(
+      new Uint8Array(Buffer.from(hex, 'hex'))
+    );
+  }
+  return Cardano.Ed25519Signature.from_hex(hex);
+};
+
 /**
+ * CSL `Vkeywitness.new` takes a `Vkey`, not a `PublicKey`. Production
+ * webpack minifies that to `expected instance of Ri` after the device
+ * already signed.
  * @param {any} Cardano
- * @param {any} publicKey CSL PublicKey
+ * @param {any} publicKey CSL PublicKey or Bip32PublicKey
  * @param {string} signatureHex
  */
 export const wrapLedgerVkeyWitness = (Cardano, publicKey, signatureHex) => {
   if (!Cardano || typeof Cardano.Vkey?.new !== 'function') {
     throw new Error('CSL Vkey.new is required to assemble a Ledger witness');
   }
-  return Cardano.Vkeywitness.new(
-    Cardano.Vkey.new(publicKey),
-    Cardano.Ed25519Signature.from_hex(signatureHex)
-  );
+  let pk;
+  try {
+    pk = coerceCslPublicKey(Cardano, publicKey);
+  } catch (/** @type {any} */ err) {
+    throw cslStepError('Could not read the Ledger payment key', err);
+  }
+  let vkey;
+  try {
+    vkey = Cardano.Vkey.new(pk);
+  } catch (/** @type {any} */ err) {
+    throw cslStepError(
+      'Could not wrap the Ledger payment key as a Vkey',
+      err
+    );
+  }
+  let signature;
+  try {
+    signature = coerceCslSignature(Cardano, signatureHex);
+  } catch (/** @type {any} */ err) {
+    throw cslStepError('Could not read the Ledger signature', err);
+  }
+  try {
+    return Cardano.Vkeywitness.new(vkey, signature);
+  } catch (/** @type {any} */ err) {
+    throw cslStepError(
+      'Could not attach the Ledger signature to the vkey',
+      err
+    );
+  }
 };
 
 const bytesHex = (value) =>

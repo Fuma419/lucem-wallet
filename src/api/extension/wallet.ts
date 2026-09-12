@@ -182,13 +182,28 @@ export const assembleSignedTransaction = async (
   witnessSet: any
 ) => {
   await Loader.load();
-  const signed = Loader.Cardano.Transaction.new(
-    unsignedTx.body(),
-    witnessSet,
-    unsignedTx.auxiliary_data()
-  );
-  signed.set_is_valid(unsignedTx.is_valid());
-  return signed;
+  try {
+    const aux =
+      unsignedTx && typeof unsignedTx.auxiliary_data === 'function'
+        ? unsignedTx.auxiliary_data()
+        : undefined;
+    // Pass aux only when it is a real AuxiliaryData. A boolean leftover from
+    // the old 4-arg Transaction.new becomes `expected instance of AuxiliaryData`
+    // (minified to `Ri` in production).
+    const signed =
+      aux && typeof aux.to_bytes === 'function'
+        ? Loader.Cardano.Transaction.new(unsignedTx.body(), witnessSet, aux)
+        : Loader.Cardano.Transaction.new(unsignedTx.body(), witnessSet);
+    if (unsignedTx && typeof unsignedTx.is_valid === 'function') {
+      signed.set_is_valid(unsignedTx.is_valid());
+    }
+    return signed;
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Could not assemble the signed transaction. ${detail}`
+    );
+  }
 };
 
 /**

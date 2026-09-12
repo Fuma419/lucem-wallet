@@ -3,6 +3,7 @@ const {
   LEDGER_BLE_NOT_LEDGER_MESSAGE,
   LEDGER_CHOOSER_CANCELLED_MESSAGE,
   LEDGER_SW,
+  LEDGER_WITNESS_ASSEMBLE_MESSAGE,
   formatLedgerError,
   isLedgerAppNotSelectedError,
   ledgerAppTooOldMessage,
@@ -96,5 +97,16 @@ describe('formatLedgerError', () => {
     expect(formatLedgerError({ message: LEDGER_BLE_NOT_LEDGER_MESSAGE })).toBe(
       LEDGER_BLE_NOT_LEDGER_MESSAGE
     );
+  });
+
+  test('maps a minified CSL instanceof error after Ledger signed', () => {
+    expect(formatLedgerError({ message: 'expected instance of Ri' })).toBe(
+      LEDGER_WITNESS_ASSEMBLE_MESSAGE
+    );
+    expect(
+      formatLedgerError({
+        message: 'Could not wrap the Ledger payment key as a Vkey: expected instance of Ri',
+      })
+    ).toMatch(/Could not wrap the Ledger payment key as a Vkey: a Cardano type mismatch/);
   });
 });

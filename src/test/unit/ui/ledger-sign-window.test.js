@@ -11,11 +11,14 @@ const read = (rel) =>
   fs.readFileSync(path.join(__dirname, '../../../', rel), 'utf8');
 
 describe('canHostDeviceChooser', () => {
-  test('extension trusts only normal windows', () => {
+  test('extension trusts only normal windows, and never the toolbar popup', () => {
     const src = read('platform/extension.js');
     expect(src).toMatch(/canHostDeviceChooser: async \(\) => \{/);
     expect(src).toMatch(/chrome\.windows\.getCurrent\(\)/);
     expect(src).toMatch(/current\.type === 'normal'/);
+    // getCurrent() from the action popup reports the parent browser window.
+    expect(src).toMatch(/querySelector\(`#\$\{POPUP\.main\}`\)/);
+    expect(src).toMatch(/querySelector\(`#\$\{POPUP\.internal\}`\)/);
     // A failed lookup must not be read as "pairing is fine here".
     expect(src).toMatch(/catch[\s\S]{0,80}return false;/);
   });
@@ -63,19 +66,22 @@ describe('ledger sign session hand-off', () => {
 describe('confirm modal', () => {
   const src = read('ui/app/components/confirmModal.jsx');
 
-  test('hands off only when a chooser is needed and cannot run here', () => {
+  test('the toolbar popup always hands Ledger signing to the tab', () => {
+    expect(src).toMatch(/detectIsExtensionPopup/);
     expect(src).toMatch(
-      /needsPicker &&\s*chooserHere === false &&\s*typeof props\.onHwLedgerWindow === 'function'/
+      /inExtensionPopup \|\| chooserHere === false/
     );
     expect(src).toMatch(/await Promise\.resolve\(props\.onHwLedgerWindow\(hw\)\)/);
   });
 
-  test('an already-granted device still signs in place', () => {
-    // needsPicker is false when Chrome remembers the device, so the popup
-    // signs without opening a window.
-    expect(src).toMatch(
-      /const needsPicker = isLedgerUsbId\(hw\.id\)\s*\?\s*forceUsbPicker \|\| !grantedUsbPick\s*:\s*forceBlePicker \|\| !grantedBleDevice;/
-    );
+  test('a remembered device does not keep pairing in the popup', () => {
+    // A granted BLE device used to skip the hand-off; requestDevice then
+    // ran in the popup and Chrome cancelled it.
+    const handler = src.slice(src.indexOf('if (hw.device === HW.ledger)'));
+    const handoff = handler.indexOf('onHwLedgerWindow');
+    const pickBle = handler.indexOf('pickLedgerBluetoothDevice');
+    expect(handoff).toBeGreaterThan(-1);
+    expect(pickBle).toBeGreaterThan(handoff);
   });
 
   test('the check is resolved per open, not assumed', () => {

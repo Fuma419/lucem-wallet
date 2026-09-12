@@ -23,6 +23,15 @@ import Loader from '../../../../api/loader';
 import { generateMnemonic } from 'bip39';
 import { ERROR, NODE, STORAGE } from '../../../../config/config';
 
+// createWallet scans for sub-accounts with on-chain history, which queried
+// Koios for real from every test below. An empty array means "no history", so
+// the scan stops after account 0 — the outcome these tests already assumed.
+jest.mock('../../../../api/util', () => ({
+  __esModule: true,
+  ...jest.requireActual('../../../../api/util'),
+  koiosRequest: jest.fn().mockResolvedValue([]),
+}));
+
 beforeAll(async () => {
   const seed =
     'midnight draft salt dirt woman tragic cause immense dad later jaguar finger nerve nerve sign job erase citizen cube neglect token bracket orient narrow';

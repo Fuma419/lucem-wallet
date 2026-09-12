@@ -283,6 +283,10 @@ describe('stake-consolidated balance (resolve stake from payment address)', () =
   test(
     'live: address_info → stake key → consolidated ADA/assets exceed primary',
     async () => {
+      // The only test here that is meant to reach Koios; jest.setup.js blocks
+      // the network otherwise, which would leave this passing without running.
+      global.allowRealNetwork();
+
       const infoReq = KOIOS_REQUESTS.getAddressInfo(PRIMARY_PAYMENT);
       expect(infoReq.endpoint).toBe('/address_info');
       expect(infoReq.body).toEqual({ _addresses: [PRIMARY_PAYMENT] });

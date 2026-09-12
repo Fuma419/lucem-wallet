@@ -28,6 +28,19 @@ Lucem is an open-source Cardano wallet: a Chrome/Firefox/Edge **extension**, a *
 2. Open `chrome://extensions` (or the equivalent on Firefox / Edge).
 3. Enable Developer mode → **Load unpacked** → select the `build/` folder.
 
+To try a build newer than the last release — or to test on a second machine
+without compiling there — take the zip CI already built:
+
+```bash
+./scripts/fetch-build.sh --extract        # newest green main
+./scripts/fetch-build.sh --branch PR-326  # a specific pull request
+./scripts/fetch-build.sh --apk            # Android debug APK instead
+```
+
+Every green build archives `dist/lucem-wallet-<version>-extension.zip`. The
+script needs `JENKINS_USER` and `JENKINS_API_TOKEN` (or
+`~/.config/lucem/jenkins.env`) and nothing else — `--help` explains the rest.
+
 ### Web app
 
 ```bash

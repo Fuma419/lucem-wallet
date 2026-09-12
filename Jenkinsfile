@@ -189,6 +189,21 @@ pipeline {
           set -e
           export PATH="${NODE24_DIR}/bin:${PATH}"
           npm run build:webpack
+
+          # Package the extension so testing this build on another machine is a
+          # download rather than a rebuild. Same name scripts/build-all.sh uses
+          # locally; python3 -m zipfile because zip(1) is not on the agent.
+          VERSION="$(node -p "require('./package.json').version")"
+          mkdir -p dist
+          rm -f dist/lucem-wallet-*-extension.zip
+          python3 -m zipfile -c "dist/lucem-wallet-${VERSION}-extension.zip" build
+          {
+            echo "version ${VERSION}"
+            echo "commit  ${GIT_COMMIT}"
+            echo "branch  ${BRANCH_NAME}"
+            echo "build   ${BUILD_NUMBER}"
+            echo "built   $(date -Is)"
+          } > dist/BUILD-INFO.txt
         '''
       }
       post {
@@ -400,7 +415,9 @@ pipeline {
 
   post {
     always {
-      archiveArtifacts artifacts: 'build/**/*,dist/**/*', allowEmptyArchive: true, fingerprint: true
+      // dist/ only: the zip built above carries the same bytes as build/, and
+      // archiving both stored 158 MB of loose files per build on top of it.
+      archiveArtifacts artifacts: 'dist/**/*', allowEmptyArchive: true, fingerprint: true
     }
   }
 }

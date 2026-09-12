@@ -35,7 +35,7 @@ import {
   TxRequiredSignerType,
 } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import { crc8 } from 'crc';
-import { txBodyCollateral } from './tx/csl-tx-accessors';
+import { transactionInputIndex, txBodyCollateral } from './tx/csl-tx-accessors';
 
 function isExtensionRuntime() {
   return (
@@ -917,7 +917,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     const input = inputs.get(i);
     ledgerInputs.push({
       txHashHex: Buffer.from(input.transaction_id().to_bytes()).toString('hex'),
-      outputIndex: parseInt(input.index().to_str()),
+      outputIndex: transactionInputIndex(input),
       path: keys.payment.path, // needed to include payment key witness if available
     });
   }
@@ -1200,7 +1200,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
           txHashHex: Buffer.from(input.transaction_id().to_bytes()).toString(
             'hex'
           ),
-          outputIndex: parseInt(input.index().to_str()),
+          outputIndex: transactionInputIndex(input),
           path: keys.payment.path, // needed to include payment key witness if available
         });
       } else {
@@ -1208,7 +1208,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
           txHashHex: Buffer.from(input.transaction_id().to_bytes()).toString(
             'hex'
           ),
-          outputIndex: parseInt(input.index().to_str()),
+          outputIndex: transactionInputIndex(input),
         });
       }
       signingMode = TransactionSigningMode.PLUTUS_TRANSACTION;
@@ -1237,7 +1237,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
       const input = refInputs.get(i);
       referenceInputs.push({
         txHashHex: input.transaction_id().to_hex(),
-        outputIndex: parseInt(input.index().to_str()),
+        outputIndex: transactionInputIndex(input),
         path: null,
       });
     }

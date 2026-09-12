@@ -1,7 +1,10 @@
 const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
+const fs = require('fs');
+const path = require('path');
 const {
   outputDatumHashHex,
   outputHasDatum,
+  transactionInputIndex,
   txBodyCollateral,
 } = require('../../../../api/tx/csl-tx-accessors');
 
@@ -116,5 +119,30 @@ describe('CSL 15 tx accessors used by the CIP-30 sign page', () => {
         outputDatumHashHex(output, CSL);
       }
     }).not.toThrow();
+  });
+});
+
+describe('transactionInputIndex (CSL v15)', () => {
+  test('reads a plain number — to_str is not a function', () => {
+    const input = txInput();
+    expect(typeof input.index()).toBe('number');
+    expect(input.index().to_str).toBeUndefined();
+    expect(transactionInputIndex(input)).toBe(0);
+    expect(() => input.index().to_str()).toThrow(TypeError);
+  });
+
+  test('still accepts a BigNum-shaped index from older bindings', () => {
+    expect(transactionInputIndex({ index: () => ({ to_str: () => '7' }) })).toBe(
+      7
+    );
+  });
+
+  test('Ledger encoding uses the accessor, not to_str on the index', () => {
+    const utilSrc = fs.readFileSync(
+      path.join(__dirname, '../../../../api/util.js'),
+      'utf8'
+    );
+    expect(utilSrc).toMatch(/transactionInputIndex\(input\)/);
+    expect(utilSrc).not.toMatch(/input\.index\(\)\.to_str\(\)/);
   });
 });

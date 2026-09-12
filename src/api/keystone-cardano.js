@@ -20,19 +20,7 @@ import {
   listEnabledPaymentAddresses,
 } from './extension/multi-address';
 import Loader from './loader';
-
-/**
- * Transaction input index: CSL v15 returns a plain number; older bindings used BigNum with to_str().
- * @param {*} input
- */
-function transactionInputIndex(input) {
-  const idx = input.index();
-  if (typeof idx === 'number' && Number.isFinite(idx)) return idx;
-  if (idx != null && typeof idx.to_str === 'function') {
-    return parseInt(idx.to_str(), 10);
-  }
-  return parseInt(String(idx), 10);
-}
+import { transactionInputIndex } from './tx/csl-tx-accessors';
 
 /**
  * CIP-1852 account node or deeper (payment/stake leaf). Keystone may report either

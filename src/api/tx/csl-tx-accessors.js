@@ -5,6 +5,23 @@
  * sign popup spinning forever.
  */
 
+/**
+ * TransactionInput.index() is a plain number in CSL v15. Older bindings
+ * returned a BigNum with to_str(). Calling to_str() on a number throws
+ * `G1.index(...).to_str is not a function` and aborted Ledger signing.
+ * @param {{ index?: () => unknown } | null | undefined} input
+ * @returns {number}
+ */
+export const transactionInputIndex = (input) => {
+  const idx = input && typeof input.index === 'function' ? input.index() : input;
+  if (typeof idx === 'number' && Number.isFinite(idx)) return idx;
+  if (idx != null && typeof idx.to_str === 'function') {
+    return parseInt(idx.to_str(), 10);
+  }
+  const parsed = parseInt(String(idx), 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export const txBodyCollateral = (txBody) => {
   if (!txBody) return undefined;
   if (typeof txBody.collateral === 'function') {

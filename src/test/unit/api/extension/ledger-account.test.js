@@ -23,19 +23,28 @@ const {
   LEDGER_KEY_MALFORMED_MESSAGE,
   LEDGER_KEY_MISMATCH_MESSAGE,
   LEDGER_VERIFY_NETWORK,
+  LEDGER_WRONG_WALLET_MESSAGE,
+  assertLedgerAccountMatches,
   assertLedgerKeyMatchesDevice,
   baseAddressHexFromAccountKey,
   exportVerifiedLedgerAccounts,
   isExtendedPublicKeyHex,
   ledgerAccountPath,
+  ledgerAccountStorageIndex,
   ledgerBaseAddressParams,
+  ledgerImportNames,
+  ledgerKeyFingerprint,
 } = require('../../../../api/extension/ledger-account');
 
 const HARDENED = 0x80000000;
 
-/** Deterministic account key, as the Cardano app would export it. */
-const accountKey = (accountIndex = 0) => {
-  const entropy = Buffer.alloc(32, 0x42);
+/**
+ * Deterministic account key, as the Cardano app would export it. A different
+ * `entropyByte` stands in for the same seed under a 25th-word passphrase:
+ * the device derives a whole separate wallet.
+ */
+const accountKey = (accountIndex = 0, entropyByte = 0x42) => {
+  const entropy = Buffer.alloc(32, entropyByte);
   const prv = CSL.Bip32PrivateKey.from_bip39_entropy(entropy, Buffer.alloc(0))
     .derive(HARDENED + 1852)
     .derive(HARDENED + 1815)
@@ -47,6 +56,14 @@ const accountKey = (accountIndex = 0) => {
     extendedHex: Buffer.from(pub.as_bytes()).toString('hex'),
   };
 };
+
+/** Same fingerprint the module derives, computed straight from CSL. */
+const fingerprint = (accountIndex = 0, entropyByte = 0x42) =>
+  CSL.Bip32PublicKey.from_hex(accountKey(accountIndex, entropyByte).extendedHex)
+    .to_raw_key()
+    .hash()
+    .to_hex()
+    .slice(0, 8);
 
 /** What a healthy Ledger answers for `deriveAddress`. */
 const deviceAddressHex = (accountIndex = 0) =>
@@ -69,6 +86,141 @@ const fakeAppAda = ({ accountIndexes = [0], addressFor } = {}) => {
   );
   return { getExtendedPublicKeys, deriveAddress, showAddress };
 };
+
+describe('passphrase (25th word) wallets', () => {
+  const plain = accountKey(0).extendedHex;
+  const withPassphrase = accountKey(0, 0x77).extendedHex;
+
+  test('the same slot under a passphrase is a different key', () => {
+    expect(withPassphrase).not.toBe(plain);
+    expect(ledgerKeyFingerprint(withPassphrase)).not.toBe(
+      ledgerKeyFingerprint(plain)
+    );
+  });
+
+  test('the fingerprint is stable for the same key', () => {
+    expect(ledgerKeyFingerprint(plain)).toBe(ledgerKeyFingerprint(plain));
+    expect(ledgerKeyFingerprint(plain)).toHaveLength(8);
+    expect(ledgerKeyFingerprint(plain)).toMatch(/^[0-9a-f]{8}$/);
+  });
+
+  test('a wrongly sized key has no fingerprint', () => {
+    expect(() => ledgerKeyFingerprint('deadbeef')).toThrow(
+      LEDGER_KEY_MALFORMED_MESSAGE
+    );
+    expect(() => ledgerKeyFingerprint(undefined)).toThrow(
+      LEDGER_KEY_MALFORMED_MESSAGE
+    );
+    // Hashing does not check the curve, so noise of the right length still
+    // yields a tag. Only the device address comparison can reject that, and
+    // it runs before any account is named or stored.
+    expect(ledgerKeyFingerprint('ab'.repeat(32) + 'cd'.repeat(32))).toMatch(
+      /^[0-9a-f]{8}$/
+    );
+  });
+
+  test('storage indexes differ so both wallets can be imported', () => {
+    const idHex = Buffer.from('usb', 'utf8').toString('hex');
+    const a = ledgerAccountStorageIndex({
+      idHex,
+      account: '0',
+      fingerprint: ledgerKeyFingerprint(plain),
+    });
+    const b = ledgerAccountStorageIndex({
+      idHex,
+      account: '0',
+      fingerprint: ledgerKeyFingerprint(withPassphrase),
+    });
+    expect(a).not.toBe(b);
+    expect(a).toBe(`ledger-${idHex}-0-k${ledgerKeyFingerprint(plain)}`);
+  });
+});
+
+describe('ledgerImportNames', () => {
+  test('a first import keeps the plain slot name', () => {
+    expect(
+      ledgerImportNames({
+        existing: [],
+        verified: [{ accountIndex: '0', publicKey: 'aa' }],
+      })
+    ).toEqual(['Ledger 1']);
+  });
+
+  test('a second wallet in the same slot is marked as a passphrase wallet', () => {
+    expect(
+      ledgerImportNames({
+        existing: [{ account: 0, publicKey: 'aa', name: 'Ledger 1' }],
+        verified: [{ accountIndex: '0', publicKey: 'bb' }],
+      })
+    ).toEqual(['Ledger 1 (passphrase)']);
+  });
+
+  test('a third wallet does not reuse the second name', () => {
+    expect(
+      ledgerImportNames({
+        existing: [
+          { account: 0, publicKey: 'aa', name: 'Ledger 1' },
+          { account: 0, publicKey: 'bb', name: 'Ledger 1 (passphrase)' },
+        ],
+        verified: [{ accountIndex: '0', publicKey: 'cc' }],
+      })
+    ).toEqual(['Ledger 1 (passphrase 2)']);
+  });
+
+  test('re-importing the same key is not treated as a new wallet', () => {
+    expect(
+      ledgerImportNames({
+        existing: [{ account: 0, publicKey: 'AA', name: 'Ledger 1' }],
+        verified: [{ accountIndex: '0', publicKey: 'aa' }],
+      })
+    ).toEqual(['Ledger 1']);
+  });
+
+  test('an untouched slot is unaffected by another slot', () => {
+    expect(
+      ledgerImportNames({
+        existing: [{ account: 0, publicKey: 'aa', name: 'Ledger 1' }],
+        verified: [{ accountIndex: '4', publicKey: 'bb' }],
+      })
+    ).toEqual(['Ledger 5']);
+  });
+});
+
+describe('assertLedgerAccountMatches', () => {
+  test('passes when the unlocked wallet owns the account', async () => {
+    const appAda = fakeAppAda();
+    await expect(
+      assertLedgerAccountMatches({
+        appAda,
+        account: 0,
+        expectedPublicKeyHex: accountKey(0).extendedHex,
+      })
+    ).resolves.toBeUndefined();
+  });
+
+  test('refuses to sign when a different passphrase is unlocked', async () => {
+    const appAda = fakeAppAda();
+    await expect(
+      assertLedgerAccountMatches({
+        appAda,
+        account: 0,
+        expectedPublicKeyHex: accountKey(0, 0x77).extendedHex,
+      })
+    ).rejects.toThrow(LEDGER_WRONG_WALLET_MESSAGE);
+  });
+
+  test('refuses an empty answer rather than signing blind', async () => {
+    const appAda = fakeAppAda();
+    appAda.getExtendedPublicKeys = jest.fn(async () => []);
+    await expect(
+      assertLedgerAccountMatches({
+        appAda,
+        account: 0,
+        expectedPublicKeyHex: accountKey(0).extendedHex,
+      })
+    ).rejects.toThrow(LEDGER_KEY_MALFORMED_MESSAGE);
+  });
+});
 
 describe('ledger account derivation params', () => {
   test('account path is CIP-1852 hardened', () => {
@@ -165,8 +317,16 @@ describe('exportVerifiedLedgerAccounts', () => {
     });
 
     expect(verified).toEqual([
-      { accountIndex: '0', publicKey: accountKey(0).extendedHex },
-      { accountIndex: '1', publicKey: accountKey(1).extendedHex },
+      {
+        accountIndex: '0',
+        publicKey: accountKey(0).extendedHex,
+        keyFingerprint: fingerprint(0),
+      },
+      {
+        accountIndex: '1',
+        publicKey: accountKey(1).extendedHex,
+        keyFingerprint: fingerprint(1),
+      },
     ]);
     expect(appAda.deriveAddress).toHaveBeenCalledTimes(2);
   });
@@ -219,6 +379,15 @@ describe('exportVerifiedLedgerAccounts', () => {
     await expect(
       exportVerifiedLedgerAccounts({ appAda, accountIndexes: ['0', '1'] })
     ).rejects.toThrow(LEDGER_KEY_MALFORMED_MESSAGE);
+  });
+
+  test('reports the wallet each key belongs to', async () => {
+    const appAda = fakeAppAda();
+    const [only] = await exportVerifiedLedgerAccounts({
+      appAda,
+      accountIndexes: ['0'],
+    });
+    expect(only.keyFingerprint).toBe(fingerprint(0));
   });
 
   test('requires at least one account', async () => {

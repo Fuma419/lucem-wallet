@@ -28,7 +28,11 @@ import {
   Scrollbars,
   lucemTransparentScrollView,
 } from '../components/scrollbar';
-import { exportVerifiedLedgerAccounts } from '../../../api/extension/ledger-account';
+import {
+  exportVerifiedLedgerAccounts,
+  ledgerAccountStorageIndex,
+  ledgerImportNames,
+} from '../../../api/extension/ledger-account';
 
 
 import LogoWhite from '../../../assets/img/bannerBlack.png';
@@ -1291,6 +1295,16 @@ const SelectAccounts = ({ data, onConfirm }) => {
     setSelected(next);
   }, [isInit, isKeystone, data.keystoneAccounts, existing]);
 
+  /**
+   * Keystone knows every exported key up front, so an imported row is truly
+   * unavailable. A Ledger only reveals the unlocked wallet's key when asked,
+   * and a 25th-word passphrase makes the same slot a different account — so
+   * those rows stay selectable and the key decides on Continue.
+   */
+  const isRowSelectable = (rowKey) => !isKeystone || !existing[rowKey];
+  const chosenRowKeys = () =>
+    Object.keys(selected).filter((s) => selected[s] && isRowSelectable(s));
+
   const ledgerRows = Object.keys([...Array(50)]);
   const keystoneRows = isKeystone
     ? data.keystoneAccounts.map((k) => k.rowKey)
@@ -1328,11 +1342,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
               : keystoneNewAccounts.length === 1
                 ? 'Confirm adding this account. The label is the type Keystone exported (Cardano Native or Ledger).'
                 : 'Confirm which accounts to add (at least one). Each row is the type Keystone exported.'
-            : Object.keys(existing).length > 0 &&
-                Object.keys(selected).filter((s) => selected[s] && !existing[s])
-                  .length === 0
-              ? 'The selected accounts are already imported in Lucem. Choose a different account index, or close this tab.'
-              : 'Select the accounts you would like to import, then click Continue. The Ledger shows the first account address — check it and approve on the device. Lucem imports nothing unless the device confirms the address. Accounts already in Lucem are marked and cannot be selected again.'}
+            : 'Select the accounts you would like to import, then click Continue. The Ledger shows the first account address — check it and approve on the device. Lucem imports nothing unless the device confirms the address. Marked accounts are already in Lucem: pick one again only if this Ledger is unlocked with a different 25th-word passphrase, which is a separate wallet.'}
         </Text>
         <Box h={8} />
 
@@ -1383,7 +1393,9 @@ const SelectAccounts = ({ data, onConfirm }) => {
                       color="yellow.300"
                       letterSpacing="0.02em"
                     >
-                      Already imported
+                      {isKeystone
+                        ? 'Already imported'
+                        : 'Already imported — reselect only for a passphrase wallet'}
                     </Box>
                   ) : null}
                 </Box>
@@ -1393,14 +1405,12 @@ const SelectAccounts = ({ data, onConfirm }) => {
                     ...hwPanelCheckboxSx,
                     '.chakra-checkbox__label': { color: 'whiteAlpha.850' },
                   }}
-                  isDisabled={!!existing[rowKey]}
-                  isChecked={!!(selected[rowKey] && !existing[rowKey])}
+                  isDisabled={!isRowSelectable(rowKey)}
+                  isChecked={!!selected[rowKey] && isRowSelectable(rowKey)}
                   onChange={(e) => {
                     if (isKeystone) {
                       const checked = e.target.checked;
-                      const n = Object.keys(selected).filter(
-                        (s) => selected[s] && !existing[s]
-                      ).length;
+                      const n = chosenRowKeys().length;
                       if (!checked && n <= 1) return;
                     }
                     setSelected((s) => ({
@@ -1427,11 +1437,8 @@ const SelectAccounts = ({ data, onConfirm }) => {
           isDisabled={
             isLoading ||
             (isKeystone
-              ? keystoneNewAccounts.length === 0 ||
-                Object.keys(selected).filter((s) => selected[s] && !existing[s])
-                  .length < 1
-              : Object.keys(selected).filter((s) => selected[s] && !existing[s])
-                  .length <= 0)
+              ? keystoneNewAccounts.length === 0 || chosenRowKeys().length < 1
+              : chosenRowKeys().length < 1)
           }
           isLoading={isLoading}
           mt={8}
@@ -1440,9 +1447,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
           onClick={async () => {
             setIsLoading(true);
             setError('');
-            const accountIndexes = Object.keys(selected).filter(
-              (s) => selected[s] && !existing[s]
-            );
+            const accountIndexes = chosenRowKeys();
             if (accountIndexes.length < 1) {
               setError(
                 'Those accounts are already imported in Lucem. Select a different account.'
@@ -1494,11 +1499,29 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   const idHex = isLedgerUsbId(id)
                     ? LEDGER_USB_ID
                     : Buffer.from(String(id), 'utf8').toString('hex');
+                  // A 25th-word passphrase is a separate wallet on the same
+                  // device, so name and key the import by what it holds.
+                  const stored = (await getStorage(STORAGE.accounts)) || {};
+                  const existingForDevice = Object.keys(
+                    getHwAccounts(stored, { device, id })
+                  ).map((storedIndex) => ({
+                    account: indexToHw(storedIndex).account,
+                    publicKey: stored[storedIndex]?.publicKey,
+                    name: stored[storedIndex]?.name,
+                  }));
+                  const names = ledgerImportNames({
+                    existing: existingForDevice,
+                    verified,
+                  });
                   accounts = verified.map(
-                    ({ accountIndex, publicKey }) => ({
-                      accountIndex: `${HW.ledger}-${idHex}-${accountIndex}`,
+                    ({ accountIndex, publicKey, keyFingerprint }, i) => ({
+                      accountIndex: ledgerAccountStorageIndex({
+                        idHex,
+                        account: accountIndex,
+                        fingerprint: keyFingerprint,
+                      }),
                       publicKey,
-                      name: `Ledger ${parseInt(accountIndex, 10) + 1}`,
+                      name: names[i],
                     })
                   );
                 } finally {

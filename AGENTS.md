@@ -77,6 +77,13 @@ Ledger account import never trusts the exported key on its own — see
 `Bip32PublicKey`, so a garbled Bluetooth frame once became a phantom account.
 The device must derive the same account's address for the import to proceed.
 
+A **25th-word passphrase is a separate wallet** on the same device, so device
+id plus CIP-1852 slot does not identify an account. Imported Ledger indexes
+are `ledger-<id>-<slot>-k<key fingerprint>` (`indexToHw` still reads the older
+3-part form), imported rows stay **selectable** because only the key can say
+whether the unlocked wallet is already stored, and `signTxHW` checks the
+device still owns `account.publicKey` before signing.
+
 A flow window must **finish by closing itself** (`finishFlowWindow`), not by
 navigating to the wallet: that left a second, browser-sized wallet window
 behind after pairing. It best-effort opens the toolbar popup on a surviving

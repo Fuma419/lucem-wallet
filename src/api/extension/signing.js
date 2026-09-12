@@ -25,6 +25,7 @@ import {
 } from '../util';
 import { ADDRESS_ROLE, getExternalIndices, getInternalIndices, listEnabledPaymentAddresses } from './multi-address';
 import { deriveAccountDRepKeyHashHex, deriveAccountDRepPrivateKey, requestAccountKey } from './keys';
+import { assertLedgerAccountMatches } from './ledger-account';
 import { getNetwork, getStorage } from './storage';
 import { recordSubmittedTx } from '../tx/pending-history';
 
@@ -446,6 +447,15 @@ export const signTxHW = async (
   };
   if (hw.device === HW.ledger) {
     const appAda = hw.appAda;
+    // Passphrase wallets share a device and a derivation path, so the wrong
+    // one would sign with the wrong key and submit an invalid witness.
+    if (appAda && account?.publicKey) {
+      await assertLedgerAccountMatches({
+        appAda,
+        account: hw.account,
+        expectedPublicKeyHex: account.publicKey,
+      });
+    }
     const networkId = network;
     const paymentIndexByHash = {};
     if (account?.publicKey) {

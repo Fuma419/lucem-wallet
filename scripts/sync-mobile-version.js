@@ -7,6 +7,11 @@
  *   e.g. 4.0.5 → 40005
  *
  * Minor and patch must stay 0–99 so codes stay monotonic and unique.
+ *
+ * With --build N, versionName becomes X.Y.Z.N so a CI debug APK says which
+ * build it came from in Android's app info. versionCode deliberately stays
+ * semver-derived: `adb install -r` replaces an equal code happily, and store
+ * codes must not depend on which Jenkins job happened to build them.
  */
 'use strict';
 
@@ -95,10 +100,11 @@ function syncIosPlist(versionName, versionCode) {
   return true;
 }
 
-function syncMobileVersion(version) {
+function syncMobileVersion(version, { build } = {}) {
   const { major, minor, patch } = parseSemver(version);
-  const versionName = `${major}.${minor}.${patch}`;
-  const versionCode = versionCodeFromSemver(versionName);
+  const semver = `${major}.${minor}.${patch}`;
+  const versionCode = versionCodeFromSemver(semver);
+  const versionName = build == null ? semver : `${semver}.${Number(build)}`;
   const updated = [];
   if (syncGradle(versionName, versionCode)) {
     updated.push(`android ${versionName} (${versionCode})`);
@@ -112,9 +118,29 @@ function syncMobileVersion(version) {
   return { versionName, versionCode, updated };
 }
 
+function parseArgs(argv) {
+  let version = null;
+  let build = null;
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === '--build') {
+      build = argv[i + 1];
+      if (build === undefined || !/^\d+$/.test(build)) {
+        throw new Error('--build needs a non-negative integer');
+      }
+      i += 1;
+    } else if (version === null) {
+      version = argv[i];
+    } else {
+      throw new Error(`unexpected argument: ${argv[i]}`);
+    }
+  }
+  return { version, build };
+}
+
 function main() {
-  const version = process.argv[2] || readPackageVersion();
-  const result = syncMobileVersion(version);
+  const args = parseArgs(process.argv.slice(2));
+  const version = args.version || readPackageVersion();
+  const result = syncMobileVersion(version, { build: args.build });
   process.stdout.write(
     `synced mobile version ${result.versionName} / ${result.versionCode}: ${result.updated.join(', ')}\n`
   );
@@ -130,6 +156,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  parseArgs,
   parseSemver,
   versionCodeFromSemver,
   syncMobileVersion,

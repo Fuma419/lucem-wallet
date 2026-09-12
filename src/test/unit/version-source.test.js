@@ -26,12 +26,59 @@ describe('single version source of truth', () => {
   test('webpack stamps npm_package_version onto the built manifest last', () => {
     // Source manifest is spread first, then version is overwritten from npm.
     expect(webpackSrc).toMatch(
-      /\.\.\.manifest[\s\S]{0,120}version:\s*process\.env\.npm_package_version/
+      /const base = process\.env\.npm_package_version/
+    );
+    expect(webpackSrc).toMatch(
+      /\.\.\.manifest,[\s\S]{0,80}version:\s*stampedVersion\(base,/
     );
     // The old bug: inject package fields then spread manifest over them.
     expect(webpackSrc).not.toMatch(
-      /version:\s*process\.env\.npm_package_version[\s\S]{0,80}\.\.\.JSON\.parse/
+      /version:\s*stampedVersion\([\s\S]{0,120}\.\.\.manifest/
     );
+  });
+
+  test('webpack labels the build without touching the plain version', () => {
+    const {
+      stampedVersion,
+      versionLabel,
+    } = require('../../../scripts/build-version');
+
+    // A local build must keep producing exactly what it produces today.
+    expect(stampedVersion('4.0.6')).toBe('4.0.6');
+    expect(versionLabel({ version: '4.0.6' })).toBeNull();
+
+    // Under CI the build number becomes a fourth component, which is what
+    // makes the browser see a reload as an upgrade.
+    expect(stampedVersion('4.0.6', '312')).toBe('4.0.6.312');
+    expect(
+      versionLabel({
+        version: '4.0.6',
+        build: '312',
+        branch: 'main',
+        commit: '014f6294d81247c42422557d85509830e46e240f',
+      })
+    ).toBe('4.0.6 (main #312, 014f629)');
+    expect(versionLabel({ version: '4.0.6', build: '2', branch: 'PR-329' })).toBe(
+      '4.0.6 (PR-329 #2)'
+    );
+  });
+
+  test('manifest version stays loadable for prereleases and huge builds', () => {
+    const {
+      stampedVersion,
+      versionLabel,
+    } = require('../../../scripts/build-version');
+
+    // Chrome rejects a manifest version that is not 1-4 integers, so the
+    // prerelease suffix has to live in version_name instead.
+    expect(stampedVersion('3.8.5-beta4')).toBe('3.8.5');
+    expect(versionLabel({ version: '3.8.5-beta4' })).toBe('3.8.5-beta4');
+    expect(stampedVersion('3.8.5-beta4', '7')).toBe('3.8.5.7');
+
+    // Each component must stay under 65536 rather than failing the build.
+    expect(stampedVersion('4.0.6', 65536)).toBe('4.0.6.0');
+    expect(() => stampedVersion('4.0.6', 'main')).toThrow(/non-negative/);
+    expect(() => stampedVersion('nope')).toThrow(/invalid semver/);
   });
 
   test('android gradle versions match package.json via versionCode encoding', () => {
@@ -50,6 +97,36 @@ describe('single version source of truth', () => {
       new RegExp(`versionName\\s+"${packageJson.version.replace(/\./g, '\\.')}"`)
     );
     expect(gradle).toMatch(new RegExp(`versionCode\\s+${expectedCode}\\b`));
+  });
+
+  test('android build stamp names the build without moving versionCode', () => {
+    const {
+      parseArgs,
+      syncMobileVersion,
+    } = require('../../../scripts/sync-mobile-version');
+
+    expect(parseArgs(['--build', '312'])).toEqual({
+      version: null,
+      build: '312',
+    });
+    expect(parseArgs(['4.0.6'])).toEqual({ version: '4.0.6', build: null });
+    expect(() => parseArgs(['--build', 'main'])).toThrow(/non-negative/);
+
+    // Store codes must not depend on which Jenkins job built the APK, so only
+    // the display name carries the build number.
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+    try {
+      expect(syncMobileVersion('4.0.6')).toMatchObject({
+        versionName: '4.0.6',
+        versionCode: 40006,
+      });
+      expect(syncMobileVersion('4.0.6', { build: '312' })).toMatchObject({
+        versionName: '4.0.6.312',
+        versionCode: 40006,
+      });
+    } finally {
+      fs.writeFileSync.mockRestore();
+    }
   });
 
   test('ios Info.plist versions match package.json via versionCode encoding', () => {

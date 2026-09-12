@@ -41,6 +41,12 @@ Every green build archives `dist/lucem-wallet-<version>-extension.zip`. The
 script needs `JENKINS_USER` and `JENKINS_API_TOKEN` (or
 `~/.config/lucem/jenkins.env`) and nothing else — `--help` explains the rest.
 
+CI builds append the build number to the version, so `chrome://extensions`
+shows `4.0.6.312` and, underneath, `4.0.6 (main #312, 014f629)` — enough to tell
+two builds of the same release apart without unpacking anything. Debug APKs get
+the same treatment in Android's app info. A local `npm run build` still produces
+the plain `4.0.6`.
+
 ### Web app
 
 ```bash

@@ -12,6 +12,7 @@ const {
   credentialParams,
   cslAssetNameHex,
   cslMintPolicyTokens,
+  ledgerCertificateType,
   ledgerNetworkForWallet,
   wrapLedgerVkeyWitness,
 } = require('../../../../api/tx/ledger-encode');
@@ -148,6 +149,61 @@ describe('certificateToLedger', () => {
     expect(mapped.params.deposit).toBe('500000000');
   });
 
+  test('maps stake+vote delegation (kind 12) without 8.0-only enum members', () => {
+    const cert = CSL.Certificate.new_stake_and_vote_delegation(
+      CSL.StakeAndVoteDelegation.new(
+        stakeCred(),
+        CSL.Ed25519KeyHash.from_bytes(Buffer.from('ef'.repeat(28), 'hex')),
+        CSL.DRep.new_always_abstain()
+      )
+    );
+    expect(cert.kind()).toBe(12);
+    const mapped = certificateToLedger(cert, keys);
+    expect(mapped.type).toBe(10);
+    expect(mapped.params.poolKeyHashHex).toBe('ef'.repeat(28));
+    expect(mapped.params.dRep).toEqual({ type: DRepParamsType.ABSTAIN });
+  });
+
+  test('maps registration+delegation combo certs (kinds 13, 16, 14)', () => {
+    const pool = CSL.Ed25519KeyHash.from_bytes(
+      Buffer.from('ef'.repeat(28), 'hex')
+    );
+    const deposit = CSL.BigNum.from_str('2000000');
+    const drep = CSL.DRep.new_always_abstain();
+
+    const kind13 = certificateToLedger(
+      CSL.Certificate.new_stake_registration_and_delegation(
+        CSL.StakeRegistrationAndDelegation.new(stakeCred(), pool, deposit)
+      ),
+      keys
+    );
+    expect(kind13.type).toBe(11);
+    expect(kind13.params.deposit).toBe('2000000');
+
+    const kind16 = certificateToLedger(
+      CSL.Certificate.new_vote_registration_and_delegation(
+        CSL.VoteRegistrationAndDelegation.new(stakeCred(), drep, deposit)
+      ),
+      keys
+    );
+    expect(kind16.type).toBe(12);
+    expect(kind16.params.dRep).toEqual({ type: DRepParamsType.ABSTAIN });
+
+    const kind14 = certificateToLedger(
+      CSL.Certificate.new_stake_vote_registration_and_delegation(
+        CSL.StakeVoteRegistrationAndDelegation.new(
+          stakeCred(),
+          pool,
+          drep,
+          deposit
+        )
+      ),
+      keys
+    );
+    expect(kind14.type).toBe(13);
+    expect(kind14.params.poolKeyHashHex).toBe('ef'.repeat(28));
+  });
+
   test('throws on pool retirement instead of pushing {}', () => {
     const cert = CSL.Certificate.new_pool_retirement(
       CSL.PoolRetirement.new(
@@ -171,6 +227,37 @@ describe('cslMintPolicyTokens', () => {
     expect(cslMintPolicyTokens(mint, policy)).toEqual([
       { assetNameHex: Buffer.from('test').toString('hex'), amount: '5' },
     ]);
+  });
+});
+
+describe('ledgerCertificateType', () => {
+  test('uses installed enum members and falls back to the 8.0 wire value', () => {
+    expect(ledgerCertificateType('STAKE_DELEGATION', 99)).toBe(
+      CertificateType.STAKE_DELEGATION
+    );
+    expect(ledgerCertificateType('NOT_A_LEDGER_CERT', 10)).toBe(10);
+    expect(ledgerCertificateType('STAKE_POOL_AND_DREP_DELEGATION', 10)).toBe(
+      10
+    );
+  });
+
+  test('encoder source does not read CertificateType members 7.x typings omit', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../../api/tx/ledger-encode.js'),
+      'utf8'
+    );
+    expect(src).not.toContain('CertificateType.STAKE_POOL_AND_DREP_DELEGATION');
+    expect(src).not.toMatch(
+      /CertificateType\.ACCOUNT_REGISTRATION_DELEGATION_TO_STAKE_POOL(?!_AND_DREP)/
+    );
+    expect(src).not.toContain(
+      'CertificateType.ACCOUNT_REGISTRATION_DELEGATION_TO_DREP'
+    );
+    expect(src).not.toContain(
+      'CertificateType.ACCOUNT_REGISTRATION_DELEGATION_TO_STAKE_POOL_AND_DREP'
+    );
   });
 });
 

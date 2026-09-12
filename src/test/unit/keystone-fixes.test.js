@@ -151,6 +151,26 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(accountSrc).toContain('deriveAddress');
     expect(accountSrc).toContain('showAddress');
     expect(accountSrc).toContain('assertLedgerKeyMatchesDevice');
+  });
+
+  test('Ledger import keys accounts by wallet, so passphrases coexist', () => {
+    // A 25th-word passphrase derives a separate wallet: the same device and
+    // slot legitimately holds more than one account.
+    expect(hwSrc).toContain('ledgerAccountStorageIndex');
+    expect(hwSrc).toContain('ledgerImportNames');
+    expect(hwSrc).not.toMatch(/accountIndex: `\$\{HW\.ledger\}-\$\{idHex\}-/);
+    // Marked rows stay selectable for Ledger — only the key can tell whether
+    // the unlocked wallet is already imported.
+    expect(hwSrc).toMatch(/const isRowSelectable = \(rowKey\) =>\s*!isKeystone \|\| !existing\[rowKey\]/);
+    expect(hwSrc).toContain('isDisabled={!isRowSelectable(rowKey)}');
+    expect(hwSrc).not.toMatch(/selected\[s\] && !existing\[s\]/);
+
+    const signingSrc = fs.readFileSync(
+      path.join(__dirname, '../../api/extension/signing.js'),
+      'utf8'
+    );
+    // Signing with the wrong passphrase wallet would submit a bad witness.
+    expect(signingSrc).toContain('assertLedgerAccountMatches');
     expect(hwSrc).toContain('Pick your Ledger in the list Chrome shows');
     const vercelSrc = fs.readFileSync(
       path.join(__dirname, '../../../vercel.json'),

@@ -1367,11 +1367,20 @@ export const indexToHw = (accountIndex) => {
     };
   }
   if (device === HW.ledger) {
-    const account = parseInt(parts[parts.length - 1], 10);
-    if (parts.length === 3 && /^\d{1,6}$/.test(parts[1])) {
-      return { device, id: parts[1], account };
+    // `ledger-<id>-<slot>` or, since passphrase support,
+    // `ledger-<id>-<slot>-k<key fingerprint>`: a 25th-word passphrase is a
+    // separate wallet, so the slot alone does not identify an account.
+    let end = parts.length;
+    let keyFingerprint;
+    if (parts.length >= 4 && /^k[0-9a-f]+$/i.test(parts[parts.length - 1])) {
+      keyFingerprint = parts[parts.length - 1].slice(1).toLowerCase();
+      end -= 1;
     }
-    const idHex = parts.slice(1, -1).join('');
+    const account = parseInt(parts[end - 1], 10);
+    if (end === 3 && /^\d{1,6}$/.test(parts[1])) {
+      return { device, id: parts[1], account, keyFingerprint };
+    }
+    const idHex = parts.slice(1, end - 1).join('');
     if (
       /^[0-9a-fA-F]+$/i.test(idHex) &&
       idHex.length % 2 === 0 &&
@@ -1382,6 +1391,7 @@ export const indexToHw = (accountIndex) => {
           device,
           id: Buffer.from(idHex, 'hex').toString('utf8'),
           account,
+          keyFingerprint,
         };
       } catch (/** @type {any} */ e) {
         /* fall through */
@@ -1389,8 +1399,9 @@ export const indexToHw = (accountIndex) => {
     }
     return {
       device,
-      id: parts.slice(1, -1).join('-'),
+      id: parts.slice(1, end - 1).join('-'),
       account,
+      keyFingerprint,
     };
   }
   return {

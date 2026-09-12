@@ -11,6 +11,7 @@
  */
 
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
+import { HW } from '../../config/config';
 import Loader from '../loader';
 
 /** CIP-1852 Cardano: m/1852'/1815'/account'. */
@@ -38,6 +39,14 @@ export const LEDGER_KEY_MISMATCH_MESSAGE =
 
 export const LEDGER_KEY_MALFORMED_MESSAGE =
   'The Ledger returned an unreadable account key, so Lucem did not import the account. Unplug or power-cycle the Ledger, open the Cardano app, and connect again. Nothing was saved.';
+
+/**
+ * A 25th-word passphrase derives a whole separate wallet from the same seed,
+ * so one device can legitimately own several accounts in the same CIP-1852
+ * slot. The stored index carries a fingerprint of the account key to tell
+ * them apart — device id plus slot number is not unique.
+ */
+export const LEDGER_KEY_FINGERPRINT_LENGTH = 8;
 
 /** @param {number|string} accountIndex */
 export const ledgerAccountPath = (accountIndex) => [
@@ -97,6 +106,95 @@ export const baseAddressHexFromAccountKey = (extendedPublicKeyHex) => {
 };
 
 /**
+ * Short, stable id for the wallet an account key belongs to. Caller must have
+ * awaited `Loader.load()`.
+ * @param {string} extendedPublicKeyHex
+ */
+export const ledgerKeyFingerprint = (extendedPublicKeyHex) => {
+  if (!isExtendedPublicKeyHex(extendedPublicKeyHex)) {
+    throw new Error(LEDGER_KEY_MALFORMED_MESSAGE);
+  }
+  try {
+    return Loader.Cardano.Bip32PublicKey.from_hex(extendedPublicKeyHex)
+      .to_raw_key()
+      .hash()
+      .to_hex()
+      .slice(0, LEDGER_KEY_FINGERPRINT_LENGTH)
+      .toLowerCase();
+  } catch (/** @type {any} */ _) {
+    throw new Error(LEDGER_KEY_MALFORMED_MESSAGE);
+  }
+};
+
+/**
+ * Storage key for an imported Ledger account:
+ * `ledger-<device id hex>-<slot>-k<key fingerprint>`.
+ * @param {{ idHex: string, account: number|string, fingerprint: string }} args
+ */
+export const ledgerAccountStorageIndex = ({ idHex, account, fingerprint }) =>
+  `${HW.ledger}-${idHex}-${parseInt(String(account), 10)}-k${fingerprint}`;
+
+/**
+ * Names for accounts about to be imported. The same slot on the same device
+ * can hold more than one wallet, so a second one is marked as a passphrase
+ * wallet rather than colliding with `Ledger 1`.
+ *
+ * @param {{
+ *   existing?: Array<{ account: number, publicKey?: string, name?: string }>,
+ *   verified?: Array<{ accountIndex: string, publicKey: string }>,
+ * }} args
+ * @returns {string[]}
+ */
+export const ledgerImportNames = ({ existing = [], verified = [] }) => {
+  const taken = new Set(existing.map((row) => row && row.name).filter(Boolean));
+  return verified.map(({ accountIndex, publicKey }) => {
+    const slot = parseInt(String(accountIndex), 10);
+    const base = `Ledger ${slot + 1}`;
+    const key = String(publicKey || '').toLowerCase();
+    const isSeparateWallet = existing.some(
+      (row) =>
+        row &&
+        row.account === slot &&
+        String(row.publicKey || '').toLowerCase() !== key
+    );
+    if (!isSeparateWallet) return base;
+    let name = `${base} (passphrase)`;
+    for (let n = 2; taken.has(name); n += 1) {
+      name = `${base} (passphrase ${n})`;
+    }
+    taken.add(name);
+    return name;
+  });
+};
+
+export const LEDGER_WRONG_WALLET_MESSAGE =
+  'This Ledger is not the wallet this account came from. If the account uses a 25th-word passphrase, unlock the device with that passphrase and try again.';
+
+/**
+ * Refuse to sign with a device that no longer holds the account's key — the
+ * usual cause is a passphrase wallet that is not the one now unlocked.
+ * @param {{ appAda: any, account: number|string, expectedPublicKeyHex: string }} args
+ */
+export const assertLedgerAccountMatches = async ({
+  appAda,
+  account,
+  expectedPublicKeyHex,
+}) => {
+  const keys = await appAda.getExtendedPublicKeys({
+    paths: [ledgerAccountPath(account)],
+  });
+  const found = Array.isArray(keys) ? keys[0] : null;
+  if (!found) throw new Error(LEDGER_KEY_MALFORMED_MESSAGE);
+  const got = `${found.publicKeyHex || ''}${found.chainCodeHex || ''}`;
+  if (
+    !isExtendedPublicKeyHex(got) ||
+    got.toLowerCase() !== String(expectedPublicKeyHex || '').toLowerCase()
+  ) {
+    throw new Error(LEDGER_WRONG_WALLET_MESSAGE);
+  }
+};
+
+/**
  * Throw unless the device's own address for `accountIndex` matches the key it
  * exported for that account.
  * @param {{ extendedPublicKeyHex: string, deviceAddressHex: string }} args
@@ -123,7 +221,7 @@ export const assertLedgerKeyMatchesDevice = ({
  *   accountIndexes: Array<string|number>,
  *   showFirstAddress?: boolean,
  * }} args
- * @returns {Promise<Array<{ accountIndex: string, publicKey: string }>>}
+ * @returns {Promise<Array<{ accountIndex: string, publicKey: string, keyFingerprint: string }>>}
  */
 export const exportVerifiedLedgerAccounts = async ({
   appAda,
@@ -157,7 +255,11 @@ export const exportVerifiedLedgerAccounts = async ({
     if (i === 0 && showFirstAddress) {
       await appAda.showAddress({ network: LEDGER_VERIFY_NETWORK, address });
     }
-    verified.push({ accountIndex: indexes[i], publicKey });
+    verified.push({
+      accountIndex: indexes[i],
+      publicKey,
+      keyFingerprint: ledgerKeyFingerprint(publicKey),
+    });
   }
   return verified;
 };

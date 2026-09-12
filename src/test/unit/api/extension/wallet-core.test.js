@@ -301,6 +301,40 @@ describe('indexToHw', () => {
     expect(hw.account).toBe(0);
   });
 
+  test('parses a passphrase wallet index (key fingerprint suffix)', () => {
+    // A 25th-word passphrase is a separate wallet: same device, same slot.
+    const oid = 'opaque-ble-device-id';
+    const hex = Buffer.from(oid, 'utf8').toString('hex');
+    const hw = indexToHw(`ledger-${hex}-0-kab12cd34`);
+    expect(hw.device).toBe('ledger');
+    expect(hw.id).toBe(oid);
+    expect(hw.account).toBe(0);
+    expect(hw.keyFingerprint).toBe('ab12cd34');
+  });
+
+  test('passphrase suffix works with the USB sentinel and legacy ids', () => {
+    expect(indexToHw('ledger-usb-3-kdeadbeef')).toMatchObject({
+      id: 'usb',
+      account: 3,
+      keyFingerprint: 'deadbeef',
+    });
+    expect(indexToHw('ledger-4117-2-kdeadbeef')).toMatchObject({
+      id: '4117',
+      account: 2,
+      keyFingerprint: 'deadbeef',
+    });
+  });
+
+  test('two wallets in the same slot stay distinct accounts', () => {
+    const hex = Buffer.from('usb', 'utf8').toString('hex');
+    const plain = `ledger-${hex}-0`;
+    const passphrase = `ledger-${hex}-0-kfeedface`;
+    expect(plain).not.toBe(passphrase);
+    expect(indexToHw(plain).account).toBe(indexToHw(passphrase).account);
+    expect(indexToHw(plain).id).toBe(indexToHw(passphrase).id);
+    expect(indexToHw(plain).keyFingerprint).toBeUndefined();
+  });
+
   test('parses trezor account index', () => {
     const hw = indexToHw('trezor-xyz-0');
     expect(hw.device).toBe('trezor');

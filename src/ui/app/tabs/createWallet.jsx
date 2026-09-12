@@ -1141,8 +1141,8 @@ const SuccessAndClose = ({ flow }) => {
       navigate('/wallet');
       return;
     }
-    if (typeof platform.navigation.openMainRoute === 'function') {
-      await platform.navigation.openMainRoute('/wallet');
+    if (typeof platform.navigation.finishFlowWindow === 'function') {
+      await platform.navigation.finishFlowWindow('/wallet');
       return;
     }
     window.location.assign(`${window.location.origin}/wallet`);

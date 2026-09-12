@@ -1,0 +1,23 @@
+---
+description: Lucem never opens a browser window or the main wallet in the browser
+alwaysApply: true
+---
+
+# No browser windows (extension)
+
+Lucem **never** opens a new browser window (`chrome.windows.create` with
+`type: 'normal'`). The main wallet (`mainPopup.html`) **never** loads in a
+browser tab or window.
+
+- Seed create / import stays in the **toolbar popup** SPA.
+- Hardware pairing and device signing that Chrome cannot host in a popup may
+  open a **temporary tab** (`openFlowWindow` → `tabs.create`) for `hwTab`,
+  `keystoneTx`, or `ledgerSign` only. That tab **closes itself**
+  (`finishFlowWindow` → `tabs.remove`) and must not navigate to
+  `mainPopup.html`.
+- The only `windows.create` allowed is the CIP-30 dApp approval dialog
+  (`createPopup`, `type: 'popup'`). That is an extension dialog, not a
+  browser window and not the main app.
+- Do not "return to the wallet" by assigning `mainPopup.html` in a tab.
+  Hand back to the toolbar popup (`chrome.action.openPopup`) or tell the
+  user to click the Lucem icon.

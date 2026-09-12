@@ -1587,7 +1587,7 @@ const SuccessAndClose = () => {
         fontSize="sm"
         color="whiteAlpha.800"
       >
-        This window closes and your wallet opens in the Lucem toolbar popup.
+        This tab closes. Your wallet stays in the Lucem toolbar popup.
         If it does not appear, click the Lucem icon.
       </Text>
       <Button

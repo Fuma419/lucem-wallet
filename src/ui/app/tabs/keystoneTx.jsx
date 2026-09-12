@@ -23,7 +23,6 @@ import {
   submitTx,
   takeKeystoneSignPayload,
 } from '../../../api/extension';
-import platform from '../../../platform';
 import Loader from '../../../api/loader';
 import { assembleSignedTransaction } from '../../../api/extension/wallet';
 import { useStoreActions } from 'easy-peasy';
@@ -443,7 +442,7 @@ const App = () => {
                     <Button
                       size="sm"
                       colorScheme="yellow"
-                      onClick={() => platform.navigation.openMainRoute('/send')}
+                      onClick={() => finishFlowWindow()}
                     >
                       Back to Send
                     </Button>

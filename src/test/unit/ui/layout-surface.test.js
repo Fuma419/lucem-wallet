@@ -147,6 +147,10 @@ describe('detectIsExtensionPopup / detectIsFullBleedWalletTab', () => {
     expect(detectIsFullBleedWalletTab(queryDoc(TAB.createWallet))).toBe(true);
     expect(detectIsFullBleedWalletTab(queryDoc(POPUP.main))).toBe(false);
   });
+
+  test('Ledger signing tab is full-bleed', () => {
+    expect(detectIsFullBleedWalletTab(queryDoc(TAB.ledgerSign))).toBe(true);
+  });
 });
 
 describe('desktop layout source contracts', () => {

@@ -1,10 +1,10 @@
 /**
- * Ledger signing step, hosted in a `normal` extension window.
+ * Ledger signing step, hosted in a temporary tab (`ledgerSign.html`).
  *
  * Chrome cancels the WebUSB / Web Bluetooth chooser inside the toolbar popup
  * and reports "No device selected", so a Ledger send cannot pair from there.
- * The page that built the transaction stores it and opens this route, which
- * pairs, signs, and submits.
+ * The page that built the transaction stores it and opens this tab, which
+ * pairs, signs, and submits, then closes itself.
  */
 import React from 'react';
 import {
@@ -180,7 +180,7 @@ const LedgerSign = () => {
             Transaction submitted
           </Text>
           <Text mt={2} fontSize="sm" color="GrayText">
-            This window closes and your wallet opens in the toolbar.
+            This tab closes. Click the Lucem icon if the wallet does not appear.
           </Text>
         </>
       )}

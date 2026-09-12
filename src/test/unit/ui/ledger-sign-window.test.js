@@ -38,12 +38,12 @@ describe('canHostDeviceChooser', () => {
 describe('ledger sign session hand-off', () => {
   const indexSrc = read('api/extension/index.js');
 
-  test('opens the signing route in a full-page flow window', () => {
+  test('opens a dedicated signing tab, never the main wallet page', () => {
     expect(indexSrc).toMatch(/export const LEDGER_SIGN_PATH = '\/ledger-sign'/);
     expect(indexSrc).toMatch(
-      /openFlowWindow\(\s*POPUP\.main,[\s\S]{0,240}next=\$\{encodeURIComponent\(LEDGER_SIGN_PATH\)\}/
+      /openFlowWindow\(\s*TAB\.ledgerSign,\s*`\?signId=\$\{encodeURIComponent\(signId\)\}`/
     );
-    expect(indexSrc).toMatch(/signId=\$\{encodeURIComponent\(signId\)\}/);
+    expect(indexSrc).not.toMatch(/openFlowWindow\(\s*POPUP\.main/);
   });
 
   test('the payload lives under its own storage key', () => {
@@ -134,9 +134,17 @@ describe('ledger signing page', () => {
     expect(src).toMatch(/setPhase\(Phase\.connect\)/);
   });
 
-  test('the route is reachable as a deep link', () => {
+  test('the web app can still deep-link the same page', () => {
     const mainSrc = read('ui/indexMain.jsx');
     expect(mainSrc).toMatch(/LEDGER_SIGN_PATH,/);
     expect(mainSrc).toMatch(/path=\{LEDGER_SIGN_PATH\}/);
+  });
+
+  test('the extension hosts signing on its own html entry', () => {
+    expect(read('ui/app/tabs/ledgerSign.jsx')).toContain('TAB.ledgerSign');
+    expect(read('pages/Tab/ledgerSign.html')).toContain('id="ledgerSign"');
+    expect(
+      fs.readFileSync(path.join(__dirname, '../../../../webpack.config.js'), 'utf8')
+    ).toMatch(/filename: 'ledgerSign.html'/);
   });
 });

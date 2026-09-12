@@ -1,9 +1,10 @@
 // @ts-nocheck
 import {
-  FLOW_WINDOW,
   FULL_PAGE_VIEW,
   isFullPageView,
+  POPUP,
   POPUP_WINDOW,
+  TAB,
 } from '../config/config';
 
 const FULL_PAGE_QUERY = `${FULL_PAGE_VIEW.param}=${FULL_PAGE_VIEW.value}`;
@@ -16,6 +17,34 @@ const FULL_PAGE_QUERY = `${FULL_PAGE_VIEW.param}=${FULL_PAGE_VIEW.value}`;
 export const mainPageUrl = (next) => {
   const base = `${chrome.runtime.getURL('mainPopup.html')}?${FULL_PAGE_QUERY}`;
   return next ? `${base}&next=${encodeURIComponent(next)}` : base;
+};
+
+const FLOW_TAB_PAGES = new Set(Object.values(TAB));
+
+/** True when this document is a dedicated flow page, not the toolbar popup. */
+const isExtensionFlowTab = () => {
+  if (typeof window === 'undefined' || !window.location) return false;
+  if (isFullPageView(window.location.search)) return true;
+  try {
+    const name = String(window.location.pathname || '')
+      .split('/')
+      .pop()
+      .replace(/\.html$/i, '');
+    return FLOW_TAB_PAGES.has(name);
+  } catch (/** @type {any} */ _e) {
+    return false;
+  }
+};
+
+const isExtensionPageUrl = (url) => {
+  try {
+    const parsed = new URL(String(url || ''));
+    const name = parsed.pathname.split('/').pop().replace(/\.html$/i, '');
+    if (FLOW_TAB_PAGES.has(name)) return true;
+    return name === POPUP.main && isFullPageView(parsed.search);
+  } catch (/** @type {any} */ _e) {
+    return false;
+  }
 };
 
 /** Center a window of `size` on the last focused browser window. */
@@ -40,13 +69,14 @@ const windowPlacement = async (size) => {
 /**
  * Open an extension page as its own window.
  *
+ * Used only for the CIP-30 dApp approval dialog (`type: 'popup'`). Lucem
+ * never opens a `normal` browser window. Hardware pairing uses a temporary
+ * tab (`createTab`) because Chrome cancels `requestDevice()` in popup
+ * windows.
+ *
  * `tabs.create` + `windows.create({tabId})` left a background tab in the last
  * focused window *and* a popup, so CIP-30 sign/enable looked like two
  * concurrent transactions. Open the window directly.
- *
- * `type` matters: Chrome cancels WebHID / WebUSB / Web Bluetooth
- * `requestDevice()` in `popup` windows (same NotFoundError as a cancelled
- * chooser). Hardware pairing needs `normal`. CIP-30 approval stays `popup`.
  */
 const openExtensionWindow = async (url, size, type = 'popup') => {
   const { left, top } = await windowPlacement(size);
@@ -123,18 +153,14 @@ const extensionAdapter = {
       ),
 
     /**
-     * Host a setup flow (hardware wallet, Keystone signing) that the toolbar
-     * popup cannot run: the device chooser closes an action popup mid-pairing.
-     * A wallet-sized `normal` window keeps the user out of their browsing
-     * tabs. `popup` type is not used here — Chrome closes the BLE/USB
-     * chooser in those windows and reports "No device selected".
+     * Host a setup flow (hardware wallet, Keystone / Ledger signing) that the
+     * toolbar popup cannot run: Chrome cancels the device chooser there.
+     * Opens a temporary tab in the existing browser window — never a new
+     * window, and never `mainPopup.html` (the main wallet stays in the
+     * toolbar popup).
      */
     openFlowWindow: (page, query = '') =>
-      openExtensionWindow(
-        chrome.runtime.getURL(`${page}.html${query || ''}`),
-        FLOW_WINDOW,
-        'normal'
-      ),
+      extensionAdapter.navigation.createTab(page, query),
 
     createTab: (tab, query = '') => {
       const url = chrome.runtime.getURL(`${tab}.html${query || ''}`);
@@ -157,8 +183,9 @@ const extensionAdapter = {
     /**
      * Whether a WebUSB / WebHID / Web Bluetooth chooser can run here. Chrome
      * cancels the chooser in `popup` windows — the toolbar action popup and
-     * the dApp prompt both are — and reports "No device selected". Only a
-     * `normal` window can pair, so callers hand the step to a flow window.
+     * the dApp prompt both are — and reports "No device selected". A tab in
+     * the user's existing window can pair, so callers hand the step to a
+     * temporary tab instead of opening a window.
      */
     canHostDeviceChooser: async () => {
       try {
@@ -170,22 +197,20 @@ const extensionAdapter = {
     },
 
     /**
-     * Leave full-page flows (hw, create wallet, Keystone tab) and return
-     * to the main UI. In-document navigation always works for extension pages.
+     * Close a temporary flow tab. Never navigates this document to
+     * `mainPopup.html` — that would open the main wallet in the browser.
      */
-    closeCurrentTab: () => {
-      if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
-        window.location.href = mainPageUrl();
-      }
-      return Promise.resolve(true);
-    },
+    closeCurrentTab: () => extensionAdapter.navigation.finishFlowWindow(),
 
     /**
-     * Leave a full-page flow and open a main-app route. Extension pages load
-     * `mainPopup.html`; non-default routes are passed as `next=` so bootstrap
-     * can land on /accounts (etc.) instead of always /wallet.
+     * Leave a flow and return to the toolbar popup. A flow tab is closed;
+     * the toolbar popup navigates in place. Never loads the main app in a
+     * browser tab or window.
      */
     openMainRoute: (path = '/wallet') => {
+      if (isExtensionFlowTab()) {
+        return extensionAdapter.navigation.finishFlowWindow(path);
+      }
       const allowed = new Set([
         '/wallet',
         '/accounts',
@@ -197,46 +222,57 @@ const extensionAdapter = {
       ]);
       const safe = allowed.has(path) ? path : '/wallet';
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
-        window.location.href = mainPageUrl(safe === '/wallet' ? null : safe);
+        const base = chrome.runtime.getURL('mainPopup.html');
+        window.location.href =
+          safe === '/wallet' ? base : `${base}?next=${encodeURIComponent(safe)}`;
       }
       return Promise.resolve(true);
     },
 
     /**
-     * Finish a flow window (HW pairing, Keystone, Ledger signing): close it
-     * and hand the user back to the toolbar popup. Navigating it to the
-     * wallet instead would leave a second, browser-sized wallet window open,
-     * which is what users hit after pairing a Ledger.
-     *
-     * Only a `normal` window is a flow window, so the toolbar popup and the
-     * dApp prompt fall through to in-place navigation. The window is also
-     * kept if it is the last one — closing it could quit the browser.
+     * Finish a temporary flow tab (HW pairing, Keystone, Ledger signing):
+     * close the tab and hand the user back to the toolbar popup. Never
+     * opens a window and never turns the tab into the main wallet.
      */
-    finishFlowWindow: async (path = '/wallet') => {
+    finishFlowWindow: async () => {
       try {
-        const current = await chrome.windows.getCurrent();
-        const others = (
-          await chrome.windows.getAll({ windowTypes: ['normal'] })
-        ).filter((w) => w && w.id !== current.id);
-        if (current && current.type === 'normal' && others.length > 0) {
-          // Best effort: Chrome may refuse without a live user gesture, and
-          // the toolbar icon still opens the wallet either way.
+        const currentWin = await chrome.windows.getCurrent();
+        if (currentWin && currentWin.type === 'popup') {
+          return true;
+        }
+        let tabId;
+        try {
+          const self = await chrome.tabs.getCurrent();
+          if (self && self.id != null) tabId = self.id;
+        } catch (/** @type {any} */ _e) {
+          /* fall through */
+        }
+        if (tabId == null) {
+          const [active] = await chrome.tabs.query({
+            active: true,
+            currentWindow: true,
+          });
+          if (active && active.id != null && isExtensionPageUrl(active.url)) {
+            tabId = active.id;
+          }
+        }
+        if (tabId != null) {
           try {
-            const target = others.find((w) => w.focused) || others[0];
-            await chrome.windows.update(target.id, { focused: true });
             if (chrome.action && typeof chrome.action.openPopup === 'function') {
-              await chrome.action.openPopup({ windowId: target.id });
+              await chrome.action.openPopup({
+                windowId: currentWin && currentWin.id,
+              });
             }
           } catch (/** @type {any} */ _e) {
-            /* fall through to closing the flow window */
+            /* Chrome may refuse without a gesture; the icon still works. */
           }
-          await chrome.windows.remove(current.id);
+          await chrome.tabs.remove(tabId);
           return true;
         }
       } catch (/** @type {any} */ _e) {
-        /* fall through to in-place navigation */
+        /* leave the flow page as-is rather than loading the wallet here */
       }
-      return extensionAdapter.navigation.openMainRoute(path);
+      return true;
     },
 
     /**
@@ -245,12 +281,11 @@ const extensionAdapter = {
      * not come back pinned to the toolbar popup box.
      */
     reloadToWalletBootstrap: () => {
+      if (isExtensionFlowTab()) {
+        return extensionAdapter.navigation.finishFlowWindow();
+      }
       if (typeof window !== 'undefined' && chrome?.runtime?.getURL) {
-        window.location.replace(
-          isFullPageView(window.location.search)
-            ? mainPageUrl()
-            : chrome.runtime.getURL('mainPopup.html')
-        );
+        window.location.replace(chrome.runtime.getURL('mainPopup.html'));
       }
       return Promise.resolve(true);
     },

@@ -189,6 +189,18 @@ const extensionAdapter = {
      */
     canHostDeviceChooser: async () => {
       try {
+        // chrome.windows.getCurrent() from the action popup often returns the
+        // last focused *browser* window (type normal). Trust the document:
+        // the toolbar popup and the CIP-30 dialog must never call
+        // requestDevice — Chrome cancels the chooser there.
+        if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+          const inPopupShell =
+            !!document.querySelector(`#${POPUP.main}`) ||
+            !!document.querySelector(`#${POPUP.internal}`);
+          if (inPopupShell && !isFullPageView(window.location.search)) {
+            return false;
+          }
+        }
         const current = await chrome.windows.getCurrent();
         return !!current && current.type === 'normal';
       } catch (/** @type {any} */ _e) {

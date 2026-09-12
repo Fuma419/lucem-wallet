@@ -25,6 +25,7 @@ import {
   initHW,
   isHW,
 } from '../../../api/extension';
+import { detectIsExtensionPopup } from '../../layout/surface';
 import { formatLedgerError } from '../../../api/extension/ledger-error';
 import {
   isLedgerUsbId,
@@ -329,15 +330,17 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         let usbDevice;
         let hidDevice;
         let bleDevice;
-        const needsPicker = isLedgerUsbId(hw.id)
-          ? forceUsbPicker || !grantedUsbPick
-          : forceBlePicker || !grantedBleDevice;
-        // Pairing needs a chooser, and this window cannot host one. Let the
-        // caller move signing to a window that can.
+        const inExtensionPopup = detectIsExtensionPopup(
+          typeof document !== 'undefined' ? document : null,
+          typeof chrome !== 'undefined' ? chrome : null,
+          typeof window !== 'undefined' ? window.location.search : ''
+        );
+        // The toolbar popup cannot host requestDevice. chrome.windows.getCurrent
+        // also lies from a popup (it reports the parent normal window), so a
+        // remembered device is not enough — always leave for the signing tab.
         if (
-          needsPicker &&
-          chooserHere === false &&
-          typeof props.onHwLedgerWindow === 'function'
+          typeof props.onHwLedgerWindow === 'function' &&
+          (inExtensionPopup || chooserHere === false)
         ) {
           setWaitReady(false);
           await Promise.resolve(props.onHwLedgerWindow(hw));

@@ -2,10 +2,14 @@ const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
 const fs = require('fs');
 const path = require('path');
 const {
+  ledgerOutputDatum,
+  optionalUintToStr,
   outputDatumHashHex,
   outputHasDatum,
   transactionInputIndex,
   txBodyCollateral,
+  txBodyTtl,
+  txBodyValidityStart,
 } = require('../../../../api/tx/csl-tx-accessors');
 
 const paymentCred = () =>
@@ -144,5 +148,79 @@ describe('transactionInputIndex (CSL v15)', () => {
     );
     expect(utilSrc).toMatch(/transactionInputIndex\(input\)/);
     expect(utilSrc).not.toMatch(/input\.index\(\)\.to_str\(\)/);
+  });
+});
+
+describe('CSL v15 slot + output fields used by Ledger encoding', () => {
+  test('ttl() is a number — to_str is not a function', () => {
+    const body = bodyWithCerts();
+    body.set_ttl(CSL.BigNum.from_str('12345'));
+    expect(typeof body.ttl()).toBe('number');
+    expect(body.ttl().to_str).toBeUndefined();
+    expect(() => body.ttl().to_str()).toThrow(TypeError);
+    expect(txBodyTtl(body)).toBe('12345');
+    expect(optionalUintToStr(body.ttl())).toBe('12345');
+  });
+
+  test('validity_interval_start is gone; validity_start_interval is a number', () => {
+    const body = bodyWithCerts();
+    expect(typeof body.validity_interval_start).toBe('undefined');
+    expect(() => body.validity_interval_start()).toThrow(TypeError);
+    expect(txBodyValidityStart(body)).toBeNull();
+    body.set_validity_start_interval(99);
+    expect(typeof body.validity_start_interval()).toBe('number');
+    expect(txBodyValidityStart(body)).toBe('99');
+  });
+
+  test('plain output has no datum() or kind() — Ledger extras stay empty', () => {
+    const output = plainOutput();
+    expect(typeof output.datum).toBe('undefined');
+    expect(typeof output.kind).toBe('undefined');
+    expect(() => output.datum()).toThrow(TypeError);
+    expect(() => output.kind()).toThrow(TypeError);
+    expect(ledgerOutputDatum(output)).toEqual({
+      datum: null,
+      isBabbage: false,
+      referenceScriptHex: null,
+    });
+  });
+
+  test('ledgerOutputDatum reads a data hash without treating it as Babbage', () => {
+    const output = plainOutput();
+    const hashBytes = Buffer.from('33'.repeat(32), 'hex');
+    output.set_data_hash(CSL.DataHash.from_bytes(hashBytes));
+    expect(ledgerOutputDatum(output)).toEqual({
+      datum: { type: 'hash', datumHashHex: hashBytes.toString('hex') },
+      isBabbage: false,
+      referenceScriptHex: null,
+    });
+  });
+
+  test('ledgerOutputDatum reads inline plutus data as Babbage', () => {
+    const output = plainOutput();
+    output.set_plutus_data(CSL.PlutusData.new_integer(CSL.BigInt.from_str('42')));
+    const extras = ledgerOutputDatum(output);
+    expect(extras.isBabbage).toBe(true);
+    expect(extras.datum).toEqual({
+      type: 'inline',
+      datumHex: Buffer.from(
+        CSL.PlutusData.new_integer(CSL.BigInt.from_str('42')).to_bytes()
+      ).toString('hex'),
+    });
+  });
+
+  test('Ledger encoding does not call the removed output/body methods', () => {
+    const utilSrc = fs.readFileSync(
+      path.join(__dirname, '../../../../api/util.js'),
+      'utf8'
+    );
+    expect(utilSrc).toMatch(/ledgerOutputDatum\(output\)/);
+    expect(utilSrc).toMatch(/txBodyTtl\(/);
+    expect(utilSrc).toMatch(/txBodyValidityStart\(/);
+    expect(utilSrc).not.toMatch(/output\.datum\(\)/);
+    expect(utilSrc).not.toMatch(/output\.kind\(\)/);
+    expect(utilSrc).not.toMatch(/validity_interval_start/);
+    expect(utilSrc).not.toMatch(/ttl\(\)\.to_str\(\)/);
+    expect(utilSrc).not.toMatch(/TransactionOutputList/);
   });
 });

@@ -35,7 +35,13 @@ import {
   TxRequiredSignerType,
 } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import { crc8 } from 'crc';
-import { transactionInputIndex, txBodyCollateral } from './tx/csl-tx-accessors';
+import {
+  ledgerOutputDatum,
+  transactionInputIndex,
+  txBodyCollateral,
+  txBodyTtl,
+  txBodyValidityStart,
+} from './tx/csl-tx-accessors';
 
 function isExtensionRuntime() {
   return (
@@ -739,9 +745,7 @@ const outputsToLedger = (outputs, address, index) => {
               addressHex: outputAddress,
             },
           };
-    const datum = output.datum();
-    const refScript = output.script_ref();
-    const isBabbage = output.kind();
+    const { datum, isBabbage, referenceScriptHex } = ledgerOutputDatum(output);
     const outputRes = isBabbage
       ? {
           format: TxOutputFormat.MAP_BABBAGE,
@@ -749,23 +753,17 @@ const outputsToLedger = (outputs, address, index) => {
           tokenBundle,
           destination,
           datum: datum
-            ? datum.kind() === 0
+            ? datum.type === 'hash'
               ? {
                   type: DatumType.HASH,
-                  datumHashHex: Buffer.from(
-                    datum.as_hash().to_bytes()
-                  ).toString('hex'),
+                  datumHashHex: datum.datumHashHex,
                 }
               : {
                   type: DatumType.INLINE,
-                  datumHex: Buffer.from(
-                    datum.as_datum().to_bytes()
-                  ).toString('hex'),
+                  datumHex: datum.datumHex,
                 }
             : null,
-          referenceScriptHex: refScript
-            ? Buffer.from(refScript.to_bytes()).toString('hex')
-            : null,
+          referenceScriptHex,
         }
       : {
           format: TxOutputFormat.ARRAY_LEGACY,
@@ -773,9 +771,7 @@ const outputsToLedger = (outputs, address, index) => {
           tokenBundle,
           destination,
           datumHashHex:
-            datum && datum.kind() === 0
-              ? Buffer.from(datum.as_hash().to_bytes()).toString('hex')
-              : null,
+            datum && datum.type === 'hash' ? datum.datumHashHex : null,
         };
     Object.keys(outputRes).forEach((key) => {
       if (!outputRes[key]) delete outputRes[key];
@@ -1118,7 +1114,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     }
   }
   const fee = tx.body().fee().to_str();
-  const ttl = tx.body().ttl() ? tx.body().ttl().to_str() : null;
+  const ttl = txBodyTtl(tx.body());
   const withdrawals = tx.body().withdrawals();
   let ledgerWithdrawals = null;
   if (withdrawals) {
@@ -1149,9 +1145,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
         },
       }
     : null;
-  const validityIntervalStart = tx.body().validity_interval_start()
-    ? tx.body().validity_interval_start().to_str()
-    : null;
+  const validityIntervalStart = txBodyValidityStart(tx.body());
 
   const mint = tx.body().mint();
   let additionalWitnessPaths = null;
@@ -1217,7 +1211,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
 
   let collateralOutput = (() => {
     if (tx.body().collateral_return()) {
-      const outputs = Loader.Cardano.TransactionOutputList.new();
+      const outputs = Loader.Cardano.TransactionOutputs.new();
       outputs.add(tx.body().collateral_return());
       const [out] = outputsToLedger(outputs, address, index);
       return out;

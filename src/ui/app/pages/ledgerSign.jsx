@@ -17,14 +17,17 @@ import {
 import { MdBluetooth, MdUsb } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import {
-  clearLedgerSignPayload,
   finishFlowWindow,
   getCurrentAccount,
   indexToHw,
   initHW,
+  setCollateral,
+  signTxHW,
   takeLedgerSignPayload,
+  writeLedgerSignResult,
 } from '../../../api/extension';
 import {
+  closeLedgerApp,
   isLedgerUsbId,
   pickLedgerBluetoothDevice,
   pickLedgerUsbDevice,
@@ -50,6 +53,8 @@ const LedgerSign = () => {
   const [hw, setHw] = React.useState(null);
   const pending = React.useRef(null);
   const account = React.useRef(null);
+  const outcomeRef = React.useRef(null);
+  const [doneTitle, setDoneTitle] = React.useState('Transaction submitted');
 
   React.useEffect(() => {
     let cancelled = false;
@@ -78,11 +83,23 @@ const LedgerSign = () => {
     };
   }, []);
 
+  React.useEffect(() => {
+    const onUnload = () => {
+      if (outcomeRef.current) return;
+      const signId = signIdFromLocation();
+      if (!signId) return;
+      writeLedgerSignResult(signId, { status: 'cancelled' });
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => window.removeEventListener('beforeunload', onUnload);
+  }, []);
+
   const usb = !!hw && isLedgerUsbId(hw.id);
 
   const signHandler = async () => {
     setError('');
     let appAda;
+    const signId = signIdFromLocation();
     try {
       // Pair before the spinner: the chooser has to open from this click.
       let usbDevice;
@@ -103,29 +120,71 @@ const LedgerSign = () => {
         hidDevice,
         bleDevice,
       });
-      // signAndSubmitHW reassembles the body, so it needs the CSL tx.
       const unsignedTx = Loader.Cardano.Transaction.from_bytes(
         Buffer.from(pending.current.txHex, 'hex')
       );
-      await signAndSubmitHW(unsignedTx, {
-        keyHashes: pending.current.keyHashes,
-        account: account.current,
-        hw: { ...hw, appAda },
-        partialSign: pending.current.partialSign,
-      });
-      const signId = signIdFromLocation();
-      if (signId) await clearLedgerSignPayload(signId);
-      toast({
-        title: 'Transaction submitted',
-        status: 'success',
-        duration: 3000,
-      });
+      const hwSession = { ...hw, appAda };
+      const mode = pending.current.mode === 'witness' ? 'witness' : 'submit';
+      if (mode === 'witness') {
+        const witnessSet = await signTxHW(
+          pending.current.txHex,
+          pending.current.keyHashes,
+          account.current,
+          hwSession,
+          pending.current.partialSign
+        );
+        await writeLedgerSignResult(signId, {
+          status: 'signed',
+          witnessHex: Buffer.from(witnessSet.to_bytes()).toString('hex'),
+        });
+        outcomeRef.current = 'signed';
+        setDoneTitle('Transaction signed');
+        toast({
+          title: 'Transaction signed',
+          status: 'success',
+          duration: 3000,
+        });
+      } else {
+        const txHash = await signAndSubmitHW(unsignedTx, {
+          keyHashes: pending.current.keyHashes,
+          account: account.current,
+          hw: hwSession,
+          partialSign: pending.current.partialSign,
+        });
+        if (pending.current.purpose === 'collateral' && txHash) {
+          await setCollateral({
+            txHash,
+            txId: 0,
+            lovelace: pending.current.collateralLovelace || '5000000',
+          });
+        }
+        await writeLedgerSignResult(signId, {
+          status: 'submitted',
+          txHash,
+        });
+        outcomeRef.current = 'submitted';
+        setDoneTitle(
+          pending.current.purpose === 'collateral'
+            ? 'Collateral added'
+            : 'Transaction submitted'
+        );
+        toast({
+          title:
+            pending.current.purpose === 'collateral'
+              ? 'Collateral added'
+              : 'Transaction submitted',
+          status: 'success',
+          duration: 3000,
+        });
+      }
       setPhase(Phase.done);
       setTimeout(() => finishFlowWindow(), 2000);
     } catch (e) {
       console.warn(e);
       setError(formatLedgerError(e, 'Signing failed.'));
       setPhase(Phase.connect);
+    } finally {
+      await closeLedgerApp(appAda);
     }
   };
 
@@ -171,13 +230,28 @@ const LedgerSign = () => {
           >
             {usb ? 'Connect over USB' : 'Connect over Bluetooth'}
           </Button>
+          <Button
+            mt={4}
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              const signId = signIdFromLocation();
+              outcomeRef.current = 'cancelled';
+              if (signId) {
+                await writeLedgerSignResult(signId, { status: 'cancelled' });
+              }
+              finishFlowWindow();
+            }}
+          >
+            Cancel
+          </Button>
         </>
       )}
 
       {phase === Phase.done && !error && (
         <>
           <Text fontSize="lg" fontWeight="bold">
-            Transaction submitted
+            {doneTitle}
           </Text>
           <Text mt={2} fontSize="sm" color="GrayText">
             This tab closes. Click the Lucem icon if the wallet does not appear.
@@ -194,7 +268,14 @@ const LedgerSign = () => {
             mt={4}
             size="sm"
             variant="ghost"
-            onClick={() => finishFlowWindow()}
+            onClick={async () => {
+              const signId = signIdFromLocation();
+              outcomeRef.current = 'cancelled';
+              if (signId) {
+                await writeLedgerSignResult(signId, { status: 'cancelled' });
+              }
+              finishFlowWindow();
+            }}
           >
             Back to wallet
           </Button>

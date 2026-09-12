@@ -222,5 +222,9 @@ describe('CSL v15 slot + output fields used by Ledger encoding', () => {
     expect(utilSrc).not.toMatch(/validity_interval_start/);
     expect(utilSrc).not.toMatch(/ttl\(\)\.to_str\(\)/);
     expect(utilSrc).not.toMatch(/TransactionOutputList/);
+    expect(utilSrc).not.toMatch(/delegation\.pool\(\)/);
+    expect(utilSrc).not.toMatch(/assetName\.to_hex\(\)/);
+    expect(utilSrc).not.toMatch(/margin\.start\(\)/);
+    expect(utilSrc).not.toMatch(/Vkeywitness\.new/);
   });
 });

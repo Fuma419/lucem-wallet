@@ -18,6 +18,10 @@ jest.mock('../../../../api/loader', () => ({
   },
 }));
 
+jest.mock('../../../../api/extension/storage', () => ({
+  getNetwork: jest.fn().mockResolvedValue({ id: 'preview' }),
+}));
+
 const {
   EXTENDED_PUBLIC_KEY_HEX_LENGTH,
   LEDGER_KEY_MALFORMED_MESSAGE,
@@ -340,6 +344,13 @@ describe('exportVerifiedLedgerAccounts', () => {
     expect(appAda.showAddress).toHaveBeenCalledTimes(1);
     expect(appAda.showAddress.mock.calls[0][0].address).toEqual(
       ledgerBaseAddressParams('0')
+    );
+    expect(appAda.showAddress.mock.calls[0][0].network).toEqual({
+      networkId: 0,
+      protocolMagic: 2,
+    });
+    expect(appAda.deriveAddress.mock.calls[0][0].network).toEqual(
+      LEDGER_VERIFY_NETWORK
     );
   });
 

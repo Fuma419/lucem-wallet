@@ -28,12 +28,30 @@ import { deriveAccountDRepKeyHashHex, deriveAccountDRepPrivateKey, requestAccoun
 import { assertLedgerAccountMatches } from './ledger-account';
 import { getNetwork, getStorage } from './storage';
 import { recordSubmittedTx } from '../tx/pending-history';
+import { ledgerInputPaths, ledgerPathsForInputs } from '../tx/cip30-input-key-hashes';
+import {
+  ledgerNetworkForWallet,
+  wrapLedgerVkeyWitness,
+} from '../tx/ledger-encode';
+import { txBodyCollateral } from '../tx/csl-tx-accessors';
 
 
 const hasTaggedSets = (cbor) => {
-  const tx = Serialization.Transaction.fromCbor(cbor);
-  return tx.body().hasTaggedSets();
-}
+  try {
+    const parsed = Serialization.Transaction.fromCbor(cbor);
+    return txHasTaggedSets(parsed);
+  } catch (/** @type {any} */ _) {
+    return true;
+  }
+};
+
+const txHasTaggedSets = (tx) => {
+  const body = tx && typeof tx.body === 'function' ? tx.body() : null;
+  if (body && typeof body.hasTaggedSets === 'function') {
+    return Boolean(body.hasTaggedSets());
+  }
+  return true;
+};
 
 const isValidAddressBytes = async (address) => {
   await Loader.load();
@@ -438,7 +456,11 @@ export const signTxHW = async (
   await Loader.load();
   const rawTx = Loader.Cardano.Transaction.from_bytes(Buffer.from(tx, 'hex'));
   const address = Loader.Cardano.Address.from_bech32(account.paymentAddr);
-  const network = address.network_id();
+  const walletNetwork = await getNetwork();
+  const ledgerNetwork = ledgerNetworkForWallet(
+    walletNetwork || { networkId: address.network_id() }
+  );
+  const networkId = address.network_id();
   /** @type {any} */
   const keys = {
     payment: { hash: null, path: null },
@@ -456,7 +478,6 @@ export const signTxHW = async (
         expectedPublicKeyHex: account.publicKey,
       });
     }
-    const networkId = network;
     const paymentIndexByHash = {};
     if (account?.publicKey) {
       for (const row of listEnabledPaymentAddresses(
@@ -464,41 +485,58 @@ export const signTxHW = async (
         account,
         networkId
       )) {
-        paymentIndexByHash[row.paymentKeyHash] = {
+        const hash = String(row.paymentKeyHash || '').toLowerCase();
+        if (!hash) continue;
+        if (!row.paymentAddr) continue;
+        let addressHex;
+        try {
+          addressHex = Buffer.from(
+            Loader.Cardano.Address.from_bech32(row.paymentAddr).to_bytes()
+          ).toString('hex');
+        } catch (/** @type {any} */ _) {
+          continue;
+        }
+        paymentIndexByHash[hash] = {
           index: row.index,
           role: row.role ?? ADDRESS_ROLE.external,
+          addressHex,
         };
       }
-    } else {
-      paymentIndexByHash[account.paymentKeyHash] = {
+    } else if (account.paymentKeyHash) {
+      paymentIndexByHash[String(account.paymentKeyHash).toLowerCase()] = {
         index: 0,
         role: ADDRESS_ROLE.external,
+        addressHex: Buffer.from(address.to_bytes()).toString('hex'),
       };
     }
     const drepKeyHash = account?.publicKey
       ? deriveAccountDRepKeyHashHex(account.publicKey)
       : null;
+    const paymentPathByHash = /** @type {Record<string, number[]>} */ ({});
     keyHashes.forEach((keyHash) => {
-      if (paymentIndexByHash[keyHash] != null) {
-        const { index: addrIdx, role } = paymentIndexByHash[keyHash];
-        keys.payment = {
-          hash: keyHash,
-          path: [
-            HARDENED + 1852,
-            HARDENED + 1815,
-            HARDENED + hw.account,
-            role,
-            addrIdx,
-          ],
-        };
-      } else if (keyHash === account.stakeKeyHash)
+      const hash = String(keyHash || '').toLowerCase();
+      if (paymentIndexByHash[hash] != null) {
+        const { index: addrIdx, role } = paymentIndexByHash[hash];
+        const path = [
+          HARDENED + 1852,
+          HARDENED + 1815,
+          HARDENED + hw.account,
+          role,
+          addrIdx,
+        ];
+        keys.payment = { hash, path };
+        paymentPathByHash[hash] = path;
+      } else if (hash === String(account.stakeKeyHash || '').toLowerCase())
         keys.stake = {
-          hash: keyHash,
+          hash,
           path: [HARDENED + 1852, HARDENED + 1815, HARDENED + hw.account, 2, 0],
         };
-      else if (drepKeyHash && keyHash === drepKeyHash)
+      else if (
+        drepKeyHash &&
+        hash === String(drepKeyHash).toLowerCase()
+      )
         keys.drep = {
-          hash: keyHash,
+          hash,
           path: [
             HARDENED + 1852,
             HARDENED + 1815,
@@ -510,9 +548,43 @@ export const signTxHW = async (
       else if (!partialSign) throw TxSignError.ProofGeneration;
       else return;
     });
+    keys.ownedDestinations = Object.values(paymentIndexByHash)
+      .filter((row) => row.addressHex)
+      .map((row) => ({
+        addressHex: row.addressHex,
+        path: [
+          HARDENED + 1852,
+          HARDENED + 1815,
+          HARDENED + hw.account,
+          row.role,
+          row.index,
+        ],
+      }));
+    keys.paymentPathByHash = paymentPathByHash;
+    try {
+      const { getUtxos } = await import('./chain-reads');
+      const utxos = (await getUtxos(undefined, undefined, account)) || [];
+      keys.inputPaths = ledgerInputPaths(
+        Loader.Cardano,
+        rawTx,
+        utxos,
+        paymentPathByHash,
+        keys.payment.path
+      );
+      keys.collateralPaths = ledgerPathsForInputs(
+        Loader.Cardano,
+        txBodyCollateral(rawTx.body()),
+        utxos,
+        paymentPathByHash,
+        keys.payment.path
+      );
+    } catch (/** @type {any} */ _) {
+      keys.inputPaths = [];
+      keys.collateralPaths = [];
+    }
     const ledgerTx = await txToLedger(
       rawTx,
-      network,
+      ledgerNetwork,
       keys,
       Buffer.from(address.to_bytes()).toString('hex'),
       hw.account
@@ -520,50 +592,28 @@ export const signTxHW = async (
     const result = await appAda.signTransaction({
       ...ledgerTx,
       options: {
-        tagCborSets: hasTaggedSets(tx)
-      }
+        tagCborSets: hasTaggedSets(tx),
+      },
     });
-    // getting public keys
     const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
     const vkeys = Loader.Cardano.Vkeywitnesses.new();
     result.witnesses.forEach((witness) => {
       const role = witness.path[3];
-      if (role === 0 || role === 1) {
-        const addrIdx = witness.path[4] != null ? witness.path[4] : 0;
-        const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
+      const addrIdx = witness.path[4] != null ? witness.path[4] : 0;
+      if (role === 0 || role === 1 || role === 2 || role === ADDRESS_ROLE.drep) {
+        const publicKey = Loader.Cardano.Bip32PublicKey.from_hex(
           account.publicKey
         )
-          .derive(role)
-          .derive(addrIdx)
+          .derive(role === 2 ? 2 : role)
+          .derive(role === 2 ? 0 : addrIdx)
           .to_raw_key();
-        const signature = Loader.Cardano.Ed25519Signature.from_hex(
-          witness.witnessSignatureHex
+        vkeys.add(
+          wrapLedgerVkeyWitness(
+            Loader.Cardano,
+            publicKey,
+            witness.witnessSignatureHex
+          )
         );
-        vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
-      } else if (
-        role == 2 // stake key
-      ) {
-        const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
-          account.publicKey
-        )
-          .derive(2)
-          .derive(0)
-          .to_raw_key();
-        const signature = Loader.Cardano.Ed25519Signature.from_hex(
-          witness.witnessSignatureHex
-        );
-        vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
-      } else if (role === ADDRESS_ROLE.drep) {
-        const vkey = Loader.Cardano.Bip32PublicKey.from_hex(
-          account.publicKey
-        )
-          .derive(ADDRESS_ROLE.drep)
-          .derive(0)
-          .to_raw_key();
-        const signature = Loader.Cardano.Ed25519Signature.from_hex(
-          witness.witnessSignatureHex
-        );
-        vkeys.add(Loader.Cardano.Vkeywitness.new(vkey, signature));
       }
     });
     witnessSet.set_vkeys(vkeys);

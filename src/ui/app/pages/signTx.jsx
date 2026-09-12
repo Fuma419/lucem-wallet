@@ -7,10 +7,12 @@ import {
   getSpecificUtxo,
   getUtxos,
   isHW,
+  openLedgerSignTxTab,
   paymentKeyHashesForSigning,
   resolveCip30Account,
   signTx,
   signTxHW,
+  waitForLedgerSignResult,
 } from '../../../api/extension';
 import { listEnabledPaymentAddresses } from '../../../api/extension/multi-address';
 import Account from '../components/account';
@@ -1091,6 +1093,29 @@ const SignTx = ({ request, controller }) => {
       <ConfirmModal
         ref={ref}
         onHwKeystone={(hwParsed) => setKeystoneHw(hwParsed)}
+        onHwLedgerWindow={async () => {
+          const signId = await openLedgerSignTxTab({
+            txHex: request.data.tx,
+            keyHashes: keyHashes.key,
+            partialSign: request.data.partialSign,
+            mode: 'witness',
+          });
+          try {
+            const result = await waitForLedgerSignResult(signId);
+            await Loader.load();
+            const witnessSet =
+              Loader.Cardano.TransactionWitnessSet.from_bytes(
+                Buffer.from(result.witnessHex, 'hex')
+              );
+            await returnSignedTx(witnessSet);
+          } catch (e) {
+            if (e && (e.code === 'UserDeclined' || e.message === 'User declined')) {
+              await returnSignError(TxSignError.UserDeclined);
+              return;
+            }
+            await returnSignError(e);
+          }
+        }}
         onCloseBtn={() => {
         }}
         sign={async (password, hw) => {

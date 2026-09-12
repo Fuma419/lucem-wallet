@@ -2,6 +2,7 @@ const CSL = require('@emurgo/cardano-serialization-lib-nodejs');
 const {
   ownedInputPaymentHashes,
   paymentKeyHashHexFromCslAddress,
+  ledgerInputPaths,
 } = require('../../../../api/tx/cip30-input-key-hashes');
 
 const {
@@ -89,5 +90,26 @@ describe('ownedInputPaymentHashes', () => {
     expect(paymentKeyHashHexFromCslAddress(CSL, addr)).toBe(
       external0.paymentKeyHash
     );
+  });
+});
+
+describe('ledgerInputPaths', () => {
+  test('stamps each input with the path of its payment key', () => {
+    const { external0, internal0 } = accountKeys();
+    const changeUtxo = utxoOn(internal0.paymentAddr, 0x11, 0);
+    const tx = txSpending(changeUtxo);
+    const extPath = [0x80000000 + 1852, 0x80000000 + 1815, 0x80000000, 0, 0];
+    const intPath = [0x80000000 + 1852, 0x80000000 + 1815, 0x80000000, 1, 0];
+    const paths = ledgerInputPaths(
+      CSL,
+      tx,
+      [changeUtxo],
+      {
+        [external0.paymentKeyHash.toLowerCase()]: extPath,
+        [internal0.paymentKeyHash.toLowerCase()]: intPath,
+      },
+      extPath
+    );
+    expect(paths).toEqual([intPath]);
   });
 });

@@ -1,5 +1,6 @@
 const {
   LEDGER_APP_NOT_OPEN_MESSAGE,
+  LEDGER_BLE_NOT_LEDGER_MESSAGE,
   LEDGER_CHOOSER_CANCELLED_MESSAGE,
   LEDGER_SW,
   formatLedgerError,
@@ -89,5 +90,11 @@ describe('formatLedgerError', () => {
         message: 'User cancelled the requestDevice() chooser.',
       })
     ).toBe(LEDGER_CHOOSER_CANCELLED_MESSAGE);
+  });
+
+  test('keeps the not-a-Ledger Bluetooth copy', () => {
+    expect(formatLedgerError({ message: LEDGER_BLE_NOT_LEDGER_MESSAGE })).toBe(
+      LEDGER_BLE_NOT_LEDGER_MESSAGE
+    );
   });
 });

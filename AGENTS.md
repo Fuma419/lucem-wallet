@@ -62,16 +62,7 @@ tab must finish with `finishFlowWindow` (`tabs.remove` + best-effort
 
 ### Where Ledger signing runs (extension)
 
-Same constraint applies to **signing**, not just pairing. Ask
-`canHostDeviceChooser()` (`chrome.windows.getCurrent().type === 'normal'`)
-before a chooser: in the toolbar popup and the dApp prompt it is `false`.
-When it is and Chrome has no remembered device, `ConfirmModal` calls
-`onHwLedgerWindow`, and the page stores the built tx
-(`openLedgerSignTxTab` → `STORAGE.ledgerTxPending`) and opens
-`ledgerSign.html` (`src/ui/app/pages/ledgerSign.jsx`) in a temporary tab,
-which pairs, signs, and submits. A **remembered** device still signs in
-place — no tab. dApp `signTx` / `signData` deliberately opt out: a tab
-cannot return a witness to the caller.
+Same constraint applies to **signing**, not just pairing. `canHostDeviceChooser()` is false in the toolbar popup (`#mainPopup`) and the dApp prompt (`#internalPopup`) even when `chrome.windows.getCurrent().type` reports the parent `normal` window. `ConfirmModal` therefore always hands Ledger signing to `onHwLedgerWindow` from those popups — a remembered USB/BLE grant does **not** sign in the popup. The signing tab (`ledgerSign.html`) pairs, signs, and either submits or returns a witness (`mode: 'witness'`) through `STORAGE.ledgerTxPending`. CIP-30 `signTx` waits for that witness. CIP-30 `signData` stays blocked on hardware.
 
 Ledger account import never trusts the exported key on its own — see
 `src/api/extension/ledger-account.js`. Any 64 bytes parse as a

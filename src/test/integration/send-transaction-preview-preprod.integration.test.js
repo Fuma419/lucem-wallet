@@ -248,19 +248,23 @@ NETWORKS.forEach(
           console.warn('Skipping history check — no submitted tx hash');
           return;
         }
+        // The tx has to reach a block and then be indexed, and testnet block
+        // times vary enough that ~90s produced false failures. Polling exits on
+        // the first sighting, so a wider window costs nothing when the chain is
+        // keeping up.
         const row = await waitForTxInAccountHistory({
           providerType,
           baseUrl: txBaseUrl,
           apiKey: txApiKey,
           mnemonic: phrase,
           txHash: submittedHash,
-          maxAttempts: 30,
+          maxAttempts: 60,
           delayMs: 3000,
         });
         expect(row.tx_hash.toLowerCase()).toBe(submittedHash.toLowerCase());
         expect(row.block_height).toBeGreaterThan(0);
       },
-      120000
+      300000
     );
   });
 }

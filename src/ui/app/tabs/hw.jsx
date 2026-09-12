@@ -28,7 +28,7 @@ import {
   Scrollbars,
   lucemTransparentScrollView,
 } from '../components/scrollbar';
-import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
+import { exportVerifiedLedgerAccounts } from '../../../api/extension/ledger-account';
 
 
 import LogoWhite from '../../../assets/img/bannerBlack.png';
@@ -1332,7 +1332,7 @@ const SelectAccounts = ({ data, onConfirm }) => {
                 Object.keys(selected).filter((s) => selected[s] && !existing[s])
                   .length === 0
               ? 'The selected accounts are already imported in Lucem. Choose a different account index, or close this tab.'
-              : 'Select the accounts you would like to import. Afterwards click Continue and follow the instructions on your device. Accounts already in Lucem are marked and cannot be selected again.'}
+              : 'Select the accounts you would like to import, then click Continue. The Ledger shows the first account address — check it and approve on the device. Lucem imports nothing unless the device confirms the address. Accounts already in Lucem are marked and cannot be selected again.'}
         </Text>
         <Box h={8} />
 
@@ -1487,21 +1487,18 @@ const SelectAccounts = ({ data, onConfirm }) => {
                   });
                 }
                 try {
-                  const ledgerKeys = await appAda.getExtendedPublicKeys({
-                    paths: accountIndexes.map((index) => [
-                      HARDENED + 1852,
-                      HARDENED + 1815,
-                      HARDENED + parseInt(index, 10),
-                    ]),
+                  const verified = await exportVerifiedLedgerAccounts({
+                    appAda,
+                    accountIndexes,
                   });
                   const idHex = isLedgerUsbId(id)
                     ? LEDGER_USB_ID
                     : Buffer.from(String(id), 'utf8').toString('hex');
-                  accounts = ledgerKeys.map(
-                    ({ publicKeyHex, chainCodeHex }, index) => ({
-                      accountIndex: `${HW.ledger}-${idHex}-${accountIndexes[index]}`,
-                      publicKey: publicKeyHex + chainCodeHex,
-                      name: `Ledger ${parseInt(accountIndexes[index], 10) + 1}`,
+                  accounts = verified.map(
+                    ({ accountIndex, publicKey }) => ({
+                      accountIndex: `${HW.ledger}-${idHex}-${accountIndex}`,
+                      publicKey,
+                      name: `Ledger ${parseInt(accountIndex, 10) + 1}`,
                     })
                   );
                 } finally {

@@ -106,10 +106,19 @@ const PRIMARY_ONLY_UTXOS = [
 const root = path.join(__dirname, '../../..');
 const readSrc = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 
+const KOIOS_MAINNET_KEY = (process.env.KOIOS_API_KEY_MAINNET || '').trim();
+
 const koiosPost = async (endpoint, body) => {
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  if (KOIOS_MAINNET_KEY) {
+    headers.Authorization = `Bearer ${KOIOS_MAINNET_KEY}`;
+  }
   const response = await fetch(`https://api.koios.rest/api/v1${endpoint}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
   const text = await response.text();
@@ -122,11 +131,11 @@ const koiosPost = async (endpoint, body) => {
 };
 
 /**
- * True for infrastructure failures (public Koios tier quota / rate limit /
- * network), as opposed to a real assertion regression. The public endpoint has
- * no API key here, so its shared quota can be exhausted (HTTP 429) — that must
- * not fail this deterministic suite. The fixture-based tests above already
- * cover the aggregation logic; the live test is a best-effort chain check.
+ * True for infrastructure failures (Koios tier quota / rate limit / network),
+ * as opposed to a real assertion regression. Even an authenticated key has a
+ * quota, and a 429 or a network blip must not fail this deterministic suite.
+ * The fixture-based tests above already cover the aggregation logic; the live
+ * test is a best-effort chain check.
  */
 const isKoiosInfraError = (e) => {
   const status = e && e.koiosStatus;
@@ -280,7 +289,13 @@ describe('stake-consolidated balance (resolve stake from payment address)', () =
     }
   });
 
-  test(
+  // Unauthenticated public Koios is rate-limited to whatever the shared tier
+  // has left, and the Unit tests stage passes no credentials, so without a key
+  // this could only ever warn and return. Reporting it as skipped says the same
+  // thing without a rate-limit line in every build log.
+  const liveTest = KOIOS_MAINNET_KEY ? test : test.skip;
+
+  liveTest(
     'live: address_info → stake key → consolidated ADA/assets exceed primary',
     async () => {
       // The only test here that is meant to reach Koios; jest.setup.js blocks

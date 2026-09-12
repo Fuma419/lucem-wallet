@@ -151,6 +151,9 @@ const webAdapter = {
       return Promise.resolve({ id: Date.now() });
     },
 
+    /** A browser tab always anchors the device chooser. */
+    canHostDeviceChooser: async () => true,
+
     closeCurrentTab: () => {
       window.location.assign(`${window.location.origin}/mainPopup.html`);
       return Promise.resolve(true);

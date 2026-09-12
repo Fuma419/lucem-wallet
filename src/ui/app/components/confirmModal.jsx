@@ -19,7 +19,12 @@ import React from 'react';
 import { flushSync } from 'react-dom';
 import { MdQrCode2, MdUsb } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
-import { indexToHw, initHW, isHW } from '../../../api/extension';
+import {
+  canHostDeviceChooser,
+  indexToHw,
+  initHW,
+  isHW,
+} from '../../../api/extension';
 import { formatLedgerError } from '../../../api/extension/ledger-error';
 import {
   isLedgerUsbId,
@@ -54,6 +59,7 @@ const ConfirmModal = React.forwardRef(
       title,
       info,
       onHwKeystone,
+      onHwLedgerWindow,
       allowEmptyPassword,
     },
     ref
@@ -76,6 +82,7 @@ const ConfirmModal = React.forwardRef(
       title,
       info,
       onHwKeystone,
+      onHwLedgerWindow,
       allowEmptyPassword: Boolean(allowEmptyPassword),
     };
     const [hw, setHw] = React.useState('');
@@ -255,6 +262,9 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
   const [forceUsbPicker, setForceUsbPicker] = React.useState(false);
   const [forceBlePicker, setForceBlePicker] = React.useState(false);
   const [suspendModal, setSuspendModal] = React.useState(false);
+  // Chrome cancels a device chooser in the toolbar popup, so pairing there is
+  // impossible. Resolved per open; null while unknown.
+  const [chooserHere, setChooserHere] = React.useState(null);
 
   React.useEffect(() => {
     setError('');
@@ -263,8 +273,16 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
     setGrantedUsbPick(null);
     setGrantedBleDevice(null);
     setSuspendModal(false);
+    setChooserHere(null);
     if (!isOpen || !hw || hw.device !== HW.ledger) return undefined;
     let cancelled = false;
+    canHostDeviceChooser()
+      .then((can) => {
+        if (!cancelled) setChooserHere(can);
+      })
+      .catch(() => {
+        if (!cancelled) setChooserHere(false);
+      });
     if (isLedgerUsbId(hw.id)) {
       preloadLedgerUsbTransports().catch(() => {});
       listGrantedLedgerUsbPicks()
@@ -311,6 +329,21 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         let usbDevice;
         let hidDevice;
         let bleDevice;
+        const needsPicker = isLedgerUsbId(hw.id)
+          ? forceUsbPicker || !grantedUsbPick
+          : forceBlePicker || !grantedBleDevice;
+        // Pairing needs a chooser, and this window cannot host one. Let the
+        // caller move signing to a window that can.
+        if (
+          needsPicker &&
+          chooserHere === false &&
+          typeof props.onHwLedgerWindow === 'function'
+        ) {
+          setWaitReady(false);
+          await Promise.resolve(props.onHwLedgerWindow(hw));
+          onClose();
+          return;
+        }
         if (isLedgerUsbId(hw.id)) {
           if (forceUsbPicker || !grantedUsbPick) {
             flushSync(() => {

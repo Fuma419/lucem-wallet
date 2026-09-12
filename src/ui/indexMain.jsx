@@ -17,7 +17,7 @@ import { Box, Spinner } from '@chakra-ui/react';
 import Welcome from './app/pages/welcome';
 import Wallet from './app/pages/wallet';
 import Accounts from './app/pages/accounts';
-import { hasStoredAccounts } from '../api/extension';
+import { LEDGER_SIGN_PATH, hasStoredAccounts } from '../api/extension';
 import Settings from './app/pages/settings';
 import Send from './app/pages/send';
 import Governance from './app/pages/governance';
@@ -28,6 +28,8 @@ import { TermsAndPrivacyProvider } from '../features/terms-and-privacy';
 import PreventHistoryBack from './app/components/PreventHistoryBack';
 import { initNativeShell } from '../platform/capacitor';
 import { FLOW_SETUP_PATHS } from './app/components/flowCancel';
+
+const LedgerSign = React.lazy(() => import('./app/pages/ledgerSign'));
 
 const CreateWalletApp = React.lazy(() =>
   import('./app/tabs/createWallet').then((mod) => ({
@@ -125,6 +127,7 @@ const App = () => {
       '/staking',
       '/governance',
       '/send',
+      LEDGER_SIGN_PATH,
     ];
     const deepLink = allowedDeep.includes(nextParam)
       ? nextParam
@@ -204,6 +207,26 @@ const App = () => {
       <Routes>
         <Route path="/welcome" element={<Welcome />} />
         <Route path="/send" element={<Send />} />
+        <Route
+          path={LEDGER_SIGN_PATH}
+          element={
+            <React.Suspense
+              fallback={
+                <Box
+                  height="full"
+                  width="full"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <Spinner color="teal" speed="0.5s" />
+                </Box>
+              }
+            >
+              <LedgerSign />
+            </React.Suspense>
+          }
+        />
         <Route
           element={
             <WalletEntryGate>

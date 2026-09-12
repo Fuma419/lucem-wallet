@@ -59,6 +59,24 @@ WebHID choosers there), the same tab on web. **Do not** route them through
 `createTab` unless pairing itself is broken; dumping into the browsing
 session is a worse experience.
 
+### Where Ledger signing runs (extension)
+
+Same constraint applies to **signing**, not just pairing. Ask
+`canHostDeviceChooser()` (`chrome.windows.getCurrent().type === 'normal'`)
+before a chooser: in the toolbar popup and the dApp prompt it is `false`.
+When it is and Chrome has no remembered device, `ConfirmModal` calls
+`onHwLedgerWindow`, and the page stores the built tx
+(`openLedgerSignTxTab` → `STORAGE.ledgerTxPending`) and opens
+`/ledger-sign` (`src/ui/app/pages/ledgerSign.jsx`) in a flow window, which
+pairs, signs, and submits. A **remembered** device still signs in place — no
+window. dApp `signTx` / `signData` deliberately opt out: a flow window cannot
+return a witness to the caller.
+
+Ledger account import never trusts the exported key on its own — see
+`src/api/extension/ledger-account.js`. Any 64 bytes parse as a
+`Bip32PublicKey`, so a garbled Bluetooth frame once became a phantom account.
+The device must derive the same account's address for the import to proceed.
+
 Leaving a full-page flow (`closeCurrentTab` / `openMainRoute`) loads
 `mainPopup.html?view=full`. That marker (`isFullPageView`) is the only way to
 tell a flow window or tab from the toolbar popup, and it keeps the layout

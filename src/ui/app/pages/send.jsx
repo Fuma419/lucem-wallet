@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   openKeystoneSignTxTab,
+  openLedgerSignTxTab,
   displayUnit,
   getAccounts,
   getAdaHandle,
@@ -373,6 +374,27 @@ const Send = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const ref = React.useRef();
+
+  /**
+   * Ledger pairing needs a device chooser, which Chrome cancels in the
+   * toolbar popup. Hand the built transaction to a window that can pair.
+   */
+  const startLedgerWindowSign = React.useCallback(async () => {
+    await Loader.load();
+    const txDes = Loader.Cardano.Transaction.from_bytes(
+      Buffer.from(tx, 'hex')
+    );
+    const paymentHashes = await paymentKeyHashesForSigning(account.current);
+    await openLedgerSignTxTab({
+      txHex: tx,
+      keyHashes: keyHashesForTx(
+        txDes,
+        paymentHashes,
+        account.current.stakeKeyHash
+      ),
+      partialSign: false,
+    });
+  }, [tx]);
 
   const startKeystoneQrSign = React.useCallback(async () => {
     if (!tx) {
@@ -1667,6 +1689,7 @@ const Send = () => {
         onHwKeystone={async () => {
           await startKeystoneQrSign();
         }}
+        onHwLedgerWindow={startLedgerWindowSign}
         sign={async (password, hw) => {
           await Loader.load();
           const txDes = Loader.Cardano.Transaction.from_bytes(

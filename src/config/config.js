@@ -85,6 +85,7 @@ export const STORAGE = {
   userId: 'userId',
   acceptedLegalDocsVersion: 'acceptedLegalDocsVersion',
   keystoneTxPending: 'keystoneTxPending',
+  ledgerTxPending: 'ledgerTxPending',
 };
 
 export const LOCAL_STORAGE = {

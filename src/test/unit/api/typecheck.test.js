@@ -22,16 +22,21 @@ describe('src/api TypeScript + checkJs', () => {
   });
 
   test('tsc -p tsconfig.api.json', () => {
-    execFileSync(
-      process.execPath,
-      [
-        require.resolve('typescript/bin/tsc'),
-        '-p',
-        'tsconfig.api.json',
-        '--pretty',
-        'false',
-      ],
-      { cwd: root, stdio: 'pipe' }
-    );
+    try {
+      execFileSync(
+        process.execPath,
+        [
+          require.resolve('typescript/bin/tsc'),
+          '-p',
+          'tsconfig.api.json',
+          '--pretty',
+          'false',
+        ],
+        { cwd: root, encoding: 'utf8' }
+      );
+    } catch (err) {
+      const detail = [err.stdout, err.stderr].filter(Boolean).join('\n').trim();
+      throw new Error(detail || err.message);
+    }
   });
 });

@@ -77,6 +77,12 @@ Ledger account import never trusts the exported key on its own — see
 `Bip32PublicKey`, so a garbled Bluetooth frame once became a phantom account.
 The device must derive the same account's address for the import to proceed.
 
+A flow window must **finish by closing itself** (`finishFlowWindow`), not by
+navigating to the wallet: that left a second, browser-sized wallet window
+behind after pairing. It best-effort opens the toolbar popup on a surviving
+window first, and falls back to in-place navigation when it is not in a flow
+window (or would close the last one).
+
 Leaving a full-page flow (`closeCurrentTab` / `openMainRoute`) loads
 `mainPopup.html?view=full`. That marker (`isFullPageView`) is the only way to
 tell a flow window or tab from the toolbar popup, and it keeps the layout

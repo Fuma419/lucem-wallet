@@ -203,6 +203,43 @@ const extensionAdapter = {
     },
 
     /**
+     * Finish a flow window (HW pairing, Keystone, Ledger signing): close it
+     * and hand the user back to the toolbar popup. Navigating it to the
+     * wallet instead would leave a second, browser-sized wallet window open,
+     * which is what users hit after pairing a Ledger.
+     *
+     * Only a `normal` window is a flow window, so the toolbar popup and the
+     * dApp prompt fall through to in-place navigation. The window is also
+     * kept if it is the last one — closing it could quit the browser.
+     */
+    finishFlowWindow: async (path = '/wallet') => {
+      try {
+        const current = await chrome.windows.getCurrent();
+        const others = (
+          await chrome.windows.getAll({ windowTypes: ['normal'] })
+        ).filter((w) => w && w.id !== current.id);
+        if (current && current.type === 'normal' && others.length > 0) {
+          // Best effort: Chrome may refuse without a live user gesture, and
+          // the toolbar icon still opens the wallet either way.
+          try {
+            const target = others.find((w) => w.focused) || others[0];
+            await chrome.windows.update(target.id, { focused: true });
+            if (chrome.action && typeof chrome.action.openPopup === 'function') {
+              await chrome.action.openPopup({ windowId: target.id });
+            }
+          } catch (/** @type {any} */ _e) {
+            /* fall through to closing the flow window */
+          }
+          await chrome.windows.remove(current.id);
+          return true;
+        }
+      } catch (/** @type {any} */ _e) {
+        /* fall through to in-place navigation */
+      }
+      return extensionAdapter.navigation.openMainRoute(path);
+    },
+
+    /**
      * After full data wipe: reload entry HTML so SPA path is not stuck on
      * /settings/…. Keeps the current surface — a wipe from a flow window must
      * not come back pinned to the toolbar popup box.

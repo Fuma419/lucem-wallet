@@ -18,6 +18,7 @@ import { MdBluetooth, MdUsb } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import {
   clearLedgerSignPayload,
+  finishFlowWindow,
   getCurrentAccount,
   indexToHw,
   initHW,
@@ -30,7 +31,6 @@ import {
 } from '../../../api/extension/ledger-transport';
 import { formatLedgerError } from '../../../api/extension/ledger-error';
 import { signAndSubmitHW } from '../../../api/extension/wallet';
-import platform from '../../../platform';
 import Loader from '../../../api/loader';
 
 const Phase = {
@@ -121,7 +121,7 @@ const LedgerSign = () => {
         duration: 3000,
       });
       setPhase(Phase.done);
-      setTimeout(() => platform.navigation.openMainRoute('/wallet'), 2000);
+      setTimeout(() => finishFlowWindow(), 2000);
     } catch (e) {
       console.warn(e);
       setError(formatLedgerError(e, 'Signing failed.'));
@@ -180,7 +180,7 @@ const LedgerSign = () => {
             Transaction submitted
           </Text>
           <Text mt={2} fontSize="sm" color="GrayText">
-            Returning to your wallet.
+            This window closes and your wallet opens in the toolbar.
           </Text>
         </>
       )}
@@ -194,7 +194,7 @@ const LedgerSign = () => {
             mt={4}
             size="sm"
             variant="ghost"
-            onClick={() => platform.navigation.openMainRoute('/wallet')}
+            onClick={() => finishFlowWindow()}
           >
             Back to wallet
           </Button>

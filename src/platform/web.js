@@ -154,6 +154,10 @@ const webAdapter = {
     /** A browser tab always anchors the device chooser. */
     canHostDeviceChooser: async () => true,
 
+    /** The web app has no window to close — flows stay in this tab. */
+    finishFlowWindow: (path = '/wallet') =>
+      webAdapter.navigation.openMainRoute(path),
+
     closeCurrentTab: () => {
       window.location.assign(`${window.location.origin}/mainPopup.html`);
       return Promise.resolve(true);

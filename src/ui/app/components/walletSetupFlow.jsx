@@ -467,9 +467,15 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
               isDisabled={!accepted}
               minW="120px"
               data-testid="hw-import-continue"
-              onClick={() =>
-                openFlowWindow(TAB.hw, appendFlowReturnQuery('', returnTo))
-              }
+              onClick={async () => {
+                // Close first: if the popup survives losing focus, it must
+                // not be left sitting on a setup screen the window owns now.
+                onClose();
+                await openFlowWindow(
+                  TAB.hw,
+                  appendFlowReturnQuery('', returnTo)
+                );
+              }}
             >
               Continue
             </Button>

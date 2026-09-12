@@ -15,8 +15,15 @@
 export const transactionInputIndex = (input) => {
   const idx = input && typeof input.index === 'function' ? input.index() : input;
   if (typeof idx === 'number' && Number.isFinite(idx)) return idx;
-  if (idx != null && typeof idx.to_str === 'function') {
-    return parseInt(idx.to_str(), 10);
+  if (
+    idx &&
+    typeof idx === 'object' &&
+    typeof /** @type {{ to_str?: () => string }} */ (idx).to_str === 'function'
+  ) {
+    return parseInt(
+      /** @type {{ to_str: () => string }} */ (idx).to_str(),
+      10
+    );
   }
   const parsed = parseInt(String(idx), 10);
   return Number.isFinite(parsed) ? parsed : 0;

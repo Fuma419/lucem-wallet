@@ -27,6 +27,9 @@ export const LEDGER_CHOOSER_CANCELLED_MESSAGE =
 export const LEDGER_BLE_NOT_LEDGER_MESSAGE =
   'That Bluetooth device is not a Ledger, or the Cardano app is not open. Unlock the Ledger, open Cardano so it fills the screen, then pick the Ledger in the list.';
 
+export const LEDGER_WITNESS_ASSEMBLE_MESSAGE =
+  'Ledger signed the transaction, but Lucem could not attach the signature. Refresh and try once more. This is a Lucem bug, not a Ledger problem.';
+
 const LEDGER_LOCKED_MESSAGE =
   'The Ledger is locked. Unlock it, open the Cardano app, then try again.';
 
@@ -72,13 +75,26 @@ const isAlreadyFriendly = (text) => {
   if (text === LEDGER_APP_NOT_OPEN_MESSAGE) return true;
   if (text === LEDGER_CHOOSER_CANCELLED_MESSAGE) return true;
   if (text === LEDGER_BLE_NOT_LEDGER_MESSAGE) return true;
+  if (text === LEDGER_WITNESS_ASSEMBLE_MESSAGE) return true;
+  if (text.startsWith('Ledger signed the transaction, but Lucem')) return true;
+  if (text.startsWith('Could not wrap the Ledger')) return true;
+  if (text.startsWith('Could not attach the Ledger signature')) return true;
   if (text.startsWith('This Ledger Cardano app is too old')) return true;
   if (text.includes('open the Cardano app')) return true;
   return false;
 };
 
 export const formatLedgerError = (err, fallback) => {
-  const text = err && err.message ? String(err.message) : err ? String(err) : '';
+  let text = err && err.message ? String(err.message) : err ? String(err) : '';
+  if (
+    /expected instance of/i.test(text) &&
+    /Could not |Ledger signed the transaction, but Lucem/i.test(text)
+  ) {
+    text = text.replace(
+      /expected instance of \w+/gi,
+      'a Cardano type mismatch'
+    );
+  }
   if (isAlreadyFriendly(text)) return text;
 
   const code = ledgerStatusCode(err);
@@ -95,6 +111,17 @@ export const formatLedgerError = (err, fallback) => {
     /cancelled the requestDevice|Must be handling a user gesture/i.test(text)
   ) {
     return LEDGER_CHOOSER_CANCELLED_MESSAGE;
+  }
+  if (/expected instance of/i.test(text)) {
+    if (
+      /Could not |Ledger signed the transaction, but Lucem/i.test(text)
+    ) {
+      return text.replace(
+        /expected instance of \w+/gi,
+        'a Cardano type mismatch'
+      );
+    }
+    return LEDGER_WITNESS_ASSEMBLE_MESSAGE;
   }
   if (text && !/please consult|general error 0x/i.test(text)) {
     return text;

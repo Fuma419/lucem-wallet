@@ -70,6 +70,41 @@ describe('wrapLedgerVkeyWitness', () => {
     const witness = wrapLedgerVkeyWitness(CSL, publicKey, sig);
     expect(witness.to_bytes().length).toBeGreaterThan(0);
   });
+
+  test('converts a Bip32PublicKey and the witness can go on a tx', () => {
+    const accountPub = CSL.Bip32PrivateKey.from_bip39_entropy(
+      Buffer.alloc(32, 0x42),
+      Buffer.alloc(0)
+    )
+      .derive(0x80000000 + 1852)
+      .derive(0x80000000 + 1815)
+      .derive(0x80000000)
+      .to_public();
+    const child = accountPub.derive(0).derive(0);
+    const witness = wrapLedgerVkeyWitness(CSL, child, '11'.repeat(64));
+    const vkeys = CSL.Vkeywitnesses.new();
+    vkeys.add(witness);
+    const ws = CSL.TransactionWitnessSet.new();
+    ws.set_vkeys(vkeys);
+    const body = CSL.TransactionBody.new_tx_body(
+      CSL.TransactionInputs.new(),
+      CSL.TransactionOutputs.new(),
+      CSL.BigNum.from_str('170000')
+    );
+    expect(() => CSL.Transaction.new(body, ws)).not.toThrow();
+  });
+
+  test('names the Vkey wrap step instead of a minified class', () => {
+    expect(() =>
+      wrapLedgerVkeyWitness(
+        CSL,
+        { as_bytes: () => new Uint8Array(4) },
+        '11'.repeat(64)
+      )
+    ).toThrow(
+      /Could not read the Ledger payment key|Could not wrap the Ledger payment key/
+    );
+  });
 });
 
 describe('credentialParams', () => {
@@ -149,5 +184,20 @@ describe('signing.js uses Vkey wrap', () => {
     );
     expect(src).toMatch(/wrapLedgerVkeyWitness\(/);
     expect(src).not.toMatch(/Vkeywitness\.new\(\s*publicKey/);
+  });
+});
+
+describe('assembleSignedTransaction skips non-AuxiliaryData', () => {
+  test('wallet.ts only passes aux when it has to_bytes', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '../../../../api/extension/wallet.ts'),
+      'utf8'
+    );
+    expect(src).toMatch(/typeof aux\.to_bytes === 'function'/);
+    expect(src).not.toMatch(
+      /Transaction\.new\(\s*unsignedTx\.body\(\),\s*witnessSet,\s*unsignedTx\.auxiliary_data\(\)/
+    );
   });
 });

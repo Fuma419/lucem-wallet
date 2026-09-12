@@ -595,29 +595,36 @@ export const signTxHW = async (
         tagCborSets: hasTaggedSets(tx),
       },
     });
-    const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
-    const vkeys = Loader.Cardano.Vkeywitnesses.new();
-    result.witnesses.forEach((witness) => {
-      const role = witness.path[3];
-      const addrIdx = witness.path[4] != null ? witness.path[4] : 0;
-      if (role === 0 || role === 1 || role === 2 || role === ADDRESS_ROLE.drep) {
-        const publicKey = Loader.Cardano.Bip32PublicKey.from_hex(
-          account.publicKey
-        )
-          .derive(role === 2 ? 2 : role)
-          .derive(role === 2 ? 0 : addrIdx)
-          .to_raw_key();
-        vkeys.add(
-          wrapLedgerVkeyWitness(
-            Loader.Cardano,
-            publicKey,
-            witness.witnessSignatureHex
+    try {
+      const witnessSet = Loader.Cardano.TransactionWitnessSet.new();
+      const vkeys = Loader.Cardano.Vkeywitnesses.new();
+      result.witnesses.forEach((witness) => {
+        const role = witness.path[3];
+        const addrIdx = witness.path[4] != null ? witness.path[4] : 0;
+        if (role === 0 || role === 1 || role === 2 || role === ADDRESS_ROLE.drep) {
+          const publicKey = Loader.Cardano.Bip32PublicKey.from_hex(
+            account.publicKey
           )
-        );
-      }
-    });
-    witnessSet.set_vkeys(vkeys);
-    return witnessSet;
+            .derive(role === 2 ? 2 : role)
+            .derive(role === 2 ? 0 : addrIdx)
+            .to_raw_key();
+          vkeys.add(
+            wrapLedgerVkeyWitness(
+              Loader.Cardano,
+              publicKey,
+              witness.witnessSignatureHex
+            )
+          );
+        }
+      });
+      witnessSet.set_vkeys(vkeys);
+      return witnessSet;
+    } catch (/** @type {any} */ err) {
+      const detail = err && err.message ? String(err.message) : String(err);
+      throw new Error(
+        `Ledger signed the transaction, but Lucem could not attach the signature. ${detail}`
+      );
+    }
   }
   if (hw.device === HW.keystone) {
     throw new Error('Keystone signing runs in the Keystone signing tab.');

@@ -91,6 +91,11 @@ browser. It best-effort opens the toolbar popup, then removes the tab.
 `closeCurrentTab` / `openMainRoute` from a flow tab do the same — they
 must not assign `mainPopup.html` in the browser.
 
+Users who want Lucem **in the browser** use the **PWA / web app**. That
+build is first-class: the wallet lives in the tab, hardware flows stay in
+the same tab, and finishing a flow returns to `/wallet`. Do not treat the
+PWA as a fallback for the extension popup.
+
 ### Platform adapter pattern
 
 `src/platform/index.js` auto-selects the correct adapter at runtime:

@@ -45,6 +45,8 @@ describe('standing rule', () => {
     expect(rule).toMatch(/never.*browser window/i);
     expect(rule).toMatch(/mainPopup\.html/);
     expect(rule).toMatch(/temporary tab/);
+    expect(rule).toMatch(/PWA \/ web app/);
+    expect(rule).toMatch(/first-class product/);
   });
 });
 
@@ -65,10 +67,13 @@ describe('openFlowWindow never opens a window', () => {
 });
 
 describe('finishFlowWindow (web)', () => {
-  test('stays in the tab', () => {
-    expect(read('platform/web.js')).toMatch(
+  test('stays in the tab — the PWA is the in-browser wallet', () => {
+    const webSrc = read('platform/web.js');
+    expect(webSrc).toMatch(
       /finishFlowWindow: \(path = '\/wallet'\) =>\s*webAdapter\.navigation\.openMainRoute\(path\)/
     );
+    expect(webSrc).toMatch(/PWA is the in-browser product/);
+    expect(webSrc).not.toMatch(/window\.open\(/);
   });
 });
 

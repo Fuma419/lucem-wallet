@@ -1,9 +1,15 @@
 ---
-description: Lucem never opens a browser window or the main wallet in the browser
+description: Extension never opens a browser window; the PWA is the in-browser app
 alwaysApply: true
 ---
 
 # No browser windows (extension)
+
+This rule is for the **Chrome extension**. The **PWA / web app** is the
+supported way to use Lucem in a browser tab — that is a first-class product,
+not a leftover.
+
+## Extension
 
 Lucem **never** opens a new browser window (`chrome.windows.create` with
 `type: 'normal'`). The main wallet (`mainPopup.html`) **never** loads in a
@@ -21,3 +27,10 @@ browser tab or window.
 - Do not "return to the wallet" by assigning `mainPopup.html` in a tab.
   Hand back to the toolbar popup (`chrome.action.openPopup`) or tell the
   user to click the Lucem icon.
+
+## PWA / web app
+
+Users who want Lucem in the browser use the deployed web app. There the
+wallet **does** live in the tab: stay on `window.location`, keep flows in
+the same tab, and `finishFlowWindow` returns to `/wallet`. Do not open
+extra windows from the PWA either — navigate in place.

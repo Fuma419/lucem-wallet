@@ -22,6 +22,7 @@
     { "source": "/verify", "destination": "/mainPopup.html" },
     { "source": "/account", "destination": "/mainPopup.html" },
     { "source": "/import", "destination": "/mainPopup.html" },
+    { "source": "/ledger-sign", "destination": "/ledgerSign.html" },
     { "source": "/enable", "destination": "/internalPopup.html" },
     { "source": "/signTx", "destination": "/internalPopup.html" },
     { "source": "/signData", "destination": "/internalPopup.html" }

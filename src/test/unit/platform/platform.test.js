@@ -170,9 +170,10 @@ describe('platform/extension.js - openFlowWindow', () => {
     return created;
   };
 
-  test('hardware setup opens a wallet-sized window, never a browser tab', async () => {
-    const created = mockChrome();
-    const { FLOW_WINDOW } = require('../../../config/config');
+  test('hardware setup opens a temporary tab, never a new window', async () => {
+    const created = { id: 71, url: 'chrome-extension://ext/hwTab.html?from=/welcome' };
+    mockChrome();
+    global.chrome.tabs.create = jest.fn((opts, cb) => cb(created));
     const extAdapter = require('../../../platform/extension').default;
 
     const tab = await extAdapter.navigation.openFlowWindow(
@@ -180,13 +181,15 @@ describe('platform/extension.js - openFlowWindow', () => {
       '?from=/welcome'
     );
 
-    expect(tab).toEqual(created.tabs[0]);
-    expect(global.chrome.tabs.create).not.toHaveBeenCalled();
-    const opts = global.chrome.windows.create.mock.calls[0][0];
-    expect(opts.url).toBe('chrome-extension://ext/hwTab.html?from=/welcome');
-    expect(opts.type).toBe('normal');
-    expect(opts.width).toBe(FLOW_WINDOW.width);
-    expect(opts.height).toBe(FLOW_WINDOW.height);
+    expect(tab).toEqual(created);
+    expect(global.chrome.windows.create).not.toHaveBeenCalled();
+    expect(global.chrome.tabs.create).toHaveBeenCalledWith(
+      {
+        url: 'chrome-extension://ext/hwTab.html?from=/welcome',
+        active: true,
+      },
+      expect.any(Function)
+    );
   });
 
   test('leaving a flow marks the main UI as full-page so it is not letterboxed', () => {
@@ -213,11 +216,10 @@ describe('platform/extension.js - openFlowWindow', () => {
       'utf8'
     );
     const afterClose = extSrc.split('closeCurrentTab:')[1] || '';
-    expect(afterClose.split('},')[0]).toContain('mainPageUrl()');
-    // A wipe from the toolbar popup must stay pinned; from a flow window it
-    // must stay responsive.
+    expect(afterClose.split('},')[0]).toContain('finishFlowWindow');
+    // A wipe from a flow tab closes the tab; the toolbar popup reloads in place.
     expect(extSrc).toMatch(
-      /isFullPageView\(window\.location\.search\)\s*\?\s*mainPageUrl\(\)/
+      /isExtensionFlowTab\(\)[\s\S]{0,80}finishFlowWindow/
     );
   });
 });
@@ -236,11 +238,11 @@ describe('import abandon navigation', () => {
     expect(createPopupSrc).toContain('openExtensionWindow');
     expect(createPopupSrc).toContain('chrome.runtime.getURL');
     expect(createPopupSrc).toContain("type = 'popup'");
-    expect(createPopupSrc).toContain("'normal'");
+    expect(createPopupSrc).not.toContain("type: 'normal'");
     expect(createPopupSrc).not.toContain('chrome.tabs.create');
   });
 
-  test('hardware setup leaves the popup for a window, not a browser tab', () => {
+  test('hardware setup leaves the popup for a temporary tab, not a window', () => {
     const setupSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/components/walletSetupFlow.jsx'),
       'utf8'
@@ -288,13 +290,13 @@ describe('import abandon navigation', () => {
     expect(webSrc).not.toMatch(/location\.href = tab \+ '\.html'/);
   });
 
-  test('create/import success opens the wallet in the same window', () => {
+  test('create/import success stays in the popup or closes a leftover tab', () => {
     const createSrc = fs.readFileSync(
       path.join(__dirname, '../../../ui/app/tabs/createWallet.jsx'),
       'utf8'
     );
     expect(createSrc).toContain('Open Wallet');
-    expect(createSrc).toContain("openMainRoute('/wallet')");
+    expect(createSrc).toContain("finishFlowWindow('/wallet')");
     expect(createSrc).not.toContain('close this tab and continue with the extension');
     expect(createSrc).not.toMatch(/isExtension \? 'Close'/);
     const hwSrc = fs.readFileSync(

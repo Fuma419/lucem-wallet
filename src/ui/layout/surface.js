@@ -42,6 +42,7 @@ export function detectIsFullBleedWalletTab(doc) {
   return (
     !!doc.querySelector(`#${TAB.hw}`) ||
     !!doc.querySelector(`#${TAB.keystoneTx}`) ||
+    !!doc.querySelector(`#${TAB.ledgerSign}`) ||
     !!doc.querySelector(`#${TAB.createWallet}`)
   );
 }

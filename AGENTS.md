@@ -13,6 +13,7 @@ Lucem is a Cardano blockchain browser extension wallet (Chrome/Firefox/Edge) **a
 | `createWalletTab` | `src/ui/app/tabs/createWallet.jsx` | Full-page wallet creation flow |
 | `hwTab` | `src/ui/app/tabs/hw.jsx` | Hardware wallet connection (Ledger USB/BLE, Keystone QR) |
 | `keystoneTx` | `src/ui/app/tabs/keystoneTx.jsx` | Keystone air-gapped transaction signing |
+| `ledgerSign` | `src/ui/app/tabs/ledgerSign.jsx` | Ledger USB/BLE signing (temporary tab) |
 | `background` | `src/pages/Background/index.js` | Extension service worker (extension-only) |
 | `contentScript` | `src/pages/Content/index.js` | dApp connector bridge (extension-only) |
 | `injected` | `src/pages/Content/injected.js` | CIP-30 API injection (extension-only) |
@@ -50,14 +51,14 @@ Lucem is a Cardano blockchain browser extension wallet (Chrome/Firefox/Edge) **a
 Create and restore run **inside the toolbar popup** as SPA routes
 (`/generate`, `/verify`, `/account`, `/import` — see `FLOW_SETUP_PATHS`).
 
-`hwTab` and `keystoneTx` cannot: Chrome destroys an action popup the moment a
-WebHID / WebUSB / Web Bluetooth chooser takes focus, which surfaces as
-`User cancelled the requestDevice() chooser`. They open through
-`platform.navigation.openFlowWindow` — a wallet-sized `FLOW_WINDOW` **normal**
-window in the extension (not `type: popup`: Chrome cancels Web Bluetooth /
-WebHID choosers there), the same tab on web. **Do not** route them through
-`createTab` unless pairing itself is broken; dumping into the browsing
-session is a worse experience.
+`hwTab`, `keystoneTx`, and `ledgerSign` cannot: Chrome destroys an action
+popup the moment a WebHID / WebUSB / Web Bluetooth chooser takes focus,
+which surfaces as `User cancelled the requestDevice() chooser`. They open
+through `platform.navigation.openFlowWindow` as a **temporary tab** in the
+existing browser window. **Never** `chrome.windows.create({ type: 'normal' })`
+and **never** load `mainPopup.html` (the main wallet) in the browser. The
+tab must finish with `finishFlowWindow` (`tabs.remove` + best-effort
+`chrome.action.openPopup`).
 
 ### Where Ledger signing runs (extension)
 
@@ -67,10 +68,10 @@ before a chooser: in the toolbar popup and the dApp prompt it is `false`.
 When it is and Chrome has no remembered device, `ConfirmModal` calls
 `onHwLedgerWindow`, and the page stores the built tx
 (`openLedgerSignTxTab` → `STORAGE.ledgerTxPending`) and opens
-`/ledger-sign` (`src/ui/app/pages/ledgerSign.jsx`) in a flow window, which
-pairs, signs, and submits. A **remembered** device still signs in place — no
-window. dApp `signTx` / `signData` deliberately opt out: a flow window cannot
-return a witness to the caller.
+`ledgerSign.html` (`src/ui/app/pages/ledgerSign.jsx`) in a temporary tab,
+which pairs, signs, and submits. A **remembered** device still signs in
+place — no tab. dApp `signTx` / `signData` deliberately opt out: a tab
+cannot return a witness to the caller.
 
 Ledger account import never trusts the exported key on its own — see
 `src/api/extension/ledger-account.js`. Any 64 bytes parse as a
@@ -84,17 +85,16 @@ are `ledger-<id>-<slot>-k<key fingerprint>` (`indexToHw` still reads the older
 whether the unlocked wallet is already stored, and `signTxHW` checks the
 device still owns `account.publicKey` before signing.
 
-A flow window must **finish by closing itself** (`finishFlowWindow`), not by
-navigating to the wallet: that left a second, browser-sized wallet window
-behind after pairing. It best-effort opens the toolbar popup on a surviving
-window first, and falls back to in-place navigation when it is not in a flow
-window (or would close the last one).
+A flow tab must **finish by closing itself** (`finishFlowWindow`), not by
+navigating to the wallet: that left the main Lucem app sitting in the
+browser. It best-effort opens the toolbar popup, then removes the tab.
+`closeCurrentTab` / `openMainRoute` from a flow tab do the same — they
+must not assign `mainPopup.html` in the browser.
 
-Leaving a full-page flow (`closeCurrentTab` / `openMainRoute`) loads
-`mainPopup.html?view=full`. That marker (`isFullPageView`) is the only way to
-tell a flow window or tab from the toolbar popup, and it keeps the layout
-responsive — without it `detectIsExtensionPopup` pins the document to
-`POPUP_WINDOW` and letterboxes a 533px wallet inside a full-size window.
+Users who want Lucem **in the browser** use the **PWA / web app**. That
+build is first-class: the wallet lives in the tab, hardware flows stay in
+the same tab, and finishing a flow returns to `/wallet`. Do not treat the
+PWA as a fallback for the extension popup.
 
 ### Platform adapter pattern
 

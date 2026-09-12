@@ -243,7 +243,7 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     );
     expect(keystoneTxSrc).toMatch(/data-testid="keystone-tx-error"/);
     expect(keystoneTxSrc).toMatch(/Copy error/);
-    expect(keystoneTxSrc).toMatch(/openMainRoute\('\/send'\)/);
+    expect(keystoneTxSrc).toMatch(/finishFlowWindow\(\)/);
     expect(keystoneTxSrc).toMatch(/assertKeystoneWitnessesCover/);
     expect(keystoneTxSrc).toMatch(/formatKeystoneSubmitError/);
     expect(keystoneTxSrc).not.toMatch(/} finally \{/);

@@ -1,14 +1,12 @@
 import {
   ERROR,
   EVENT,
-  FULL_PAGE_VIEW,
   HW,
   LOCAL_STORAGE,
   MAX_TOTAL_ACCOUNTS,
   NETWORK_ID,
   NETWORKD_ID_NUMBER,
   NODE,
-  POPUP,
   SENDER,
   STORAGE,
   TAB,
@@ -288,8 +286,9 @@ export const createTab = (tab, query = '') =>
   platform.navigation.createTab(tab, query);
 
 /**
- * Open a setup flow outside the toolbar popup without leaving the extension:
- * a wallet-sized window in the extension, the same tab on the web app.
+ * Open a setup flow the toolbar popup cannot host (device chooser). In the
+ * extension this is a temporary tab in the existing window — never a new
+ * window and never the main wallet page. On the web app it stays in-tab.
  */
 export const openFlowWindow = (page, query = '') =>
   typeof platform.navigation.openFlowWindow === 'function'
@@ -299,8 +298,8 @@ export const openFlowWindow = (page, query = '') =>
 export const closeCurrentTab = () => platform.navigation.closeCurrentTab();
 
 /**
- * Finish a flow window: close it and hand the user back to the toolbar popup
- * instead of leaving a second wallet window behind.
+ * Finish a temporary flow tab: close it and hand the user back to the
+ * toolbar popup. Never loads the main wallet in the browser.
  */
 export const finishFlowWindow = (path = '/wallet') =>
   typeof platform.navigation.finishFlowWindow === 'function'
@@ -359,7 +358,7 @@ export const clearKeystoneSignPayload = (signId) =>
   clearSignPayload(STORAGE.keystoneTxPending, signId);
 
 /**
- * Air-gapped Keystone: opens the QR flow in its own window (camera plus two
+ * Air-gapped Keystone: opens the QR flow in a temporary tab (camera plus two
  * QR steps outlive the toolbar popup). Payload stays until submit.
  */
 export const openKeystoneSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
@@ -384,13 +383,13 @@ export const takeLedgerSignPayload = (signId) =>
 export const clearLedgerSignPayload = (signId) =>
   clearSignPayload(STORAGE.ledgerTxPending, signId);
 
-/** Route for the Ledger signing step hosted inside the main popup SPA. */
+/** Route kept so the web app can still deep-link the same signing page. */
 export const LEDGER_SIGN_PATH = '/ledger-sign';
 
 /**
- * Hand a built transaction to a window that can pair a Ledger. Chrome cancels
- * the USB/Bluetooth chooser in the toolbar popup, so the device step has to
- * run in a `normal` window; it signs and submits there.
+ * Hand a built transaction to a temporary tab that can pair a Ledger. Chrome
+ * cancels the USB/Bluetooth chooser in the toolbar popup. The tab is a
+ * dedicated signing page — never `mainPopup.html`.
  */
 export const openLedgerSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
   const signId = await pushLedgerSignPayload({
@@ -399,10 +398,8 @@ export const openLedgerSignTxTab = async ({ txHex, keyHashes, partialSign }) => 
     partialSign: !!partialSign,
   });
   await openFlowWindow(
-    POPUP.main,
-    `?${FULL_PAGE_VIEW.param}=${FULL_PAGE_VIEW.value}` +
-      `&next=${encodeURIComponent(LEDGER_SIGN_PATH)}` +
-      `&signId=${encodeURIComponent(signId)}`
+    TAB.ledgerSign,
+    `?signId=${encodeURIComponent(signId)}`
   );
 };
 

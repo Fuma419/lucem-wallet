@@ -409,12 +409,14 @@ export const HardwareWalletModal = React.forwardRef((props, ref) => {
               {shouldOfferLedgerImport() ? (
                 <>
                   Connect a Ledger via USB or Bluetooth (Nano X, Flex, Stax, …),
-                  or a Keystone in two steps. Pairing opens a separate Lucem
-                  window, because Chrome closes this popup as soon as the device
-                  chooser appears. By default Lucem uses account 0 and Cardano
-                  standard derivation; use Advanced there for more accounts or
-                  Ledger-compatible keys. Scan Lucem&apos;s QR, then
-                  Keystone&apos;s QR (camera required for step 2).
+                  or a Keystone in two steps. Pairing opens a temporary tab,
+                  because Chrome closes this popup as soon as the device
+                  chooser appears. That tab closes when you finish — Lucem never
+                  opens a browser window or the main wallet in the browser. By
+                  default Lucem uses account 0 and Cardano standard derivation;
+                  use Advanced there for more accounts or Ledger-compatible
+                  keys. Scan Lucem&apos;s QR, then Keystone&apos;s QR (camera
+                  required for step 2).
                 </>
               ) : (
                 <>

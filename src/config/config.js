@@ -122,6 +122,7 @@ export const TAB = {
   hw: 'hwTab',
   createWallet: 'createWalletTab',
   keystoneTx: 'keystoneTx',
+  ledgerSign: 'ledgerSign',
 };
 
 export const HW = {

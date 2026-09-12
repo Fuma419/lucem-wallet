@@ -99,6 +99,7 @@ const options = {
     hwTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'hw.jsx'),
     createWalletTab: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'createWallet.jsx'),
     keystoneTx: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'keystoneTx.jsx'),
+    ledgerSign: path.join(__dirname, 'src', 'ui', 'app', 'tabs', 'ledgerSign.jsx'),
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
     contentScript: path.join(__dirname, 'src', 'pages', 'Content', 'index.js'),
     injected: path.join(__dirname, 'src', 'pages', 'Content', 'injected.js'),
@@ -301,6 +302,16 @@ const options = {
       template: path.join(__dirname, 'src', 'pages', 'Tab', 'keystoneTx.html'),
       filename: 'keystoneTx.html',
       chunks: ['keystoneTx'],
+      cache: false,
+      inject: 'head',
+      templateParameters: {
+        preloadImages,
+      },
+    }),
+    new HtmlWebpackPlugin({
+      template: path.join(__dirname, 'src', 'pages', 'Tab', 'ledgerSign.html'),
+      filename: 'ledgerSign.html',
+      chunks: ['ledgerSign'],
       cache: false,
       inject: 'head',
       templateParameters: {

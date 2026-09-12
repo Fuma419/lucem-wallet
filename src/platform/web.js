@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { POPUP_WINDOW } from '../config/config';
 
 const DB_NAME = 'lucem-wallet';
 const STORE_NAME = 'storage';
@@ -123,11 +122,7 @@ const webAdapter = {
 
   navigation: {
     createPopup: async (popup) => {
-      window.open(
-        popup + '.html',
-        '_blank',
-        `width=${POPUP_WINDOW.width},height=${POPUP_WINDOW.height}`
-      );
+      window.location.assign(`${window.location.origin}/${popup}.html`);
       return { id: Date.now(), windowId: Date.now() };
     },
 
@@ -141,8 +136,9 @@ const webAdapter = {
     },
 
     /**
-     * The web app has no toolbar popup to escape, so setup flows stay in this
-     * tab rather than opening a window a popup blocker could eat.
+     * The PWA is the in-browser product: setup flows stay in this tab.
+     * Never open a second window — a popup blocker would eat it, and the
+     * wallet already lives here.
      */
     openFlowWindow: (page, query = '') => {
       window.location.assign(
@@ -154,7 +150,7 @@ const webAdapter = {
     /** A browser tab always anchors the device chooser. */
     canHostDeviceChooser: async () => true,
 
-    /** The web app has no window to close — flows stay in this tab. */
+    /** Stay in this tab and return to the wallet route. */
     finishFlowWindow: (path = '/wallet') =>
       webAdapter.navigation.openMainRoute(path),
 

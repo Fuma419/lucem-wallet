@@ -7,6 +7,14 @@ import {
 import Loader from '../../../api/loader';
 import { STORAGE } from '../../../config/config';
 
+// See src/test/unit/api/extension/index.test.js: createWallet's sub-account
+// scan would otherwise hit Koios live. No history means it stops at account 0.
+jest.mock('../../../api/util', () => ({
+  __esModule: true,
+  ...jest.requireActual('../../../api/util'),
+  koiosRequest: jest.fn().mockResolvedValue([]),
+}));
+
 const harden = (num) => {
   return 0x80000000 + num;
 };

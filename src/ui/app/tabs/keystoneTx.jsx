@@ -16,7 +16,7 @@ import LogoWhite from '../../../assets/img/bannerBlack.png';
 import backgroundGreenWebp from '../../../assets/img/background-green.webp';
 import {
   clearKeystoneSignPayload,
-  closeCurrentTab,
+  finishFlowWindow,
   getCurrentAccount,
   getUtxos,
   indexToHw,
@@ -158,7 +158,7 @@ const App = () => {
     });
     resetSend();
     setRoute('/wallet');
-    setTimeout(() => closeCurrentTab(), 2500);
+    setTimeout(() => finishFlowWindow(), 2500);
   };
 
   const onSignatureScan = async ({ type, cbor }) => {

@@ -298,6 +298,15 @@ export const openFlowWindow = (page, query = '') =>
 
 export const closeCurrentTab = () => platform.navigation.closeCurrentTab();
 
+/**
+ * Finish a flow window: close it and hand the user back to the toolbar popup
+ * instead of leaving a second wallet window behind.
+ */
+export const finishFlowWindow = (path = '/wallet') =>
+  typeof platform.navigation.finishFlowWindow === 'function'
+    ? platform.navigation.finishFlowWindow(path)
+    : platform.navigation.closeCurrentTab();
+
 const SIGN_PAYLOAD_TTL_MS = 2 * 60 * 60 * 1000;
 
 function pruneSignPayloads(prev) {

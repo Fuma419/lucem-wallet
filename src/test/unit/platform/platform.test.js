@@ -246,7 +246,7 @@ describe('import abandon navigation', () => {
       'utf8'
     );
     expect(setupSrc).toMatch(
-      /openFlowWindow\(TAB\.hw, appendFlowReturnQuery\('', returnTo\)\)/
+      /openFlowWindow\(\s*TAB\.hw,\s*appendFlowReturnQuery\('', returnTo\)\s*\)/
     );
     expect(setupSrc).not.toMatch(/createTab\(/);
     const apiSrc = fs.readFileSync(

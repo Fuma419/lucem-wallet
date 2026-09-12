@@ -37,8 +37,8 @@ import LedgerLogo from '../../../assets/img/ledgerLogo.svg';
 import KeystoneLogo from '../../../assets/img/imgKeystone.svg';
 import { ChevronDownIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import {
-  closeCurrentTab,
   createHWAccounts,
+  finishFlowWindow,
   getHwAccounts,
   getStorage,
   indexToHw,
@@ -1564,7 +1564,8 @@ const SuccessAndClose = () => {
         fontSize="sm"
         color="whiteAlpha.800"
       >
-        You can now open your wallet.
+        This window closes and your wallet opens in the Lucem toolbar popup.
+        If it does not appear, click the Lucem icon.
       </Text>
       <Button
         type="button"
@@ -1577,7 +1578,7 @@ const SuccessAndClose = () => {
         display="inline-flex"
         alignItems="center"
         justifyContent="center"
-        onClick={() => closeCurrentTab()}
+        onClick={() => finishFlowWindow()}
       >
         Open Wallet
       </Button>

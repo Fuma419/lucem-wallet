@@ -154,7 +154,7 @@ describe('wallet tray accounts vs settings FABs', () => {
     // Exit revert (#181) accidentally dropped it and left only Close.
     expect(setupSrc).toContain('data-testid="hw-import-continue"');
     expect(setupSrc).toMatch(
-      /openFlowWindow\(\s*TAB\.hw,\s*appendFlowReturnQuery\('', returnTo\)\)/
+      /openFlowWindow\(\s*TAB\.hw,\s*appendFlowReturnQuery\('', returnTo\)\s*\)/
     );
     expect(setupSrc).toMatch(
       /HardwareWalletModal[\s\S]*hw-import-continue[\s\S]*Continue/

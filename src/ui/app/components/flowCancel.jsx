@@ -61,7 +61,11 @@ export function readFlowReturnPath(
 
 async function openReturnRoute(path) {
   const safe = sanitizeFlowReturnPath(path) || '/wallet';
-  if (typeof platform.navigation.openMainRoute === 'function') {
+  // In a flow window (HW pairing) this closes the window and hands back to
+  // the toolbar popup; elsewhere it navigates in place.
+  if (typeof platform.navigation.finishFlowWindow === 'function') {
+    await platform.navigation.finishFlowWindow(safe);
+  } else if (typeof platform.navigation.openMainRoute === 'function') {
     await platform.navigation.openMainRoute(safe);
   } else {
     await platform.navigation.closeCurrentTab();

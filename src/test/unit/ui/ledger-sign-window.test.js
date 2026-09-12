@@ -60,6 +60,9 @@ describe('ledger sign session hand-off', () => {
     expect(indexSrc).toMatch(
       /clearSignPayload\(STORAGE\.ledgerTxPending, signId\)/
     );
+    expect(indexSrc).toMatch(/export const writeLedgerSignResult/);
+    expect(indexSrc).toMatch(/export const waitForLedgerSignResult/);
+    expect(indexSrc).toMatch(/mode: mode === 'witness' \? 'witness' : 'submit'/);
   });
 });
 
@@ -102,33 +105,37 @@ describe('pages that can hand off', () => {
     );
   });
 
-  test('dApp prompts do not, since the window cannot return a witness', () => {
-    expect(read('ui/app/pages/signTx.jsx')).not.toMatch(/onHwLedgerWindow/);
+  test('dApp signTx hands Ledger pairing to a witness tab; signData stays blocked', () => {
+    expect(read('ui/app/pages/signTx.jsx')).toMatch(/onHwLedgerWindow/);
+    expect(read('ui/app/pages/signTx.jsx')).toMatch(/mode: 'witness'/);
+    expect(read('ui/app/pages/signTx.jsx')).toMatch(/waitForLedgerSignResult/);
     expect(read('ui/app/pages/signData.jsx')).not.toMatch(/onHwLedgerWindow/);
   });
 
-  test('collateral does not, since it needs the submitted hash back', () => {
+  test('collateral hands off because the toolbar popup is destroyed', () => {
     const src = read('ui/app/components/transactionBuilder.jsx');
     const collateralIdx = src.indexOf('<Box>Collateral</Box>');
     expect(collateralIdx).toBeGreaterThan(-1);
-    const collateralSrc = src.slice(collateralIdx, collateralIdx + 1200);
-    expect(collateralSrc).not.toMatch(/onHwLedgerWindow/);
+    const collateralSrc = src.slice(collateralIdx, collateralIdx + 1800);
+    expect(collateralSrc).toMatch(/onHwLedgerWindow/);
+    expect(collateralSrc).toMatch(/purpose: 'collateral'/);
   });
 });
 
 describe('ledger signing page', () => {
   const src = read('ui/app/pages/ledgerSign.jsx');
 
-  test('pairs from the click, then signs and submits', () => {
+  test('pairs from the click, then signs and submits or returns a witness', () => {
     expect(src).toMatch(/takeLedgerSignPayload/);
     expect(src).toMatch(/pickLedgerUsbDevice/);
     expect(src).toMatch(/pickLedgerBluetoothDevice/);
-    expect(src).toMatch(/clearLedgerSignPayload/);
-    // signAndSubmitHW rebuilds the body from the tx, so it needs the CSL
-    // object — the stored hex would throw on `.body()`.
-    expect(src).toMatch(
-      /Transaction\.from_bytes\([\s\S]{0,120}\)\s*\);\s*await signAndSubmitHW\(unsignedTx, \{/
-    );
+    expect(src).toMatch(/writeLedgerSignResult/);
+    expect(src).toMatch(/signTxHW\(/);
+    expect(src).toMatch(/signAndSubmitHW\(unsignedTx/);
+    expect(src).toMatch(/mode === 'witness'/);
+    expect(src).toMatch(/purpose === 'collateral'/);
+    expect(src).toMatch(/setCollateral/);
+    expect(src).toMatch(/closeLedgerApp/);
     // The chooser must open from the click, before any await on a spinner.
     expect(src.indexOf('pickLedgerUsbDevice(')).toBeLessThan(
       src.indexOf('setPhase(Phase.signing)')

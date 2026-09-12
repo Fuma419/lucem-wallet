@@ -40,7 +40,9 @@ const SignData = ({ request, controller }) => {
   const getAccount = async () => {
     const currentAccount = await resolveCip30Account(request.origin);
     if (isHW(currentAccount.index)) {
-      setError('Hardware wallets cannot sign data yet.');
+      setError(
+        'Hardware wallets cannot sign CIP-30 messages in Lucem yet. Use a software account, or sign the transaction instead of a message.'
+      );
     }
     setAccount(currentAccount);
   };

@@ -27,7 +27,6 @@ import {
   PoolOwnerType,
   PoolRewardAccountType,
   RelayType,
-  CredentialParamsType,
   TransactionSigningMode,
   TxAuxiliaryDataType,
   TxOutputDestinationType,
@@ -42,6 +41,15 @@ import {
   txBodyTtl,
   txBodyValidityStart,
 } from './tx/csl-tx-accessors';
+import {
+  certificateToLedger,
+  credentialParams,
+  cslAssetNameHex,
+  cslMintPolicyTokens,
+  ledgerNetworkForWallet,
+  relayDnsName,
+  unitIntervalToLedger,
+} from './tx/ledger-encode';
 
 function isExtensionRuntime() {
   return (
@@ -681,7 +689,7 @@ export const minAdaRequired = async (output, coinsPerUtxoWord) => {
   return Loader.Cardano.min_ada_for_output(output, dataCost).to_str();
 };
 
-const outputsToLedger = (outputs, address, index) => {
+const outputsToLedger = (outputs, address, index, ownedDestinations = []) => {
   const ledgerOutputs = [];
   for (let i = 0; i < outputs.len(); i++) {
     const output = outputs.get(i);
@@ -698,7 +706,7 @@ const outputsToLedger = (outputs, address, index) => {
           const assetName = assets.keys().get(k);
           const amount = assets.get(assetName).to_str();
           tokens.push({
-            assetNameHex: assetName.to_hex(),
+            assetNameHex: cslAssetNameHex(assetName),
             amount,
           });
         }
@@ -715,36 +723,43 @@ const outputsToLedger = (outputs, address, index) => {
     const outputAddress = Buffer.from(output.address().to_bytes()).toString(
       'hex'
     );
-    const destination =
-      outputAddress == address
-        ? {
-            type: TxOutputDestinationType.DEVICE_OWNED,
+    const owned =
+      (ownedDestinations || []).find(
+        (row) => row && row.addressHex === outputAddress
+      ) || (outputAddress == address ? { path: null } : null);
+    const spendingPath =
+      owned && Array.isArray(owned.path)
+        ? owned.path
+        : [
+            HARDENED + 1852,
+            HARDENED + 1815,
+            HARDENED + index,
+            0,
+            0,
+          ];
+    const destination = owned
+      ? {
+          type: TxOutputDestinationType.DEVICE_OWNED,
+          params: {
+            type: AddressType.BASE_PAYMENT_KEY_STAKE_KEY,
             params: {
-              type: AddressType.BASE_PAYMENT_KEY_STAKE_KEY,
-              params: {
-                spendingPath: [
-                  HARDENED + 1852,
-                  HARDENED + 1815,
-                  HARDENED + index,
-                  0,
-                  0,
-                ],
-                stakingPath: [
-                  HARDENED + 1852,
-                  HARDENED + 1815,
-                  HARDENED + index,
-                  2,
-                  0,
-                ],
-              },
+              spendingPath,
+              stakingPath: [
+                HARDENED + 1852,
+                HARDENED + 1815,
+                HARDENED + index,
+                2,
+                0,
+              ],
             },
-          }
-        : {
-            type: TxOutputDestinationType.THIRD_PARTY,
-            params: {
-              addressHex: outputAddress,
-            },
-          };
+          },
+        }
+      : {
+          type: TxOutputDestinationType.THIRD_PARTY,
+          params: {
+            addressHex: outputAddress,
+          },
+        };
     const { datum, isBabbage, referenceScriptHex } = ledgerOutputDatum(output);
     const outputRes = isBabbage
       ? {
@@ -810,7 +825,11 @@ const cslVoterToLedger = (voter, keys) => {
   const keyHashHex = keyHash ? bytesToHex(keyHash) : null;
 
   if (kind === 2) {
-    if (keyHashHex && keys?.drep?.hash === keyHashHex && keys.drep.path) {
+    if (
+      keyHashHex &&
+      keys?.drep?.path &&
+      String(keys.drep.hash || '').toLowerCase() === keyHashHex.toLowerCase()
+    ) {
       return { type: LEDGER_VOTER.DREP_KEY_PATH, keyPath: keys.drep.path };
     }
     if (!keyHashHex) {
@@ -839,7 +858,11 @@ const cslVoterToLedger = (voter, keys) => {
     };
   }
   if (kind === 4) {
-    if (keyHashHex && keys?.stake?.hash === keyHashHex && keys.stake.path) {
+    if (
+      keyHashHex &&
+      keys?.stake?.path &&
+      String(keys.stake.hash || '').toLowerCase() === keyHashHex.toLowerCase()
+    ) {
       return { type: LEDGER_VOTER.STAKE_POOL_KEY_PATH, keyPath: keys.stake.path };
     }
     if (!keyHashHex) {
@@ -908,17 +931,26 @@ export const txToLedger = async (tx, network, keys, address, index) => {
 
   let signingMode = TransactionSigningMode.ORDINARY_TRANSACTION;
   const inputs = tx.body().inputs();
+  const inputPaths = Array.isArray(keys.inputPaths) ? keys.inputPaths : [];
+  const ownedDestinations = Array.isArray(keys.ownedDestinations)
+    ? keys.ownedDestinations
+    : [];
   const ledgerInputs = [];
   for (let i = 0; i < inputs.len(); i++) {
     const input = inputs.get(i);
     ledgerInputs.push({
       txHashHex: Buffer.from(input.transaction_id().to_bytes()).toString('hex'),
       outputIndex: transactionInputIndex(input),
-      path: keys.payment.path, // needed to include payment key witness if available
+      path: inputPaths[i] || keys.payment.path,
     });
   }
 
-  const ledgerOutputs = outputsToLedger(tx.body().outputs(), address, index);
+  const ledgerOutputs = outputsToLedger(
+    tx.body().outputs(),
+    address,
+    index,
+    ownedDestinations
+  );
 
   let ledgerCertificates = null;
   const certificates = tx.body().certs();
@@ -926,77 +958,18 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     ledgerCertificates = [];
     for (let i = 0; i < certificates.len(); i++) {
       const cert = certificates.get(i);
+      const mapped = certificateToLedger(cert, keys);
+      if (mapped) {
+        ledgerCertificates.push(mapped);
+        continue;
+      }
+      if (cert.kind() !== 3) {
+        throw new Error(
+          `This transaction has a certificate Lucem cannot sign on Ledger yet (kind ${cert.kind()}).`
+        );
+      }
       const certificate = {};
-      if (cert.kind() === 0) {
-        const credential = cert.as_stake_registration().stake_credential();
-        certificate.type = CertificateType.STAKE_REGISTRATION;
-        if (credential.kind() === 0) {
-          certificate.params = {
-            stakeCredential: {
-              type: CredentialParamsType.KEY_PATH,
-              keyPath: keys.stake.path,
-            },
-          };
-        } else {
-          const scriptHash = Buffer.from(
-            credential.to_scripthash().to_bytes()
-          ).toString('hex');
-          certificate.params = {
-            stakeCredential: {
-              type: CredentialParamsType.SCRIPT_HASH,
-              scriptHash,
-            },
-          };
-        }
-      } else if (cert.kind() === 1) {
-        const credential = cert.as_stake_deregistration().stake_credential();
-        certificate.type = CertificateType.STAKE_DEREGISTRATION;
-        if (credential.kind() === 0) {
-          certificate.params = {
-            stakeCredential: {
-              type: CredentialParamsType.KEY_PATH,
-              keyPath: keys.stake.path,
-            },
-          };
-        } else {
-          const scriptHash = Buffer.from(
-            credential.to_scripthash().to_bytes()
-          ).toString('hex');
-          certificate.params = {
-            stakeCredential: {
-              type: CredentialParamsType.SCRIPT_HASH,
-              scriptHash,
-            },
-          };
-        }
-      } else if (cert.kind() === 2) {
-        const delegation = cert.as_stake_delegation();
-        const credential = delegation.stake_credential();
-        const poolKeyHashHex = Buffer.from(
-          delegation.pool().to_bytes()
-        ).toString('hex');
-        certificate.type = CertificateType.STAKE_DELEGATION;
-        if (credential.kind() === 0) {
-          certificate.params = {
-            stakeCredential: {
-              type: CredentialParamsType.KEY_PATH,
-              keyPath: keys.stake.path,
-            },
-          };
-        } else {
-          const scriptHash = Buffer.from(
-            credential.to_scripthash().to_bytes()
-          ).toString('hex');
-          certificate.params = {
-            stakeCredential: {
-              type: CredentialParamsType.SCRIPT_HASH,
-              scriptHash,
-            },
-          };
-        }
-        certificate.params.poolKeyHashHex = poolKeyHashHex;
-      } else if (cert.kind() === 3) {
-        const params = cert.as_pool_registration().pool_params();
+      const params = cert.as_pool_registration().pool_params();
         certificate.type = CertificateType.STAKE_POOL_REGISTRATION;
         const owners = params.pool_owners();
         const poolOwners = [];
@@ -1034,7 +1007,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
             const type = RelayType.SINGLE_HOST_HOSTNAME;
             const singleHostName = relay.as_single_host_name();
             const portNumber = singleHostName.port();
-            const dnsName = singleHostName.dns_name().record();
+            const dnsName = relayDnsName(singleHostName.dns_name());
             ledgerRelays.push({
               type,
               params: { portNumber, dnsName },
@@ -1042,7 +1015,7 @@ export const txToLedger = async (tx, network, keys, address, index) => {
           } else if (relay.kind() === 2) {
             const type = RelayType.MULTI_HOST;
             const multiHostName = relay.as_multi_host_name();
-            const dnsName = multiHostName.dns_name();
+            const dnsName = relayDnsName(multiHostName.dns_name());
             ledgerRelays.push({
               type,
               params: { dnsName },
@@ -1100,16 +1073,12 @@ export const txToLedger = async (tx, network, keys, address, index) => {
           vrfKeyHashHex,
           pledge,
           cost,
-          margin: {
-            numerator: margin.start().to_str(),
-            denominator: margin.end().to_str(),
-          },
+          margin: unitIntervalToLedger(margin),
           rewardAccount,
           poolOwners,
           relays: ledgerRelays,
           metadata,
         };
-      }
       ledgerCertificates.push(certificate);
     }
   }
@@ -1122,15 +1091,11 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     for (let i = 0; i < withdrawals.keys().len(); i++) {
       const withdrawal = { stakeCredential: {} };
       const rewardAddress = withdrawals.keys().get(i);
-      if (rewardAddress.payment_cred().kind() === 0) {
-        withdrawal.stakeCredential.type = CredentialParamsType.KEY_PATH;
-        withdrawal.stakeCredential.keyPath = keys.stake.path;
-      } else {
-        withdrawal.stakeCredential.type = CredentialParamsType.SCRIPT_HASH;
-        withdrawal.stakeCredential.scriptHash = Buffer.from(
-          rewardAddress.payment_cred().to_scripthash().to_bytes()
-        ).toString('hex');
-      }
+      withdrawal.stakeCredential = credentialParams(
+        rewardAddress.payment_cred(),
+        keys.stake && keys.stake.hash,
+        keys.stake && keys.stake.path
+      );
       withdrawal.amount = withdrawals.get(rewardAddress).to_str();
       ledgerWithdrawals.push(withdrawal);
     }
@@ -1154,17 +1119,8 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     mintBundle = [];
     for (let j = 0; j < mint.keys().len(); j++) {
       const policy = mint.keys().get(j);
-      const assets = mint.get(policy);
-      if (!assets) continue;
-      const tokens = [];
-      for (let k = 0; k < assets.keys().len(); k++) {
-        const assetName = assets.keys().get(k);
-        const amount = assets.get(assetName);
-        tokens.push({
-          assetNameHex: assetName.to_hex(),
-          amount: amount.to_str(),
-        });
-      }
+      const tokens = cslMintPolicyTokens(mint, policy);
+      if (!tokens.length) continue;
       sortCanonicallyInPlace(tokens, item => item.assetNameHex);
       mintBundle.push({
         policyIdHex: Buffer.from(policy.to_bytes()).toString('hex'),
@@ -1174,9 +1130,19 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     sortCanonicallyInPlace(mintBundle, item => item.policyIdHex);
   }
   additionalWitnessPaths = [];
-  if (keys.payment.path) additionalWitnessPaths.push(keys.payment.path);
-  if (keys.stake.path) additionalWitnessPaths.push(keys.stake.path);
-  if (keys.drep?.path) additionalWitnessPaths.push(keys.drep.path);
+  const seenPaths = new Set();
+  const pushWitnessPath = (path) => {
+    if (!Array.isArray(path) || path.length < 1) return;
+    const id = path.join('/');
+    if (seenPaths.has(id)) return;
+    seenPaths.add(id);
+    additionalWitnessPaths.push(path);
+  };
+  pushWitnessPath(keys.payment && keys.payment.path);
+  pushWitnessPath(keys.stake && keys.stake.path);
+  pushWitnessPath(keys.drep && keys.drep.path);
+  (keys.inputPaths || []).forEach(pushWitnessPath);
+  (keys.collateralPaths || []).forEach(pushWitnessPath);
 
   // Plutus
   const scriptDataHashHex = tx.body().script_data_hash()
@@ -1189,22 +1155,17 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     collateralInputs = [];
     for (let i = 0; i < coll.len(); i++) {
       const input = coll.get(i);
-      if (keys.payment.path) {
-        collateralInputs.push({
-          txHashHex: Buffer.from(input.transaction_id().to_bytes()).toString(
-            'hex'
-          ),
-          outputIndex: transactionInputIndex(input),
-          path: keys.payment.path, // needed to include payment key witness if available
-        });
-      } else {
-        collateralInputs.push({
-          txHashHex: Buffer.from(input.transaction_id().to_bytes()).toString(
-            'hex'
-          ),
-          outputIndex: transactionInputIndex(input),
-        });
-      }
+      const collPaths = Array.isArray(keys.collateralPaths)
+        ? keys.collateralPaths
+        : [];
+      const collPath = collPaths[i] || keys.payment.path || null;
+      collateralInputs.push({
+        txHashHex: Buffer.from(input.transaction_id().to_bytes()).toString(
+          'hex'
+        ),
+        outputIndex: transactionInputIndex(input),
+        path: collPath,
+      });
       signingMode = TransactionSigningMode.PLUTUS_TRANSACTION;
     }
   }
@@ -1213,7 +1174,12 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     if (tx.body().collateral_return()) {
       const outputs = Loader.Cardano.TransactionOutputs.new();
       outputs.add(tx.body().collateral_return());
-      const [out] = outputsToLedger(outputs, address, index);
+      const [out] = outputsToLedger(
+        outputs,
+        address,
+        index,
+        ownedDestinations
+      );
       return out;
     }
     return null;
@@ -1243,15 +1209,40 @@ export const txToLedger = async (tx, network, keys, address, index) => {
     const r = tx.body().required_signers();
     for (let i = 0; i < r.len(); i++) {
       const signer = Buffer.from(r.get(i).to_bytes()).toString('hex');
-      if (signer === keys.payment.hash) {
+      const signerLc = signer.toLowerCase();
+      const paymentPath =
+        (keys.paymentPathByHash && keys.paymentPathByHash[signerLc]) ||
+        (keys.payment &&
+        keys.payment.path &&
+        String(keys.payment.hash || '').toLowerCase() === signerLc
+          ? keys.payment.path
+          : null);
+      const stakePath =
+        keys.stake &&
+        keys.stake.path &&
+        String(keys.stake.hash || '').toLowerCase() === signerLc
+          ? keys.stake.path
+          : null;
+      const drepPath =
+        keys.drep &&
+        keys.drep.path &&
+        String(keys.drep.hash || '').toLowerCase() === signerLc
+          ? keys.drep.path
+          : null;
+      if (paymentPath) {
         requiredSigners.push({
           type: TxRequiredSignerType.PATH,
-          path: keys.payment.path,
+          path: paymentPath,
         });
-      } else if (signer === keys.stake.hash) {
+      } else if (stakePath) {
         requiredSigners.push({
           type: TxRequiredSignerType.PATH,
-          path: keys.stake.path,
+          path: stakePath,
+        });
+      } else if (drepPath) {
+        requiredSigners.push({
+          type: TxRequiredSignerType.PATH,
+          path: drepPath,
         });
       } else {
         requiredSigners.push({
@@ -1266,10 +1257,11 @@ export const txToLedger = async (tx, network, keys, address, index) => {
   const includeNetworkId = !!tx.body().network_id();
   const ledgerVotingProcedures = votingProceduresToLedger(tx.body(), keys);
 
+  const ledgerNet = ledgerNetworkForWallet(network);
   const ledgerTx = {
     network: {
-      protocolMagic: network === 1 ? 764824073 : 42,
-      networkId: network,
+      protocolMagic: ledgerNet.protocolMagic,
+      networkId: ledgerNet.networkId,
     },
     inputs: ledgerInputs,
     outputs: ledgerOutputs,

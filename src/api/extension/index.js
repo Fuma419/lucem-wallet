@@ -383,6 +383,52 @@ export const takeLedgerSignPayload = (signId) =>
 export const clearLedgerSignPayload = (signId) =>
   clearSignPayload(STORAGE.ledgerTxPending, signId);
 
+export const writeLedgerSignResult = async (signId, result) => {
+  const prev = (await getStorage(STORAGE.ledgerTxPending)) || {};
+  const row = prev[signId];
+  if (!row) return;
+  await setStorage({
+    [STORAGE.ledgerTxPending]: {
+      ...prev,
+      [signId]: { ...row, result },
+    },
+  });
+};
+
+export const waitForLedgerSignResult = async (
+  signId,
+  { timeoutMs = 15 * 60 * 1000, intervalMs = 400 } = {}
+) => {
+  if (!signId) {
+    throw new Error('Ledger signing session is missing.');
+  }
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const row = await takeLedgerSignPayload(signId);
+    const result = row && row.result;
+    if (result && (result.status === 'submitted' || result.status === 'signed')) {
+      await clearLedgerSignPayload(signId);
+      return result;
+    }
+    if (result && result.status === 'error') {
+      await clearLedgerSignPayload(signId);
+      throw new Error(result.message || 'Ledger signing failed.');
+    }
+    if (result && result.status === 'cancelled') {
+      await clearLedgerSignPayload(signId);
+      const err = /** @type {Error & { code?: string }} */ (
+        new Error('User declined')
+      );
+      err.code = 'UserDeclined';
+      throw err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(
+    'Ledger signing timed out. Confirm it on the device, then try again.'
+  );
+};
+
 /** Route kept so the web app can still deep-link the same signing page. */
 export const LEDGER_SIGN_PATH = '/ledger-sign';
 
@@ -390,17 +436,31 @@ export const LEDGER_SIGN_PATH = '/ledger-sign';
  * Hand a built transaction to a temporary tab that can pair a Ledger. Chrome
  * cancels the USB/Bluetooth chooser in the toolbar popup. The tab is a
  * dedicated signing page — never `mainPopup.html`.
+ * `mode: 'witness'` signs without submitting (CIP-30). `purpose: 'collateral'`
+ * records the reserved UTxO after submit because the toolbar popup is gone.
+ * @returns {Promise<string>} signId
  */
-export const openLedgerSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
+export const openLedgerSignTxTab = async ({
+  txHex,
+  keyHashes,
+  partialSign,
+  mode = 'submit',
+  purpose,
+  collateralLovelace,
+}) => {
   const signId = await pushLedgerSignPayload({
     txHex,
     keyHashes,
     partialSign: !!partialSign,
+    mode: mode === 'witness' ? 'witness' : 'submit',
+    purpose: purpose || null,
+    collateralLovelace: collateralLovelace || null,
   });
   await openFlowWindow(
     TAB.ledgerSign,
     `?signId=${encodeURIComponent(signId)}`
   );
+  return signId;
 };
 
 /** Whether this window can host a device chooser (see platform adapter). */

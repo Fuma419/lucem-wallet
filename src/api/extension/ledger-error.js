@@ -24,6 +24,9 @@ export const LEDGER_APP_NOT_OPEN_MESSAGE =
 export const LEDGER_CHOOSER_CANCELLED_MESSAGE =
   'Chrome closed the Bluetooth or USB picker. Unlock the Ledger, open the Cardano app, tap Confirm again, and pick the Ledger in the list.';
 
+export const LEDGER_BLE_NOT_LEDGER_MESSAGE =
+  'That Bluetooth device is not a Ledger, or the Cardano app is not open. Unlock the Ledger, open Cardano so it fills the screen, then pick the Ledger in the list.';
+
 const LEDGER_LOCKED_MESSAGE =
   'The Ledger is locked. Unlock it, open the Cardano app, then try again.';
 
@@ -68,6 +71,7 @@ const isAlreadyFriendly = (text) => {
   if (/^General error 0x/i.test(text)) return false;
   if (text === LEDGER_APP_NOT_OPEN_MESSAGE) return true;
   if (text === LEDGER_CHOOSER_CANCELLED_MESSAGE) return true;
+  if (text === LEDGER_BLE_NOT_LEDGER_MESSAGE) return true;
   if (text.startsWith('This Ledger Cardano app is too old')) return true;
   if (text.includes('open the Cardano app')) return true;
   return false;

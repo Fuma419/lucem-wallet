@@ -132,7 +132,7 @@ A deprecated top-level `window.cardano.enable()` still exists for old sites; new
 The Connect Hardware Wallet screen offers **Keystone** and **Ledger**.
 
 - **Keystone** — air-gapped QR (also the hardware path on mobile).
-- **Ledger** — USB or Bluetooth (Chrome / Edge on desktop; iOS browsers do not expose Web Bluetooth).
+- **Ledger** — USB or Bluetooth in Chrome / Edge, including Android Chrome / PWA when Web Bluetooth is available. iOS browsers do not expose Web Bluetooth, so use Keystone there. The extension toolbar popup cannot host the device picker: signing opens a temporary tab. A 25th-word passphrase is a separate wallet (`ledger-…-k<fingerprint>`). CIP-30 `signTx` returns a witness from that tab; CIP-30 `signData` is software accounts only.
 
 ## Development
 

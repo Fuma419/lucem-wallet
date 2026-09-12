@@ -269,7 +269,7 @@ describe('dApp sign message screen', () => {
     const { container, root } = await mount();
 
     expect(byTestId(container, 'sign-data-error').textContent).toMatch(
-      /Hardware wallets cannot sign data/i
+      /Hardware wallets cannot sign/i
     );
     expect(
       byTestId(container, 'sign-data-primary-action').hasAttribute('disabled')

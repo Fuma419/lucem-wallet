@@ -423,6 +423,18 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
             <Icon as={FaRegFileCode} mr="2" /> <Box>Collateral</Box>
           </Box>
         }
+        onHwLedgerWindow={async () => {
+          const keyHashes = await signingKeyHashesForAccount(data.account, {
+            includeStake: false,
+          });
+          await openLedgerSignTxTab({
+            txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
+            keyHashes,
+            partialSign: false,
+            purpose: 'collateral',
+            collateralLovelace: toUnit(COLLATERAL),
+          });
+        }}
         sign={async (password, hw) => {
           const keyHashes = await signingKeyHashesForAccount(data.account, {
             includeStake: false,

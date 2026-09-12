@@ -10,6 +10,8 @@
  * parsing Ledger's export maps.
  */
 
+import { LEDGER_BLE_NOT_LEDGER_MESSAGE } from './ledger-error';
+
 export const LEDGER_USB_ID = 'usb';
 
 /** Ledger VID (`@ledgerhq/devices` ledgerUSBVendorId). Nano S also used ST 0x2581. */
@@ -104,7 +106,10 @@ export const canConnectLedgerInThisBrowser = () =>
 export const isMobilePlatform = () =>
   Boolean(isIosLikeDevice() || isAndroidLike() || isNativeShell());
 
-export const shouldOfferLedgerImport = () => !isMobilePlatform();
+export const shouldOfferLedgerImport = () => {
+  if (isIosLikeDevice() || isNativeShell()) return false;
+  return canConnectLedgerInThisBrowser();
+};
 
 export const isLedgerChooserCancelled = (err) => {
   if (!err) return false;
@@ -445,7 +450,19 @@ const openBleTransport = async (device) => {
     }
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
-  return TransportWebBLE.open(device);
+  try {
+    return await TransportWebBLE.open(device);
+  } catch (/** @type {any} */ err) {
+    const msg = err && err.message ? String(err.message) : String(err || '');
+    if (
+      /service|characteristic|gatt|not found|infos not found|bluetooth/i.test(
+        msg
+      )
+    ) {
+      throw new Error(LEDGER_BLE_NOT_LEDGER_MESSAGE);
+    }
+    throw err;
+  }
 };
 
 const openGrantedUsbTransport = async () => {

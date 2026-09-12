@@ -13,6 +13,8 @@
 import { HARDENED } from '@cardano-foundation/ledgerjs-hw-app-cardano';
 import { HW } from '../../config/config';
 import Loader from '../loader';
+import { getNetwork } from './storage';
+import { ledgerNetworkForWallet } from '../tx/ledger-encode';
 
 /** CIP-1852 Cardano: m/1852'/1815'/account'. */
 export const CARDANO_PURPOSE = 1852;
@@ -253,7 +255,13 @@ export const exportVerifiedLedgerAccounts = async ({
       deviceAddressHex: derived && derived.addressHex,
     });
     if (i === 0 && showFirstAddress) {
-      await appAda.showAddress({ network: LEDGER_VERIFY_NETWORK, address });
+      let displayNetwork = LEDGER_VERIFY_NETWORK;
+      try {
+        displayNetwork = ledgerNetworkForWallet(await getNetwork());
+      } catch (/** @type {any} */ _) {
+        /* keep mainnet display if the wallet network is unknown */
+      }
+      await appAda.showAddress({ network: displayNetwork, address });
     }
     verified.push({
       accountIndex: indexes[i],

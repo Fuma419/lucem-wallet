@@ -45,6 +45,9 @@ const {
   findGrantedBluetoothDevice,
   isLedgerSessionLive,
 } = require('../../../../api/extension/ledger-transport');
+const {
+  LEDGER_BLE_NOT_LEDGER_MESSAGE,
+} = require('../../../../api/extension/ledger-error');
 
 describe('ledger USB / BLE transport', () => {
   const originalHid = navigator.hid;
@@ -90,6 +93,7 @@ describe('ledger USB / BLE transport', () => {
       configurable: true,
       value: originalMaxTouchPoints,
     });
+    delete window.Capacitor;
   });
 
   test('isLedgerUsbId recognizes stored USB sentinels', () => {
@@ -354,7 +358,7 @@ describe('ledger USB / BLE transport', () => {
     expect(ledgerCannotConnectMessage()).toMatch(/Chrome or Edge/);
   });
 
-  test('does not offer Ledger import on iPhone or Android', () => {
+  test('does not offer Ledger import on iPhone', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value:
@@ -362,7 +366,9 @@ describe('ledger USB / BLE transport', () => {
     });
     expect(isMobilePlatform()).toBe(true);
     expect(shouldOfferLedgerImport()).toBe(false);
+  });
 
+  test('offers Ledger import on Android Chrome when WebUSB or Web Bluetooth exists', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0 Mobile Safari/537.36',
@@ -372,7 +378,18 @@ describe('ledger USB / BLE transport', () => {
       value: { requestDevice: jest.fn() },
     });
     expect(isMobilePlatform()).toBe(true);
+    expect(shouldOfferLedgerImport()).toBe(true);
+  });
+
+  test('does not offer Ledger import in the native Capacitor shell', () => {
+    window.Capacitor = { isNativePlatform: () => true };
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
     expect(shouldOfferLedgerImport()).toBe(false);
+    delete window.Capacitor;
   });
 
   test('offers Ledger import on desktop Chrome', () => {
@@ -389,7 +406,18 @@ describe('ledger USB / BLE transport', () => {
       configurable: true,
       value: 0,
     });
+    Object.defineProperty(navigator, 'hid', {
+      configurable: true,
+      value: { requestDevice: jest.fn() },
+    });
     expect(isMobilePlatform()).toBe(false);
     expect(shouldOfferLedgerImport()).toBe(true);
+  });
+
+  test('maps a wrong-device GATT failure to the not-a-Ledger message', async () => {
+    TransportWebBLE.open.mockRejectedValueOnce(new Error('No Services found'));
+    await expect(
+      openLedgerTransport({ bleDevice: { gatt: {} } })
+    ).rejects.toThrow(LEDGER_BLE_NOT_LEDGER_MESSAGE);
   });
 });

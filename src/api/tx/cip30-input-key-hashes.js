@@ -7,6 +7,8 @@
  * the ledger rejected the cert tx. Hash the address on the UTxO instead.
  */
 
+import { transactionInputIndex } from './csl-tx-accessors';
+
 const keyHashHex = (credential) => {
   if (!credential || typeof credential.kind !== 'function') return null;
   if (credential.kind() !== 0) return null;
@@ -44,7 +46,7 @@ export const paymentKeyHashHexFromCslAddress = (Cardano, address) => {
 
 const inputId = (input) => ({
   txHash: Buffer.from(input.transaction_id().to_bytes()).toString('hex'),
-  index: parseInt(input.index().toString(), 10),
+  index: transactionInputIndex(input),
 });
 
 /**
@@ -77,3 +79,58 @@ export const ownedInputPaymentHashes = (Cardano, tx, utxos) => {
   }
   return hashes;
 };
+
+export const ledgerPathsForInputs = (
+  Cardano,
+  inputs,
+  utxos,
+  paymentPathByHash,
+  fallbackPath
+) => {
+  if (!inputs || typeof inputs.len !== 'function') return [];
+  const owned = (utxos || []).map((utxo) => ({
+    ...inputId(utxo.input()),
+    address: utxo.output().address(),
+  }));
+  const paths = [];
+  for (let i = 0; i < inputs.len(); i++) {
+    const { txHash, index } = inputId(inputs.get(i));
+    const match = owned.find((u) => u.txHash === txHash && u.index === index);
+    const hash = match
+      ? paymentKeyHashHexFromCslAddress(Cardano, match.address)
+      : null;
+    const key = hash ? String(hash).toLowerCase() : '';
+    paths.push(
+      (key && paymentPathByHash && paymentPathByHash[key]) ||
+        fallbackPath ||
+        null
+    );
+  }
+  return paths;
+};
+
+/**
+ * BIP-32 path for each tx input, matched to the UTxO's payment key.
+ * Unmatched inputs keep `fallbackPath` so ADA-only /0/0 still signs.
+ *
+ * @param {object} Cardano
+ * @param {object} tx
+ * @param {object[]} utxos
+ * @param {Record<string, number[]>} paymentPathByHash
+ * @param {number[] | null} fallbackPath
+ * @returns {Array<number[] | null>}
+ */
+export const ledgerInputPaths = (
+  Cardano,
+  tx,
+  utxos,
+  paymentPathByHash,
+  fallbackPath
+) =>
+  ledgerPathsForInputs(
+    Cardano,
+    tx?.body?.()?.inputs?.(),
+    utxos,
+    paymentPathByHash,
+    fallbackPath
+  );

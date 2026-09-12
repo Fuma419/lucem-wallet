@@ -87,8 +87,13 @@ curl -fL "${PROGRESS[@]}" "${AUTH[@]}" -o "$target" "${BUILD_URL}/artifact/${art
 curl -fsS "${AUTH[@]}" "${BUILD_URL}/artifact/dist/BUILD-INFO.txt" 2>/dev/null || true
 
 if [ "$EXTRACT" = 1 ] && [ "$WANT" = "extension" ]; then
-  command -v unzip >/dev/null || die "unzip not found"
   rm -rf "${OUT%/}/build"
-  unzip -q "$target" -d "${OUT%/}"
+  if command -v unzip >/dev/null; then
+    unzip -q "$target" -d "${OUT%/}"
+  elif command -v python3 >/dev/null; then
+    python3 -m zipfile -e "$target" "${OUT%/}"
+  else
+    die "need unzip or python3 to extract; the zip is at ${target}"
+  fi
   printf 'extracted to %s/build — load that folder at chrome://extensions\n' "${OUT%/}"
 fi

@@ -11,6 +11,20 @@ import {
 import { NETWORK_ID } from '../../config/config';
 import { optionalUintToStr } from './csl-tx-accessors';
 
+/**
+ * Conway combo CertificateType names exist on ledgerjs 8.0.0. The 7.x
+ * typings omit them (enum jumps from VOTE_DELEGATION=9 to
+ * AUTHORIZE_COMMITTEE_HOT=14), so `CertificateType.NAME` fails `tsc`.
+ * Prefer the installed enum at runtime; otherwise the 8.0.0 wire numbers.
+ * @param {string} name
+ * @param {number} wireValue
+ * @returns {number}
+ */
+export const ledgerCertificateType = (name, wireValue) => {
+  const value = /** @type {Record<string, unknown>} */ (CertificateType)[name];
+  return typeof value === 'number' ? value : wireValue;
+};
+
 /** Cardano protocol magics (Byron-era `42` is not Preview/Preprod). */
 export const LEDGER_PROTOCOL_MAGIC = {
   mainnet: 764824073,
@@ -354,7 +368,7 @@ export const certificateToLedger = (cert, keys) => {
   if (kind === 12) {
     const both = cert.as_stake_and_vote_delegation();
     return {
-      type: CertificateType.STAKE_POOL_AND_DREP_DELEGATION,
+      type: ledgerCertificateType('STAKE_POOL_AND_DREP_DELEGATION', 10),
       params: {
         stakeCredential: stakeCredentialParams(both.stake_credential(), keys),
         poolKeyHashHex: stakeDelegationPoolHashHex(both),
@@ -365,7 +379,10 @@ export const certificateToLedger = (cert, keys) => {
   if (kind === 13) {
     const row = cert.as_stake_registration_and_delegation();
     return {
-      type: CertificateType.ACCOUNT_REGISTRATION_DELEGATION_TO_STAKE_POOL,
+      type: ledgerCertificateType(
+        'ACCOUNT_REGISTRATION_DELEGATION_TO_STAKE_POOL',
+        11
+      ),
       params: {
         stakeCredential: stakeCredentialParams(row.stake_credential(), keys),
         poolKeyHashHex: stakeDelegationPoolHashHex(row),
@@ -376,7 +393,10 @@ export const certificateToLedger = (cert, keys) => {
   if (kind === 16) {
     const row = cert.as_vote_registration_and_delegation();
     return {
-      type: CertificateType.ACCOUNT_REGISTRATION_DELEGATION_TO_DREP,
+      type: ledgerCertificateType(
+        'ACCOUNT_REGISTRATION_DELEGATION_TO_DREP',
+        12
+      ),
       params: {
         stakeCredential: stakeCredentialParams(row.stake_credential(), keys),
         dRep: dRepParams(row.drep(), keys),
@@ -387,7 +407,10 @@ export const certificateToLedger = (cert, keys) => {
   if (kind === 14) {
     const row = cert.as_stake_vote_registration_and_delegation();
     return {
-      type: CertificateType.ACCOUNT_REGISTRATION_DELEGATION_TO_STAKE_POOL_AND_DREP,
+      type: ledgerCertificateType(
+        'ACCOUNT_REGISTRATION_DELEGATION_TO_STAKE_POOL_AND_DREP',
+        13
+      ),
       params: {
         stakeCredential: stakeCredentialParams(row.stake_credential(), keys),
         poolKeyHashHex: stakeDelegationPoolHashHex(row),

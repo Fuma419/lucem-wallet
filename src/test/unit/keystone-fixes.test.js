@@ -238,7 +238,11 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(indexSrc).toMatch(/Does not delete/);
     expect(indexSrc).toMatch(/clearKeystoneSignPayload/);
     expect(indexSrc).toMatch(
-      /export const takeKeystoneSignPayload = async \(signId\) => \{\s*const prev = \(await getStorage\(STORAGE\.keystoneTxPending\)\) \|\| \{\};\s*return prev\[signId\] \|\| null;/
+      /export const takeKeystoneSignPayload = \(signId\) =>\s*takeSignPayload\(STORAGE\.keystoneTxPending, signId\);/
+    );
+    // The shared reader only reads — Ledger reuses it for the same reason.
+    expect(indexSrc).toMatch(
+      /const takeSignPayload = async \(storageKey, signId\) => \{\s*const prev = \(await getStorage\(storageKey\)\) \|\| \{\};\s*return prev\[signId\] \|\| null;\s*\};/
     );
   });
 

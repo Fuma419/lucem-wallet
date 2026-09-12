@@ -155,6 +155,21 @@ const extensionAdapter = {
     },
 
     /**
+     * Whether a WebUSB / WebHID / Web Bluetooth chooser can run here. Chrome
+     * cancels the chooser in `popup` windows — the toolbar action popup and
+     * the dApp prompt both are — and reports "No device selected". Only a
+     * `normal` window can pair, so callers hand the step to a flow window.
+     */
+    canHostDeviceChooser: async () => {
+      try {
+        const current = await chrome.windows.getCurrent();
+        return !!current && current.type === 'normal';
+      } catch (/** @type {any} */ _e) {
+        return false;
+      }
+    },
+
+    /**
      * Leave full-page flows (hw, create wallet, Keystone tab) and return
      * to the main UI. In-document navigation always works for extension pages.
      */

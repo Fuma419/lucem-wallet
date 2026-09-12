@@ -46,6 +46,7 @@ import {
   getStakePools,
   getUtxos,
   openKeystoneSignTxTab,
+  openLedgerSignTxTab,
   paymentKeyHashesForSigning,
   searchPools,
 } from '../../../api/extension';
@@ -883,6 +884,16 @@ const Staking = () => {
         onHwKeystone={async () => {
           const paymentHashes = await paymentKeyHashesForSigning(account);
           return openKeystoneSignTxTab({
+            txHex: Buffer.from(txPreview.tx.to_bytes()).toString('hex'),
+            keyHashes: [...paymentHashes, account.stakeKeyHash].filter(
+              Boolean
+            ),
+            partialSign: false,
+          });
+        }}
+        onHwLedgerWindow={async () => {
+          const paymentHashes = await paymentKeyHashesForSigning(account);
+          return openLedgerSignTxTab({
             txHex: Buffer.from(txPreview.tx.to_bytes()).toString('hex'),
             keyHashes: [...paymentHashes, account.stakeKeyHash].filter(
               Boolean

@@ -37,6 +37,7 @@ import { useStoreState } from 'easy-peasy';
 import Loader from '../../../api/loader';
 import {
   openKeystoneSignTxTab,
+  openLedgerSignTxTab,
   paymentKeyHashesForSigning,
   getUtxos,
   removeCollateral,
@@ -181,9 +182,25 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
     },
   }));
 
+  /**
+   * Ledger pairing needs a device chooser, which Chrome cancels in the
+   * toolbar popup. Hand the built transaction to a window that can pair.
+   */
+  const ledgerWindowSign = async ({ includeStake }) => {
+    const keyHashes = await signingKeyHashesForAccount(data.account, {
+      includeStake,
+    });
+    return openLedgerSignTxTab({
+      txHex: Buffer.from(data.tx.to_bytes()).toString('hex'),
+      keyHashes,
+      partialSign: false,
+    });
+  };
+
   return (
     <>
       <ConfirmModal
+        onHwLedgerWindow={() => ledgerWindowSign({ includeStake: true })}
         sign={async (password, hw) => {
           const keyHashes = await signingKeyHashesForAccount(data.account, {
             includeStake: true,
@@ -289,6 +306,7 @@ const TransactionBuilder = React.forwardRef(({ onConfirm }, ref) => {
       <ConfirmModal
         ready={data.ready}
         title="Stake deregistration"
+        onHwLedgerWindow={() => ledgerWindowSign({ includeStake: true })}
         sign={async (password, hw) => {
           const keyHashes = await signingKeyHashesForAccount(data.account, {
             includeStake: true,

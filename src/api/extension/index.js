@@ -1,12 +1,14 @@
 import {
   ERROR,
   EVENT,
+  FULL_PAGE_VIEW,
   HW,
   LOCAL_STORAGE,
   MAX_TOTAL_ACCOUNTS,
   NETWORK_ID,
   NETWORKD_ID_NUMBER,
   NODE,
+  POPUP,
   SENDER,
   STORAGE,
   TAB,
@@ -296,29 +298,27 @@ export const openFlowWindow = (page, query = '') =>
 
 export const closeCurrentTab = () => platform.navigation.closeCurrentTab();
 
-const KEYSTONE_SIGN_PAYLOAD_TTL_MS = 2 * 60 * 60 * 1000;
+const SIGN_PAYLOAD_TTL_MS = 2 * 60 * 60 * 1000;
 
-function pruneKeystoneSignPayloads(prev) {
+function pruneSignPayloads(prev) {
   const now = Date.now();
   const next = {};
   for (const [id, row] of Object.entries(prev || {})) {
-    if (row && now - (row.created || 0) < KEYSTONE_SIGN_PAYLOAD_TTL_MS) {
+    if (row && now - (row.created || 0) < SIGN_PAYLOAD_TTL_MS) {
       next[id] = row;
     }
   }
   return next;
 }
 
-export const pushKeystoneSignPayload = async (payload) => {
+const pushSignPayload = async (storageKey, payload) => {
   const signId =
     typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const prev = pruneKeystoneSignPayloads(
-    (await getStorage(STORAGE.keystoneTxPending)) || {}
-  );
+  const prev = pruneSignPayloads((await getStorage(storageKey)) || {});
   await setStorage({
-    [STORAGE.keystoneTxPending]: {
+    [storageKey]: {
       ...prev,
       [signId]: { ...payload, created: Date.now() },
     },
@@ -326,19 +326,28 @@ export const pushKeystoneSignPayload = async (payload) => {
   return signId;
 };
 
-/** Read the pending sign session. Does not delete — the QR tab can remount. */
-export const takeKeystoneSignPayload = async (signId) => {
-  const prev = (await getStorage(STORAGE.keystoneTxPending)) || {};
+const takeSignPayload = async (storageKey, signId) => {
+  const prev = (await getStorage(storageKey)) || {};
   return prev[signId] || null;
 };
 
-export const clearKeystoneSignPayload = async (signId) => {
-  const prev = (await getStorage(STORAGE.keystoneTxPending)) || {};
+const clearSignPayload = async (storageKey, signId) => {
+  const prev = (await getStorage(storageKey)) || {};
   if (!prev[signId]) return;
   const next = { ...prev };
   delete next[signId];
-  await setStorage({ [STORAGE.keystoneTxPending]: next });
+  await setStorage({ [storageKey]: next });
 };
+
+export const pushKeystoneSignPayload = (payload) =>
+  pushSignPayload(STORAGE.keystoneTxPending, payload);
+
+/** Read the pending sign session. Does not delete — the QR tab can remount. */
+export const takeKeystoneSignPayload = (signId) =>
+  takeSignPayload(STORAGE.keystoneTxPending, signId);
+
+export const clearKeystoneSignPayload = (signId) =>
+  clearSignPayload(STORAGE.keystoneTxPending, signId);
 
 /**
  * Air-gapped Keystone: opens the QR flow in its own window (camera plus two
@@ -354,6 +363,46 @@ export const openKeystoneSignTxTab = async ({ txHex, keyHashes, partialSign }) =
     TAB.keystoneTx,
     `?signId=${encodeURIComponent(signId)}`
   );
+};
+
+export const pushLedgerSignPayload = (payload) =>
+  pushSignPayload(STORAGE.ledgerTxPending, payload);
+
+/** Does not delete — the signing window can remount while the user retries. */
+export const takeLedgerSignPayload = (signId) =>
+  takeSignPayload(STORAGE.ledgerTxPending, signId);
+
+export const clearLedgerSignPayload = (signId) =>
+  clearSignPayload(STORAGE.ledgerTxPending, signId);
+
+/** Route for the Ledger signing step hosted inside the main popup SPA. */
+export const LEDGER_SIGN_PATH = '/ledger-sign';
+
+/**
+ * Hand a built transaction to a window that can pair a Ledger. Chrome cancels
+ * the USB/Bluetooth chooser in the toolbar popup, so the device step has to
+ * run in a `normal` window; it signs and submits there.
+ */
+export const openLedgerSignTxTab = async ({ txHex, keyHashes, partialSign }) => {
+  const signId = await pushLedgerSignPayload({
+    txHex,
+    keyHashes,
+    partialSign: !!partialSign,
+  });
+  await openFlowWindow(
+    POPUP.main,
+    `?${FULL_PAGE_VIEW.param}=${FULL_PAGE_VIEW.value}` +
+      `&next=${encodeURIComponent(LEDGER_SIGN_PATH)}` +
+      `&signId=${encodeURIComponent(signId)}`
+  );
+};
+
+/** Whether this window can host a device chooser (see platform adapter). */
+export const canHostDeviceChooser = async () => {
+  if (typeof platform.navigation.canHostDeviceChooser !== 'function') {
+    return true;
+  }
+  return !!(await platform.navigation.canHostDeviceChooser());
 };
 
 export const getCurrentWebpage = () =>

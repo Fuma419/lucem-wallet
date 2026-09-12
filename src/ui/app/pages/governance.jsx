@@ -39,6 +39,7 @@ import {
   getCurrentAccount,
   getDelegation,
   openKeystoneSignTxTab,
+  openLedgerSignTxTab,
   paymentKeyHashesForSigning,
 } from '../../../api/extension';
 import {
@@ -1330,6 +1331,13 @@ const Governance = () => {
         ref={confirmRef}
         ready={voteTxState.ready}
         title={voteTxState.title || 'Confirm Transaction'}
+        onHwLedgerWindow={() =>
+          openLedgerSignTxTab({
+            txHex: Buffer.from(voteTxState.tx.to_bytes()).toString('hex'),
+            keyHashes: voteTxState.keyHashes,
+            partialSign: false,
+          })
+        }
         sign={async (password, hw) => {
           const txHex = Buffer.from(voteTxState.tx.to_bytes()).toString('hex');
           const keyHashes = voteTxState.keyHashes;

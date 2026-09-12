@@ -188,12 +188,19 @@ pipeline {
         sh '''
           set -e
           export PATH="${NODE24_DIR}/bin:${PATH}"
+
+          # Stamp build identity into the manifest, so a tester loading this
+          # build sees which commit it is instead of the same semver every time.
+          export LUCEM_BUILD_ID="${BUILD_NUMBER}"
+          export LUCEM_BUILD_BRANCH="${BRANCH_NAME}"
+          export LUCEM_BUILD_COMMIT="${GIT_COMMIT}"
           npm run build:webpack
 
           # Package the extension so testing this build on another machine is a
-          # download rather than a rebuild. Same name scripts/build-all.sh uses
-          # locally; python3 -m zipfile because zip(1) is not on the agent.
-          VERSION="$(node -p "require('./package.json').version")"
+          # download rather than a rebuild. Read the version back out of the
+          # built manifest so the zip name cannot disagree with what loads.
+          # python3 -m zipfile because zip(1) is not on the agent.
+          VERSION="$(node -p "require('./build/manifest.json').version")"
           mkdir -p dist
           rm -f dist/lucem-wallet-*-extension.zip
           python3 -m zipfile -c "dist/lucem-wallet-${VERSION}-extension.zip" build
@@ -273,11 +280,19 @@ pipeline {
           sh '''
             set -e
             export PATH="${NODE24_DIR}/bin:${PATH}"
+            # versionName only: Android app info then names the build, while
+            # versionCode stays semver-derived for the stores.
+            node scripts/sync-mobile-version.js --build "${BUILD_NUMBER}"
             npm run mobile:android:ci
           '''
         }
       }
       post {
+        always {
+          // Workspaces are reused, and the unit tests assert the committed
+          // native versions match package.json exactly.
+          sh 'git checkout -- android/app/build.gradle ios/App/App/Info.plist || true'
+        }
         success {
           script {
             publishGithubStatus('Mobile Android', 'success', 'Mobile Android passed in Jenkins')

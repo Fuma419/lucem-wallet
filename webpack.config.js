@@ -12,6 +12,7 @@ var webpack = require('webpack'),
 
 // Use only this import for EsbuildPlugin.
 const { EsbuildPlugin } = require('esbuild-loader');
+const { stampedVersion, versionLabel } = require('./scripts/build-version');
 console.log("EsbuildPlugin:", EsbuildPlugin);
 
 require('dotenv').config();
@@ -248,12 +249,21 @@ const options = {
             // Spread the source manifest first, then overwrite version so a
             // stale/missing src/manifest.json version cannot win.
             const manifest = JSON.parse(content.toString());
-            return Buffer.from(
-              JSON.stringify({
-                ...manifest,
-                version: process.env.npm_package_version,
-              })
-            );
+            const base = process.env.npm_package_version;
+            const stamped = {
+              ...manifest,
+              version: stampedVersion(base, process.env.LUCEM_BUILD_ID),
+            };
+            const label = versionLabel({
+              version: base,
+              build: process.env.LUCEM_BUILD_ID,
+              branch: process.env.LUCEM_BUILD_BRANCH,
+              commit: process.env.LUCEM_BUILD_COMMIT,
+            });
+            if (label) {
+              stamped.version_name = label;
+            }
+            return Buffer.from(JSON.stringify(stamped));
           },
         },
       ],

@@ -137,6 +137,20 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toContain('bleDevice');
     expect(hwSrc).toContain('isLedgerSessionLive');
     expect(hwSrc).toContain('bleDevice: data.bleDevice');
+  });
+
+  test('Ledger import only trusts keys the device confirms by address', () => {
+    // A garbled BLE response once became an account the owner never approved.
+    expect(hwSrc).toContain('exportVerifiedLedgerAccounts');
+    expect(hwSrc).not.toMatch(/getExtendedPublicKeys/);
+    expect(hwSrc).not.toMatch(/publicKeyHex \+ chainCodeHex/);
+    const accountSrc = fs.readFileSync(
+      path.join(__dirname, '../../api/extension/ledger-account.js'),
+      'utf8'
+    );
+    expect(accountSrc).toContain('deriveAddress');
+    expect(accountSrc).toContain('showAddress');
+    expect(accountSrc).toContain('assertLedgerKeyMatchesDevice');
     expect(hwSrc).toContain('Pick your Ledger in the list Chrome shows');
     const vercelSrc = fs.readFileSync(
       path.join(__dirname, '../../../vercel.json'),

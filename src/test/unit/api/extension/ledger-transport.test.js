@@ -212,7 +212,7 @@ describe('ledger USB / BLE transport', () => {
     expect(found).toBe(ble);
   });
 
-  test('pickLedgerBluetoothDevice uses acceptAllDevices so bonded Flex appears', async () => {
+  test('pickLedgerBluetoothDevice filters by Ledger device names', async () => {
     const ble = { id: 'flex-1', gatt: {} };
     const requestDevice = jest.fn(async () => ble);
     Object.defineProperty(navigator, 'bluetooth', {
@@ -220,6 +220,29 @@ describe('ledger USB / BLE transport', () => {
       value: { requestDevice, getDevices: jest.fn(async () => []) },
     });
     const picked = await pickLedgerBluetoothDevice(['13d63400-2c97-3004-0000-4c6564676572']);
+    expect(picked).toBe(ble);
+    expect(requestDevice).toHaveBeenCalledWith({
+      filters: expect.arrayContaining([
+        { namePrefix: 'Flex' },
+        { namePrefix: 'Stax' },
+        { namePrefix: 'Nano' },
+        { namePrefix: 'Ledger' },
+      ]),
+      optionalServices: ['13d63400-2c97-3004-0000-4c6564676572'],
+    });
+  });
+
+  test('pickLedgerBluetoothDevice can fall back to acceptAllDevices', async () => {
+    const ble = { id: 'flex-1', gatt: {} };
+    const requestDevice = jest.fn(async () => ble);
+    Object.defineProperty(navigator, 'bluetooth', {
+      configurable: true,
+      value: { requestDevice, getDevices: jest.fn(async () => []) },
+    });
+    const picked = await pickLedgerBluetoothDevice(
+      ['13d63400-2c97-3004-0000-4c6564676572'],
+      { acceptAllDevices: true }
+    );
     expect(picked).toBe(ble);
     expect(requestDevice).toHaveBeenCalledWith({
       acceptAllDevices: true,

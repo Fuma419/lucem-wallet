@@ -147,6 +147,10 @@ const webAdapter = {
       return Promise.resolve({ id: Date.now() });
     },
 
+    yieldPopupForDeviceChooser: async () => null,
+
+    restoreYieldedPopup: async () => {},
+
     /** A browser tab always anchors the device chooser. */
     canHostDeviceChooser: async () => true,
 

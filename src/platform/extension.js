@@ -47,6 +47,65 @@ const isExtensionPageUrl = (url) => {
   }
 };
 
+const chromeWindow = (fn) =>
+  new Promise((res) => {
+    try {
+      fn((result) => {
+        res(chrome.runtime.lastError ? null : result || null);
+      });
+    } catch (/** @type {any} */ _) {
+      res(null);
+    }
+  });
+
+/** Last focused real browser window — never a CIP-30 `type: 'popup'`. */
+const lastFocusedNormalWindow = () =>
+  chromeWindow((cb) =>
+    chrome.windows.getLastFocused({ windowTypes: ['normal'] }, cb)
+  );
+
+const firstNormalWindow = async () => {
+  const list = await chromeWindow((cb) =>
+    chrome.windows.getAll({ windowTypes: ['normal'] }, cb)
+  );
+  if (!Array.isArray(list) || !list.length) return null;
+  return list.find((w) => w && w.state !== 'minimized') || list[0];
+};
+
+const windowOfThisTab = async () => {
+  const tab = await chromeWindow((cb) => chrome.tabs.getCurrent(cb));
+  if (!tab || tab.windowId == null) return null;
+  return chromeWindow((cb) => chrome.windows.get(tab.windowId, cb));
+};
+
+const findInternalPopupWindow = async () => {
+  const list = await chromeWindow((cb) =>
+    chrome.windows.getAll({ populate: true }, cb)
+  );
+  if (!Array.isArray(list)) return null;
+  return (
+    list.find(
+      (w) =>
+        w &&
+        w.type === 'popup' &&
+        (w.tabs || []).some((t) =>
+          /internalPopup\.html/i.test(String(t.url || ''))
+        )
+    ) || null
+  );
+};
+
+const updateWindow = (id, info) =>
+  new Promise((res) => {
+    try {
+      chrome.windows.update(id, info, () => {
+        res(!chrome.runtime.lastError);
+      });
+    } catch (/** @type {any} */ _) {
+      res(false);
+    }
+  });
+
 /** Center a window of `size` on the last focused browser window. */
 const windowPlacement = async (size) => {
   try {
@@ -162,22 +221,91 @@ const extensionAdapter = {
     openFlowWindow: (page, query = '') =>
       extensionAdapter.navigation.createTab(page, query),
 
-    createTab: (tab, query = '') => {
+    /**
+     * CIP-30 `type: 'popup'` windows stay on top of the browser. The Ledger
+     * signing tab (and Chrome's Bluetooth list) would sit behind that dialog
+     * and look like "no devices". Shrink and unfocus the dialog until
+     * signing finishes. `getCurrent()` from a popup often reports the parent
+     * browser window, so this looks up the popup that hosts this document.
+     * @returns {Promise<number | null>} popup window id to restore
+     */
+    yieldPopupForDeviceChooser: async () => {
+      try {
+        const fromTab = await windowOfThisTab();
+        let current = fromTab && fromTab.type === 'popup' ? fromTab : null;
+        if (!current) {
+          try {
+            const focused = await chrome.windows.getCurrent();
+            if (focused && focused.type === 'popup') current = focused;
+          } catch (/** @type {any} */ _) {
+            /* getCurrent can report the parent browser window */
+          }
+        }
+        if (!current) current = await findInternalPopupWindow();
+        if (!current || current.type !== 'popup' || current.id == null) {
+          return null;
+        }
+        await updateWindow(current.id, {
+          focused: false,
+          state: 'minimized',
+        });
+        // Some WMs keep popup windows always-on-top even when minimized.
+        await updateWindow(current.id, {
+          focused: false,
+          state: 'normal',
+          width: 1,
+          height: 1,
+          left: 0,
+          top: 0,
+        });
+        return current.id;
+      } catch (/** @type {any} */ _) {
+        return null;
+      }
+    },
+
+    /** Bring back the CIP-30 dialog after the Ledger tab finishes. */
+    restoreYieldedPopup: async (windowId) => {
+      if (windowId == null) return;
+      await updateWindow(windowId, {
+        focused: true,
+        state: 'normal',
+        width: POPUP_WINDOW.width,
+        height: POPUP_WINDOW.height,
+      });
+    },
+
+    createTab: async (tab, query = '') => {
       const url = chrome.runtime.getURL(`${tab}.html${query || ''}`);
       // Toolbar action popups cannot host another extension page: Chrome
       // closes them on location.assign, so create/import looked like a no-op.
-      // Open a tab in the existing browser window (no extra windows.create).
-      return new Promise((res, rej) => {
-        chrome.tabs.create({ url, active: true }, (created) => {
-          if (chrome.runtime.lastError || !created) {
+      // Open a tab in the existing *browser* window (no extra windows.create).
+      // Without windowId, CIP-30's popup is WINDOW_ID_CURRENT and the Ledger
+      // page lands in that always-on-top dialog — Chrome then cancels the
+      // Bluetooth chooser, which looks like "no devices".
+      const last = await lastFocusedNormalWindow();
+      const fallback = last && last.id != null ? last : await firstNormalWindow();
+      const windowId =
+        fallback && fallback.type !== 'popup' && fallback.id != null
+          ? fallback.id
+          : undefined;
+      const created = await new Promise((res, rej) => {
+        const props = { url, active: true };
+        if (windowId != null) props.windowId = windowId;
+        chrome.tabs.create(props, (opened) => {
+          if (chrome.runtime.lastError || !opened) {
             rej(
               chrome.runtime.lastError || new Error('Failed to open tab')
             );
             return;
           }
-          res(created);
+          res(opened);
         });
       });
+      if (created.windowId != null) {
+        await updateWindow(created.windowId, { focused: true });
+      }
+      return created;
     },
 
     /**

@@ -209,14 +209,24 @@ export const findGrantedBluetoothDevice = async (id) => {
 };
 
 /**
- * Bluetooth picker for send/sign. `acceptAllDevices` is required because a
- * bonded Flex often stops advertising the Ledger GATT service, so service
- * filters make Chrome show an empty chooser and throw
- * "User cancelled the requestDevice() chooser."
- * `uuids` must be the Ledger BLE service list (`getBluetoothServiceUuids()`).
- * @param {string[]} [uuids]
+ * Advertised names for Nano X / Stax / Flex. Service-UUID filters hide a
+ * bonded Flex that has stopped advertising the Ledger GATT service; name
+ * prefixes still match. `acceptAllDevices` is a fallback when even the name
+ * is missing from the advertisement.
  */
-export const pickLedgerBluetoothDevice = async (uuids = []) => {
+export const LEDGER_BLE_NAME_FILTERS = [
+  { namePrefix: 'Ledger' },
+  { namePrefix: 'Nano' },
+  { namePrefix: 'Stax' },
+  { namePrefix: 'Flex' },
+];
+
+/**
+ * Bluetooth picker for send/sign.
+ * @param {string[]} [uuids] Ledger BLE service list (`getBluetoothServiceUuids()`)
+ * @param {{ acceptAllDevices?: boolean }} [opts]
+ */
+export const pickLedgerBluetoothDevice = async (uuids = [], opts = {}) => {
   if (
     typeof navigator === 'undefined' ||
     !navigator.bluetooth ||
@@ -225,8 +235,14 @@ export const pickLedgerBluetoothDevice = async (uuids = []) => {
     throw new Error(LEDGER_BLE_NEED_PICKER_MESSAGE);
   }
   const services = Array.isArray(uuids) ? uuids.filter(Boolean) : [];
+  if (opts.acceptAllDevices) {
+    return navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: services,
+    });
+  }
   return navigator.bluetooth.requestDevice({
-    acceptAllDevices: true,
+    filters: LEDGER_BLE_NAME_FILTERS,
     optionalServices: services,
   });
 };

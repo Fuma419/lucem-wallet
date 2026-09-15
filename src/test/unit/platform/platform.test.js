@@ -107,7 +107,11 @@ describe('platform/extension.js - createTab', () => {
   });
 
   test('opens create/import in a tab and does not navigate the popup', async () => {
-    const created = { id: 42, url: 'chrome-extension://ext/createWalletTab.html' };
+    const created = {
+      id: 42,
+      windowId: 9,
+      url: 'chrome-extension://ext/createWalletTab.html',
+    };
     global.chrome = {
       runtime: {
         id: 'ext',
@@ -116,8 +120,20 @@ describe('platform/extension.js - createTab', () => {
       },
       tabs: {
         create: jest.fn((opts, cb) => cb(created)),
+        getCurrent: jest.fn((cb) => cb(null)),
       },
-      windows: { create: jest.fn() },
+      windows: {
+        create: jest.fn(),
+        getLastFocused: jest.fn((opts, cb) => {
+          const done = typeof opts === 'function' ? opts : cb;
+          done({ id: 9, type: 'normal', top: 20, left: 100, width: 1400 });
+        }),
+        getAll: jest.fn((opts, cb) => {
+          const done = typeof opts === 'function' ? opts : cb;
+          done([{ id: 9, type: 'normal' }]);
+        }),
+        update: jest.fn((id, info, cb) => cb && cb()),
+      },
       storage: { local: {} },
     };
 
@@ -132,6 +148,7 @@ describe('platform/extension.js - createTab', () => {
       {
         url: 'chrome-extension://ext/createWalletTab.html?type=generate',
         active: true,
+        windowId: 9,
       },
       expect.any(Function)
     );
@@ -157,13 +174,27 @@ describe('platform/extension.js - openFlowWindow', () => {
         getURL: (p) => `chrome-extension://ext/${p}`,
         lastError: undefined,
       },
-      tabs: { create: jest.fn() },
+      tabs: {
+        create: jest.fn(),
+        getCurrent: jest.fn((cb) => cb(null)),
+      },
       windows: {
         create: jest.fn((opts, cb) => cb(created)),
-        getLastFocused: jest.fn((cb) =>
-          cb({ top: 20, left: 100, width: 1400 })
-        ),
-        update: jest.fn((id, pos, cb) => cb()),
+        getLastFocused: jest.fn((opts, cb) => {
+          const done = typeof opts === 'function' ? opts : cb;
+          done({
+            id: 9,
+            type: 'normal',
+            top: 20,
+            left: 100,
+            width: 1400,
+          });
+        }),
+        getAll: jest.fn((opts, cb) => {
+          const done = typeof opts === 'function' ? opts : cb;
+          done([{ id: 9, type: 'normal' }]);
+        }),
+        update: jest.fn((id, pos, cb) => cb && cb()),
       },
       storage: { local: {} },
     };
@@ -171,7 +202,11 @@ describe('platform/extension.js - openFlowWindow', () => {
   };
 
   test('hardware setup opens a temporary tab, never a new window', async () => {
-    const created = { id: 71, url: 'chrome-extension://ext/hwTab.html?from=/welcome' };
+    const created = {
+      id: 71,
+      windowId: 9,
+      url: 'chrome-extension://ext/hwTab.html?from=/welcome',
+    };
     mockChrome();
     global.chrome.tabs.create = jest.fn((opts, cb) => cb(created));
     const extAdapter = require('../../../platform/extension').default;
@@ -187,6 +222,7 @@ describe('platform/extension.js - openFlowWindow', () => {
       {
         url: 'chrome-extension://ext/hwTab.html?from=/welcome',
         active: true,
+        windowId: 9,
       },
       expect.any(Function)
     );
@@ -268,6 +304,8 @@ describe('import abandon navigation', () => {
     const createTabSrc = afterCreateTab.split('closeCurrentTab:')[0];
     expect(createTabSrc).toContain('chrome.tabs.create');
     expect(createTabSrc).not.toContain('chrome.windows.create');
+    expect(createTabSrc).toContain('props.windowId = windowId');
+    expect(extSrc).toContain("windowTypes: ['normal']");
     // Toolbar popups die on in-document navigation; that is why create/import
     // appeared to do nothing after the PWA-style same-document navigation.
     expect(createTabSrc).not.toMatch(/location\.assign\(/);

@@ -28,9 +28,12 @@ import {
 } from '../../../api/extension';
 import {
   closeLedgerApp,
+  findGrantedBluetoothDevice,
   isLedgerUsbId,
+  listGrantedLedgerUsbPicks,
   pickLedgerBluetoothDevice,
   pickLedgerUsbDevice,
+  preferredGrantedLedgerUsbPick,
 } from '../../../api/extension/ledger-transport';
 import { formatLedgerError } from '../../../api/extension/ledger-error';
 import { signAndSubmitHW } from '../../../api/extension/wallet';
@@ -51,6 +54,9 @@ const LedgerSign = () => {
   const [phase, setPhase] = React.useState(Phase.load);
   const [error, setError] = React.useState('');
   const [hw, setHw] = React.useState(null);
+  const [grantedBle, setGrantedBle] = React.useState(null);
+  const [grantedUsb, setGrantedUsb] = React.useState(null);
+  const [useAcceptAllBle, setUseAcceptAllBle] = React.useState(false);
   const pending = React.useRef(null);
   const account = React.useRef(null);
   const outcomeRef = React.useRef(null);
@@ -96,7 +102,30 @@ const LedgerSign = () => {
 
   const usb = !!hw && isLedgerUsbId(hw.id);
 
-  const signHandler = async () => {
+  React.useEffect(() => {
+    if (!hw) return undefined;
+    let cancelled = false;
+    if (isLedgerUsbId(hw.id)) {
+      listGrantedLedgerUsbPicks()
+        .then((granted) => {
+          if (!cancelled) {
+            setGrantedUsb(preferredGrantedLedgerUsbPick(granted));
+          }
+        })
+        .catch(() => {});
+    } else {
+      findGrantedBluetoothDevice(hw.id)
+        .then((device) => {
+          if (!cancelled) setGrantedBle(device);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [hw]);
+
+  const signHandler = async (opts = {}) => {
     setError('');
     let appAda;
     const signId = signIdFromLocation();
@@ -105,12 +134,23 @@ const LedgerSign = () => {
       let usbDevice;
       let hidDevice;
       let bleDevice;
+      const acceptAllBle = !!(opts.acceptAllDevices || useAcceptAllBle);
       if (usb) {
-        const picked = await pickLedgerUsbDevice();
-        usbDevice = picked.usbDevice;
-        hidDevice = picked.hidDevice;
+        if (grantedUsb) {
+          usbDevice = grantedUsb.usbDevice;
+          hidDevice = grantedUsb.hidDevice;
+        } else {
+          const picked = await pickLedgerUsbDevice();
+          usbDevice = picked.usbDevice;
+          hidDevice = picked.hidDevice;
+        }
+      } else if (grantedBle && !acceptAllBle) {
+        bleDevice = grantedBle;
       } else {
-        bleDevice = await pickLedgerBluetoothDevice(getBluetoothServiceUuids());
+        bleDevice = await pickLedgerBluetoothDevice(
+          getBluetoothServiceUuids(),
+          { acceptAllDevices: acceptAllBle }
+        );
       }
       setPhase(Phase.signing);
       appAda = await initHW({
@@ -183,6 +223,12 @@ const LedgerSign = () => {
       console.warn(e);
       setError(formatLedgerError(e, 'Signing failed.'));
       setPhase(Phase.connect);
+      if (usb) {
+        setGrantedUsb(null);
+      } else {
+        setGrantedBle(null);
+        setUseAcceptAllBle(true);
+      }
     } finally {
       await closeLedgerApp(appAda);
     }
@@ -220,16 +266,38 @@ const LedgerSign = () => {
           <Text mt={3} fontSize="sm" color="GrayText">
             {usb
               ? 'Plug in the Ledger, unlock it, and open the Cardano app. Pick it in the list Chrome shows.'
-              : 'Unlock the Ledger, open the Cardano app, and pick it in the Bluetooth list Chrome shows.'}
+              : grantedBle && !useAcceptAllBle
+                ? 'Unlock the Ledger and open the Cardano app. Chrome already allowed this device — tap Connect to reuse it.'
+                : 'Unlock the Ledger, open the Cardano app so it advertises, then pick it in the Bluetooth list. Pairing on the Lucem website does not count for the browser extension.'}
           </Text>
           <Button
             mt={6}
             colorScheme="teal"
             leftIcon={usb ? <MdUsb /> : <MdBluetooth />}
-            onClick={signHandler}
+            onClick={() => signHandler()}
           >
-            {usb ? 'Connect over USB' : 'Connect over Bluetooth'}
+            {usb
+              ? grantedUsb
+                ? 'Connect saved USB Ledger'
+                : 'Connect over USB'
+              : grantedBle && !useAcceptAllBle
+                ? 'Connect saved Bluetooth Ledger'
+                : 'Connect over Bluetooth'}
           </Button>
+          {!usb && (
+            <Button
+              mt={3}
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setGrantedBle(null);
+                setUseAcceptAllBle(true);
+                signHandler({ acceptAllDevices: true });
+              }}
+            >
+              Device not listed? Show all Bluetooth devices
+            </Button>
+          )}
           <Button
             mt={4}
             size="sm"

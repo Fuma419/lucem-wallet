@@ -402,31 +402,44 @@ export const waitForLedgerSignResult = async (
   if (!signId) {
     throw new Error('Ledger signing session is missing.');
   }
+  let yieldedPopupId;
   const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const row = await takeLedgerSignPayload(signId);
-    const result = row && row.result;
-    if (result && (result.status === 'submitted' || result.status === 'signed')) {
-      await clearLedgerSignPayload(signId);
-      return result;
+  try {
+    while (Date.now() - start < timeoutMs) {
+      const row = await takeLedgerSignPayload(signId);
+      if (row && row.yieldedPopupId != null) {
+        yieldedPopupId = row.yieldedPopupId;
+      }
+      const result = row && row.result;
+      if (result && (result.status === 'submitted' || result.status === 'signed')) {
+        await clearLedgerSignPayload(signId);
+        return result;
+      }
+      if (result && result.status === 'error') {
+        await clearLedgerSignPayload(signId);
+        throw new Error(result.message || 'Ledger signing failed.');
+      }
+      if (result && result.status === 'cancelled') {
+        await clearLedgerSignPayload(signId);
+        const err = /** @type {Error & { code?: string }} */ (
+          new Error('User declined')
+        );
+        err.code = 'UserDeclined';
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
-    if (result && result.status === 'error') {
-      await clearLedgerSignPayload(signId);
-      throw new Error(result.message || 'Ledger signing failed.');
+    throw new Error(
+      'Ledger signing timed out. Confirm it on the device, then try again.'
+    );
+  } finally {
+    if (
+      yieldedPopupId != null &&
+      typeof platform.navigation.restoreYieldedPopup === 'function'
+    ) {
+      await platform.navigation.restoreYieldedPopup(yieldedPopupId);
     }
-    if (result && result.status === 'cancelled') {
-      await clearLedgerSignPayload(signId);
-      const err = /** @type {Error & { code?: string }} */ (
-        new Error('User declined')
-      );
-      err.code = 'UserDeclined';
-      throw err;
-    }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-  throw new Error(
-    'Ledger signing timed out. Confirm it on the device, then try again.'
-  );
 };
 
 /** Route kept so the web app can still deep-link the same signing page. */
@@ -456,6 +469,22 @@ export const openLedgerSignTxTab = async ({
     purpose: purpose || null,
     collateralLovelace: collateralLovelace || null,
   });
+  if (typeof platform.navigation.yieldPopupForDeviceChooser === 'function') {
+    const yieldedPopupId =
+      await platform.navigation.yieldPopupForDeviceChooser();
+    if (yieldedPopupId != null) {
+      const prev = (await getStorage(STORAGE.ledgerTxPending)) || {};
+      const row = prev[signId];
+      if (row) {
+        await setStorage({
+          [STORAGE.ledgerTxPending]: {
+            ...prev,
+            [signId]: { ...row, yieldedPopupId },
+          },
+        });
+      }
+    }
+  }
   await openFlowWindow(
     TAB.ledgerSign,
     `?signId=${encodeURIComponent(signId)}`

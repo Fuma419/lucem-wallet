@@ -184,6 +184,44 @@ describe('ledger USB / BLE transport', () => {
     expect(TransportWebBLE.open).toHaveBeenCalledWith(bleDevice);
   });
 
+  test('link ble does not fall back to a stored USB account id', async () => {
+    Object.defineProperty(navigator, 'hid', {
+      configurable: true,
+      value: { requestDevice: jest.fn(), getDevices: jest.fn(async () => []) },
+    });
+    await expect(
+      openLedgerTransport({ id: LEDGER_USB_ID, link: 'ble' })
+    ).rejects.toThrow(/Bluetooth list/);
+    expect(TransportWebHID.request).not.toHaveBeenCalled();
+    expect(TransportWebBLE.open).not.toHaveBeenCalled();
+  });
+
+  test('link usb with a picked device ignores a stored BLE account id', async () => {
+    const usbDevice = { vendorId: LEDGER_USB_VENDOR_ID, opened: false };
+    Object.defineProperty(navigator, 'usb', {
+      configurable: true,
+      value: { requestDevice: jest.fn() },
+    });
+    const t = await openLedgerTransport({
+      id: 'opaque-ble-device-id',
+      usbDevice,
+      link: 'usb',
+    });
+    expect(t).toEqual({ kind: 'usb-open', d: usbDevice });
+    expect(TransportWebBLE.open).not.toHaveBeenCalled();
+  });
+
+  test('link ble with a gatt device ignores a stored USB account id', async () => {
+    const bleDevice = { id: 'ble-1', gatt: {} };
+    const t = await openLedgerTransport({
+      id: LEDGER_USB_ID,
+      bleDevice,
+      link: 'ble',
+    });
+    expect(t).toEqual({ kind: 'ble', dev: bleDevice });
+    expect(TransportWebHID.request).not.toHaveBeenCalled();
+  });
+
   test('BLE reconnect opens a granted device by id without requestDevice', async () => {
     const ble = { id: 'ble-1', gatt: {} };
     Object.defineProperty(navigator, 'bluetooth', {

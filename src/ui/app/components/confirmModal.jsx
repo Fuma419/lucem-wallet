@@ -17,7 +17,7 @@ import {
 } from '@chakra-ui/react';
 import React from 'react';
 import { flushSync } from 'react-dom';
-import { MdQrCode2, MdUsb } from 'react-icons/md';
+import { MdBluetooth, MdQrCode2, MdUsb } from 'react-icons/md';
 import { getBluetoothServiceUuids } from '@ledgerhq/devices';
 import {
   canHostDeviceChooser,
@@ -28,7 +28,10 @@ import {
 import { detectIsExtensionPopup } from '../../layout/surface';
 import { formatLedgerError } from '../../../api/extension/ledger-error';
 import {
+  hasLedgerUsbApi,
+  hasWebBluetoothRequestDevice,
   isLedgerUsbId,
+  ledgerCannotConnectMessage,
   listGrantedLedgerUsbPicks,
   listGrantedBluetoothDevices,
   pickLedgerBluetoothDevice,
@@ -290,37 +293,49 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
       .catch(() => {
         if (!cancelled) setChooserHere(false);
       });
-    if (isLedgerUsbId(hw.id)) {
-      preloadLedgerUsbTransports().catch(() => {});
-      listGrantedLedgerUsbPicks()
-        .then((granted) => {
-          if (!cancelled) {
-            setGrantedUsbPick(preferredGrantedLedgerUsbPick(granted));
-          }
-        })
-        .catch(() => {});
-    } else {
-      preloadLedgerBleTransport().catch(() => {});
-      listGrantedBluetoothDevices()
-        .then((devices) => {
-          if (cancelled) return;
-          const want = String(hw.id);
-          const match =
-            devices.find((d) => d && String(d.id) === want) ||
-            (devices.length === 1 ? devices[0] : null);
-          setGrantedBleDevice(match);
-        })
-        .catch(() => {});
-    }
+    preloadLedgerUsbTransports().catch(() => {});
+    preloadLedgerBleTransport().catch(() => {});
+    listGrantedLedgerUsbPicks()
+      .then((granted) => {
+        if (!cancelled) {
+          setGrantedUsbPick(preferredGrantedLedgerUsbPick(granted));
+        }
+      })
+      .catch(() => {});
+    listGrantedBluetoothDevices()
+      .then((devices) => {
+        if (cancelled) return;
+        const want = String(hw.id);
+        const match =
+          (!isLedgerUsbId(hw.id) &&
+            devices.find((d) => d && String(d.id) === want)) ||
+          (devices.length === 1 ? devices[0] : null);
+        setGrantedBleDevice(match || null);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
   }, [isOpen, hw]);
 
-  const confirmHandler = async () => {
+  const inExtensionPopup = detectIsExtensionPopup(
+    typeof document !== 'undefined' ? document : null,
+    typeof chrome !== 'undefined' ? chrome : null,
+    typeof window !== 'undefined' ? window.location.search : ''
+  );
+  const ledgerHandoff =
+    hw &&
+    hw.device === HW.ledger &&
+    typeof props.onHwLedgerWindow === 'function' &&
+    (inExtensionPopup || chooserHere === false);
+  const canUsb = hasLedgerUsbApi();
+  const canBle = hasWebBluetoothRequestDevice();
+
+  const confirmHandler = async (opts = {}) => {
     if (props.ready === false || !waitReady || submittingRef.current) return;
     submittingRef.current = true;
     setWaitReady(false);
+    const link = opts.link === 'ble' ? 'ble' : 'usb';
     try {
       if (
         hw.device === HW.keystone &&
@@ -337,23 +352,15 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         let usbDevice;
         let hidDevice;
         let bleDevice;
-        const inExtensionPopup = detectIsExtensionPopup(
-          typeof document !== 'undefined' ? document : null,
-          typeof chrome !== 'undefined' ? chrome : null,
-          typeof window !== 'undefined' ? window.location.search : ''
-        );
         // The toolbar popup cannot host requestDevice. chrome.windows.getCurrent
         // also lies from a popup (it reports the parent normal window), so a
         // remembered device is not enough — always leave for the signing tab.
-        if (
-          typeof props.onHwLedgerWindow === 'function' &&
-          (inExtensionPopup || chooserHere === false)
-        ) {
+        if (ledgerHandoff) {
           await Promise.resolve(props.onHwLedgerWindow(hw));
           onClose();
           return;
         }
-        if (isLedgerUsbId(hw.id)) {
+        if (link === 'usb') {
           if (forceUsbPicker || !grantedUsbPick) {
             flushSync(() => {
               setSuspendModal(true);
@@ -395,6 +402,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
           usbDevice,
           hidDevice,
           bleDevice,
+          link,
         });
         const signedMessage = await props.sign(null, { ...hw, appAda });
         await props.onConfirm(true, signedMessage);
@@ -407,7 +415,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
       if (isSubmitError(e)) props.onConfirm(false, e);
       else {
         console.warn(e);
-        if (hw.device === HW.ledger && isLedgerUsbId(hw.id)) {
+        if (hw.device === HW.ledger && link === 'usb') {
           setForceUsbPicker(true);
         } else if (hw.device === HW.ledger) {
           setForceBlePicker(true);
@@ -435,8 +443,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
           px={4}
         >
           <Text color="white" textAlign="center" fontSize="sm">
-            Pick your Ledger in the Chrome Bluetooth list. Leave the Cardano
-            app open.
+            Pick your Ledger in the Chrome list. Leave the Cardano app open.
           </Text>
         </Box>
       )}
@@ -494,7 +501,13 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                 color="white"
               >
                 <Icon
-                  as={hw.device === HW.keystone ? MdQrCode2 : MdUsb}
+                  as={
+                    hw.device === HW.keystone
+                      ? MdQrCode2
+                      : hw.device === HW.ledger
+                        ? MdBluetooth
+                        : MdUsb
+                  }
                   boxSize={5}
                   mr={2}
                   flexShrink={0}
@@ -509,22 +522,20 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
                         signing tab.
                       </>
                     )
+                  ) : hw.device === HW.ledger ? (
+                    !waitReady ? (
+                      'Waiting for Ledger…'
+                    ) : ledgerHandoff ? (
+                      'Continue to choose USB or Bluetooth. Either works for this account.'
+                    ) : !canUsb && !canBle ? (
+                      ledgerCannotConnectMessage()
+                    ) : (
+                      'Connect over USB or Bluetooth. Either works, even if this account was imported the other way.'
+                    )
                   ) : !waitReady ? (
-                    `Waiting for ${deviceLabel(hw.device)}${
-                      hw.device === HW.ledger && isLedgerUsbId(hw.id)
-                        ? ' (USB)'
-                        : hw.device === HW.ledger
-                          ? ' (Bluetooth)'
-                          : ''
-                    }`
+                    `Waiting for ${deviceLabel(hw.device)}`
                   ) : (
-                    `Connect ${deviceLabel(hw.device)}${
-                      hw.device === HW.ledger && isLedgerUsbId(hw.id)
-                        ? ' over USB'
-                        : hw.device === HW.ledger
-                          ? ' over Bluetooth'
-                          : ''
-                    }`
+                    `Connect ${deviceLabel(hw.device)}`
                   )}
                 </Box>
               </Box>
@@ -536,7 +547,7 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
             </Box>
           </ModalBody>
 
-          <ModalFooter>
+          <ModalFooter flexWrap="wrap" gap={2}>
             <Button
               mr={3}
               variant="ghost"
@@ -549,14 +560,43 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
             >
               Close
             </Button>
-            <Button
-              isDisabled={props.ready === false || !waitReady}
-              isLoading={!waitReady}
-              colorScheme="blue"
-              onClick={confirmHandler}
-            >
-              Confirm
-            </Button>
+            {hw.device === HW.ledger && !ledgerHandoff ? (
+              <>
+                {canUsb && (
+                  <Button
+                    isDisabled={props.ready === false || !waitReady}
+                    isLoading={!waitReady}
+                    colorScheme="blue"
+                    leftIcon={<Icon as={MdUsb} />}
+                    onClick={() => confirmHandler({ link: 'usb' })}
+                  >
+                    USB
+                  </Button>
+                )}
+                {canBle && (
+                  <Button
+                    ml={canUsb ? 2 : 0}
+                    isDisabled={props.ready === false || !waitReady}
+                    isLoading={!waitReady}
+                    colorScheme="blue"
+                    variant={canUsb ? 'outline' : 'solid'}
+                    leftIcon={<Icon as={MdBluetooth} />}
+                    onClick={() => confirmHandler({ link: 'ble' })}
+                  >
+                    Bluetooth
+                  </Button>
+                )}
+              </>
+            ) : (
+              <Button
+                isDisabled={props.ready === false || !waitReady}
+                isLoading={!waitReady}
+                colorScheme="blue"
+                onClick={() => confirmHandler()}
+              >
+                Confirm
+              </Button>
+            )}
           </ModalFooter>
         </ModalContent>
       </Modal>

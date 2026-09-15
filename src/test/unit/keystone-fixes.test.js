@@ -137,6 +137,7 @@ describe('hw.jsx mobile layout and Ledger Web Bluetooth', () => {
     expect(hwSrc).toContain('bleDevice');
     expect(hwSrc).toContain('isLedgerSessionLive');
     expect(hwSrc).toContain('bleDevice: data.bleDevice');
+    expect(hwSrc).toContain('Signing later can use USB or Bluetooth');
   });
 
   test('Ledger import only trusts keys the device confirms by address', () => {

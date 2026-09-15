@@ -32,7 +32,14 @@ test.describe('Wallet header action row', () => {
 
       const send = page.getByTestId('wallet-send');
       const delegation = page.getByTestId('wallet-delegation');
+      await send.waitFor({ state: 'visible', timeout: 15_000 });
 
+      await expect
+        .poll(async () => receive.boundingBox(), { timeout: 10_000 })
+        .toBeTruthy();
+      await expect
+        .poll(async () => send.boundingBox(), { timeout: 10_000 })
+        .toBeTruthy();
       const rReceive = await receive.boundingBox();
       const rSend = await send.boundingBox();
       expect(rReceive, 'Receive visible').toBeTruthy();

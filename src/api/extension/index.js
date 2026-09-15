@@ -1549,6 +1549,7 @@ export const initHW = async ({
   promptUsb,
   usbDevice,
   hidDevice,
+  link,
 }) => {
   if (device == HW.ledger) {
     let appAda;
@@ -1559,6 +1560,7 @@ export const initHW = async ({
         promptUsb,
         usbDevice,
         hidDevice,
+        link,
       });
       appAda = new Ada(transport);
       let versionInfo;

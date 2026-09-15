@@ -536,13 +536,30 @@ const openUsbTransport = async (opts = {}) => {
 
 /**
  * Open a Ledger transport for import or signing.
- * USB when `id` is the USB sentinel; otherwise WebBLE (`bleDevice` or `id`).
+ *
+ * USB vs Bluetooth is a session choice. The stored account `id` is only a
+ * reconnect hint — a USB-imported account can sign over BLE and the reverse.
+ * Pass `link: 'usb' | 'ble'` when the user picked a transport so a stored
+ * USB sentinel cannot steal a Bluetooth click (and vice versa).
+ *
  * Never pass a BLE id string into TransportWebBLE.open — that calls
  * bluetooth.requestDevice() (see Ledger's open() TODO) and needs a gesture.
- * @param {{ id?: string, bleDevice?: { gatt?: unknown }, promptUsb?: boolean, usbDevice?: any, hidDevice?: any }} [opts]
+ * @param {{ id?: string, bleDevice?: { gatt?: unknown }, promptUsb?: boolean, usbDevice?: any, hidDevice?: any, link?: 'usb' | 'ble' }} [opts]
  */
 export const openLedgerTransport = async (opts = {}) => {
-  const { id, bleDevice, promptUsb, usbDevice, hidDevice } = opts;
+  const { id, bleDevice, promptUsb, usbDevice, hidDevice, link } = opts;
+  if (link === 'usb') {
+    if (usbDevice || hidDevice) {
+      return openPickedLedgerDevice({ usbDevice, hidDevice });
+    }
+    return openUsbTransport({ prompt: Boolean(promptUsb) });
+  }
+  if (link === 'ble') {
+    if (bleDevice && bleDevice.gatt) {
+      return openBleTransport(bleDevice);
+    }
+    throw new Error(LEDGER_BLE_NEED_PICKER_MESSAGE);
+  }
   if (bleDevice && bleDevice.gatt) {
     return openBleTransport(bleDevice);
   }

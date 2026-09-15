@@ -1006,6 +1006,20 @@ const ConnectHW = ({ onConfirm }) => {
               : ledgerBluetoothHelpText()}
         </Text>
       )}
+      {selected === HW.ledger && canConnectLedgerInThisBrowser() && (
+        <Text
+          width="90%"
+          maxWidth="320px"
+          textAlign="center"
+          mx="auto"
+          mt={2}
+          fontSize="xs"
+          color="whiteAlpha.600"
+        >
+          Signing later can use USB or Bluetooth. This only connects the
+          device so Lucem can import the account.
+        </Text>
+      )}
       {selected === HW.ledger && (
         <Box
           mt={4}

@@ -94,6 +94,13 @@ describe('confirm modal', () => {
     expect(src).toMatch(/await Promise\.resolve\(props\.onHwLedgerWindow\(hw\)\)/);
   });
 
+  test('Ledger confirm offers USB and Bluetooth instead of the import transport', () => {
+    expect(src).toMatch(/confirmHandler\(\{ link: 'usb' \}\)/);
+    expect(src).toMatch(/confirmHandler\(\{ link: 'ble' \}\)/);
+    expect(src).toMatch(/ledgerHandoff/);
+    expect(src).not.toMatch(/isLedgerUsbId\(hw\.id\)\s*\?[\s\S]{0,40}over USB/);
+  });
+
   test('a remembered device does not keep pairing in the popup', () => {
     // A granted BLE device used to skip the hand-off; requestDevice then
     // ran in the popup and Chrome cancelled it.
@@ -156,6 +163,11 @@ describe('ledger signing page', () => {
     expect(src).toMatch(/findGrantedBluetoothDevice/);
     expect(src).toMatch(/acceptAllDevices: true/);
     expect(src).toMatch(/Device not listed\? Show all Bluetooth devices/);
+    expect(src).toMatch(/Connect over USB/);
+    expect(src).toMatch(/Connect over Bluetooth/);
+    expect(src).toMatch(/link === 'usb'/);
+    expect(src).toMatch(/link === 'ble'/);
+    expect(src).toMatch(/even if this account was imported the other way/);
     expect(src).toMatch(/writeLedgerSignResult/);
     expect(src).toMatch(/signTxHW\(/);
     expect(src).toMatch(/signAndSubmitHW\(unsignedTx/);

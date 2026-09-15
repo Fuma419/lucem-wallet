@@ -28,6 +28,10 @@ import { deriveAccountDRepKeyHashHex, deriveAccountDRepPrivateKey, requestAccoun
 import { assertLedgerAccountMatches } from './ledger-account';
 import { getNetwork, getStorage } from './storage';
 import { recordSubmittedTx } from '../tx/pending-history';
+import {
+  isAlreadyIncludedSubmitError,
+  txHashFromCborHex,
+} from '../tx/submit-already-included';
 import { ledgerInputPaths, ledgerPathsForInputs } from '../tx/cip30-input-key-hashes';
 import {
   ledgerNetworkForWallet,
@@ -670,6 +674,13 @@ export const submitTx = async (tx) => {
       const payload = await result.json();
       await rememberSubmitted(txHex, payload);
       return payload;
+    }
+    const text = await result.text().catch(() => '');
+    if (isAlreadyIncludedSubmitError(text)) {
+      invalidateReadCache();
+      const hash = await txHashFromCborHex(txHex);
+      await rememberSubmitted(txHex, hash);
+      return hash;
     }
     throw APIError.InvalidRequest;
   }

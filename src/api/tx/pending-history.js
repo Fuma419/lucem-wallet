@@ -29,7 +29,7 @@ export const normalizeSubmittedHash = (result) => {
   return '';
 };
 
-const hashFromTxHex = (Cardano, txHex) => {
+export const hashFromTxHex = (Cardano, txHex) => {
   const tx =
     typeof Cardano.Transaction.from_hex === 'function'
       ? Cardano.Transaction.from_hex(txHex)

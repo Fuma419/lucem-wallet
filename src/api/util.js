@@ -50,6 +50,10 @@ import {
   relayDnsName,
   unitIntervalToLedger,
 } from './tx/ledger-encode';
+import {
+  isAlreadyIncludedSubmitError,
+  txHashFromCborHex,
+} from './tx/submit-already-included';
 
 function isExtensionRuntime() {
   return (
@@ -227,10 +231,25 @@ export async function koiosSubmitTransaction(txHex, signal) {
         recordProviderSuccess('blockfrost', Date.now() - startedAt, '/tx/submit');
         return text.trim().replace(/^"+|"+$/g, '');
       }
-      throw new Error(
+      const blockfrostError = new Error(
         `Blockfrost API error: ${blockfrostResult.status} ${blockfrostResult.statusText} ${text.slice(0, 500)}`
       );
+      if (isAlreadyIncludedSubmitError(text) || isAlreadyIncludedSubmitError(blockfrostError)) {
+        const hash = await txHashFromCborHex(txHex);
+        recordProviderSuccess('blockfrost', Date.now() - startedAt, '/tx/submit');
+        return hash;
+      }
+      throw blockfrostError;
     } catch (/** @type {any} */ error) {
+      if (isAlreadyIncludedSubmitError(error)) {
+        try {
+          const hash = await txHashFromCborHex(txHex);
+          recordProviderSuccess('blockfrost', Date.now() - startedAt, '/tx/submit');
+          return hash;
+        } catch {
+          /* fall through to Koios */
+        }
+      }
       recordProviderFailure(
         'blockfrost',
         error,
@@ -281,6 +300,15 @@ export async function koiosSubmitTransaction(txHex, signal) {
         detail ? ` — ${String(detail).slice(0, 500)}` : ''
       }`
     );
+    if (isAlreadyIncludedSubmitError(koiosError) || isAlreadyIncludedSubmitError(detail)) {
+      try {
+        const hash = await txHashFromCborHex(txHex);
+        recordProviderSuccess('koios', Date.now() - koiosStartedAt, '/submittx');
+        return hash;
+      } catch {
+        /* throw the node error below */
+      }
+    }
     // A node rejecting a bad transaction is not an unhealthy provider; only
     // transport and server faults are.
     if (rawResult.status >= 500 || rawResult.status === 429) {

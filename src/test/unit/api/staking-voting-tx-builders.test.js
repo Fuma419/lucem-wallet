@@ -338,6 +338,17 @@ describe('signAndSubmitHW submit errors', () => {
     expect(wrapped.message).toMatch(/not registered on this network/i);
   });
 
+  test('wrapSubmitError humanizes Conway already-included mempool failures', () => {
+    const wrapped = wrapSubmitError(
+      new Error(
+        'Transaction submission failed: Koios API error: 400 — {"contents":{"contents":{"contents":{"era":"ShelleyBasedEraConway","error":["ConwayMempoolFailure \\"All inputs are spent. Transaction has probably already been included\\""],"kind":"ShelleyTxValidationError"},"tag":"TxValidationErrorInCardanoMode"},"tag":"TxCmdTxSubmitValidationError"},"tag":"TxSubmitFail"}'
+      )
+    );
+    expect(isSubmitError(wrapped)).toBe(true);
+    expect(wrapped.message).toMatch(/already on the network/i);
+    expect(wrapped.message).not.toMatch(/TxSubmitFail/);
+  });
+
   test('signAndSubmitHW surfaces the provider submit message', async () => {
     const tx = await delegationTx(
       ACCOUNT,

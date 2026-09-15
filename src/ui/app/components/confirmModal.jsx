@@ -129,6 +129,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
     name: '',
   });
   const [waitReady, setWaitReady] = React.useState(true);
+  const submittingRef = React.useRef(false);
   const inputRef = React.useRef();
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false;
 
@@ -144,19 +145,23 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
     if (
       (!props.allowEmptyPassword && !state.password) ||
       props.ready === false ||
-      !waitReady
+      !waitReady ||
+      submittingRef.current
     )
       return;
+    submittingRef.current = true;
+    setWaitReady(false);
     try {
-      setWaitReady(false);
       const signedMessage = await props.sign(state.password);
       await props.onConfirm(true, signedMessage);
     } catch (e) {
       if (e === ERROR.wrongPassword)
         setState((s) => ({ ...s, wrongPassword: true }));
       else await props.onConfirm(false, e);
+    } finally {
+      submittingRef.current = false;
+      setWaitReady(true);
     }
-    setWaitReady(true);
   };
 
   return (
@@ -256,6 +261,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
 
 const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
   const [waitReady, setWaitReady] = React.useState(true);
+  const submittingRef = React.useRef(false);
   const [error, setError] = React.useState('');
   const isMobile = useBreakpointValue({ base: true, md: false }) ?? false;
   const [grantedUsbPick, setGrantedUsbPick] = React.useState(null);
@@ -312,13 +318,14 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
   }, [isOpen, hw]);
 
   const confirmHandler = async () => {
-    if (props.ready === false || !waitReady) return;
+    if (props.ready === false || !waitReady || submittingRef.current) return;
+    submittingRef.current = true;
+    setWaitReady(false);
     try {
       if (
         hw.device === HW.keystone &&
         typeof props.onHwKeystone === 'function'
       ) {
-        setWaitReady(false);
         await Promise.resolve(props.onHwKeystone(hw));
         onClose();
         return;
@@ -342,7 +349,6 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
           typeof props.onHwLedgerWindow === 'function' &&
           (inExtensionPopup || chooserHere === false)
         ) {
-          setWaitReady(false);
           await Promise.resolve(props.onHwLedgerWindow(hw));
           onClose();
           return;
@@ -383,7 +389,6 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         } else {
           bleDevice = grantedBleDevice;
         }
-        setWaitReady(false);
         const appAda = await initHW({
           device: hw.device,
           id: hw.id,
@@ -394,7 +399,6 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         const signedMessage = await props.sign(null, { ...hw, appAda });
         await props.onConfirm(true, signedMessage);
       } else {
-        setWaitReady(false);
         await props.sign(null, hw);
         onClose();
         return;
@@ -410,8 +414,10 @@ const ConfirmModalHw = ({ props, isOpen, onClose, hw }) => {
         }
         setError(formatLedgerError(e, 'An error occurred'));
       }
+    } finally {
+      submittingRef.current = false;
+      setWaitReady(true);
     }
-    setWaitReady(true);
   };
 
   return (

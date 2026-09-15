@@ -91,6 +91,13 @@ describe('confirm modal', () => {
     expect(src).toMatch(/setChooserHere\(null\)/);
     expect(src).toMatch(/canHostDeviceChooser\(\)/);
   });
+
+  test('password and hardware confirm refuse a second submit while one is in flight', () => {
+    expect(src).toMatch(/submittingRef/);
+    expect(src).toMatch(/submittingRef\.current/);
+    expect(src).toMatch(/submittingRef\.current = true/);
+    expect(src).toMatch(/submittingRef\.current = false/);
+  });
 });
 
 describe('pages that can hand off', () => {

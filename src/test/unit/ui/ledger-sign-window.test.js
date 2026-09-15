@@ -64,6 +64,23 @@ describe('ledger sign session hand-off', () => {
     expect(indexSrc).toMatch(/export const waitForLedgerSignResult/);
     expect(indexSrc).toMatch(/mode: mode === 'witness' \? 'witness' : 'submit'/);
   });
+
+  test('CIP-30 popup is minimized so the Bluetooth list is not hidden behind it', () => {
+    expect(indexSrc).toMatch(/yieldPopupForDeviceChooser/);
+    expect(indexSrc).toMatch(/restoreYieldedPopup/);
+    expect(indexSrc).toMatch(/yieldedPopupId/);
+    const ext = read('platform/extension.js');
+    expect(ext).toMatch(/yieldPopupForDeviceChooser: async/);
+    expect(ext).toMatch(/state: 'minimized'/);
+    expect(ext).toMatch(/restoreYieldedPopup: async/);
+    expect(ext).toMatch(/findInternalPopupWindow/);
+    expect(ext).toContain('internalPopup');
+    expect(ext).toMatch(/windowTypes: \['normal'\]/);
+    expect(ext).toMatch(/props\.windowId = windowId/);
+    expect(read('platform/web.js')).toMatch(
+      /yieldPopupForDeviceChooser: async \(\) => null/
+    );
+  });
 });
 
 describe('confirm modal', () => {
@@ -136,6 +153,9 @@ describe('ledger signing page', () => {
     expect(src).toMatch(/takeLedgerSignPayload/);
     expect(src).toMatch(/pickLedgerUsbDevice/);
     expect(src).toMatch(/pickLedgerBluetoothDevice/);
+    expect(src).toMatch(/findGrantedBluetoothDevice/);
+    expect(src).toMatch(/acceptAllDevices: true/);
+    expect(src).toMatch(/Device not listed\? Show all Bluetooth devices/);
     expect(src).toMatch(/writeLedgerSignResult/);
     expect(src).toMatch(/signTxHW\(/);
     expect(src).toMatch(/signAndSubmitHW\(unsignedTx/);

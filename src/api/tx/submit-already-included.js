@@ -3,9 +3,11 @@
  * fallback after Blockfrost) fails with ConwayMempoolFailure "All inputs are
  * spent. Transaction has probably already been included". That is a duplicate
  * submit of a tx that is already in the mempool or on-chain — not a failed vote.
+ *
+ * Leaf module: do not import pending-history or extension/storage (those import
+ * util.js, and util.js calls this helper).
  */
 import Loader from '../loader';
-import { hashFromTxHex } from './pending-history';
 
 export const ALREADY_INCLUDED_USER_MESSAGE =
   'This transaction is already on the network, or its coins were already spent. Check history; wait for it to confirm before sending another.';
@@ -38,5 +40,13 @@ export const txHashFromCborHex = async (txHex) => {
     throw new Error('Missing transaction hex');
   }
   await Loader.load();
-  return hashFromTxHex(Loader.Cardano, txHex);
+  const Cardano = Loader.Cardano;
+  const tx =
+    typeof Cardano.Transaction.from_hex === 'function'
+      ? Cardano.Transaction.from_hex(txHex)
+      : Cardano.Transaction.from_bytes(Buffer.from(txHex, 'hex'));
+  const fixed = Cardano.FixedTransactionBody.from_bytes(tx.body().to_bytes());
+  const hex = Buffer.from(fixed.tx_hash().to_bytes()).toString('hex');
+  if (typeof fixed.free === 'function') fixed.free();
+  return hex;
 };

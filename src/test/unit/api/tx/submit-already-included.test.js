@@ -6,7 +6,6 @@ const {
   isAlreadyIncludedSubmitError,
   txHashFromCborHex,
 } = require('../../../../api/tx/submit-already-included');
-const { hashFromTxHex } = require('../../../../api/tx/pending-history');
 
 const USER_KOIOS_ERROR =
   'Transaction submission failed: Koios API error: 400 — {"contents":{"contents":{"contents":{"era":"ShelleyBasedEraConway","error":["ConwayMempoolFailure \\"All inputs are spent. Transaction has probably already been included\\""],"kind":"ShelleyTxValidationError"},"tag":"TxValidationErrorInCardanoMode"},"tag":"TxCmdTxSubmitValidationError"},"tag":"TxSubmitFail"}';
@@ -35,7 +34,14 @@ describe('already-included submit recovery', () => {
   test('txHashFromCborHex matches CSL body hash', async () => {
     const hex = emptyTxHex();
     const hash = await txHashFromCborHex(hex);
-    expect(hash).toBe(hashFromTxHex(CSL, hex));
+    const expected = Buffer.from(
+      CSL.FixedTransactionBody.from_bytes(
+        CSL.Transaction.from_bytes(Buffer.from(hex, 'hex')).body().to_bytes()
+      )
+        .tx_hash()
+        .to_bytes()
+    ).toString('hex');
+    expect(hash).toBe(expected);
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
   });
 

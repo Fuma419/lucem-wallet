@@ -28,6 +28,10 @@ import type {
   KoiosRequestEnhanced,
   ProtocolParametersSnapshot,
 } from '../types';
+import {
+  ALREADY_INCLUDED_USER_MESSAGE,
+  isAlreadyIncludedSubmitError,
+} from '../tx/submit-already-included';
 import { koiosRequestEnhanced as koiosRequestEnhancedUntyped } from '../util';
 import {
   canWithdrawRewards,
@@ -472,7 +476,9 @@ export const wrapSubmitError = (error: unknown): SubmitError => {
       ? REWARD_WITHDRAWAL_NEEDS_DREP
       : /DelegateeDRepNotRegisteredDELEG/i.test(raw)
         ? DREP_NOT_REGISTERED
-        : raw;
+        : isAlreadyIncludedSubmitError(raw)
+          ? ALREADY_INCLUDED_USER_MESSAGE
+          : raw;
   const wrapped = new Error(message) as SubmitError;
   wrapped.code = ERROR.submit;
   if (error && error !== ERROR.submit) {

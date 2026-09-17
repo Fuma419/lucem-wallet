@@ -146,3 +146,29 @@ describe('Android FileProvider paths', () => {
     );
   });
 });
+
+describe('Mobile Android CI', () => {
+  const ciScript = fs.readFileSync(
+    path.join(root, 'scripts/ci-mobile-android.sh'),
+    'utf8'
+  );
+  const jenkinsfile = fs.readFileSync(path.join(root, 'Jenkinsfile'), 'utf8');
+
+  test('runs host unit tests as well as assembleDebug', () => {
+    expect(ciScript).toMatch(/assembleDebug/);
+    expect(ciScript).toMatch(/testDebugUnitTest/);
+  });
+
+  test('hard-gates Mobile Android without skipping later Jenkins stages', () => {
+    expect(jenkinsfile).toMatch(
+      /catchError\(buildResult: 'FAILURE', stageResult: 'FAILURE'\)/
+    );
+    expect(jenkinsfile).toMatch(
+      /publishGithubStatus\('Mobile Android', 'failure', 'Mobile Android failed in Jenkins'\)/
+    );
+    expect(jenkinsfile).not.toMatch(/soft-gated/);
+    expect(jenkinsfile).toMatch(
+      /return \['Build', 'Unit tests', 'Mobile Android', 'Integration tests', 'Functional tests'\]/
+    );
+  });
+});

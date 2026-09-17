@@ -9,17 +9,18 @@
 //   Jenkins / Unit tests
 //   Jenkins / Integration tests
 //   Jenkins / Functional tests
-// Optional (soft-gated): Jenkins / Mobile Android
+//   Jenkins / Mobile Android
+//
+// Mobile Android is a hard gate (assembleDebug + testDebugUnitTest). catchError still
+// lets Integration and Functional run so a native failure does not hide web/tx
+// regressions. GitHub must require the Mobile Android status for merges to block.
 //
 // To publish those statuses, add Jenkins credential ID `github-status-token` as a secret text
 // token with commit status write access for this repository. Missing status credentials do not
 // fail the build, but protected PRs will wait for the required Jenkins statuses.
 
 def requiredGithubStatusStages() {
-  // Mobile Android runs in Jenkins but is soft-gated (catchError) until the
-  // agent SDK/JDK cache is warm — do not list it here or branch protection
-  // will block merges on a non-gating stage.
-  return ['Build', 'Unit tests', 'Integration tests', 'Functional tests']
+  return ['Build', 'Unit tests', 'Mobile Android', 'Integration tests', 'Functional tests']
 }
 
 def publishGithubStatus(String stageName, String state, String description) {
@@ -266,17 +267,16 @@ pipeline {
     }
 
     stage('Mobile Android') {
-      // Capacitor sync + assembleDebug against the webpack build/ from the Build stage.
+      // Capacitor sync + assembleDebug + testDebugUnitTest against webpack build/.
       // Bootstraps a user-local Android SDK + JDK 21 under $HOME/.local when needed.
       // iOS is intentionally omitted (needs macOS runners + signing).
-      // Soft-gate: mark the stage failed / publish failure status, but do not fail the
-      // whole PR pipeline on first-time agent SDK bootstrap flakes. Promote to hard
-      // gate once the lucem-wallet agent has a warm SDK cache.
+      // Hard gate: publish a real GitHub failure. catchError(buildResult: FAILURE)
+      // still continues the pipeline so Integration and Functional still run.
       steps {
         script {
           publishGithubStatus('Mobile Android', 'pending', 'Mobile Android is running in Jenkins')
         }
-        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
           sh '''
             set -e
             export PATH="${NODE24_DIR}/bin:${PATH}"
@@ -301,8 +301,7 @@ pipeline {
         }
         failure {
           script {
-            // Soft-gate: keep GitHub green so required checks are not blocked.
-            publishGithubStatus('Mobile Android', 'success', 'Mobile Android soft-gated (stage failed; see Jenkins log)')
+            publishGithubStatus('Mobile Android', 'failure', 'Mobile Android failed in Jenkins')
           }
         }
         aborted {

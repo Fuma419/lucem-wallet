@@ -1,0 +1,30 @@
+/**
+ * Native store contracts that webpack / Playwright cannot see. Keep these
+ * assertions in Jest so an extension-only change cannot drop Android/iOS
+ * permissions the packaged apps need.
+ */
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '../../..');
+const androidManifest = fs.readFileSync(
+  path.join(root, 'android/app/src/main/AndroidManifest.xml'),
+  'utf8'
+);
+
+describe('Android Keystone camera', () => {
+  test('declares CAMERA because the Capacitor Camera plugin does not merge it', () => {
+    expect(androidManifest).toMatch(
+      /<uses-permission android:name="android.permission.CAMERA" \/>/
+    );
+    expect(androidManifest).toMatch(
+      /<uses-feature android:name="android.hardware.camera" android:required="false" \/>/
+    );
+  });
+
+  test('does not require a camera so USB-only phones can still install', () => {
+    expect(androidManifest).not.toMatch(
+      /android.hardware.camera" android:required="true"/
+    );
+  });
+});

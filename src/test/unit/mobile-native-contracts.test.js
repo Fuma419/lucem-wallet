@@ -109,3 +109,31 @@ describe('Android gradle tests', () => {
     expect(instrumented).not.toMatch(/assertEquals\("com\.getcapacitor/);
   });
 });
+
+describe('Android FileProvider paths', () => {
+  const filePaths = fs.readFileSync(
+    path.join(root, 'android/app/src/main/res/xml/file_paths.xml'),
+    'utf8'
+  );
+
+  test('does not share the device external storage tree', () => {
+    expect(filePaths).not.toMatch(/<external-path\b/);
+    expect(filePaths).not.toMatch(/<root-path\b/);
+  });
+
+  test('only shares app cache and app-private Pictures', () => {
+    expect(filePaths).toMatch(/<cache-path name="my_cache_images" path="\." \/>/);
+    expect(filePaths).toMatch(
+      /<external-files-path name="my_images" path="Pictures\/" \/>/
+    );
+  });
+
+  test('FileProvider itself is not exported', () => {
+    expect(androidManifest).toMatch(
+      /<provider[\s\S]*?android:name="androidx\.core\.content\.FileProvider"[\s\S]*?android:exported="false"/
+    );
+    expect(androidManifest).toMatch(
+      /android:authorities="\$\{applicationId\}\.fileprovider"/
+    );
+  });
+});

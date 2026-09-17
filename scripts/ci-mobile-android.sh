@@ -134,4 +134,5 @@ if [ -z "${APK}" ]; then
   exit 1
 fi
 echo "Mobile Android OK: ${APK}"
-echo "Mobile Android unit tests OK (testDebugUnitTest)"
+python3 "${ROOT}/scripts/assert-gradle-unit-test-results.py" \
+  app/build/test-results/testDebugUnitTest

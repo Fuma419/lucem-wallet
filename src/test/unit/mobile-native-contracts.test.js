@@ -60,3 +60,52 @@ describe('iOS App Store export compliance', () => {
     );
   });
 });
+
+describe('Android gradle tests', () => {
+  test('does not keep Capacitor template tests under com.getcapacitor.myapp', () => {
+    expect(
+      fs.existsSync(
+        path.join(
+          root,
+          'android/app/src/test/java/com/getcapacitor/myapp/ExampleUnitTest.java'
+        )
+      )
+    ).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(
+          root,
+          'android/app/src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java'
+        )
+      )
+    ).toBe(false);
+  });
+
+  test('ships Lucem host and device tests under xyz.lucem.wallet', () => {
+    expect(
+      fs.existsSync(
+        path.join(
+          root,
+          'android/app/src/test/java/xyz/lucem/wallet/EdgeGestureExclusionTest.java'
+        )
+      )
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(
+          root,
+          'android/app/src/androidTest/java/xyz/lucem/wallet/PackageIdentityInstrumentedTest.java'
+        )
+      )
+    ).toBe(true);
+    const instrumented = fs.readFileSync(
+      path.join(
+        root,
+        'android/app/src/androidTest/java/xyz/lucem/wallet/PackageIdentityInstrumentedTest.java'
+      ),
+      'utf8'
+    );
+    expect(instrumented).toMatch(/assertEquals\("xyz\.lucem\.wallet"/);
+    expect(instrumented).not.toMatch(/assertEquals\("com\.getcapacitor/);
+  });
+});

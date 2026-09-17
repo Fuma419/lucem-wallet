@@ -18,8 +18,6 @@ import java.util.Arrays;
  * mid-screen left/right edges so create/import seed grids are usable.
  */
 public class MainActivity extends BridgeActivity {
-  private static final int EXCLUSION_WIDTH_DP = 48;
-  private static final int EXCLUSION_HEIGHT_DP = 200;
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -69,17 +67,19 @@ public class MainActivity extends BridgeActivity {
   }
 
   private void applyEdgeGestureExclusion(View view) {
-    int width = view.getWidth();
-    int height = view.getHeight();
-    if (width <= 0 || height <= 0) {
+    EdgeGestureExclusion.Band[] bands = EdgeGestureExclusion.midEdges(
+      view.getWidth(),
+      view.getHeight(),
+      getResources().getDisplayMetrics().density
+    );
+    if (bands.length == 0) {
       return;
     }
-    float density = getResources().getDisplayMetrics().density;
-    int edge = Math.max(1, Math.round(EXCLUSION_WIDTH_DP * density));
-    int excludeH = Math.min(height, Math.round(EXCLUSION_HEIGHT_DP * density));
-    int top = Math.max(0, (height - excludeH) / 2);
-    Rect left = new Rect(0, top, Math.min(edge, width), top + excludeH);
-    Rect right = new Rect(Math.max(0, width - edge), top, width, top + excludeH);
-    view.setSystemGestureExclusionRects(Arrays.asList(left, right));
+    view.setSystemGestureExclusionRects(
+      Arrays.asList(
+        new Rect(bands[0].left, bands[0].top, bands[0].right, bands[0].bottom),
+        new Rect(bands[1].left, bands[1].top, bands[1].right, bands[1].bottom)
+      )
+    );
   }
 }

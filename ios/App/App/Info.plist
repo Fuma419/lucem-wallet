@@ -20,6 +20,8 @@
 	<string>4.0.6</string>
 	<key>CFBundleVersion</key>
 	<string>40006</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Lucem uses the camera to scan Keystone QR codes for connecting and signing.</string>
 	<key>LSRequiresIPhoneOS</key>

@@ -28,3 +28,23 @@ describe('Android Keystone camera', () => {
     );
   });
 });
+
+describe('Android backup', () => {
+  test('disables Auto Backup of the WebView wallet store', () => {
+    expect(androidManifest).toMatch(/android:allowBackup="false"/);
+    expect(androidManifest).not.toMatch(/android:allowBackup="true"/);
+  });
+
+  test('excludes cloud backup and device-to-device transfer', () => {
+    expect(androidManifest).toMatch(
+      /android:dataExtractionRules="@xml\/data_extraction_rules"/
+    );
+    const rules = fs.readFileSync(
+      path.join(root, 'android/app/src/main/res/xml/data_extraction_rules.xml'),
+      'utf8'
+    );
+    expect(rules).toMatch(/<cloud-backup>/);
+    expect(rules).toMatch(/<device-transfer>/);
+    expect(rules).toMatch(/<exclude domain="root" \/>/);
+  });
+});

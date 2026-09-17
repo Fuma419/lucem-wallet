@@ -129,7 +129,7 @@ Each should export dummy API keys (see `secrets.testing.js` for the format). `ut
 | Lint | `./node_modules/.bin/eslint . --ext .js,.jsx,.ts,.tsx` |
 | Deploy web | `vercel deploy --prod --token $VERCEL_TOKEN --scope my-team-5c660a1c --yes` |
 | Mobile sync (local) | `npm run mobile:sync` then `npm run mobile:android` / `mobile:ios` |
-| Mobile Android CI | `npm run mobile:android:ci` (Capacitor sync + `assembleDebug`; Jenkins stage after Unit tests) |
+| Mobile Android CI | `npm run mobile:android:ci` (Capacitor sync + `assembleDebug` + `testDebugUnitTest`; Jenkins hard-gate after Unit tests). **iOS is not in Jenkins** (Linux agent, no Xcode) |
 
 **Live send integration tests** (`src/test/integration/send-transaction-preview-preprod.integration.test.js`): not run by default Jest. **Cardano mainnet is forbidden** (URL allowlist + `addr_test1` + Blockfrost key prefix; Jenkins unsets mainnet credentials). Only the two testnets:
 
@@ -277,7 +277,9 @@ Jenkins runs as a Docker container on this host. Agents have full access to debu
 
 **Reloading CasC:** `docker restart jenkins` (picks up `~/jenkins-deployment/jenkins/casc/*.yaml`).
 
-**GitHub status publishing:** The `Jenkinsfile` uses `withCredentials('github-status-token')` + `curl` to post `Jenkins / Build`, `Jenkins / Unit tests`, etc. The PAT stored in `github-status-token` must have **`commit_statuses:write`** permission on this repository.
+**GitHub status publishing:** The `Jenkinsfile` uses `withCredentials('github-status-token')` + `curl` to post `Jenkins / Build`, `Jenkins / Unit tests`, `Jenkins / Mobile Android`, `Jenkins / Integration tests`, and `Jenkins / Functional tests`. The PAT stored in `github-status-token` must have **`commit_statuses:write`** permission on this repository.
+
+**iOS is not in Jenkins.** The lucem-wallet agent is Linux. There is no `xcodebuild` / `cap sync ios` stage. Store Info.plist contracts are locked by Jest (`src/test/unit/mobile-native-contracts.test.js`). Device and TestFlight builds stay on a Mac — see `MOBILE.md`.
 
 **Troubleshooting:**
 - Build logs: `~/jenkins_home/jobs/lucem-wallet/branches/PR-<n>/builds/<num>/log`

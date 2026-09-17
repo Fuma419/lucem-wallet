@@ -5,12 +5,14 @@ import { File } from 'react-kawaii';
 import {
   getNetwork,
   getTransactions,
+  hydrateHistoryDetails,
   setTransactions,
   setTxDetail,
 } from '../../../api/extension';
 import Transaction from './transaction';
+import { isHistoryDetailComplete } from '../../../api/tx/tx-history';
 
-const BATCH = 5;
+const BATCH = 8;
 
 let slice = [];
 
@@ -21,16 +23,20 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
   const [page, setPage] = React.useState(1);
   const [final, setFinal] = React.useState(false);
   const [loadNext, setLoadNext] = React.useState(false);
+  const [hydratedDetails, setHydratedDetails] = React.useState({});
   const loadGenRef = React.useRef(0);
+  const hydratedAttemptRef = React.useRef(new Set());
 
   const resetPaging = React.useCallback(() => {
     loadGenRef.current += 1;
     slice = [];
     txObject = {};
+    hydratedAttemptRef.current = new Set();
     setHistorySlice(null);
     setPage(1);
     setFinal(false);
     setLoadNext(false);
+    setHydratedDetails({});
   }, []);
 
   const getTxs = async () => {
@@ -105,7 +111,35 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
   React.useEffect(() => {
     if (!historySlice) return;
     if (historySlice.length >= (page - 1) * BATCH) setLoadNext(false);
-  }, [historySlice]);
+  }, [historySlice, page]);
+
+  React.useEffect(() => {
+    if (!historySlice || !historySlice.length) return undefined;
+    let cancelled = false;
+    const missing = historySlice.filter((txHash) => {
+      if (hydratedAttemptRef.current.has(txHash)) return false;
+      const stored = hydratedDetails[txHash] || history.details?.[txHash];
+      return !isHistoryDetailComplete(stored);
+    });
+    if (!missing.length) return undefined;
+    missing.forEach((txHash) => hydratedAttemptRef.current.add(txHash));
+    hydrateHistoryDetails(missing)
+      .then((map) => {
+        if (cancelled) return;
+        if (!map || !Object.keys(map).length) return;
+        setHydratedDetails((prev) => ({ ...prev, ...map }));
+        Object.assign(txObject, map);
+      })
+      .catch((error) => {
+        console.warn(
+          'Failed to hydrate transaction history:',
+          error?.message || error
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [historySlice, history]);
 
   return (
     <Box position="relative">
@@ -137,6 +171,13 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
           >
             {historySlice.map((txHash) => {
               if (!history.details[txHash]) history.details[txHash] = {};
+              const stored = history.details[txHash];
+              const hydrated = hydratedDetails[txHash];
+              const detail = isHistoryDetailComplete(hydrated)
+                ? hydrated
+                : isHistoryDetailComplete(stored)
+                  ? stored
+                  : hydrated || stored;
 
               return (
                 <Transaction
@@ -145,7 +186,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
                   }}
                   key={txHash}
                   txHash={txHash}
-                  detail={history.details[txHash]}
+                  detail={detail}
                   currentAddr={currentAddr}
                   addresses={addresses}
                   network={network}

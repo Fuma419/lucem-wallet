@@ -99,6 +99,10 @@ describe('Koios Endpoints Library', () => {
       expect(endpoint.body).toHaveProperty('_inputs');
       expect(endpoint.body).toHaveProperty('_metadata');
       expect(endpoint.body).toHaveProperty('_assets');
+      expect(endpoint.body._inputs).toBe(true);
+      expect(endpoint.body._certs).toBe(true);
+      expect(endpoint.body._governance).toBe(true);
+      expect(endpoint.body._bytecode).toBe(false);
     });
 
     test('TX_UTXOS.DETAILS should be configured correctly', () => {
@@ -293,19 +297,27 @@ describe('KOIOS_REQUESTS helper functions', () => {
     expect(request.body).toEqual({ _block_hashes: ['test-hash'] });
   });
 
-  test('getTxInfo should build correct request', () => {
+  test('getTxInfo should request history sections (certs, votes, assets)', () => {
     const request = KOIOS_REQUESTS.getTxInfo('test-tx-hash');
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/tx_info');
-    expect(request.body).toEqual({ _tx_hashes: ['test-tx-hash'] });
+    expect(request.body._tx_hashes).toEqual(['test-tx-hash']);
+    expect(request.body._inputs).toBe(true);
+    expect(request.body._certs).toBe(true);
+    expect(request.body._governance).toBe(true);
+    expect(request.body._assets).toBe(true);
+    expect(request.body._metadata).toBe(true);
+    expect(request.body._bytecode).toBe(false);
   });
 
-  test('getTxInfos should preserve default flags and set multiple hashes', () => {
+  test('getTxInfos should request the same history flags for a batch', () => {
     const request = KOIOS_REQUESTS.getTxInfos(['h1', 'h2']);
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/tx_info');
     expect(request.body._tx_hashes).toEqual(['h1', 'h2']);
-    expect(request.body._inputs).toBe(false);
+    expect(request.body._inputs).toBe(true);
+    expect(request.body._certs).toBe(true);
+    expect(request.body._governance).toBe(true);
   });
 
   test('getTxUtxos should build correct request', () => {
@@ -541,7 +553,17 @@ describe('Integration tests', () => {
     
     expect(request.method).toBe('POST');
     expect(request.endpoint).toBe('/tx_info');
-    expect(request.body).toEqual({ _tx_hashes: [txHash] });
+    expect(request.body).toEqual({
+      _tx_hashes: [txHash],
+      _inputs: true,
+      _metadata: true,
+      _assets: true,
+      _withdrawals: true,
+      _certs: true,
+      _scripts: true,
+      _bytecode: false,
+      _governance: true,
+    });
   });
 
   test('should build realistic address info request', () => {

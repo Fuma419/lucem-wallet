@@ -172,6 +172,7 @@ export {
   getBlock,
   getTxUTxOs,
   getTxMetadata,
+  hydrateHistoryDetails,
   updateTxInfo,
   setTxDetail,
   getSpecificUtxo,

@@ -7,7 +7,7 @@ import {
   NETWORKD_ID_NUMBER,
   STORAGE,
 } from '../../config/config';
-import { cacheKey, invalidateAll as invalidateReadCache, withCache } from '../cache';
+import { cacheKey, getCached, invalidateAll as invalidateReadCache, setCached, withCache } from '../cache';
 import { KOIOS_REQUESTS } from '../koios-endpoints';
 import Loader from '../loader';
 import {
@@ -57,7 +57,16 @@ import {
   getStorage,
   setStorage,
 } from './storage';
-import { extraFromKoiosInfo, koiosKindCounts } from '../tx/tx-kind';
+import { extraFromKoiosInfo } from '../tx/tx-kind';
+import {
+  HISTORY_TX_INFO_TTL_MS,
+  blockSummaryFromTxInfo,
+  convertKoiosTxToExpectedFormat,
+  detailFromKoiosTxInfo,
+  isHistoryDetailComplete,
+  normalizeTxMetadata,
+  utxosFromTxInfo,
+} from '../tx/tx-history';
 
 
 const compareValues = (value1, value2) => {
@@ -675,11 +684,59 @@ export const getFiatPrice = async (currency, { force = false } = {}) =>
     { force }
   );
 
+const txInfoCacheKey = (networkId, txHash) =>
+  cacheKey('tx-info', networkId, txHash);
+
+const rememberTxInfo = (networkId, row) => {
+  if (row?.tx_hash) {
+    setCached(txInfoCacheKey(networkId, row.tx_hash), row, HISTORY_TX_INFO_TTL_MS);
+  }
+  return row;
+};
+
 export const getTxInfo = async (txHash) => {
+  const network = await getNetwork();
+  const key = txInfoCacheKey(network?.id, txHash);
+  const cached = getCached(key);
+  if (cached) return cached;
   const request = KOIOS_REQUESTS.getTxInfo(txHash);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   if (!result || result.error || result.length === 0) return null;
-  return result[0];
+  return rememberTxInfo(network?.id, result[0]);
+};
+
+/**
+ * Batch-hydrate history rows from one POST /tx_info. Used by the list so each
+ * visible hash is not an independent 4-request waterfall.
+ */
+export const hydrateHistoryDetails = async (txHashes) => {
+  const hashes = [...new Set((txHashes || []).filter(Boolean))];
+  if (!hashes.length) return {};
+  const network = await getNetwork();
+  const map = {};
+  const missing = [];
+  for (const hash of hashes) {
+    const cached = getCached(txInfoCacheKey(network?.id, hash));
+    if (cached) {
+      const detail = detailFromKoiosTxInfo(cached);
+      if (detail) map[hash] = detail;
+      else missing.push(hash);
+    } else {
+      missing.push(hash);
+    }
+  }
+  if (!missing.length) return map;
+
+  const request = KOIOS_REQUESTS.getTxInfos(missing);
+  const result = await koiosRequest(request.endpoint, {}, request.body);
+  if (!result || result.error || !Array.isArray(result)) return map;
+  for (const row of result) {
+    if (!row?.tx_hash) continue;
+    rememberTxInfo(network?.id, row);
+    const detail = detailFromKoiosTxInfo(row);
+    if (detail) map[row.tx_hash] = detail;
+  }
+  return map;
 };
 
 export const getBlock = async (blockHashOrNumb) => {
@@ -699,120 +756,18 @@ export const getBlock = async (blockHashOrNumb) => {
   return result[0];
 };
 
-// Helper function to convert Koios UTXO format to expected format
-const convertKoiosUtxosToExpectedFormat = (koiosUtxos) => {
-  if (!koiosUtxos) return null;
-  const normalizeAddress = (utxo) =>
-    utxo.payment_addr?.bech32 ||
-    utxo.address ||
-    utxo.payment_addr ||
-    utxo.stake_address ||
-    utxo.stake_addr?.bech32 ||
-    utxo.stake_addr ||
-    null;
-  
-  return {
-    inputs: (koiosUtxos.inputs || []).map(input => ({
-      address: normalizeAddress(input),
-      stake_address: input.stake_addr || input.stake_address || input.stake_addr?.bech32,
-      tx_hash: input.tx_hash,
-      tx_index: input.tx_index,
-      value: input.value,
-      asset_list: input.asset_list || [],
-      datum_hash: input.datum_hash,
-      inline_datum: input.inline_datum,
-      reference_script: input.reference_script
-    })),
-    outputs: (koiosUtxos.outputs || []).map(output => ({
-      address: normalizeAddress(output),
-      stake_address: output.stake_addr || output.stake_address || output.stake_addr?.bech32,
-      tx_hash: output.tx_hash,
-      tx_index: output.tx_index,
-      value: output.value,
-      asset_list: output.asset_list || [],
-      datum_hash: output.datum_hash,
-      inline_datum: output.inline_datum,
-      reference_script: output.reference_script
-    }))
-  };
-};
-
 export const getTxUTxOs = async (txHash) => {
   const request = KOIOS_REQUESTS.getTxUtxos(txHash);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   if (!result || result.error || result.length === 0) return null;
-  
-  // Convert Koios format to expected format
-  const converted = convertKoiosUtxosToExpectedFormat(result[0]);
-  return converted;
+  return utxosFromTxInfo(result[0]);
 };
 
 export const getTxMetadata = async (txHash) => {
   const request = KOIOS_REQUESTS.getTxMetadata(txHash);
   const result = await koiosRequest(request.endpoint, {}, request.body);
   if (!result || result.error || result.length === 0) return null;
-  return result[0];
-};
-
-// Helper function to convert Koios transaction format to expected format
-const convertKoiosTxToExpectedFormat = (koiosTx) => {
-  if (!koiosTx) return null;
-
-  const counts = koiosKindCounts(koiosTx);
-
-  return {
-    // Basic transaction info
-    tx_hash: koiosTx.tx_hash,
-    block_height: koiosTx.block_height,
-    block_hash: koiosTx.block_hash,
-    epoch_no: koiosTx.epoch_no,
-    epoch_slot: koiosTx.epoch_slot,
-    absolute_slot: koiosTx.absolute_slot,
-    tx_timestamp: koiosTx.tx_timestamp,
-    tx_block_index: koiosTx.tx_block_index,
-    tx_size: koiosTx.tx_size,
-    
-    // Financial info
-    total_output: koiosTx.total_output,
-    fee: koiosTx.fee,
-    treasury_donation: koiosTx.treasury_donation,
-    deposit: koiosTx.deposit,
-    
-    // Validity
-    invalid_before: koiosTx.invalid_before,
-    invalid_after: koiosTx.invalid_after,
-    
-    // UTXOs
-    inputs: koiosTx.inputs || [],
-    outputs: koiosTx.outputs || [],
-    
-    // Additional data
-    collateral_inputs: koiosTx.collateral_inputs,
-    collateral_output: koiosTx.collateral_output,
-    reference_inputs: koiosTx.reference_inputs,
-    withdrawals: koiosTx.withdrawals,
-    assets_minted: koiosTx.assets_minted,
-    certificates: koiosTx.certificates,
-    native_scripts: koiosTx.native_scripts,
-    plutus_contracts: koiosTx.plutus_contracts,
-    voting_procedures: koiosTx.voting_procedures || [],
-    
-    // Legacy field names for compatibility
-    fees: koiosTx.fee,
-    valid_contract: true, // Default to true for now
-    
-    // Transaction type detection fields
-    redeemer_count: counts.redeemerCount,
-    withdrawal_count: counts.withdrawalCount,
-    delegation_count: counts.delegationCount,
-    drep_delegation_count: counts.drepDelegationCount,
-    drep_registration_count: counts.drepRegistrationCount,
-    vote_count: counts.voteCount,
-    asset_mint_or_burn_count: counts.assetMintOrBurnCount,
-    stake_cert_count: counts.stakeCertCount,
-    pool_retire_count: counts.poolRetireCount,
-    pool_update_count: counts.poolUpdateCount
-  };
+  return normalizeTxMetadata(result[0]);
 };
 
 export const updateTxInfo = async (txHash) => {
@@ -822,38 +777,35 @@ export const updateTxInfo = async (txHash) => {
   const stored = history?.details?.[txHash];
   const pendingStub =
     stored && typeof stored === 'object' && stored.pending ? stored : null;
-  const complete =
-    stored &&
-    typeof stored === 'object' &&
-    stored.info &&
-    stored.block &&
-    stored.utxos &&
-    !stored.pending;
-
-  if (complete) return stored;
-
-  const detail = {};
+  if (isHistoryDetailComplete(stored)) return stored;
 
   const info = await getTxInfo(txHash);
-  if (info) {
+  let detail = info ? detailFromKoiosTxInfo(info) : {};
+  if (!detail) detail = {};
+
+  if (!detail.utxos) {
+    const uTxOs = await getTxUTxOs(txHash);
+    if (uTxOs) detail.utxos = uTxOs;
+  }
+  if (!detail.metadata || !detail.metadata.length) {
+    const metadata = await getTxMetadata(txHash);
+    if (metadata && metadata.length) detail.metadata = metadata;
+  }
+  if (!detail.block && info) {
+    detail.block = blockSummaryFromTxInfo(info) || (info.block_height
+      ? await getBlock(info.block_height)
+      : null);
+  }
+  if (!detail.info && info) {
     detail.info = convertKoiosTxToExpectedFormat(info);
-    if (info.block_height) {
-      detail.block = await getBlock(info.block_height);
-    }
   }
 
-  const uTxOs = await getTxUTxOs(txHash);
-  if (uTxOs) {
-    detail.utxos = uTxOs;
-  }
-
-  const metadata = await getTxMetadata(txHash);
-  if (metadata) {
-    detail.metadata = metadata;
-  }
-
-  if (detail.info && detail.utxos && detail.block) {
-    return { ...detail, pending: false };
+  if (isHistoryDetailComplete({ ...detail, pending: false })) {
+    return {
+      ...detail,
+      extra: extraFromKoiosInfo(detail.info),
+      pending: false,
+    };
   }
 
   if (pendingStub || detail.info) {
@@ -866,7 +818,8 @@ export const updateTxInfo = async (txHash) => {
         [],
       info: detail.info,
       utxos: detail.utxos,
-      metadata: detail.metadata,
+      metadata: detail.metadata || [],
+      block: detail.block,
     };
   }
 

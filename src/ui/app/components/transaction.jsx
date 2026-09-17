@@ -1,6 +1,7 @@
 import { ExternalLinkIcon, CopyIcon, CheckIcon } from '@chakra-ui/icons';
 import React from 'react';
 import { updateTxInfo } from '../../../api/extension';
+import { isHistoryDetailComplete } from '../../../api/tx/tx-history';
 import UnitDisplay from './unitDisplay';
 import {
   Box,
@@ -40,7 +41,9 @@ import Loader from '../../../api/loader';
 import {
   extraFromKoiosInfo,
   formatTxKindLabels,
-  TX_KIND_LABEL,
+  historyCategoryLabel,
+  primaryTxKind,
+  TX_FLOW_LABEL,
 } from '../../../api/tx/tx-kind';
 
 TimeAgo.addDefaultLocale(en);
@@ -61,21 +64,25 @@ const txTypeColor = {
   multisig: 'orange.400',
   contract: 'yellow.400',
   vote: 'purple.400',
+  catalystVote: 'purple.400',
+  proposal: 'purple.500',
   drepDelegation: 'cyan.400',
   drepRegistration: 'cyan.500',
+  drepDeregistration: 'cyan.300',
+  drepUpdate: 'cyan.400',
+  committeeHot: 'cyan.500',
+  committeeCold: 'cyan.300',
+  mir: 'gray.500',
+  swap: 'orange.400',
+  burn: 'red.400',
+  assetSend: 'orange.600',
+  assetReceive: 'gray.500',
+  assetSelf: 'gray.500',
+  assetTransfer: 'orange.500',
   pending: 'yellow.400',
 };
 
-const txTypeLabel = TX_KIND_LABEL;
-
-const txFlowLabel = {
-  self: 'Self transfer',
-  internalIn: 'Internal receive',
-  internalOut: 'Internal send',
-  externalIn: 'Receive',
-  externalOut: 'Send',
-  multisig: 'Multi-signature',
-};
+const txFlowLabel = TX_FLOW_LABEL;
 
 const useIsMounted = () => {
   const isMounted = React.useRef(false);
@@ -145,9 +152,17 @@ const Transaction = ({
   );
 
   React.useEffect(() => {
+    applyDetail(detail);
+  }, [detail, applyDetail]);
+
+  React.useEffect(() => {
     let cancelled = false;
+    const alreadyComplete =
+      isHistoryDetailComplete(detail) ||
+      (Boolean(displayRef.current) && !isPending && !detail?.pending);
+    if (alreadyComplete) return undefined;
+
     const load = async () => {
-      if (displayRef.current) return;
       try {
         const txDetail = await withTimeout(updateTxInfo(txHash), 25000);
         if (cancelled || !isMounted.current) return;
@@ -175,18 +190,17 @@ const Transaction = ({
       }
     };
     load();
-    const timer = setInterval(load, 8000);
+    const shouldPoll = isPending || Boolean(detail?.pending);
+    const timer = shouldPoll ? setInterval(load, 8000) : null;
     return () => {
       cancelled = true;
-      clearInterval(timer);
+      if (timer) clearInterval(timer);
     };
-  }, [txHash, applyDetail, isMounted]);
+  }, [txHash, applyDetail, isMounted, isPending, detail?.pending]);
 
   const category = displayInfo
-    ? formatTxKindLabels(displayInfo.extra) ||
-      txFlowLabel[displayInfo.type] ||
-      'Transaction'
-    : formatTxKindLabels(pendingExtra) || 'Transaction';
+    ? historyCategoryLabel(displayInfo.extra, displayInfo.type)
+    : historyCategoryLabel(pendingExtra, '');
 
   const showPending = !displayInfo && (isPending || Boolean(detail?.pending));
 
@@ -273,7 +287,11 @@ const Transaction = ({
               <Text fontSize={11} fontWeight="semibold" color="gray.500">
                 {category}
               </Text>
-              {displayInfo.extra.length > 0 && txFlowLabel[displayInfo.type] ? (
+              {displayInfo.extra.length > 0 &&
+              txFlowLabel[displayInfo.type] &&
+              !['assetSend', 'assetReceive', 'assetSelf', 'assetTransfer'].includes(
+                primaryTxKind(displayInfo.extra, displayInfo.type)
+              ) ? (
                 <Text fontSize={11} color="gray.500">
                   {txFlowLabel[displayInfo.type]}
                 </Text>
@@ -369,8 +387,8 @@ const Transaction = ({
 
 const PendingTxRow = ({ txHash, extra, network }) => {
   const explorer = explorerBase(network);
-  const label = formatTxKindLabels(extra) || 'Transaction';
-  const iconKind = extra && extra[0] ? extra[0] : 'pending';
+  const label = historyCategoryLabel(extra, '');
+  const iconKind = primaryTxKind(extra, '') || 'pending';
   return (
     <Box
       display="flex"
@@ -442,7 +460,7 @@ const TxFallback = ({ txHash, network }) => {
   );
 };
 
-const TxIcon = ({ txType, extra }) => {
+const TxIcon = ({ txType, extra = [] }) => {
   const icons = {
     self: TiArrowLoop,
     internalIn: TiArrowShuffle,
@@ -459,16 +477,30 @@ const TxIcon = ({ txType, extra }) => {
     multisig: FaUsers,
     contract: FaRegFileCode,
     vote: MdHowToVote,
+    catalystVote: MdHowToVote,
+    proposal: FaBalanceScale,
     drepDelegation: FaBalanceScale,
     drepRegistration: FaBalanceScale,
+    drepDeregistration: FaBalanceScale,
+    drepUpdate: FaBalanceScale,
+    committeeHot: FaUserCheck,
+    committeeCold: IoRemoveCircleSharp,
+    mir: FaCoins,
+    swap: TiArrowShuffle,
+    burn: FaTrashAlt,
+    assetSend: TiArrowBack,
+    assetReceive: TiArrowForward,
+    assetSelf: TiArrowLoop,
+    assetTransfer: FaCoins,
     pending: TiArrowLoop,
   };
 
-  if (extra.length) txType = extra[0];
+  const iconType = primaryTxKind(extra, txType) || txType;
 
   let style;
-  switch (txType) {
+  switch (iconType) {
     case 'externalIn':
+    case 'assetReceive':
       style = { transform: 'rotate(90deg)' };
       break;
     case 'internalOut':
@@ -480,11 +512,11 @@ const TxIcon = ({ txType, extra }) => {
 
   return (
     <Icon
-      as={icons[txType]}
+      as={icons[iconType] || icons.self}
       style={style}
       w={8}
       h={8}
-      color={txTypeColor[txType]}
+      color={txTypeColor[iconType] || txTypeColor.self}
     />
   );
 };
@@ -625,7 +657,8 @@ const TxDetail = ({ displayInfo, network }) => {
           </DetailRow>
         ) : null}
 
-        {displayInfo.detail.metadata.length > 0 ? (
+        {Array.isArray(displayInfo.detail.metadata) &&
+        displayInfo.detail.metadata.length > 0 ? (
           <Box textAlign="right">
             <Button
               colorScheme="blue"
@@ -662,7 +695,10 @@ const genDisplayInfo = (txHash, detail, currentAddr, addresses) => {
   const lovelaceAmount = amounts.find((amount) => amount.unit === 'lovelace');
   const lovelace = lovelaceAmount ? BigInt(lovelaceAmount.quantity) : 0n;
 
-const extra = extraFromKoiosInfo(detail.info, type);
+const extra = extraFromKoiosInfo(detail.info, type, {
+    hasNativeAssets: assets.length > 0,
+    metadata: detail.metadata,
+  });
 
   let displayLovelace = ['internalIn', 'externalIn', 'multisig'].includes(type)
     ? lovelace
@@ -757,10 +793,20 @@ const getTimestamp = (date) => {
   )}`;
 };
 
+const credCache = new Map();
+
+const rememberCred = (address, pair) => {
+  if (credCache.size > 500) credCache.clear();
+  credCache.set(address, pair);
+  return pair;
+};
+
 const getAddressCredentials = (address) => {
   if (!address) {
     return [null, null];
   }
+  const cached = credCache.get(address);
+  if (cached) return cached;
 
   try {
     const cmlAddress = Loader.Cardano.Address.from_bech32(address);
@@ -769,23 +815,26 @@ const getAddressCredentials = (address) => {
     const baseAddr = Loader.Cardano.BaseAddress.from_address(cmlAddress);
     if (baseAddr) {
       const stakeCred = baseAddr.stake_cred()?.to_hex() || null;
-      return [paymentCred, stakeCred];
+      return rememberCred(address, [paymentCred, stakeCred]);
     }
 
     const rewardAddr = Loader.Cardano.RewardAddress.from_address(cmlAddress);
     if (rewardAddr) {
-      return [null, rewardAddr.payment_cred()?.to_hex() || null];
+      return rememberCred(address, [
+        null,
+        rewardAddr.payment_cred()?.to_hex() || null,
+      ]);
     }
 
-    return [paymentCred, null];
+    return rememberCred(address, [paymentCred, null]);
   } catch (error) {
     try {
       const cmlAddress = Loader.Cardano.ByronAddress.from_base58(address);
       const paymentCred = cmlAddress.to_address()?.payment_cred()?.to_hex() || null;
-      return [paymentCred, null];
+      return rememberCred(address, [paymentCred, null]);
     } catch (byronError) {
       console.error('Failed to parse address:', address, error);
-      return [null, null];
+      return rememberCred(address, [null, null]);
     }
   }
 };

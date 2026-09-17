@@ -11,6 +11,10 @@ const androidManifest = fs.readFileSync(
   path.join(root, 'android/app/src/main/AndroidManifest.xml'),
   'utf8'
 );
+const iosInfoPlist = fs.readFileSync(
+  path.join(root, 'ios/App/App/Info.plist'),
+  'utf8'
+);
 
 describe('Android Keystone camera', () => {
   test('declares CAMERA because the Capacitor Camera plugin does not merge it', () => {
@@ -46,5 +50,13 @@ describe('Android backup', () => {
     expect(rules).toMatch(/<cloud-backup>/);
     expect(rules).toMatch(/<device-transfer>/);
     expect(rules).toMatch(/<exclude domain="root" \/>/);
+  });
+});
+
+describe('iOS App Store export compliance', () => {
+  test('declares exempt encryption so TestFlight upload is not blocked', () => {
+    expect(iosInfoPlist).toMatch(
+      /<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/
+    );
   });
 });

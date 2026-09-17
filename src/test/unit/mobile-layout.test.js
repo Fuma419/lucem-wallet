@@ -150,8 +150,17 @@ describe('mobile layout - no hardcoded overflow widths', () => {
       ),
       'utf8'
     );
+    const math = fs.readFileSync(
+      path.join(
+        __dirname,
+        '../../../android/app/src/main/java/xyz/lucem/wallet/EdgeGestureExclusion.java'
+      ),
+      'utf8'
+    );
     expect(src).toContain('setSystemGestureExclusionRects');
-    expect(src).toContain('EXCLUSION_HEIGHT_DP');
+    expect(src).toContain('EdgeGestureExclusion.midEdges');
+    expect(math).toContain('HEIGHT_DP = 200');
+    expect(math).toContain('WIDTH_DP = 48');
     expect(src).toContain('setDecorFitsSystemWindows(window, true)');
     expect(src).toContain('LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT');
     expect(src).toContain('setAppearanceLightStatusBars(false)');

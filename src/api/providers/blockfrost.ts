@@ -41,6 +41,19 @@ export async function fetchBlockfrostJson(
   return text ? JSON.parse(text) : null;
 }
 
+async function fetchBlockfrostJsonOptional(
+  networkKey: NetworkKey,
+  path: string,
+  signal?: AbortSignal
+): Promise<any> {
+  try {
+    return await fetchBlockfrostJson(networkKey, path, signal);
+  } catch (error) {
+    if (errorMessage(error).includes('404')) return null;
+    throw error;
+  }
+}
+
 export async function fetchBlockfrostAddressUtxos(
   networkKey: NetworkKey,
   address: string,
@@ -113,32 +126,199 @@ export function amountListToKoiosValueAndAssets(amountList: BlockfrostAmount[] =
   return { value, asset_list };
 }
 
-export function blockfrostTxToKoiosTxInfo(txHash: string, txPayload: any) {
+export function blockfrostTxToKoiosTxInfo(
+  txHash: string,
+  txPayload: any,
+  extras: {
+    inputs?: any[];
+    outputs?: any[];
+    withdrawals?: any[];
+    certificates?: any[];
+    voting_procedures?: any[];
+    metadata?: any;
+    assets_minted?: any[];
+    plutus_contracts?: any[];
+  } = {}
+) {
   const parsedDeposit = Number.parseInt(String(txPayload?.deposit || '0'), 10);
   return {
     tx_hash: txHash,
     block_height: txPayload?.block_height ?? null,
+    block_hash: txPayload?.block ?? null,
+    epoch_no: txPayload?.epoch ?? null,
+    absolute_slot: txPayload?.slot ?? null,
     tx_timestamp: txPayload?.block_time ?? null,
     tx_block_index: txPayload?.index ?? txPayload?.tx_index ?? null,
     tx_size: txPayload?.size ?? null,
     total_output: txPayload?.output_amount?.find((a: BlockfrostAmount) => a.unit === 'lovelace')?.quantity || '0',
     fee: txPayload?.fees || '0',
     deposit: Number.isFinite(parsedDeposit) ? String(parsedDeposit) : '0',
-    invalid_before: txPayload?.valid_contract === false ? null : null,
+    invalid_before: txPayload?.invalid_before ?? null,
     invalid_after: txPayload?.invalid_hereafter ?? null,
     collateral_inputs: [],
     collateral_output: null,
     reference_inputs: [],
-    inputs: [],
-    outputs: [],
-    withdrawals: [],
-    assets_minted: [],
-    metadata: null,
-    certificates: [],
+    inputs: extras.inputs || [],
+    outputs: extras.outputs || [],
+    withdrawals: extras.withdrawals || [],
+    assets_minted: extras.assets_minted || [],
+    metadata: extras.metadata ?? null,
+    certificates: extras.certificates || [],
     native_scripts: [],
-    plutus_contracts: [],
-    voting_procedures: [],
+    plutus_contracts: extras.plutus_contracts || [],
+    voting_procedures: extras.voting_procedures || [],
     proposal_procedures: [],
+    valid_contract: txPayload?.valid_contract,
+    withdrawal_count: txPayload?.withdrawal_count,
+    delegation_count: txPayload?.delegation_count,
+    stake_cert_count: txPayload?.stake_cert_count,
+    pool_update_count: txPayload?.pool_update_count,
+    pool_retire_count: txPayload?.pool_retire_count,
+    asset_mint_or_burn_count: txPayload?.asset_mint_or_burn_count,
+    redeemer_count: txPayload?.redeemer_count,
+    vote_count: txPayload?.vote_count,
+    mir_cert_count: txPayload?.mir_cert_count,
+  };
+}
+
+function mapBlockfrostTxUtxos(txHash: string, txUtxos: any) {
+  const inputs = Array.isArray(txUtxos?.inputs)
+    ? txUtxos.inputs.map((input: any) => {
+        const mapped = amountListToKoiosValueAndAssets(input.amount || []);
+        return {
+          tx_hash: input.tx_hash,
+          tx_index: input.output_index,
+          address: input.address,
+          value: mapped.value,
+          asset_list: mapped.asset_list,
+        };
+      })
+    : [];
+  const outputs = Array.isArray(txUtxos?.outputs)
+    ? txUtxos.outputs.map((output: any) => {
+        const mapped = amountListToKoiosValueAndAssets(output.amount || []);
+        return {
+          tx_hash: txHash,
+          tx_index: output.output_index,
+          address: output.address,
+          value: mapped.value,
+          asset_list: mapped.asset_list,
+        };
+      })
+    : [];
+  return { inputs, outputs };
+}
+
+function mapBlockfrostCertificates(delegations: any, stakes: any, poolUpdates: any, poolRetires: any) {
+  const certificates: any[] = [];
+  if (Array.isArray(delegations)) {
+    for (const row of delegations) {
+      certificates.push({
+        type: 'delegation',
+        info: { stake_address: row.address, pool: row.pool_id },
+      });
+    }
+  }
+  if (Array.isArray(stakes)) {
+    for (const row of stakes) {
+      certificates.push({
+        type: row.registration === false ? 'stake_deregistration' : 'stake_registration',
+        info: { stake_address: row.address },
+      });
+    }
+  }
+  if (Array.isArray(poolUpdates)) {
+    for (const row of poolUpdates) {
+      certificates.push({ type: 'pool_update', info: row });
+    }
+  }
+  if (Array.isArray(poolRetires)) {
+    for (const row of poolRetires) {
+      certificates.push({ type: 'pool_retire', info: row });
+    }
+  }
+  return certificates;
+}
+
+async function fetchBlockfrostHistoryExtras(
+  networkKey: NetworkKey,
+  txHash: string,
+  body: any,
+  signal?: AbortSignal
+) {
+  const wantInputs = body?._inputs === true;
+  const wantMetadata = body?._metadata === true;
+  const wantWithdrawals = body?._withdrawals === true;
+  const wantCerts = body?._certs === true;
+  const wantGovernance = body?._governance === true;
+  const wantScripts = body?._scripts === true;
+  if (
+    !wantInputs &&
+    !wantMetadata &&
+    !wantWithdrawals &&
+    !wantCerts &&
+    !wantGovernance &&
+    !wantScripts
+  ) {
+    return {};
+  }
+
+  const [
+    utxos,
+    metadata,
+    withdrawals,
+    delegations,
+    stakes,
+    poolUpdates,
+    poolRetires,
+    votes,
+    redeemers,
+  ] = await Promise.all([
+    wantInputs
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/utxos`, signal)
+      : null,
+    wantMetadata
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/metadata`, signal)
+      : null,
+    wantWithdrawals
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/withdrawals`, signal)
+      : null,
+    wantCerts
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/delegations`, signal)
+      : null,
+    wantCerts
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/stakes`, signal)
+      : null,
+    wantCerts
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/pool_updates`, signal)
+      : null,
+    wantCerts
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/pool_retires`, signal)
+      : null,
+    wantGovernance
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/votes`, signal)
+      : null,
+    wantScripts
+      ? fetchBlockfrostJsonOptional(networkKey, `/txs/${txHash}/redeemers`, signal)
+      : null,
+  ]);
+
+  const mappedUtxos = utxos ? mapBlockfrostTxUtxos(txHash, utxos) : { inputs: [], outputs: [] };
+  return {
+    inputs: mappedUtxos.inputs,
+    outputs: mappedUtxos.outputs,
+    metadata: metadata || null,
+    withdrawals: Array.isArray(withdrawals)
+      ? withdrawals.map((row: any) => ({
+          stake_addr: row.address,
+          amount: row.amount,
+        }))
+      : [],
+    certificates: mapBlockfrostCertificates(delegations, stakes, poolUpdates, poolRetires),
+    voting_procedures: Array.isArray(votes) ? votes : [],
+    plutus_contracts: Array.isArray(redeemers) && redeemers.length
+      ? [{ redeemers }]
+      : [],
   };
 }
 
@@ -274,7 +454,13 @@ export async function blockfrostKoiosCompatibleRequest(
     const rows: any[] = [];
     for (const txHash of body._tx_hashes) {
       const txPayload = await fetchBlockfrostJson(networkKey, `/txs/${txHash}`, signal);
-      rows.push(blockfrostTxToKoiosTxInfo(txHash, txPayload));
+      const extras = await fetchBlockfrostHistoryExtras(
+        networkKey,
+        txHash,
+        body,
+        signal
+      );
+      rows.push(blockfrostTxToKoiosTxInfo(txHash, txPayload, extras));
     }
     return rows;
   }

@@ -231,6 +231,70 @@ describe('Blockfrost → Koios adapter', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  test('/tx_info with history flags attaches utxos, certs, and count fallbacks', async () => {
+    global.fetch = jest.fn(async (url) => {
+      const href = String(url);
+      if (href.endsWith(`/txs/${TX_HASH}`)) {
+        return jsonResponse(200, {
+          block_height: 99,
+          block_time: 1_700_000_000,
+          fees: '170000',
+          deposit: '0',
+          output_amount: [{ unit: 'lovelace', quantity: '5000000' }],
+          delegation_count: 1,
+        });
+      }
+      if (href.endsWith(`/txs/${TX_HASH}/utxos`)) {
+        return jsonResponse(200, {
+          inputs: [
+            {
+              tx_hash: TX_HASH,
+              output_index: 0,
+              address: 'addr_in',
+              amount: [{ unit: 'lovelace', quantity: '6000000' }],
+            },
+          ],
+          outputs: [
+            {
+              output_index: 0,
+              address: 'addr_out',
+              amount: [{ unit: 'lovelace', quantity: '5000000' }],
+            },
+          ],
+        });
+      }
+      if (href.endsWith(`/txs/${TX_HASH}/delegations`)) {
+        return jsonResponse(200, [
+          { address: 'stake1abc', pool_id: 'pool1abc' },
+        ]);
+      }
+      return jsonResponse(404, { message: 'Not Found' });
+    });
+
+    const [row] = await blockfrostKoiosCompatibleRequest(
+      'preview',
+      '/tx_info',
+      {
+        _tx_hashes: [TX_HASH],
+        _inputs: true,
+        _certs: true,
+        _metadata: true,
+        _withdrawals: true,
+        _governance: true,
+        _scripts: true,
+      }
+    );
+    expect(row.inputs[0].address).toBe('addr_in');
+    expect(row.outputs[0].address).toBe('addr_out');
+    expect(row.certificates).toEqual([
+      {
+        type: 'delegation',
+        info: { stake_address: 'stake1abc', pool: 'pool1abc' },
+      },
+    ]);
+    expect(row.delegation_count).toBe(1);
+  });
+
   test('/tx_status skips 404 hashes and keeps confirmed rows', async () => {
     global.fetch = jest.fn(async (url) => {
       const href = String(url);

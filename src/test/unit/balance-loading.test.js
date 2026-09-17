@@ -224,13 +224,21 @@ describe('history transaction amount display', () => {
   });
 
   test('should expose transaction flow label mapping for user clarity', () => {
-    const txSrc = require('fs').readFileSync(
-      require('path').join(__dirname, '../../ui/app/components/transaction.jsx'),
+    const path = require('path');
+    const fs = require('fs');
+    const kindSrc = fs.readFileSync(
+      path.join(__dirname, '../../api/tx/tx-kind.js'),
       'utf8'
     );
-    expect(txSrc).toContain("self: 'Self transfer'");
-    expect(txSrc).toContain("internalOut: 'Internal send'");
-    expect(txSrc).toContain("internalIn: 'Internal receive'");
+    const txSrc = fs.readFileSync(
+      path.join(__dirname, '../../ui/app/components/transaction.jsx'),
+      'utf8'
+    );
+    expect(kindSrc).toContain("self: 'Self transfer'");
+    expect(kindSrc).toContain("internalOut: 'Internal send'");
+    expect(kindSrc).toContain("internalIn: 'Internal receive'");
+    expect(txSrc).toContain('TX_FLOW_LABEL');
+    expect(txSrc).toContain('historyCategoryLabel');
   });
 
   test('should normalize tx row address from stake-address fallback when payment address is missing', () => {

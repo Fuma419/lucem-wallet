@@ -4,6 +4,18 @@
  * This library provides the correct endpoints, HTTP methods, and request formats
  */
 
+/** Flags for POST /tx_info so history gets certs, votes, assets, and UTxOs. */
+export const TX_INFO_HISTORY_FLAGS = {
+  _inputs: true,
+  _metadata: true,
+  _assets: true,
+  _withdrawals: true,
+  _certs: true,
+  _scripts: true,
+  _bytecode: false,
+  _governance: true,
+};
+
 export const KOIOS_ENDPOINTS = {
   // ===== BLOCK ENDPOINTS =====
   BLOCKS: {
@@ -35,20 +47,15 @@ export const KOIOS_ENDPOINTS = {
 
   // ===== TRANSACTION ENDPOINTS =====
   TX_INFO: {
-    // POST /tx_info - Get detailed information about transaction(s)
+    // POST /tx_info - Get detailed information about transaction(s).
+    // Koios grest requires explicit section flags; omitting them returns a
+    // skeleton without certs, votes, assets, or inputs (useless for history).
     DETAILS: {
       method: 'POST',
       endpoint: '/tx_info',
-      body: { 
+      body: {
         _tx_hashes: ['hash1', 'hash2'],
-        _inputs: false,
-        _metadata: false,
-        _assets: false,
-        _withdrawals: false,
-        _certs: false,
-        _scripts: false,
-        _bytecode: false,
-        _governance: false
+        ...TX_INFO_HISTORY_FLAGS,
       },
       example: { _tx_hashes: ['f144a8264acf4bdfe2e1241170969c930d64ab6b0996a4a45237b623f1dd670e'] }
     }
@@ -331,11 +338,11 @@ export const KOIOS_REQUESTS = {
   
   // Get transaction info
   getTxInfo: (txHash) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_INFO.DETAILS, {
-    body: { _tx_hashes: [txHash] }
+    body: { _tx_hashes: [txHash], ...TX_INFO_HISTORY_FLAGS },
   }),
 
   getTxInfos: (txHashes) => buildKoiosRequest(KOIOS_ENDPOINTS.TX_INFO.DETAILS, {
-    body: { ...KOIOS_ENDPOINTS.TX_INFO.DETAILS.body, _tx_hashes: [...txHashes] }
+    body: { _tx_hashes: [...txHashes], ...TX_INFO_HISTORY_FLAGS },
   }),
   
   // Get transaction UTXOs

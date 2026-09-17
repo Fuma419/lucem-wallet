@@ -183,6 +183,36 @@ function koiosMockBody(requestUrl) {
             fee: '170121',
             deposit: '0',
             tx_size: 300,
+            certificates: [],
+            withdrawals: [],
+            voting_procedures: [],
+            assets_minted: [],
+            metadata: {},
+            inputs: [
+              {
+                tx_hash: 'aa'.repeat(32),
+                tx_index: 0,
+                address: E2E_PAYMENT_ADDR,
+                value: '100000000',
+                asset_list: [],
+              },
+            ],
+            outputs: [
+              {
+                tx_hash: 'bb'.repeat(32),
+                tx_index: 0,
+                address: 'addr_test1qexternal',
+                value: '5000000',
+                asset_list: [],
+              },
+              {
+                tx_hash: 'bb'.repeat(32),
+                tx_index: 1,
+                address: E2E_PAYMENT_ADDR,
+                value: '94829879',
+                asset_list: [],
+              },
+            ],
           },
         ];
   } else if (

@@ -15,6 +15,11 @@ describe('history viewer pending + categories', () => {
     'utf8'
   );
 
+  test('hydrates the visible page in one tx_info batch', () => {
+    expect(historySrc).toContain('hydrateHistoryDetails');
+    expect(historySrc).toContain('hydratedDetails');
+  });
+
   test('reloads the list when a new confirmed head (pending hash) arrives', () => {
     expect(historySrc).toContain('history?.confirmed?.[0]');
     expect(historySrc).toContain('headHash');
@@ -25,17 +30,19 @@ describe('history viewer pending + categories', () => {
     expect(txSrc).toContain('Waiting for confirmation');
   });
 
-  test('history labels distinguish stake, vote, DRep, internal, and external', () => {
+  test('history labels distinguish stake, vote, DRep, assets, internal, and external', () => {
     const kindSrc = fs.readFileSync(
       path.join(__dirname, '../../../api/tx/tx-kind.js'),
       'utf8'
     );
     expect(kindSrc).toContain("delegation: 'Stake delegation'");
     expect(kindSrc).toContain("drepDelegation: 'DRep delegation'");
-    expect(kindSrc).toContain("vote: 'Vote'");
-    expect(txSrc).toContain("internalOut: 'Internal send'");
-    expect(txSrc).toContain("externalOut: 'Send'");
-    expect(txSrc).toContain("internalIn: 'Internal receive'");
+    expect(kindSrc).toContain("vote: 'Governance vote'");
+    expect(kindSrc).toContain("assetSend: 'Send assets'");
+    expect(kindSrc).toContain("catalystVote: 'Catalyst vote'");
+    expect(kindSrc).toContain("internalOut: 'Internal send'");
+    expect(kindSrc).toContain("externalOut: 'Send'");
+    expect(kindSrc).toContain("internalIn: 'Internal receive'");
   });
 
   test('every submit path records pending history', () => {

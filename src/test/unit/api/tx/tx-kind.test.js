@@ -5,7 +5,9 @@ const {
   classifyCslTx,
   extraFromKoiosInfo,
   formatTxKindLabels,
+  historyCategoryLabel,
   koiosKindCounts,
+  primaryTxKind,
 } = require('../../../../api/tx/tx-kind');
 
 const stakeHex = '11'.repeat(28);
@@ -41,10 +43,12 @@ const txWithCerts = (...certs) => {
 describe('tx-kind classification', () => {
   test('labels cover the history categories we surface', () => {
     expect(TX_KIND_LABEL[TX_KIND.delegation]).toBe('Stake delegation');
-    expect(TX_KIND_LABEL[TX_KIND.vote]).toBe('Vote');
+    expect(TX_KIND_LABEL[TX_KIND.vote]).toBe('Governance vote');
     expect(TX_KIND_LABEL[TX_KIND.drepDelegation]).toBe('DRep delegation');
+    expect(TX_KIND_LABEL[TX_KIND.assetSend]).toBe('Send assets');
+    expect(TX_KIND_LABEL[TX_KIND.catalystVote]).toBe('Catalyst vote');
     expect(formatTxKindLabels(['delegation', 'vote'])).toBe(
-      'Stake delegation, Vote'
+      'Stake delegation, Governance vote'
     );
   });
 
@@ -72,6 +76,17 @@ describe('tx-kind classification', () => {
     expect(extra).not.toContain(TX_KIND.vote);
   });
 
+  test('classifies DRep deregistration certs', () => {
+    const extra = classifyCslTx(
+      txWithCerts(
+        CSL.Certificate.new_drep_deregistration(
+          CSL.DRepDeregistration.new(stakeCred(), CSL.BigNum.from_str('500000000'))
+        )
+      )
+    );
+    expect(extra).toContain(TX_KIND.drepDeregistration);
+  });
+
   test('classifies governance votes from voting_procedures', () => {
     const extra = classifyCslTx({
       body: () => ({
@@ -82,6 +97,39 @@ describe('tx-kind classification', () => {
       }),
     });
     expect(extra).toEqual([TX_KIND.vote]);
+  });
+
+  test('classifies Catalyst CIP-36 metadata as a vote', () => {
+    const extra = classifyCslTx({
+      body: () => ({
+        certs: () => null,
+        voting_procedures: () => null,
+        withdrawals: () => null,
+        mint: () => null,
+      }),
+      auxiliary_data: () => ({
+        metadata: () => ({
+          keys: () => ({
+            len: () => 1,
+            get: () => ({ to_str: () => '61284' }),
+          }),
+        }),
+      }),
+    });
+    expect(extra).toContain(TX_KIND.catalystVote);
+  });
+
+  test('classifies governance proposals from voting_proposals', () => {
+    const extra = classifyCslTx({
+      body: () => ({
+        certs: () => null,
+        voting_procedures: () => null,
+        voting_proposals: () => ({ len: () => 1 }),
+        withdrawals: () => null,
+        mint: () => null,
+      }),
+    });
+    expect(extra).toContain(TX_KIND.proposal);
   });
 });
 
@@ -115,5 +163,59 @@ describe('koiosKindCounts / extraFromKoiosInfo', () => {
 
   test('internal send with no certs has no extras', () => {
     expect(extraFromKoiosInfo({}, 'internalOut')).toEqual([]);
+  });
+
+  test('labels native-asset sends from the net token delta', () => {
+    expect(
+      extraFromKoiosInfo({}, 'externalOut', { hasNativeAssets: true })
+    ).toEqual([TX_KIND.assetSend]);
+    expect(
+      extraFromKoiosInfo({}, 'externalIn', { hasNativeAssets: true })
+    ).toEqual([TX_KIND.assetReceive]);
+  });
+
+  test('detects Catalyst metadata and Conway DRep unregistration', () => {
+    const extra = extraFromKoiosInfo(
+      {
+        drep_deregistration_count: 1,
+        metadata: { '61284': { '1': 'vote' } },
+      },
+      'self'
+    );
+    expect(extra).toContain(TX_KIND.drepDeregistration);
+    expect(extra).toContain(TX_KIND.catalystVote);
+  });
+
+  test('uses stake unreg count instead of deposit sign', () => {
+    expect(
+      extraFromKoiosInfo({ stake_unreg_count: 1, deposit: '2000000' })
+    ).toContain(TX_KIND.unstake);
+    expect(
+      extraFromKoiosInfo({ stake_reg_count: 1, deposit: '-2000000' })
+    ).toContain(TX_KIND.stake);
+  });
+});
+
+describe('primary history label', () => {
+  test('prefers a governance vote over a generic send', () => {
+    expect(primaryTxKind(['vote', 'assetSend'], 'externalOut')).toBe(
+      TX_KIND.vote
+    );
+    expect(historyCategoryLabel(['vote'], 'externalOut')).toBe(
+      'Governance vote'
+    );
+  });
+
+  test('prefers stake delegation over stake registration', () => {
+    expect(primaryTxKind(['stake', 'delegation'], 'self')).toBe(
+      TX_KIND.delegation
+    );
+  });
+
+  test('falls back to payment flow', () => {
+    expect(historyCategoryLabel([], 'externalOut')).toBe('Send');
+    expect(historyCategoryLabel(['assetSend'], 'externalOut')).toBe(
+      'Send assets'
+    );
   });
 });

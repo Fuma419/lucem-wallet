@@ -189,4 +189,14 @@ describe('iOS is not in Jenkins', () => {
     expect(mobileMd).toMatch(/Jenkins does not build iOS|Not in Jenkins/);
     expect(agentsMd).toMatch(/iOS is not in Jenkins/);
   });
+
+  test('PR template says Jenkins does not cover iOS', () => {
+    const template = fs.readFileSync(
+      path.join(root, '.github/pull_request_template.md'),
+      'utf8'
+    );
+    expect(template).toMatch(/iOS is not in Jenkins/);
+    expect(template).toMatch(/Mobile Android/);
+    expect(template).toMatch(/Functional tests/);
+  });
 });

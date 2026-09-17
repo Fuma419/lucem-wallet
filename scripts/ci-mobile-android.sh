@@ -123,10 +123,10 @@ echo "sdk.dir=${ANDROID_SDK_ROOT}" > android/local.properties
 echo "=== Capacitor sync (android) ==="
 npx cap sync android
 
-echo "=== Gradle assembleDebug ==="
+echo "=== Gradle assembleDebug + testDebugUnitTest ==="
 cd android
 chmod +x gradlew
-./gradlew assembleDebug --no-daemon --stacktrace
+./gradlew assembleDebug testDebugUnitTest --no-daemon --stacktrace
 
 APK="$(find app/build/outputs/apk/debug -name '*.apk' 2>/dev/null | head -1 || true)"
 if [ -z "${APK}" ]; then
@@ -134,3 +134,4 @@ if [ -z "${APK}" ]; then
   exit 1
 fi
 echo "Mobile Android OK: ${APK}"
+echo "Mobile Android unit tests OK (testDebugUnitTest)"

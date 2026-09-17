@@ -289,6 +289,7 @@ pipeline {
       }
       post {
         always {
+          archiveArtifacts artifacts: 'android/app/build/test-results/testDebugUnitTest/*.xml', allowEmptyArchive: true
           // Workspaces are reused, and the unit tests assert the committed
           // native versions match package.json exactly.
           sh 'git checkout -- android/app/build.gradle ios/App/App/Info.plist || true'

@@ -157,6 +157,7 @@ describe('Mobile Android CI', () => {
   test('runs host unit tests as well as assembleDebug', () => {
     expect(ciScript).toMatch(/assembleDebug/);
     expect(ciScript).toMatch(/testDebugUnitTest/);
+    expect(ciScript).toMatch(/assert-gradle-unit-test-results\.py/);
   });
 
   test('hard-gates Mobile Android without skipping later Jenkins stages', () => {
@@ -169,6 +170,9 @@ describe('Mobile Android CI', () => {
     expect(jenkinsfile).not.toMatch(/soft-gated/);
     expect(jenkinsfile).toMatch(
       /return \['Build', 'Unit tests', 'Mobile Android', 'Integration tests', 'Functional tests'\]/
+    );
+    expect(jenkinsfile).toMatch(
+      /test-results\/testDebugUnitTest\/\*\.xml/
     );
   });
 });

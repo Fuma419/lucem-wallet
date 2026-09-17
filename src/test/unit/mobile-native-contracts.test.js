@@ -61,6 +61,15 @@ describe('iOS App Store export compliance', () => {
   });
 });
 
+describe('iOS required device capabilities', () => {
+  test('requires arm64 so App Store does not list 32-bit iPhones', () => {
+    expect(iosInfoPlist).toMatch(
+      /<key>UIRequiredDeviceCapabilities<\/key>\s*<array>\s*<string>arm64<\/string>\s*<\/array>/
+    );
+    expect(iosInfoPlist).not.toMatch(/<string>armv7<\/string>/);
+  });
+});
+
 describe('Android gradle tests', () => {
   test('does not keep Capacitor template tests under com.getcapacitor.myapp', () => {
     expect(

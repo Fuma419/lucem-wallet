@@ -101,6 +101,25 @@ transfers over several frames, so hold steady. Ledger (Bluetooth) is
 not available on mobile in v1 — the hardware screen shows guidance to that effect
 on phones.
 
+## CI (Jenkins)
+
+Jenkins runs on a **Linux** `lucem-wallet` agent. It gates PRs for the
+extension, PWA/webpack, live testnet sends, and Playwright. Native coverage is
+Android-only.
+
+| What | Where | Notes |
+| --- | --- | --- |
+| Webpack / extension / PWA | Jenkins **Build** | Same `build/` Capacitor wraps. |
+| Jest native contracts | Jenkins **Unit tests** | `src/test/unit/mobile-native-contracts.test.js` (CAMERA, backup, FileProvider, iOS plist). |
+| Playwright | Jenkins **Functional tests** | Web/extension layout, not a phone. |
+| Live Preview/Preprod send | Jenkins **Integration tests** | Unchanged by native PRs. |
+| Android APK + JVM tests | Jenkins **Mobile Android** | `npm run mobile:android:ci`: Capacitor sync, `assembleDebug`, `testDebugUnitTest`. Hard-gated. A native failure still lets Integration and Functional run. |
+| **iOS / Xcode / TestFlight** | **Not in Jenkins** | No macOS runner. `ios/` is compiled on a Mac (`npm run mobile:ios`). Jest still locks `Info.plist` contracts. |
+
+Do not add a Jenkins `iOS` / `xcodebuild` stage on this host — it cannot succeed.
+Do not treat a green Mobile Android check as “the iPhone app works”; sideload
+Android from the archived debug APK, and build iOS on a Mac before store upload.
+
 ## Cut a mobile release
 
 App semver is **`package.json` `version`**. Native versions are derived, not
@@ -121,9 +140,9 @@ npm run mobile:sync-version
 ```
 
 `repo-release` calls `scripts/sync-mobile-version.js` via the
-`lucem-android-sync` hook in agent-tooling. Jenkins `mobile:android:ci` still
-builds a **debug APK** only (`assembleDebug`). Signed Play AAB / TestFlight
-upload is a later step (keystore + store consoles).
+`lucem-android-sync` hook in agent-tooling. Jenkins `mobile:android:ci` builds
+a **debug APK** (`assembleDebug`) and runs host unit tests (`testDebugUnitTest`).
+Signed Play AAB / TestFlight upload is a later step (keystore + store consoles).
 
 Until a store track exists: install the debug APK with
 `npm run mobile:android:install` or take the Jenkins Android CI artifact.

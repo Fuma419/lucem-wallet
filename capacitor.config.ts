@@ -8,7 +8,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
  *
  * `npm run mobile:sync` builds `build/` and copies it into the native projects.
  * CI (`npm run mobile:android:ci` / Jenkins Mobile Android) syncs Android and
- * runs `assembleDebug`. iOS is local-only for now (macOS + signing).
+ * runs `assembleDebug` plus `testDebugUnitTest`. iOS is not in Jenkins (Linux
+ * agent, no Xcode); build and TestFlight stay on a Mac.
  */
 const config: CapacitorConfig = {
   appId: 'xyz.lucem.wallet',

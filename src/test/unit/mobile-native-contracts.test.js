@@ -172,3 +172,21 @@ describe('Mobile Android CI', () => {
     );
   });
 });
+
+describe('iOS is not in Jenkins', () => {
+  const jenkinsfile = fs.readFileSync(path.join(root, 'Jenkinsfile'), 'utf8');
+  const mobileMd = fs.readFileSync(path.join(root, 'MOBILE.md'), 'utf8');
+  const agentsMd = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+
+  test('Jenkinsfile has no iOS or xcodebuild stage that would fail on Linux', () => {
+    expect(jenkinsfile).not.toMatch(/stage\(['"]iOS/);
+    expect(jenkinsfile).not.toMatch(/xcodebuild/);
+    expect(jenkinsfile).not.toMatch(/npx cap sync ios/);
+    expect(jenkinsfile).toMatch(/iOS is intentionally omitted/);
+  });
+
+  test('docs say Jenkins does not build iOS', () => {
+    expect(mobileMd).toMatch(/Jenkins does not build iOS|Not in Jenkins/);
+    expect(agentsMd).toMatch(/iOS is not in Jenkins/);
+  });
+});

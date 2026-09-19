@@ -30,6 +30,9 @@ describe('wallet tray accounts vs settings FABs', () => {
   test('tray has separate accounts and settings FABs that navigate to full screens', () => {
     expect(traysSrc).toContain('aria-label="Open accounts"');
     expect(traysSrc).toContain('aria-label="Open settings"');
+    expect(traysSrc).toContain('data-testid="wallet-accounts-nav"');
+    expect(traysSrc).toContain('data-testid="wallet-settings-nav"');
+    expect(traysSrc).toContain('data-testid="wallet-stake-nav"');
     expect(traysSrc).toContain('MdAccountBalanceWallet');
     expect(traysSrc).toContain("go('/accounts')");
     expect(traysSrc).toContain("go('/settings')");

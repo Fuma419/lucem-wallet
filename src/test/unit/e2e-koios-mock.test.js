@@ -85,6 +85,12 @@ describe('e2e Koios mock includes spendable /account_utxos', () => {
     expect(screenshotsSrc).toMatch(/send-available-balance/);
   });
 
+  test('seed writes a confirmed history hash and preprod/mainnet slices', () => {
+    expect(helpersSrc).toMatch(/confirmed: \[txHash\]/);
+    expect(helpersSrc).toMatch(/preprod: \{ \.\.\.networkSlice \}/);
+    expect(helpersSrc).toMatch(/mainnet: \{ \.\.\.networkSlice \}/);
+  });
+
   test('layout and send-all seed a wallet instead of skipping', () => {
     const layoutSrc = fs.readFileSync(
       path.join(__dirname, '../../../e2e/wallet-layout.spec.js'),

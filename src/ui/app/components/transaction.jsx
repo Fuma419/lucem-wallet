@@ -225,6 +225,7 @@ const Transaction = ({
         )}
         {displayInfo ? (
           <AccordionButton
+            data-testid="history-tx"
             display="flex"
             justifyContent="space-between"
             bg={colorMode.txBg}
@@ -284,7 +285,12 @@ const Transaction = ({
                   />
                 </HStack>
               ) : null}
-              <Text fontSize={11} fontWeight="semibold" color="gray.500">
+              <Text
+                fontSize={11}
+                fontWeight="semibold"
+                color="gray.500"
+                data-testid="history-tx-label"
+              >
                 {category}
               </Text>
               {displayInfo.extra.length > 0 &&

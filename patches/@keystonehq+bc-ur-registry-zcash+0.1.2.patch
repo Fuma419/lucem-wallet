@@ -1,0 +1,24 @@
+diff --git a/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.cjs b/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.cjs
+index 7c80cab..bf1fd73 100644
+--- a/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.cjs
++++ b/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.cjs
+@@ -18,7 +18,6 @@ exports.ZcashAccounts = exports.ZcashUnifiedFullViewingKey = exports.ZcashPCZT =
+ const bc_ur_registry_1 = require("@keystonehq/bc-ur-registry");
+ const RegistryType_1 = require("./RegistryType.cjs");
+ __exportStar(require("@keystonehq/bc-ur-registry"), exports);
+-console.log("Registering Zcash UR Registry Types...");
+ (0, bc_ur_registry_1.patchTags)(Object.values(RegistryType_1.ExtendedRegistryTypes)
+     .filter(rt => !!rt.getTag())
+     .map(rt => rt.getTag()));
+diff --git a/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.mjs b/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.mjs
+index 6519725..972fa9b 100644
+--- a/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.mjs
++++ b/node_modules/@keystonehq/bc-ur-registry-zcash/dist/index.mjs
+@@ -2,7 +2,6 @@ import $keystonehqbcurregistry from "@keystonehq/bc-ur-registry";
+ const { patchTags } = $keystonehqbcurregistry;
+ import { ExtendedRegistryTypes } from "./RegistryType.mjs";
+ export * from "@keystonehq/bc-ur-registry";
+-console.log("Registering Zcash UR Registry Types...");
+ patchTags(Object.values(ExtendedRegistryTypes)
+     .filter(rt => !!rt.getTag())
+     .map(rt => rt.getTag()));

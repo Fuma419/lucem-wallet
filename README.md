@@ -148,6 +148,11 @@ npm start
 
 `secrets.*.js` (except `secrets.testing.js`) are gitignored; webpack resolves `import secrets from 'secrets'` to `secrets.{NODE_ENV}.js`. Copy the testing template so local builds have dummy keys.
 
+`npm install` / `npm ci` run `patch-package` afterwards. The only patch today
+drops an import-time `console.log` from Keystone's unused Zcash UR registry
+(`@keystonehq/bc-ur-registry-zcash`). Do not pass `--ignore-scripts` or the
+log — and the unit test that asserts it is gone — come back.
+
 Optional env (see `.env.example`): `KOIOS_API_KEY_MAINNET` / `_PREPROD` / `_PREVIEW`, and `BLOCKFROST_*` for governance metadata.
 
 ```bash

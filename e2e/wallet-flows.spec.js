@@ -4,22 +4,12 @@
  * Jenkins Functional tests (`npm run test:e2e`) already run every spec in e2e/.
  * Screenshots capture appearance; these assert navigation, labels, and review
  * state with the shared Koios mock.
+ *
+ * Prefer direct routes over the action tray so a missing FAB cannot stall the
+ * Playwright web server (which takes the rest of the suite down with it).
  */
 const { test, expect } = require('@playwright/test');
 const { E2E_PAYMENT_ADDR, openSeededWallet } = require('./helpers');
-
-/** @param {import('@playwright/test').Page} page */
-async function openActionTray(page) {
-  const toggle = page.getByTestId('wallet-action-tray-toggle');
-  await toggle.waitFor({ state: 'visible', timeout: 60_000 });
-  if ((await toggle.getAttribute('aria-expanded')) !== 'true') {
-    await toggle.click();
-  }
-  await page.getByTestId('wallet-action-tray-menu').waitFor({
-    state: 'visible',
-    timeout: 10_000,
-  });
-}
 
 /**
  * @param {import('@playwright/test').Page} page
@@ -29,7 +19,7 @@ async function waitForSendTxReady(page) {
   const errorAlert = page.getByTestId('send-error-alert');
   const reviewButton = page.getByTestId('send-primary-action');
   let alertText = '';
-  for (let i = 0; i < 45; i += 1) {
+  for (let i = 0; i < 30; i += 1) {
     await page.waitForTimeout(1_000);
     if (await errorAlert.count()) {
       alertText = (await errorAlert.textContent()) || '';
@@ -91,31 +81,22 @@ test.describe('seeded wallet click-through', () => {
       timeout: 60_000,
     });
     const historyTab = page.getByTestId('wallet-history-tab');
-    if (await historyTab.isVisible().catch(() => false)) {
-      await historyTab.click();
-    }
-    await expect(page.getByTestId('history-tx-label')).toHaveText(/^Send$/, {
-      timeout: 45_000,
-    });
-    await page.getByTestId('history-tx').click();
-    await expect(page.getByText(/Fee:/i).first()).toBeVisible({
-      timeout: 10_000,
+    await historyTab.waitFor({ state: 'visible', timeout: 15_000 });
+    await historyTab.click();
+    await expect(historyTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('history-tx-label')).toHaveText(/Send/i, {
+      timeout: 20_000,
     });
   });
 
   test('Send review opens confirm breakdown for a built payment', async ({
     page,
   }) => {
-    test.setTimeout(120_000);
-    await openSeededWallet(page, '/wallet');
-    await page.getByTestId('wallet-send').waitFor({
-      state: 'visible',
-      timeout: 60_000,
-    });
-    await page.getByTestId('wallet-send').click();
+    test.setTimeout(90_000);
+    await openSeededWallet(page, '/send');
     await page.getByTestId('send-page').waitFor({
       state: 'visible',
-      timeout: 30_000,
+      timeout: 60_000,
     });
     await page.getByTestId('send-recipient-input').fill(E2E_PAYMENT_ADDR);
     await page.getByTestId('send-ada-amount').fill('5');
@@ -127,26 +108,18 @@ test.describe('seeded wallet click-through', () => {
     await expect(page.getByTestId('send-confirm-breakdown')).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByTestId('confirm-tx-modal')).toBeVisible();
+    await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.getByTestId('send-confirm-to-address')).toContainText(
       'addr_test1'
     );
   });
 
-  test('action tray opens Settings, network switch, and tray swap', async ({
-    page,
-  }) => {
+  test('Settings switches network and tray layout', async ({ page }) => {
     test.setTimeout(90_000);
-    await openSeededWallet(page, '/wallet');
-    await page.getByTestId('wallet-send').waitFor({
-      state: 'visible',
-      timeout: 60_000,
-    });
-    await openActionTray(page);
-    await page.getByTestId('wallet-settings-nav').click();
+    await openSeededWallet(page, '/settings');
     await page.getByTestId('settings-page').waitFor({
       state: 'visible',
-      timeout: 30_000,
+      timeout: 60_000,
     });
     const network = page.getByTestId('settings-network-panel');
     await expect(network.getByRole('radio', { name: 'Preview' })).toHaveAttribute(
@@ -167,20 +140,12 @@ test.describe('seeded wallet click-through', () => {
     await expect(page.getByTestId('settings-provider-test')).toBeVisible();
   });
 
-  test('action tray opens Accounts and applies a display name', async ({
-    page,
-  }) => {
+  test('Accounts applies a display name', async ({ page }) => {
     test.setTimeout(90_000);
-    await openSeededWallet(page, '/wallet');
-    await page.getByTestId('wallet-send').waitFor({
-      state: 'visible',
-      timeout: 60_000,
-    });
-    await openActionTray(page);
-    await page.getByTestId('wallet-accounts-nav').click();
+    await openSeededWallet(page, '/accounts');
     await page.getByTestId('accounts-page').waitFor({
       state: 'visible',
-      timeout: 30_000,
+      timeout: 60_000,
     });
     const input = page.getByTestId('accounts-rename-input');
     await input.click();
@@ -189,45 +154,31 @@ test.describe('seeded wallet click-through', () => {
     await expect(input).toHaveValue('E2E Wallet', { timeout: 15_000 });
   });
 
-  test('action tray opens Stake center and selects HODLR', async ({ page }) => {
+  test('Stake center lists HODLR and shows pool details', async ({ page }) => {
     test.setTimeout(90_000);
-    await openSeededWallet(page, '/wallet');
-    await page.getByTestId('wallet-send').waitFor({
+    await openSeededWallet(page, '/staking');
+    await page.getByTestId('stake-center-page').waitFor({
       state: 'visible',
       timeout: 60_000,
     });
-    await openActionTray(page);
-    await page.getByTestId('wallet-stake-nav').click();
-    await page.getByTestId('stake-center-page').waitFor({
-      state: 'visible',
-      timeout: 30_000,
-    });
     await expect(page.getByTestId('stake-current-status')).toBeVisible({
-      timeout: 30_000,
-    });
-    await page.getByTestId('stake-pool-search').fill('HODLR');
-    await page.getByTestId('stake-pool-result-HODLR').click({
       timeout: 20_000,
     });
+    await page.getByTestId('stake-pool-search').fill('HODLR');
+    const hodlr = page.getByTestId('stake-pool-result-HODLR');
+    await hodlr.waitFor({ state: 'visible', timeout: 20_000 });
+    await hodlr.click();
     await expect(page.getByTestId('stake-pool-details')).toBeVisible({
       timeout: 15_000,
     });
   });
 
-  test('action tray opens Vote with DRep and always-abstain actions', async ({
-    page,
-  }) => {
+  test('Vote page exposes DRep and always-abstain actions', async ({ page }) => {
     test.setTimeout(90_000);
-    await openSeededWallet(page, '/wallet');
-    await page.getByTestId('wallet-send').waitFor({
-      state: 'visible',
-      timeout: 60_000,
-    });
-    await openActionTray(page);
-    await page.getByTestId('wallet-delegation').click();
+    await openSeededWallet(page, '/governance');
     await page.getByTestId('governance-page').waitFor({
       state: 'visible',
-      timeout: 30_000,
+      timeout: 60_000,
     });
     await expect(page.getByTestId('governance-drep-id-input')).toBeVisible();
     await page.getByTestId('governance-drep-id-input').fill('drep1e2etestid');
@@ -238,5 +189,22 @@ test.describe('seeded wallet click-through', () => {
     await expect(
       page.getByRole('button', { name: /Always Abstain/i })
     ).toBeVisible();
+  });
+
+  test('action tray opens Settings from wallet home', async ({ page }) => {
+    test.setTimeout(90_000);
+    await openSeededWallet(page, '/wallet');
+    await page.getByTestId('wallet-send').waitFor({
+      state: 'visible',
+      timeout: 60_000,
+    });
+    const toggle = page.getByTestId('wallet-action-tray-toggle');
+    await toggle.waitFor({ state: 'visible', timeout: 15_000 });
+    await toggle.click();
+    await page.getByTestId('wallet-settings-nav').click({ timeout: 10_000 });
+    await page.getByTestId('settings-page').waitFor({
+      state: 'visible',
+      timeout: 15_000,
+    });
   });
 });

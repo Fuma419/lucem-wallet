@@ -181,6 +181,7 @@ function koiosMockBody(requestUrl) {
           {
             tx_hash: 'bb'.repeat(32),
             block_height: 499990,
+            block_hash: 'cc'.repeat(32),
             tx_timestamp: Math.floor(Date.now() / 1000) - 3600,
             fee: '170121',
             deposit: '0',

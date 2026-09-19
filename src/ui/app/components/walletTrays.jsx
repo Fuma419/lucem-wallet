@@ -278,6 +278,7 @@ const WalletTrays = ({
               labelSide={actionLabelSide}
               {...walletFabBase}
               className="button fab-stake"
+              data-testid="wallet-stake-nav"
               data-active={path === '/staking' ? 'true' : undefined}
               onClick={() => go('/staking')}
               aria-label="Open stake center"
@@ -290,6 +291,7 @@ const WalletTrays = ({
               labelSide={actionLabelSide}
               {...walletFabBase}
               className="button fab-accounts"
+              data-testid="wallet-accounts-nav"
               data-active={path === '/accounts' ? 'true' : undefined}
               onClick={() => go('/accounts')}
               aria-label="Open accounts"
@@ -302,6 +304,7 @@ const WalletTrays = ({
               labelSide={actionLabelSide}
               {...walletFabBase}
               className="button fab-settings"
+              data-testid="wallet-settings-nav"
               data-active={path === '/settings' ? 'true' : undefined}
               onClick={() => go('/settings')}
               aria-label="Open settings"

@@ -10,6 +10,8 @@ const E2E_PAYMENT_ADDR =
   'addr_test1qq02xt0z2e7cyd8dg05zlpclhqnpdx6eektgegdsq7nq0whmnjrwgrd2f8txn9g78zh5futgtyn4ctjekjdu9wdpkk8qcz65ed';
 const E2E_REWARD_ADDR =
   'stake_test1uraeephypk4yn4nfj50r3t6y7959jf6u9evmfx7zhxsmtrssx6ehu';
+/** Mocked confirmed payment in `koiosMockBody` /tx_info (external send). */
+const E2E_TX_HASH = 'bb'.repeat(32);
 
 /** ADA-only row shaped like Koios `/account_utxos` with `_extended: true`. */
 const E2E_ACCOUNT_UTXO = {
@@ -179,6 +181,7 @@ function koiosMockBody(requestUrl) {
           {
             tx_hash: 'bb'.repeat(32),
             block_height: 499990,
+            block_hash: 'cc'.repeat(32),
             tx_timestamp: Math.floor(Date.now() / 1000) - 3600,
             fee: '170121',
             deposit: '0',
@@ -309,7 +312,13 @@ async function seedTestWallet(
 ) {
   const signable = options.signable !== false;
   await page.evaluate(
-    async ({ routePath, writeEncryptedKey, paymentAddr, rewardAddr }) => {
+    async ({
+      routePath,
+      writeEncryptedKey,
+      paymentAddr,
+      rewardAddr,
+      txHash,
+    }) => {
       const DB_NAME = 'lucem-wallet';
       const STORE_NAME = 'storage';
       await new Promise((resolve) => {
@@ -327,6 +336,16 @@ async function seedTestWallet(
         req.onerror = () => reject(req.error);
       });
 
+      const networkSlice = {
+        lovelace: '100000000',
+        minAda: '0',
+        assets: [],
+        history: { confirmed: [txHash], details: {} },
+        paymentAddr,
+        rewardAddr,
+        collateral: null,
+        recentSendToAddresses: [],
+      };
       const account = {
         index: 0,
         name: 'Test Wallet',
@@ -334,16 +353,9 @@ async function seedTestWallet(
         publicKey: '00',
         paymentKeyHash: '1ea32de2567d8234ed43e82f871fb826169b59cd968ca1b007a607ba',
         stakeKeyHash: 'fb9c86e40daa49d669951e38af44f16859275c2e59b49bc2b9a1b58e',
-        preview: {
-          lovelace: '100000000',
-          minAda: '0',
-          assets: [],
-          history: { confirmed: [], details: {} },
-          paymentAddr,
-          rewardAddr,
-          collateral: null,
-          recentSendToAddresses: [],
-        },
+        preview: { ...networkSlice },
+        preprod: { ...networkSlice },
+        mainnet: { ...networkSlice },
       };
 
       await new Promise((resolve, reject) => {
@@ -378,6 +390,7 @@ async function seedTestWallet(
       writeEncryptedKey: signable,
       paymentAddr: E2E_PAYMENT_ADDR,
       rewardAddr: E2E_REWARD_ADDR,
+      txHash: E2E_TX_HASH,
     }
   );
 }
@@ -419,6 +432,7 @@ async function openSeededWallet(page, persistedRoute = '/wallet', options = {}) 
 module.exports = {
   E2E_PAYMENT_ADDR,
   E2E_REWARD_ADDR,
+  E2E_TX_HASH,
   E2E_ACCOUNT_UTXO,
   isChainApiUrl,
   koiosMockBody,

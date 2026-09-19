@@ -773,10 +773,10 @@ const Wallet = () => {
           colorScheme="customGray"
         >
           <TabList className="lucem-wallet-asset-tabs">
-            <Tab mr={2}>
+            <Tab mr={2} data-testid="wallet-assets-tab">
               <Icon as={RxTokens} boxSize={5} />
             </Tab>
-            <Tab>
+            <Tab data-testid="wallet-history-tab">
               <Icon
                 as={GoHistory}
                 boxSize={5}

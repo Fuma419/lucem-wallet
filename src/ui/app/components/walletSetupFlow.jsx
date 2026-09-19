@@ -87,6 +87,7 @@ export const WalletSetupButtons = ({
           className="button new-wallet"
           onClick={() => refWallet.current.openModal()}
           {...buttonProps}
+          data-testid="welcome-create-wallet"
         >
           Create Wallet
         </Button>
@@ -94,6 +95,7 @@ export const WalletSetupButtons = ({
           className="button import-wallet"
           onClick={() => refImport.current.openModal()}
           {...buttonProps}
+          data-testid="welcome-restore-wallet"
         >
           Restore Wallet
         </Button>
@@ -101,6 +103,7 @@ export const WalletSetupButtons = ({
           className="button hw-wallet"
           onClick={() => refHw.current.openModal()}
           {...buttonProps}
+          data-testid="welcome-connect-hardware"
         >
           Connect Hardware
         </Button>

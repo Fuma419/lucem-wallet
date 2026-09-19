@@ -179,6 +179,7 @@ const ConfirmModalNormal = ({ props, isOpen, onClose }) => {
     >
       <ModalOverlay />
       <ModalContent
+        data-testid="confirm-tx-modal"
         mx={{ base: 2, md: 0 }}
         my={{ base: 'max(0.5rem, env(safe-area-inset-top, 0px))', md: 0 }}
         sx={{

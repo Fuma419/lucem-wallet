@@ -166,6 +166,7 @@ const HistoryViewer = ({ history, network, currentAddr, addresses }) => {
           <Accordion
             allowToggle
             borderBottom="none"
+            data-testid="wallet-history-list"
             onClick={() => {
             }}
           >

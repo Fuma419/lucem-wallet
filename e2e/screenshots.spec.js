@@ -424,7 +424,7 @@ test.describe('capture seeded wallet pages', () => {
     await openSeededWallet(page, '/wallet');
 
     await page.getByTestId('wallet-send').waitFor({ state: 'visible', timeout: 60_000 });
-    const historyTab = page.locator('[role="tab"]').nth(3);
+    const historyTab = page.getByTestId('wallet-history-tab');
     if (await historyTab.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await historyTab.click();
       await page.waitForTimeout(2000);
